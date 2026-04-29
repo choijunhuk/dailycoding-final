@@ -102,8 +102,8 @@ export function rateLimit(max = 30, windowSec = 60) {
   };
 }
 
-// 로그인/회원가입용 더 엄격한 제한
-export const authLimiter = rateLimit(10, 15 * 60);
+// 로그인/회원가입용 제한 (/api/auth/me 같은 조회 엔드포인트도 포함되므로 충분히 허용)
+export const authLimiter = rateLimit(100, 15 * 60);
 // AI 호출 제한
 export const aiLimiter   = rateLimit(20, 60);
 // 제출 제한

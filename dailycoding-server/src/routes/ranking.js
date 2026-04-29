@@ -65,7 +65,7 @@ router.get('/', auth, async (req, res) => {
         tier ? ['admin', tier] : ['admin']
       ),
       queryOne(
-        `SELECT COUNT(*) + 1 AS rank
+        `SELECT COUNT(*) + 1 AS \`rank\`
          FROM users
          WHERE role != ?
            AND banned_at IS NULL
