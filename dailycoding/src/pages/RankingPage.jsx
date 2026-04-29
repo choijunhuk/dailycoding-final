@@ -115,6 +115,7 @@ export default function RankingPage() {
   const { user } = useAuth();
   const toast = useToast();
   const { t, lang } = useLang();
+  const locale = lang === 'ko' ? 'ko-KR' : 'en-US';
   const [mode,         setMode]         = useState('global');
   const [page,         setPage]         = useState(1);
   const [search,       setSearch]       = useState('');
@@ -686,4 +687,3 @@ export default function RankingPage() {
     </div>
   );
 }
-  const locale = lang === 'ko' ? 'ko-KR' : 'en-US';

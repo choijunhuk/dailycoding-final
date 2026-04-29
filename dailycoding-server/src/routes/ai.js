@@ -140,12 +140,13 @@ router.post('/hint', auth, requireVerified, checkAiQuota, async (req, res) => {
     const problem = await Problem.findById(Number(problemId), req.user.id);
     if (!problem) return res.status(404).json({ message: '문제를 찾을 수 없습니다.' });
 
+    const desc = (problem.description || problem.desc || '').slice(0, 500);
     const fallback = {
-      hint1: '문제를 다시 읽고 입출력 조건을 꼼꼼히 확인하세요.',
-      hint2: '예제를 손으로 시뮬레이션해보세요. 규칙을 찾아보세요.',
-      hint3: `${problem.tier} 난이도 문제입니다. 관련 알고리즘을 검색해보세요.`,
-      commonMistake: '엣지 케이스(빈 배열, 최대/최소값)를 확인하세요.',
-      relatedConcept: '알고리즘',
+      hint1: `"${problem.title}" 문제에서 요구하는 것이 정확히 무엇인지 파악하세요. 입력 범위와 출력 형식을 다시 확인해보세요.`,
+      hint2: `예제 입출력을 직접 손으로 추적해보세요. 패턴이 보이면 그것이 핵심 알고리즘의 단서입니다.`,
+      hint3: `문제를 작은 단위로 쪼개보세요. 각 단계를 독립적으로 해결한 뒤 합치는 방식으로 접근해보세요.`,
+      commonMistake: '인덱스 범위, 빈 입력, 정수 오버플로우 같은 엣지 케이스를 놓치지 마세요.',
+      relatedConcept: '완전탐색 또는 구현',
     };
 
     const cacheKey = `ai:hint:${problemId}`;
@@ -154,19 +155,26 @@ router.post('/hint', auth, requireVerified, checkAiQuota, async (req, res) => {
 
     if (!hintData) {
       const prompt = `다음 코딩 문제에 대해 3단계 점진적 힌트를 JSON으로 작성하세요 (한국어).
+
 문제 제목: ${problem.title}
-문제 설명: ${(problem.description || problem.desc || '').slice(0, 300)}
+문제 설명: ${desc}
 난이도: ${problem.tier}
 
-필수 필드:
+규칙:
+- 코드나 정답을 직접 알려주지 마세요
+- 각 힌트는 이전 힌트보다 조금 더 구체적이어야 합니다
+- 이 특정 문제에 맞는 힌트를 작성하세요 (일반적인 조언 금지)
+- hint1은 문제 접근 방향만, hint2는 핵심 알고리즘/자료구조 언급, hint3은 구체적인 구현 전략
+
+JSON 형식으로만 응답:
 {
-  "hint1": "첫 번째 힌트 - 문제 접근 방향만 (코드 없이)",
-  "hint2": "두 번째 힌트 - 핵심 알고리즘/자료구조 언급",
-  "hint3": "세 번째 힌트 - 구체적인 구현 방향",
-  "commonMistake": "자주 하는 실수",
+  "hint1": "문제 접근 방향 (이 문제에 특화된 힌트)",
+  "hint2": "핵심 알고리즘/자료구조 이름과 왜 적합한지",
+  "hint3": "구체적인 구현 전략 (의사코드 수준)",
+  "commonMistake": "이 문제에서 자주 실수하는 부분",
   "relatedConcept": "관련 알고리즘/개념 이름"
 }`;
-      hintData = await askAI(req.user.id, prompt, fallback, 400);
+      hintData = await askAI(req.user.id, prompt, fallback, 600);
       await redis.setJSON(cacheKey, hintData, 3600);
     }
 
