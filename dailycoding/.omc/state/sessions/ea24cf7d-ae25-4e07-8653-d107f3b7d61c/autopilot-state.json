@@ -1,0 +1,10 @@
+{
+  "active": true,
+  "started_at": "2026-04-22T02:27:04.328Z",
+  "original_prompt": "/oh-my-claudecode:autopilot 오전 11:25:10 [vite] http proxy error: /api/auth/me\nAggregateError [ECONNREFUSED]: \n    at internalConnectMultiple (node:net:1193:18)\n    at afterConnectMultiple (node:net:1783:7)\n오전 11:25:10 [vite] http proxy error: /api/auth/me\nAggregateError [ECONNREFUSED]: \n    at internalConnectMultiple (node:net:1193:18)\n    at afterConnectMultiple (node:net:1783:7) (x2)\n오전 11:25:10 [vite] http proxy error: /api/stats\nAggregateError [ECONNREFUSED]: \n    at internalConnectMultiple (node:net:1193:18)\n    at afterConnectMultiple (node:net:1783:7)\n오전 11:25:10 [vite] http proxy error: /api/stats\nAggregateError [ECONNREFUSED]: \n    at internalConnectMultiple (node:net:1193:18)\n    at afterConnectMultiple (node:net:1783:7) (x2) 그리고 예상치 못한 오류가 발생했습니다\n페이지를 새로고침하면 해결될 수 있습니다.\n\n오류 세부 정보\nReferenceError: backgrounds is not defined 야 싹다 다 점검해 진짜 더 이상은 안됨",
+  "session_id": "ea24cf7d-ae25-4e07-8653-d107f3b7d61c",
+  "project_path": "/Users/choi/Desktop/dailycoding-final/dailycoding",
+  "reinforcement_count": 0,
+  "awaiting_confirmation": true,
+  "last_checked_at": "2026-04-22T02:27:04.328Z"
+}

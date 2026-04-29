@@ -1,0 +1,31 @@
+{
+  "name": "dailycoding",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "test": "node --test src/**/*.test.js",
+    "preview": "vite preview",
+    "start": "npx serve -s dist -l ${PORT:-3000}",
+    "lint": "npx eslint src --ext .js,.jsx --max-warnings 0",
+    "lint:fix": "npx eslint src --ext .js,.jsx --fix"
+  },
+  "dependencies": {
+    "@monaco-editor/react": "^4.6.0",
+    "axios": "^1.6.0",
+    "canvas-confetti": "^1.9.4",
+    "lucide-react": "^1.8.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^7.14.0",
+    "serve": "^14.2.6",
+    "socket.io-client": "^4.8.3"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.1",
+    "eslint": "^8.57.1",
+    "vite": "^5.4.2"
+  }
+}

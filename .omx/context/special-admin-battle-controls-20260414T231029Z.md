@@ -1,0 +1,23 @@
+# Task Context Snapshot
+
+- task: 관리자에서 특수유형(빈칸채우기/틀린부분찾기) 문제 생성 UI 추가, 배틀 문제 구성 비율(코딩:특수)과 문제 수를 관리자가 실시간 변경 가능하게 구현
+- desired outcome:
+  - Admin UI에서 problem_type/special_config/preferred_language 생성 가능
+  - Battle 설정(예: codingCount/fillBlankCount/bugFixCount/totalCount) 저장/적용 API + UI
+  - 배틀 문제 출제 로직이 최신 설정을 즉시 반영
+  - 특수유형 문제 seed 추가 및 사용성 개선
+- known facts:
+  - 이미 DB에 problem_type/preferred_language/special_config 마이그레이션 반영됨
+  - Battle 모델은 현재 코딩 2 + fill-blank 1 + bug-fix 1 하드코딩
+  - AdminPage/ admin routes 존재
+- constraints:
+  - 기존 메인 레이팅/티어는 coding 기준 유지
+  - 큰 리팩터링보다 호환성 중심
+- unknowns:
+  - AdminPage 현재 구조에서 설정 탭 확장 포인트
+  - 실시간 적용 저장소(redis/mysql/env) 선택
+- likely touchpoints:
+  - dailycoding/src/pages/AdminPage.jsx
+  - dailycoding-server/src/routes/admin.js
+  - dailycoding-server/src/models/Battle.js
+  - dailycoding-server/src/models/Problem.js

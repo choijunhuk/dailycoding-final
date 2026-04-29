@@ -1,0 +1,23 @@
+# Context Snapshot: deep-interview unspecified task
+
+- Task statement: User explicitly invoked `$deep-interview` but did not provide a concrete task description yet.
+- Desired outcome: Clarify what change, idea, or problem the user wants to scope before planning or execution.
+- Stated solution: Start deep-interview mode and ask the highest-leverage intent question first.
+- Probable intent hypothesis: The user wants a requirements-clarification pass for a new topic, but the target is still unspecified.
+- Known facts/evidence:
+  - The previous thread completed deep-interview skill improvements and verification.
+  - The current message contains only the deep-interview invocation, with no explicit feature/bug/request payload.
+  - A stale ralph state blocked the mode transition and was cleared before starting this interview.
+- Constraints:
+  - Ask one question only.
+  - Do not implement directly in deep-interview mode.
+  - Use plain-text questioning because structured user-input tooling is unavailable in this mode.
+- Unknowns/open questions:
+  - What exact task/topic the user wants clarified.
+  - Whether this is code-related, product-related, or process-related.
+  - Desired outcome, scope, and non-goals.
+- Decision-boundary unknowns:
+  - Whether OMX should only plan or may later execute.
+  - What choices can be made without further confirmation.
+- Likely codebase touchpoints:
+  - Unknown until the user names the target task.

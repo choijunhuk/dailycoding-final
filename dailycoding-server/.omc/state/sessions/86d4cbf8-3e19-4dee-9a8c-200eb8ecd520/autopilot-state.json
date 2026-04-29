@@ -1,0 +1,10 @@
+{
+  "active": true,
+  "started_at": "2026-04-17T09:03:01.481Z",
+  "original_prompt": "/autopilot 예상치 못한 오류가 발생했습니다\n페이지를 새로고침하면 해결될 수 있습니다.\n\n오류 세부 정보\nReferenceError: Cannot access 'isSpecialProblem' before initialization 이거뜸 그리고 다른게 아니라 문제를 풀려고 하면 자꾸 오류뜨는거야 아까도 그렇고",
+  "session_id": "86d4cbf8-3e19-4dee-9a8c-200eb8ecd520",
+  "project_path": "/Users/choi/Desktop/dailycoding-final/dailycoding-server",
+  "reinforcement_count": 0,
+  "awaiting_confirmation": true,
+  "last_checked_at": "2026-04-17T09:03:01.482Z"
+}

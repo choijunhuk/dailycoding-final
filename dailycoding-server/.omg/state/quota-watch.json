@@ -1,0 +1,12 @@
+{
+  "turn_count": 1,
+  "last_session_id": "414ca83e-09fa-4d83-8591-e385b462a115",
+  "last_event_key": "414ca83e-09fa-4d83-8591-e385b462a115:transcript:1acac90f7815de64f8c92a0b8f39b4e12aa42c38ad6fcb84c89b9a30538ff6ae",
+  "last_transcript_hash": "1acac90f7815de64f8c92a0b8f39b4e12aa42c38ad6fcb84c89b9a30538ff6ae",
+  "last_model": "gemini-3-flash-preview",
+  "last_turn_total_tokens": 31924,
+  "last_session_total_tokens": 328994,
+  "cwd_mode": "parent-leaf",
+  "last_cwd_label": "dailycoding-final/dailycoding-server",
+  "updated_at": "2026-04-13T08:27:14.053Z"
+}

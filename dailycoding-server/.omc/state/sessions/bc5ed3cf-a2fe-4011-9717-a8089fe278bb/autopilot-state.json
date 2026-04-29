@@ -1,0 +1,10 @@
+{
+  "active": true,
+  "started_at": "2026-04-09T12:06:27.024Z",
+  "original_prompt": "/autopilot",
+  "session_id": "bc5ed3cf-a2fe-4011-9717-a8089fe278bb",
+  "project_path": "/Users/choi/Desktop/dailycoding-final/dailycoding-server",
+  "reinforcement_count": 0,
+  "awaiting_confirmation": true,
+  "last_checked_at": "2026-04-09T12:06:27.025Z"
+}

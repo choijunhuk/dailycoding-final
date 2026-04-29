@@ -1,0 +1,6 @@
+{
+  "last_turn_at": "2026-04-21T14:39:33.724Z",
+  "turn_count": 3,
+  "last_progress_at": "2026-04-21T14:39:33.724Z",
+  "last_agent_output": "완료한 범위는 이번 명세에서 실제로 비어 있던 부분 위주입니다. `ai/analyze`는 사용자별 일간 캐시를 추가해 같은 날 재요청 시 캐시로 응답하고 free quota를 소모"
+}

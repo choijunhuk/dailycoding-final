@@ -1,0 +1,439 @@
+{
+  "version": "1.0.0",
+  "lastScanned": 1776824853717,
+  "projectRoot": "/Users/choi/Desktop/dailycoding-final/dailycoding",
+  "techStack": {
+    "languages": [
+      {
+        "name": "JavaScript/TypeScript",
+        "version": null,
+        "confidence": "high",
+        "markers": [
+          "package.json"
+        ]
+      }
+    ],
+    "frameworks": [
+      {
+        "name": "react",
+        "version": "18.3.1",
+        "category": "frontend"
+      },
+      {
+        "name": "react-dom",
+        "version": "18.3.1",
+        "category": "frontend"
+      },
+      {
+        "name": "vite",
+        "version": "5.4.2",
+        "category": "build"
+      }
+    ],
+    "packageManager": "npm",
+    "runtime": null
+  },
+  "build": {
+    "buildCommand": "npm run build",
+    "testCommand": null,
+    "lintCommand": "npm run lint",
+    "devCommand": "npm run dev",
+    "scripts": {
+      "dev": "vite",
+      "build": "vite build",
+      "preview": "vite preview",
+      "start": "npx serve -s dist -l ${PORT:-3000}",
+      "lint": "npx eslint src --ext .js,.jsx --max-warnings 0",
+      "lint:fix": "npx eslint src --ext .js,.jsx --fix"
+    }
+  },
+  "conventions": {
+    "namingStyle": "camelCase",
+    "importStyle": "ES modules",
+    "testPattern": null,
+    "fileOrganization": "type-based"
+  },
+  "structure": {
+    "isMonorepo": false,
+    "workspaces": [],
+    "mainDirectories": [
+      "public",
+      "src"
+    ],
+    "gitBranches": null
+  },
+  "customNotes": [],
+  "directoryMap": {
+    "dist": {
+      "path": "dist",
+      "purpose": "Distribution/build output",
+      "fileCount": 4,
+      "lastAccessed": 1776824853707,
+      "keyFiles": [
+        "_redirects",
+        "index.html",
+        "manifest.json",
+        "robots.txt"
+      ]
+    },
+    "public": {
+      "path": "public",
+      "purpose": "Public files",
+      "fileCount": 3,
+      "lastAccessed": 1776824853707,
+      "keyFiles": [
+        "_redirects",
+        "manifest.json",
+        "robots.txt"
+      ]
+    },
+    "src": {
+      "path": "src",
+      "purpose": "Source code",
+      "fileCount": 5,
+      "lastAccessed": 1776824853709,
+      "keyFiles": [
+        "App.jsx",
+        "api.js",
+        "index.css",
+        "main.jsx"
+      ]
+    },
+    "dist/assets": {
+      "path": "dist/assets",
+      "purpose": "Static assets",
+      "fileCount": 38,
+      "lastAccessed": 1776824853709,
+      "keyFiles": [
+        "AdminPage-D3sCfuD2.css",
+        "AdminPage-DLpdnVY3.js",
+        "AiPage-BFm9cZYj.js"
+      ]
+    },
+    "src/components": {
+      "path": "src/components",
+      "purpose": "UI components",
+      "fileCount": 11,
+      "lastAccessed": 1776824853710,
+      "keyFiles": [
+        "EmailVerifyGate.jsx",
+        "ErrorBoundary.jsx",
+        "MockAd.jsx"
+      ]
+    },
+    "src/data": {
+      "path": "src/data",
+      "purpose": "Data files",
+      "fileCount": 4,
+      "lastAccessed": 1776824853710,
+      "keyFiles": [
+        "constants.js",
+        "judgeLanguages.js",
+        "problemCatalog.js"
+      ]
+    }
+  },
+  "hotPaths": [
+    {
+      "path": "src/pages/ProblemsPage.jsx",
+      "accessCount": 60,
+      "lastAccessed": 1776885515077,
+      "type": "file"
+    },
+    {
+      "path": "src/pages/ProfilePage.jsx",
+      "accessCount": 45,
+      "lastAccessed": 1776885527226,
+      "type": "file"
+    },
+    {
+      "path": "src",
+      "accessCount": 27,
+      "lastAccessed": 1776839167667,
+      "type": "directory"
+    },
+    {
+      "path": "src/context/LangContext.jsx",
+      "accessCount": 26,
+      "lastAccessed": 1776885895513,
+      "type": "file"
+    },
+    {
+      "path": "src/components/TopNav.jsx",
+      "accessCount": 21,
+      "lastAccessed": 1776838938318,
+      "type": "file"
+    },
+    {
+      "path": "src/App.jsx",
+      "accessCount": 18,
+      "lastAccessed": 1776824654045,
+      "type": "file"
+    },
+    {
+      "path": "src/pages/RankingPage.jsx",
+      "accessCount": 17,
+      "lastAccessed": 1776839194118,
+      "type": "file"
+    },
+    {
+      "path": "src/pages/JudgePage.jsx",
+      "accessCount": 17,
+      "lastAccessed": 1776839220827,
+      "type": "file"
+    },
+    {
+      "path": "src/pages/Dashboard.jsx",
+      "accessCount": 16,
+      "lastAccessed": 1776839222404,
+      "type": "file"
+    },
+    {
+      "path": "src/pages/AiPage.jsx",
+      "accessCount": 16,
+      "lastAccessed": 1776885806574,
+      "type": "file"
+    },
+    {
+      "path": "src/pages/SettingsPage.jsx",
+      "accessCount": 15,
+      "lastAccessed": 1776839123814,
+      "type": "file"
+    },
+    {
+      "path": "src/pages/BattlePage.jsx",
+      "accessCount": 14,
+      "lastAccessed": 1776885852223,
+      "type": "file"
+    },
+    {
+      "path": "src/pages/AuthPage.jsx",
+      "accessCount": 13,
+      "lastAccessed": 1776839223824,
+      "type": "file"
+    },
+    {
+      "path": "src/pages/PricingPage.jsx",
+      "accessCount": 11,
+      "lastAccessed": 1776839236043,
+      "type": "file"
+    },
+    {
+      "path": "src/pages/NotFoundPage.jsx",
+      "accessCount": 11,
+      "lastAccessed": 1776862192810,
+      "type": "file"
+    },
+    {
+      "path": "src/pages/LandingPage.jsx",
+      "accessCount": 8,
+      "lastAccessed": 1776338353120,
+      "type": "file"
+    },
+    {
+      "path": "src/pages/SharedSubmissionPage.jsx",
+      "accessCount": 7,
+      "lastAccessed": 1776862421286,
+      "type": "file"
+    },
+    {
+      "path": "src/context/AuthContext.jsx",
+      "accessCount": 6,
+      "lastAccessed": 1776418273340,
+      "type": "file"
+    },
+    {
+      "path": "src/context/AppContext.jsx",
+      "accessCount": 6,
+      "lastAccessed": 1776418306307,
+      "type": "file"
+    },
+    {
+      "path": "src/components/OnboardingModal.jsx",
+      "accessCount": 6,
+      "lastAccessed": 1776839192859,
+      "type": "file"
+    },
+    {
+      "path": "src/pages/ForgotPasswordPage.jsx",
+      "accessCount": 6,
+      "lastAccessed": 1776862271348,
+      "type": "file"
+    },
+    {
+      "path": "src/pages/ResetPasswordPage.jsx",
+      "accessCount": 6,
+      "lastAccessed": 1776862335116,
+      "type": "file"
+    },
+    {
+      "path": "src/components/MockAd.jsx",
+      "accessCount": 5,
+      "lastAccessed": 1776839210458,
+      "type": "directory"
+    },
+    {
+      "path": "src/pages/SubmissionsPage.jsx",
+      "accessCount": 5,
+      "lastAccessed": 1776839222734,
+      "type": "file"
+    },
+    {
+      "path": "src/hooks/useSubscriptionStatus.js",
+      "accessCount": 4,
+      "lastAccessed": 1776418334609,
+      "type": "file"
+    },
+    {
+      "path": "src/components/VerificationBanner.jsx",
+      "accessCount": 4,
+      "lastAccessed": 1776839220406,
+      "type": "file"
+    },
+    {
+      "path": "src/components/ErrorBoundary.jsx",
+      "accessCount": 4,
+      "lastAccessed": 1776862159552,
+      "type": "file"
+    },
+    {
+      "path": "src/components/EmailVerifyGate.jsx",
+      "accessCount": 4,
+      "lastAccessed": 1776862231093,
+      "type": "file"
+    },
+    {
+      "path": "src/pages/VerifyEmailPage.jsx",
+      "accessCount": 4,
+      "lastAccessed": 1776862376334,
+      "type": "file"
+    },
+    {
+      "path": "",
+      "accessCount": 3,
+      "lastAccessed": 1775502104817,
+      "type": "directory"
+    },
+    {
+      "path": "package.json",
+      "accessCount": 3,
+      "lastAccessed": 1775695597490,
+      "type": "file"
+    },
+    {
+      "path": "index.html",
+      "accessCount": 3,
+      "lastAccessed": 1775760996616,
+      "type": "file"
+    },
+    {
+      "path": "src/hooks/useSubscriptionCheckout.js",
+      "accessCount": 3,
+      "lastAccessed": 1776338312724,
+      "type": "file"
+    },
+    {
+      "path": "src/api.js",
+      "accessCount": 3,
+      "lastAccessed": 1776418273583,
+      "type": "file"
+    },
+    {
+      "path": "src/pages/CommunityPage.jsx",
+      "accessCount": 3,
+      "lastAccessed": 1776839224452,
+      "type": "file"
+    },
+    {
+      "path": "src/pages/ExamListPage.jsx",
+      "accessCount": 3,
+      "lastAccessed": 1776839226728,
+      "type": "file"
+    },
+    {
+      "path": "src/pages/ContestPage.jsx",
+      "accessCount": 3,
+      "lastAccessed": 1776885568614,
+      "type": "file"
+    },
+    {
+      "path": "src/pages/RankingPage.css",
+      "accessCount": 2,
+      "lastAccessed": 1775759942160,
+      "type": "file"
+    },
+    {
+      "path": "src/data/problems.js",
+      "accessCount": 2,
+      "lastAccessed": 1775829893432,
+      "type": "file"
+    },
+    {
+      "path": "src/hooks/useRankingData.js",
+      "accessCount": 2,
+      "lastAccessed": 1776416013077,
+      "type": "file"
+    },
+    {
+      "path": "src/pages",
+      "accessCount": 2,
+      "lastAccessed": 1776418211685,
+      "type": "directory"
+    },
+    {
+      "path": "railway.json",
+      "accessCount": 1,
+      "lastAccessed": 1775694786263,
+      "type": "file"
+    },
+    {
+      "path": "nixpacks.toml",
+      "accessCount": 1,
+      "lastAccessed": 1775695596191,
+      "type": "file"
+    },
+    {
+      "path": ".env.production",
+      "accessCount": 1,
+      "lastAccessed": 1775696913835,
+      "type": "file"
+    },
+    {
+      "path": "public/robots.txt",
+      "accessCount": 1,
+      "lastAccessed": 1775760922045,
+      "type": "file"
+    },
+    {
+      "path": "src/pages/TermsPage.jsx",
+      "accessCount": 1,
+      "lastAccessed": 1775760959074,
+      "type": "file"
+    },
+    {
+      "path": "src/pages/PrivacyPage.jsx",
+      "accessCount": 1,
+      "lastAccessed": 1775760985918,
+      "type": "file"
+    },
+    {
+      "path": "src/data",
+      "accessCount": 1,
+      "lastAccessed": 1775829881188,
+      "type": "directory"
+    },
+    {
+      "path": "src/hooks",
+      "accessCount": 1,
+      "lastAccessed": 1776337280315,
+      "type": "directory"
+    },
+    {
+      "path": "vite.config.js",
+      "accessCount": 1,
+      "lastAccessed": 1776416212863,
+      "type": "file"
+    }
+  ],
+  "userDirectives": []
+}

@@ -1,0 +1,12 @@
+{
+  "last_session_id": "414ca83e-09fa-4d83-8591-e385b462a115",
+  "last_event_key": "414ca83e-09fa-4d83-8591-e385b462a115:transcript:1acac90f7815de64f8c92a0b8f39b4e12aa42c38ad6fcb84c89b9a30538ff6ae",
+  "last_prompted_session_id": "",
+  "last_prompted_at": "",
+  "last_reason": "short-session",
+  "last_user_message_count": 1,
+  "last_actionable_message_count": 1,
+  "deep_interview_lock_active": false,
+  "deep_interview_lock_source": "/Users/choi/Desktop/dailycoding-final/dailycoding-server/.omg/state/deep-interview.json",
+  "updated_at": "2026-04-13T08:27:14.042Z"
+}

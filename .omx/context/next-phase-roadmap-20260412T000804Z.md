@@ -1,0 +1,22 @@
+# Context Snapshot: next-phase-roadmap
+
+- Task statement: Review CLAUDE.md and current codebase, then build a consensus roadmap for the next wave of work.
+- Desired outcome: Prioritized PRD and test spec covering judge completion/optimization, performance optimization, existing feature improvements, security/stability, design improvements, and new features.
+- Known facts/evidence:
+  - Monorepo has `dailycoding/` (React/Vite) and `dailycoding-server/` (Express/Node).
+  - `CLAUDE.md` documents dual judge backends and claims all 5 languages are supported in both Docker and native modes.
+  - Fresh frontend verification: `npm run build` passes.
+  - Fresh backend verification: `node --test src/services/judge.test.js` fails because tests still expect Python-only native mode while current `judge.js` exposes all languages in native mode.
+  - Key judge touchpoints: `dailycoding-server/src/services/judge.js`, `src/routes/submissions.js`, `src/routes/battles.js`, and `dailycoding/src/pages/JudgePage.jsx`.
+- Constraints:
+  - Planning only for this turn; do not implement without execution handoff.
+  - Keep Railway deployment viability in mind.
+  - Prefer small, verifiable phases.
+- Unknowns/open questions:
+  - Whether current all-language native implementation is truly safe enough for Railway production.
+  - Whether battle judging and submissions judging have full parity.
+  - Which existing UX issues hurt user retention the most.
+- Likely codebase touchpoints:
+  - Backend judge/runtime routes and tests
+  - Auth, ranking, notifications, problem/submission flows
+  - Frontend JudgePage, Dashboard, Problems/Profile/Ranking pages, shared nav/loading states

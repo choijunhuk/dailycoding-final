@@ -1,0 +1,21 @@
+# Context Snapshot: deep-interview skill improvements
+
+- Task statement: Plan improvements for `/Users/choi/.codex/skills/deep-interview/SKILL.md` after a review of correctness, maintainability, and execution-contract clarity.
+- Desired outcome: A consensus-approved change plan that tightens the deep-interview skill's runtime contract, reduces ambiguity in execution, and preserves the skill's strengths.
+- Known facts/evidence:
+  - The skill strongly emphasizes intent-first questioning, one-question rounds, pressure-pass revisits, and explicit non-goals/decision boundaries.
+  - The skill references mixed tool contracts (`AskUserQuestion`, `request_user_input`, `state_write`, `state_read`) without a single ordered fallback path.
+  - Weighted ambiguity scoring excludes readiness-gate fields such as Non-goals and Decision Boundaries even though those are mandatory to proceed.
+  - The initial state schema omits several fields the workflow later depends on, such as dimension score history and gate completion status.
+  - The workflow classifies only `greenfield|brownfield`, but this task is effectively a meta/artifact-review case.
+  - Quick mode currently appears to inherit the same artifact burden as larger profiles.
+- Constraints:
+  - No implementation during ralplan; output plan only.
+  - Prefer small, reversible edits to the skill contract.
+  - Preserve the core philosophy of deep-interview rather than rewriting it into a different workflow.
+- Unknowns/open questions:
+  - Whether supporting docs (`plan`/`ralplan`) need synchronized wording changes.
+  - Whether artifact generation policy should vary by profile or by residual ambiguity only.
+- Likely codebase touchpoints:
+  - `/Users/choi/.codex/skills/deep-interview/SKILL.md`
+  - Potentially `/Users/choi/.codex/skills/plan/SKILL.md` and `/Users/choi/.codex/skills/ralplan/SKILL.md` if cross-skill wording needs alignment.

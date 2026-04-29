@@ -1,0 +1,12 @@
+{"timestamp":"2026-04-19T17:24:47.338Z","type":"tmux_hook","mode":null,"reason":"invalid_config","turn_id":"019da6b6-3d52-79d2-8c05-c07b7dd67992","thread_id":"019da6b4-e6ba-7903-b131-639aefce0f89","target":null,"dry_run":false,"sent":false,"event":"injection_skipped"}
+{"timestamp":"2026-04-19T17:24:47.425Z","type":"auto_nudge_skipped","reason":"unmanaged_session"}
+{"timestamp":"2026-04-19T17:44:32.455Z","type":"tmux_hook","mode":null,"reason":"invalid_config","turn_id":"019da6d0-0a6b-7b41-a42c-3934252e15b1","thread_id":"019da6b4-e6ba-7903-b131-639aefce0f89","target":null,"dry_run":false,"sent":false,"event":"injection_skipped"}
+{"timestamp":"2026-04-19T17:44:32.554Z","type":"auto_nudge_skipped","reason":"unmanaged_session"}
+{"timestamp":"2026-04-19T18:05:53.128Z","type":"tmux_hook","mode":null,"reason":"invalid_config","turn_id":"019da6e6-776e-7a82-bbdc-75986fd47d2a","thread_id":"019da6b4-e6ba-7903-b131-639aefce0f89","target":null,"dry_run":false,"sent":false,"event":"injection_skipped"}
+{"timestamp":"2026-04-19T18:05:53.184Z","type":"auto_nudge_skipped","reason":"unmanaged_session"}
+{"timestamp":"2026-04-19T22:22:39.566Z","type":"tmux_hook","mode":null,"reason":"invalid_config","turn_id":"019da7d5-590f-7e30-bdb9-f00a76c44877","thread_id":"019da6b4-e6ba-7903-b131-639aefce0f89","target":null,"dry_run":false,"sent":false,"event":"injection_skipped"}
+{"timestamp":"2026-04-19T22:22:39.625Z","type":"auto_nudge_skipped","reason":"unmanaged_session"}
+{"timestamp":"2026-04-19T23:31:05.080Z","type":"tmux_hook","mode":null,"reason":"invalid_config","turn_id":"019da7d7-4bce-7a92-a178-49d9ae2239f1","thread_id":"019da6b4-e6ba-7903-b131-639aefce0f89","target":null,"dry_run":false,"sent":false,"event":"injection_skipped"}
+{"timestamp":"2026-04-19T23:31:05.124Z","type":"auto_nudge_skipped","reason":"unmanaged_session"}
+{"timestamp":"2026-04-19T23:34:31.442Z","type":"tmux_hook","mode":null,"reason":"invalid_config","turn_id":"019da816-d0fb-7d10-a1a5-ed32b8239e3d","thread_id":"019da6b4-e6ba-7903-b131-639aefce0f89","target":null,"dry_run":false,"sent":false,"event":"injection_skipped"}
+{"timestamp":"2026-04-19T23:34:31.486Z","type":"auto_nudge_skipped","reason":"unmanaged_session"}

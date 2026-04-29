@@ -1,0 +1,70 @@
+/* TopNav */
+.topnav {
+  user-select: none;
+}
+
+/* 모바일 햄버거 버튼 — 기본 숨김, 모바일에서만 표시 */
+.topnav-hamburger {
+  display: none;
+  width: 44px; height: 44px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg2);
+  cursor: pointer;
+  font-size: 16px;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.topnav-overlay {
+  position: fixed;
+  inset: 54px 0 0;
+  background: rgba(0,0,0,.45);
+  backdrop-filter: blur(4px);
+  z-index: 98;
+}
+
+/* 모바일 드롭다운 메뉴 */
+.topnav-mobile-menu {
+  display: none;
+  position: fixed;
+  top: 54px; left: 0; right: 0;
+  background: var(--glass-bg);
+  border-bottom: 1px solid var(--border);
+  padding: 12px;
+  z-index: 99;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: 0 14px 32px rgba(0,0,0,.35);
+}
+.topnav-mobile-menu.open { display: flex; }
+
+.topnav-mobile-btn {
+  width: 100%;
+  min-height: 44px;
+  padding: 12px 14px;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: background .15s;
+}
+.topnav-mobile-btn:hover { background: var(--bg3); }
+.topnav-mobile-btn.active { background: var(--bg3); color: var(--text); }
+
+@media (max-width: 768px) {
+  .topnav-desktop-nav { display: none !important; }
+  .topnav-hamburger { display: flex; }
+  .topnav-server-status { display: none !important; }
+}
+
+@keyframes pulse2 { 0%,100%{transform:scale(1)} 50%{transform:scale(1.2)} }

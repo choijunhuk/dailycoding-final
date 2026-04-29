@@ -1,0 +1,81 @@
+{
+  "updatedAt": "2026-04-26T09:16:46.882Z",
+  "missions": [
+    {
+      "id": "session:bc5ed3cf-a2fe-4011-9717-a8089fe278bb:none",
+      "source": "session",
+      "name": "none",
+      "objective": "Session mission",
+      "createdAt": "2026-04-07T12:20:22.353Z",
+      "updatedAt": "2026-04-08T00:42:30.550Z",
+      "status": "running",
+      "workerCount": 3,
+      "taskCounts": {
+        "total": 3,
+        "pending": 0,
+        "blocked": 0,
+        "inProgress": 1,
+        "completed": 2,
+        "failed": 0
+      },
+      "agents": [
+        {
+          "name": "Explore:a1d6285",
+          "role": "Explore",
+          "ownership": "a1d6285574921d5f8",
+          "status": "done",
+          "currentStep": null,
+          "latestUpdate": "completed",
+          "completedSummary": null,
+          "updatedAt": "2026-04-07T12:22:31.209Z"
+        },
+        {
+          "name": "analyst:a19e878",
+          "role": "analyst",
+          "ownership": "a19e87856c71a7359",
+          "status": "done",
+          "currentStep": null,
+          "latestUpdate": "completed",
+          "completedSummary": null,
+          "updatedAt": "2026-04-08T00:42:10.401Z"
+        },
+        {
+          "name": "architect:afddcfb",
+          "role": "architect",
+          "ownership": "afddcfbe11fa198d7",
+          "status": "running",
+          "currentStep": null,
+          "latestUpdate": null,
+          "completedSummary": null,
+          "updatedAt": "2026-04-08T00:42:30.550Z"
+        }
+      ],
+      "timeline": [
+        {
+          "id": "session-start:a19e87856c71a7359:2026-04-07T12:23:03.876Z",
+          "at": "2026-04-07T12:23:03.876Z",
+          "kind": "update",
+          "agent": "analyst:a19e878",
+          "detail": "started analyst:a19e878",
+          "sourceKey": "session-start:a19e87856c71a7359"
+        },
+        {
+          "id": "session-stop:a19e87856c71a7359:2026-04-08T00:42:10.401Z",
+          "at": "2026-04-08T00:42:10.401Z",
+          "kind": "completion",
+          "agent": "analyst:a19e878",
+          "detail": "completed",
+          "sourceKey": "session-stop:a19e87856c71a7359"
+        },
+        {
+          "id": "session-start:afddcfbe11fa198d7:2026-04-08T00:42:30.550Z",
+          "at": "2026-04-08T00:42:30.550Z",
+          "kind": "update",
+          "agent": "architect:afddcfb",
+          "detail": "started architect:afddcfb",
+          "sourceKey": "session-start:afddcfbe11fa198d7"
+        }
+      ]
+    }
+  ]
+}

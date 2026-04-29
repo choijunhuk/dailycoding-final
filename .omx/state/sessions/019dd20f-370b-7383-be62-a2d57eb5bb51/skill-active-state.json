@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "active": true,
+  "skill": "autopilot",
+  "keyword": "$autopilot",
+  "phase": "planning",
+  "activated_at": "2026-04-29T03:07:34.001Z",
+  "updated_at": "2026-04-29T03:07:34.001Z",
+  "source": "keyword-detector",
+  "session_id": "019dd20f-370b-7383-be62-a2d57eb5bb51",
+  "thread_id": "019dd20f-370b-7383-be62-a2d57eb5bb51",
+  "turn_id": "019dd733-7b1f-7961-be69-fd77a5be2209",
+  "active_skills": [
+    {
+      "skill": "autopilot",
+      "phase": "planning",
+      "active": true,
+      "activated_at": "2026-04-29T03:07:34.001Z",
+      "updated_at": "2026-04-29T03:07:34.001Z",
+      "session_id": "019dd20f-370b-7383-be62-a2d57eb5bb51",
+      "thread_id": "019dd20f-370b-7383-be62-a2d57eb5bb51",
+      "turn_id": "019dd733-7b1f-7961-be69-fd77a5be2209"
+    }
+  ],
+  "initialized_mode": "autopilot",
+  "initialized_state_path": ".omx/state/sessions/019dd20f-370b-7383-be62-a2d57eb5bb51/autopilot-state.json"
+}

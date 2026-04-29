@@ -1,0 +1,10 @@
+{
+  "active": true,
+  "started_at": "2026-04-22T06:11:55.621Z",
+  "original_prompt": "/autopilot ko en 이거 제대로 완수 안했어  ko랑 en이랑 섞임 그리고 다른거도 다 확인해서 완벽하게 만들 수 있는 프롬포트를 작성해줘 너한테 줄 꺼고 한번에 완벽하게 수행할 수 있게 해줘야해 지금은 점검단계 + 프롬포트 작성단계라고 생각해",
+  "session_id": "ea24cf7d-ae25-4e07-8653-d107f3b7d61c",
+  "project_path": "/Users/choi/Desktop/dailycoding-final/dailycoding-server",
+  "reinforcement_count": 0,
+  "awaiting_confirmation": true,
+  "last_checked_at": "2026-04-22T06:11:55.622Z"
+}

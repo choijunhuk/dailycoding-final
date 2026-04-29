@@ -1,0 +1,26 @@
+# 환경변수 (API Key, JWT Secret 등 절대 올리면 안됨)
+.env
+.env.local
+.env.production
+.env.bak
+.env.*.bak
+
+# 의존성
+node_modules/
+
+# 로그
+*.log
+npm-debug.log*
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Coverage / temp
+coverage/
+.cache/

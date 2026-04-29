@@ -1,0 +1,16 @@
+{
+  "lanes": {
+    "active": "critical",
+    "critical": {
+      "owner": "omg-director",
+      "status": "dirty",
+      "baseline": "HEAD",
+      "trust": "high",
+      "handoff": "pending"
+    }
+  },
+  "workspace": {
+    "clean": false,
+    "last_checkpoint": null
+  }
+}

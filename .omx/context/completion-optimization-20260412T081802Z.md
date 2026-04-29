@@ -1,0 +1,36 @@
+# Context Snapshot: completion-optimization
+
+- task statement:
+  - Rebuild the unfinished-work and optimization plan as a consensus-backed execution plan grounded in the current repository state.
+- desired outcome:
+  - A consensus-approved PRD and test spec that prioritize fixing broken judge paths, separating sample run from submission, aligning judge policy, and then optimizing frontend loading and shared fetches.
+- known facts/evidence:
+  - Frontend build passes: `cd dailycoding && npm run build`.
+  - Backend judge test currently fails before assertions due to duplicate `OUTPUT_LIMIT` declaration in `dailycoding-server/src/services/judge.js`.
+  - `dailycoding-server/src/services/judge.test.js` currently expects 5-language native support, not Python-only.
+  - `dailycoding-server/src/routes/battles.js` already routes code judging through `judgeCode` or `judgeCodeNative`; the older roadmap's 503-native assumption is stale.
+  - `dailycoding/src/pages/JudgePage.jsx` uses `/api/submissions` for "예제 실행", so sample runs currently create submission-side effects.
+  - `customInput` exists in Judge UI but is not forwarded into a dedicated run API flow.
+  - Frontend app shell eagerly imports large pages in `dailycoding/src/App.jsx`, contributing to a large initial JS chunk.
+  - Ranking and subscription status are fetched redundantly across multiple pages/components.
+- constraints:
+  - Planning only in this turn; do not implement code changes.
+  - No new dependencies should be introduced by the plan.
+  - Plans must be evidence-based, testable, and suitable for later `$ralph` or `$team` handoff.
+- unknowns/open questions:
+  - Whether battle native judge should remain fully supported or be narrowed to match submissions policy.
+  - Whether sample-run should support both example batches and arbitrary custom input through one route or separate routes.
+  - Which large page should be split first after the judge-path fixes.
+- likely codebase touchpoints:
+  - `dailycoding-server/src/services/judge.js`
+  - `dailycoding-server/src/services/judge.test.js`
+  - `dailycoding-server/src/routes/submissions.js`
+  - `dailycoding-server/src/routes/battles.js`
+  - `dailycoding/src/pages/JudgePage.jsx`
+  - `dailycoding/src/App.jsx`
+  - `dailycoding/src/context/AppContext.jsx`
+  - `dailycoding/src/components/TopNav.jsx`
+  - `dailycoding/src/pages/Dashboard.jsx`
+  - `dailycoding/src/pages/RankingPage.jsx`
+  - `dailycoding/src/pages/ProfilePage.jsx`
+  - `dailycoding/src/pages/PricingPage.jsx`

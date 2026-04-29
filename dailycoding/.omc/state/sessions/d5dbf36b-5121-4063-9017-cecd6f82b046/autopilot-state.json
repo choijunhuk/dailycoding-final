@@ -1,0 +1,10 @@
+{
+  "active": true,
+  "started_at": "2026-04-10T21:16:11.102Z",
+  "original_prompt": "/autopilot 더 기능추가나 개선이나 수정해야할부분 디버깅해야할부분 보안적으로 해결해야하는 부분을 해줘",
+  "session_id": "d5dbf36b-5121-4063-9017-cecd6f82b046",
+  "project_path": "/Users/choi/Desktop/dailycoding-final/dailycoding",
+  "reinforcement_count": 0,
+  "awaiting_confirmation": true,
+  "last_checked_at": "2026-04-10T21:16:11.103Z"
+}

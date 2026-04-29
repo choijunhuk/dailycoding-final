@@ -1,0 +1,42 @@
+{
+  "name": "dailycoding-server",
+  "version": "2.0.0",
+  "description": "DailyCoding Backend API (MySQL + Redis + Docker Sandbox)",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "nodemon src/index.js",
+    "start": "node src/index.js",
+    "docker": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f api",
+    "test": "NODE_ENV=test node --test --test-force-exit --test-timeout=10000 src/**/*.test.js",
+    "test:single": "NODE_ENV=test node --test",
+    "lint": "npx eslint src --ext .js --max-warnings 0",
+    "lint:fix": "npx eslint src --ext .js --fix"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.21.0",
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dockerode": "^4.0.2",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-rate-limit": "^7.5.1",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^2.1.1",
+    "mysql2": "^3.6.5",
+    "nodemailer": "^8.0.5",
+    "redis": "^4.6.12",
+    "socket.io": "^4.8.3",
+    "stripe": "^22.0.1",
+    "winston": "^3.19.0",
+    "xss": "^1.0.15"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.1",
+    "nodemon": "^3.0.2"
+  }
+}

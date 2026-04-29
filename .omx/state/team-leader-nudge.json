@@ -1,0 +1,99 @@
+{
+  "last_nudged_by_team": {
+    "omx-plans-prd-post-change-road": {
+      "at": "2026-04-12T00:26:51.354Z",
+      "last_message_id": "",
+      "reason": "stale_leader_panes_alive",
+      "orchestration_intent": "stalled-unblock"
+    },
+    "dailycoding-full-stack-improve": {
+      "at": "2026-04-14T16:19:09.434Z",
+      "last_message_id": "85fc931d-24e7-404b-8fb5-d6009971f8ac",
+      "reason": "ack_without_start_evidence",
+      "orchestration_intent": "followup-relaunch"
+    }
+  },
+  "last_idle_nudged_by_team": {},
+  "progress_by_team": {
+    "omx-plans-prd-deep-interview-s": {
+      "signature": "{\"tasks\":[{\"id\":\"1\",\"owner\":\"worker-1\",\"status\":\"pending\"},{\"id\":\"2\",\"owner\":\"worker-2\",\"status\":\"pending\"},{\"id\":\"3\",\"owner\":\"worker-2\",\"status\":\"pending\"}],\"workers\":[{\"worker\":\"worker-1\",\"state\":\"unknown\",\"current_task_id\":\"1\",\"status_missing\":false,\"turn_count\":null,\"heartbeat_missing\":true},{\"worker\":\"worker-2\",\"state\":\"unknown\",\"current_task_id\":\"\",\"status_missing\":true,\"turn_count\":null,\"heartbeat_missing\":true},{\"worker\":\"worker-3\",\"state\":\"unknown\",\"current_task_id\":\"\",\"status_missing\":true,\"turn_count\":null,\"heartbeat_missing\":true}]}",
+      "last_progress_at": "2026-04-11T18:19:24.692Z",
+      "observed_at": "2026-04-11T18:19:30.286Z",
+      "missing_signal_workers": 3,
+      "work_remaining": true,
+      "leader_action_state": "still_actionable",
+      "leader_attention_pending": false,
+      "leader_attention_reason": null,
+      "leader_stale": false,
+      "all_workers_idle": false,
+      "pending_task_count": 3,
+      "unread_leader_message_count": 0,
+      "stalled_for_ms": null,
+      "source": "notify_hook"
+    },
+    "omx-plans-prd-post-change-road": {
+      "signature": "{\"tasks\":[{\"id\":\"1\",\"owner\":\"worker-1\",\"status\":\"in_progress\"},{\"id\":\"2\",\"owner\":\"worker-2\",\"status\":\"pending\"},{\"id\":\"3\",\"owner\":\"worker-2\",\"status\":\"pending\"},{\"id\":\"4\",\"owner\":\"worker-1\",\"status\":\"pending\"}],\"workers\":[{\"worker\":\"worker-1\",\"state\":\"unknown\",\"current_task_id\":\"1\",\"status_missing\":false,\"turn_count\":null,\"heartbeat_missing\":true},{\"worker\":\"worker-2\",\"state\":\"unknown\",\"current_task_id\":\"2\",\"status_missing\":false,\"turn_count\":null,\"heartbeat_missing\":true},{\"worker\":\"worker-3\",\"state\":\"unknown\",\"current_task_id\":\"\",\"status_missing\":false,\"turn_count\":null,\"heartbeat_missing\":true},{\"worker\":\"worker-4\",\"state\":\"unknown\",\"current_task_id\":\"\",\"status_missing\":true,\"turn_count\":null,\"heartbeat_missing\":true}]}",
+      "last_progress_at": "2026-04-12T00:30:28.140Z",
+      "observed_at": "2026-04-12T00:30:58.173Z",
+      "missing_signal_workers": 4,
+      "work_remaining": true,
+      "leader_action_state": "still_actionable",
+      "leader_attention_pending": false,
+      "leader_attention_reason": null,
+      "leader_stale": false,
+      "all_workers_idle": false,
+      "pending_task_count": 4,
+      "unread_leader_message_count": 3,
+      "stalled_for_ms": null,
+      "source": "notify_hook"
+    },
+    "dailycoding-full-stack-improve": {
+      "signature": "{\"tasks\":[{\"id\":\"1\",\"owner\":\"worker-1\",\"status\":\"in_progress\"},{\"id\":\"2\",\"owner\":\"worker-2\",\"status\":\"in_progress\"},{\"id\":\"3\",\"owner\":\"worker-3\",\"status\":\"in_progress\"}],\"workers\":[{\"worker\":\"worker-1\",\"state\":\"unknown\",\"current_task_id\":\"1\",\"status_missing\":false,\"turn_count\":null,\"heartbeat_missing\":true},{\"worker\":\"worker-2\",\"state\":\"unknown\",\"current_task_id\":\"2\",\"status_missing\":false,\"turn_count\":null,\"heartbeat_missing\":true},{\"worker\":\"worker-3\",\"state\":\"in_progress\",\"current_task_id\":\"3\",\"status_missing\":false,\"turn_count\":null,\"heartbeat_missing\":true}]}",
+      "last_progress_at": "2026-04-14T16:20:30.516Z",
+      "observed_at": "2026-04-14T16:21:35.269Z",
+      "missing_signal_workers": 3,
+      "work_remaining": true,
+      "leader_action_state": "still_actionable",
+      "leader_attention_pending": false,
+      "leader_attention_reason": null,
+      "leader_stale": false,
+      "all_workers_idle": false,
+      "pending_task_count": 3,
+      "unread_leader_message_count": 7,
+      "stalled_for_ms": null,
+      "source": "notify_hook"
+    },
+    "dailycoding-ux": {
+      "signature": "{\"tasks\":[{\"id\":\"1\",\"owner\":\"worker-1\",\"status\":\"completed\"}],\"workers\":[{\"worker\":\"worker-1\",\"state\":\"idle\",\"current_task_id\":\"\",\"status_missing\":false,\"turn_count\":null,\"heartbeat_missing\":true}]}",
+      "last_progress_at": "2026-04-14T16:31:59.639Z",
+      "observed_at": "2026-04-14T16:34:21.981Z",
+      "missing_signal_workers": 1,
+      "work_remaining": false,
+      "leader_action_state": "done_waiting_on_leader",
+      "leader_attention_pending": true,
+      "leader_attention_reason": "done_waiting_on_leader",
+      "leader_stale": true,
+      "all_workers_idle": true,
+      "pending_task_count": 0,
+      "unread_leader_message_count": 6,
+      "stalled_for_ms": null,
+      "source": "notify_hook"
+    },
+    "dailycoding-1-ui-2-3-seed": {
+      "signature": "{\"tasks\":[{\"id\":\"1\",\"owner\":\"worker-1\",\"status\":\"in_progress\"},{\"id\":\"2\",\"owner\":\"worker-2\",\"status\":\"in_progress\"},{\"id\":\"3\",\"owner\":\"worker-1\",\"status\":\"pending\"}],\"workers\":[{\"worker\":\"worker-1\",\"state\":\"unknown\",\"current_task_id\":\"1\",\"status_missing\":false,\"turn_count\":null,\"heartbeat_missing\":true},{\"worker\":\"worker-2\",\"state\":\"unknown\",\"current_task_id\":\"2\",\"status_missing\":false,\"turn_count\":null,\"heartbeat_missing\":true}]}",
+      "last_progress_at": "2026-04-14T23:11:46.517Z",
+      "observed_at": "2026-04-14T23:15:52.748Z",
+      "missing_signal_workers": 2,
+      "work_remaining": true,
+      "leader_action_state": "stuck_waiting_on_leader",
+      "leader_attention_pending": true,
+      "leader_attention_reason": "stuck_waiting_on_leader",
+      "leader_stale": true,
+      "all_workers_idle": false,
+      "pending_task_count": 3,
+      "unread_leader_message_count": 4,
+      "stalled_for_ms": 246231,
+      "source": "notify_hook"
+    }
+  }
+}

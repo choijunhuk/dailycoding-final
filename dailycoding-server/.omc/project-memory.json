@@ -1,0 +1,353 @@
+{
+  "version": "1.0.0",
+  "lastScanned": 1776296286766,
+  "projectRoot": "/Users/choi/Desktop/dailycoding-final/dailycoding-server",
+  "techStack": {
+    "languages": [
+      {
+        "name": "JavaScript/TypeScript",
+        "version": null,
+        "confidence": "high",
+        "markers": [
+          "package.json"
+        ]
+      }
+    ],
+    "frameworks": [
+      {
+        "name": "express",
+        "version": "4.18.2",
+        "category": "backend"
+      }
+    ],
+    "packageManager": "npm",
+    "runtime": null
+  },
+  "build": {
+    "buildCommand": null,
+    "testCommand": null,
+    "lintCommand": null,
+    "devCommand": "npm run dev",
+    "scripts": {
+      "dev": "nodemon src/index.js",
+      "start": "node src/index.js",
+      "docker": "docker-compose up -d",
+      "docker:down": "docker-compose down",
+      "docker:logs": "docker-compose logs -f api"
+    }
+  },
+  "conventions": {
+    "namingStyle": "camelCase",
+    "importStyle": null,
+    "testPattern": null,
+    "fileOrganization": null
+  },
+  "structure": {
+    "isMonorepo": false,
+    "workspaces": [],
+    "mainDirectories": [
+      "src"
+    ],
+    "gitBranches": null
+  },
+  "customNotes": [],
+  "directoryMap": {
+    "src": {
+      "path": "src",
+      "purpose": "Source code",
+      "fileCount": 1,
+      "lastAccessed": 1776296286752,
+      "keyFiles": [
+        "index.js"
+      ]
+    },
+    "src/config": {
+      "path": "src/config",
+      "purpose": "Configuration files",
+      "fileCount": 4,
+      "lastAccessed": 1776296286755,
+      "keyFiles": [
+        "dateutil.js",
+        "logger.js",
+        "mysql.js"
+      ]
+    },
+    "src/middleware": {
+      "path": "src/middleware",
+      "purpose": "Middleware",
+      "fileCount": 4,
+      "lastAccessed": 1776296286755,
+      "keyFiles": [
+        "auth.js",
+        "rateLimit.js",
+        "rateLimit.test.js"
+      ]
+    },
+    "src/migrations": {
+      "path": "src/migrations",
+      "purpose": "Database migrations",
+      "fileCount": 11,
+      "lastAccessed": 1776296286755,
+      "keyFiles": [
+        "001_commercial.sql",
+        "002_tier_redesign.sql",
+        "003_submission_preferences.sql"
+      ]
+    },
+    "src/models": {
+      "path": "src/models",
+      "purpose": "Data models",
+      "fileCount": 9,
+      "lastAccessed": 1776296286756,
+      "keyFiles": [
+        "Battle.js",
+        "Contest.js",
+        "Note.js"
+      ]
+    },
+    "src/routes": {
+      "path": "src/routes",
+      "purpose": "Route handlers",
+      "fileCount": 20,
+      "lastAccessed": 1776296286756,
+      "keyFiles": [
+        "admin.js",
+        "ai.js",
+        "auth.js"
+      ]
+    },
+    "src/services": {
+      "path": "src/services",
+      "purpose": "Business logic services",
+      "fileCount": 9,
+      "lastAccessed": 1776296286756,
+      "keyFiles": [
+        "ai.js",
+        "battle.test.js",
+        "email.js"
+      ]
+    },
+    "src/utils": {
+      "path": "src/utils",
+      "purpose": "Utility functions",
+      "fileCount": 1,
+      "lastAccessed": 1776296286756,
+      "keyFiles": [
+        "dumpAnon.js"
+      ]
+    }
+  },
+  "hotPaths": [
+    {
+      "path": "src/routes/battles.js",
+      "accessCount": 28,
+      "lastAccessed": 1776322115736,
+      "type": "directory"
+    },
+    {
+      "path": "src/routes/auth.js",
+      "accessCount": 26,
+      "lastAccessed": 1776322351117,
+      "type": "file"
+    },
+    {
+      "path": "src/index.js",
+      "accessCount": 25,
+      "lastAccessed": 1776366632406,
+      "type": "file"
+    },
+    {
+      "path": "src/services/judge.js",
+      "accessCount": 24,
+      "lastAccessed": 1776321876496,
+      "type": "file"
+    },
+    {
+      "path": "src/routes/submissions.js",
+      "accessCount": 18,
+      "lastAccessed": 1776322119536,
+      "type": "file"
+    },
+    {
+      "path": "src",
+      "accessCount": 18,
+      "lastAccessed": 1776366568681,
+      "type": "directory"
+    },
+    {
+      "path": "src/models/User.js",
+      "accessCount": 16,
+      "lastAccessed": 1776322357797,
+      "type": "file"
+    },
+    {
+      "path": "src/shared/problemCatalog.js",
+      "accessCount": 12,
+      "lastAccessed": 1776360460025,
+      "type": "file"
+    },
+    {
+      "path": "src/routes/subscription.js",
+      "accessCount": 12,
+      "lastAccessed": 1776369256269,
+      "type": "file"
+    },
+    {
+      "path": "src/routes/problems.js",
+      "accessCount": 10,
+      "lastAccessed": 1776322195533,
+      "type": "file"
+    },
+    {
+      "path": "src/routes/ai.js",
+      "accessCount": 7,
+      "lastAccessed": 1775921288586,
+      "type": "file"
+    },
+    {
+      "path": "src/routes/contests.js",
+      "accessCount": 7,
+      "lastAccessed": 1775921292825,
+      "type": "file"
+    },
+    {
+      "path": "src/routes",
+      "accessCount": 7,
+      "lastAccessed": 1776322365918,
+      "type": "directory"
+    },
+    {
+      "path": "src/config/redis.js",
+      "accessCount": 7,
+      "lastAccessed": 1776322385982,
+      "type": "file"
+    },
+    {
+      "path": "src/middleware/auth.js",
+      "accessCount": 5,
+      "lastAccessed": 1775921269388,
+      "type": "file"
+    },
+    {
+      "path": "src/models/Notification.js",
+      "accessCount": 5,
+      "lastAccessed": 1775921288074,
+      "type": "file"
+    },
+    {
+      "path": "src/models/Submission.js",
+      "accessCount": 5,
+      "lastAccessed": 1775921446925,
+      "type": "file"
+    },
+    {
+      "path": "src/routes/notifications.js",
+      "accessCount": 5,
+      "lastAccessed": 1776322191432,
+      "type": "file"
+    },
+    {
+      "path": "src/routes/follows.js",
+      "accessCount": 4,
+      "lastAccessed": 1775874157218,
+      "type": "file"
+    },
+    {
+      "path": "src/config/mysql.js",
+      "accessCount": 3,
+      "lastAccessed": 1775921292592,
+      "type": "file"
+    },
+    {
+      "path": "Dockerfile",
+      "accessCount": 3,
+      "lastAccessed": 1775951502521,
+      "type": "file"
+    },
+    {
+      "path": "src/routes/ranking.js",
+      "accessCount": 2,
+      "lastAccessed": 1775921349360,
+      "type": "file"
+    },
+    {
+      "path": "src/middleware/rateLimit.js",
+      "accessCount": 2,
+      "lastAccessed": 1775954103061,
+      "type": "file"
+    },
+    {
+      "path": "",
+      "accessCount": 2,
+      "lastAccessed": 1776366568046,
+      "type": "directory"
+    },
+    {
+      "path": "src/services/email.js",
+      "accessCount": 1,
+      "lastAccessed": 1775733704524,
+      "type": "file"
+    },
+    {
+      "path": "src/middleware/validate.js",
+      "accessCount": 1,
+      "lastAccessed": 1775873479081,
+      "type": "file"
+    },
+    {
+      "path": "src/models/Problem.js",
+      "accessCount": 1,
+      "lastAccessed": 1775921260774,
+      "type": "file"
+    },
+    {
+      "path": "src/services/socketServer.js",
+      "accessCount": 1,
+      "lastAccessed": 1775921269065,
+      "type": "file"
+    },
+    {
+      "path": "src/models/Battle.js",
+      "accessCount": 1,
+      "lastAccessed": 1775921284319,
+      "type": "file"
+    },
+    {
+      "path": "src/config",
+      "accessCount": 1,
+      "lastAccessed": 1775921285014,
+      "type": "directory"
+    },
+    {
+      "path": "package.json",
+      "accessCount": 1,
+      "lastAccessed": 1775923340833,
+      "type": "file"
+    },
+    {
+      "path": "src/routes/admin.js",
+      "accessCount": 1,
+      "lastAccessed": 1776322380315,
+      "type": "file"
+    },
+    {
+      "path": "src/routes/community.js",
+      "accessCount": 1,
+      "lastAccessed": 1776322400975,
+      "type": "file"
+    },
+    {
+      "path": "src/routes/teams.js",
+      "accessCount": 1,
+      "lastAccessed": 1776322405232,
+      "type": "file"
+    },
+    {
+      "path": "src/models/Team.js",
+      "accessCount": 1,
+      "lastAccessed": 1776322410457,
+      "type": "directory"
+    }
+  ],
+  "userDirectives": []
+}

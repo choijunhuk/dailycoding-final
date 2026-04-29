@@ -1,0 +1,10 @@
+{
+  "active": true,
+  "started_at": "2026-04-22T01:50:42.444Z",
+  "original_prompt": "/oh-my-claudecode:autopilot 문제 데이터 넣어줘",
+  "session_id": "ea24cf7d-ae25-4e07-8653-d107f3b7d61c",
+  "project_path": "/Users/choi/Desktop/dailycoding-final",
+  "reinforcement_count": 0,
+  "awaiting_confirmation": true,
+  "last_checked_at": "2026-04-22T01:50:42.445Z"
+}

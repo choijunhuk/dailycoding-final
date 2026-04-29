@@ -1,0 +1,93 @@
+.contest-page {
+  padding: 24px 28px; max-width: 1300px; margin: 0 auto;
+  height: calc(100vh - 54px); overflow-y: auto;
+  display: flex; flex-direction: column; gap: 16px;
+}
+.contest-top { display: flex; justify-content: space-between; align-items: flex-end; }
+.contest-top h1 { font-size: 22px; font-weight: 800; }
+.contest-top p  { color: var(--text2); font-size: 13px; margin-top: 3px; }
+
+.contest-filter { display: flex; gap: 6px; }
+.cf-btn {
+  background: var(--bg3); border: 1px solid var(--border);
+  color: var(--text2); padding: 6px 16px; border-radius: 20px;
+  cursor: pointer; font-family: inherit; font-size: 13px; transition: all .15s;
+}
+.cf-btn:hover  { color: var(--text); }
+.cf-btn.active { background: var(--blue); color: #0d1117; border-color: var(--blue); font-weight: 700; }
+
+.contest-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px;
+}
+
+.contest-card { padding: 18px 20px; display: flex; flex-direction: column; gap: 10px; transition: transform .2s, box-shadow .2s; }
+.contest-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,.4); }
+
+.cc-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.cc-top h3 { font-size: 15px; font-weight: 700; }
+
+.badge-live     { display:flex;align-items:center;gap:4px;font-size:10px;font-weight:700;letter-spacing:.5px;padding:3px 9px;border-radius:4px;background:rgba(248,81,73,.12);color:var(--red);font-family:'Space Mono',monospace;white-space:nowrap; }
+.badge-upcoming { font-size:10px;font-weight:700;padding:3px 9px;border-radius:4px;background:rgba(121,192,255,.1);color:var(--blue);white-space:nowrap; }
+.badge-ended    { font-size:10px;font-weight:700;padding:3px 9px;border-radius:4px;background:var(--bg3);color:var(--text3);white-space:nowrap; }
+
+.live-dot {
+  width:6px;height:6px;border-radius:50%;
+  background:var(--red);animation:pulse 1.2s infinite;
+  display:inline-block;
+}
+
+.cc-desc { font-size: 13px; color: var(--text2); line-height: 1.5; }
+.cc-meta { display: flex; flex-wrap: wrap; gap: 10px; font-size: 12px; color: var(--text2); }
+.cc-host { font-size: 11px; color: var(--text3); }
+.cc-action-btn { width: 100%; padding: 10px; font-size: 13px; }
+
+/* Modal */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.7);
+  display: flex; align-items: center; justify-content: center; z-index: 300;
+}
+.modal-box { padding: 26px; width: 500px; max-width: 95vw; }
+.modal-box h2 { font-size: 18px; font-weight: 800; margin-bottom: 18px; }
+.modal-form { display: flex; flex-direction: column; gap: 12px; }
+.modal-row  { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+.modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 18px; }
+
+/* Live view */
+.live-view { height: calc(100vh - 54px); display: flex; flex-direction: column; }
+.lv-header {
+  display: flex; align-items: center; gap: 14px;
+  background: var(--bg2); border-bottom: 1px solid var(--border);
+  padding: 13px 22px; flex-shrink: 0;
+}
+.lv-title { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 700; flex: 1; }
+.lv-timer { font-size: 14px; color: var(--yellow); }
+
+.lv-body { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 18px; overflow-y: auto; }
+.lv-problems, .lv-ranking { padding: 18px; }
+.lv-panel-title { font-size: 13px; font-weight: 700; margin-bottom: 14px; }
+
+.lp-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 12px; border-radius: 8px; cursor: pointer;
+  background: var(--bg3); margin-bottom: 7px; transition: background .15s;
+}
+.lp-row:hover  { background: var(--bg4); }
+.lp-row.solved { background: rgba(86,211,100,.1); border: 1px solid rgba(86,211,100,.2); }
+
+.lr-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 9px 10px; border-radius: 7px; margin-bottom: 6px; background: var(--bg3);
+}
+.lr-row.me { background: rgba(121,192,255,.1); border: 1px solid rgba(121,192,255,.2); }
+
+.contest-empty {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 12px; padding: 60px 20px; text-align: center;
+  color: var(--text2); font-size: 14px;
+}
+
+.admin-cc-btns {
+  display: flex; gap: 8px; margin-top: 4px;
+}
+
+.cc-action-btn { width: 100%; padding: 10px; font-size: 13px; }

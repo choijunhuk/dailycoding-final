@@ -1,0 +1,4 @@
+{"timestamp":"2026-04-21T14:39:33.732Z","type":"tmux_hook","mode":null,"reason":"invalid_config","turn_id":"019db063-969f-79c1-bd8e-48b1032b3eea","thread_id":"019dab66-3ec4-7ff1-907f-00947cd3d0ee","target":null,"dry_run":false,"sent":false,"event":"injection_skipped"}
+{"timestamp":"2026-04-21T14:39:33.784Z","type":"auto_nudge_skipped","reason":"unmanaged_session"}
+{"timestamp":"2026-04-21T15:09:22.315Z","type":"tmux_hook","mode":null,"reason":"invalid_config","turn_id":"019db085-4976-73f3-830a-0f72b5d610bd","thread_id":"019db085-1f03-7132-bfc0-cbeb5aa93d2d","target":null,"dry_run":false,"sent":false,"event":"injection_skipped"}
+{"timestamp":"2026-04-21T15:09:22.374Z","type":"auto_nudge_skipped","reason":"unmanaged_session"}

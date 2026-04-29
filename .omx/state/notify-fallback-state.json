@@ -1,0 +1,88 @@
+{
+  "pid": 97850,
+  "parent_pid": 80802,
+  "started_at": "2026-04-15T01:38:25.662Z",
+  "cwd": "/Users/choi/Desktop/dailycoding-final",
+  "notify_script": "/opt/homebrew/lib/node_modules/oh-my-codex/dist/scripts/notify-hook.js",
+  "authority_only": true,
+  "poll_ms": 75,
+  "effective_poll_ms": 75,
+  "idle_max_poll_ms": 1000,
+  "pid_file": null,
+  "max_lifetime_ms": 0,
+  "tracked_files": 0,
+  "seen_turns": 0,
+  "dispatch_drain": {
+    "enabled": true,
+    "max_per_tick": 5,
+    "run_count": 1,
+    "leader_only": true,
+    "last_tick_at": "2026-04-15T01:38:25.664Z",
+    "last_result": {
+      "processed": 0,
+      "skipped": 41,
+      "failed": 0
+    },
+    "last_error": null
+  },
+  "leader_nudge": {
+    "enabled": true,
+    "leader_only": true,
+    "stale_threshold_ms": 180000,
+    "precomputed_leader_stale": true,
+    "last_tick_at": "2026-04-15T01:38:25.671Z",
+    "last_error": null,
+    "run_count": 1
+  },
+  "ralph_continue_steer": {
+    "enabled": true,
+    "cadence_ms": 60000,
+    "message": "Ralph loop active continue",
+    "active": true,
+    "last_state_check_at": "2026-04-11T23:43:57.488Z",
+    "last_sent_at": "",
+    "cooldown_anchor_at": "2026-04-11T17:43:57.679Z",
+    "last_reason": "pane_missing",
+    "last_error": null,
+    "state_path": "/Users/choi/Desktop/dailycoding-final/.omx/state/sessions/019d7dce-cecd-74d1-ae71-315b5136abd7/ralph-state.json",
+    "pane_id": "",
+    "pane_current_command": "",
+    "current_phase": "fixing",
+    "subagent_session_id": "",
+    "active_subagent_thread_ids": [],
+    "shared_timestamp_path": "/Users/choi/Desktop/dailycoding-final/.omx/state/ralph-last-steer-at",
+    "shared_last_sent_at": "",
+    "singleton_lock_path": "/Users/choi/Desktop/dailycoding-final/.omx/state/ralph-continue-steer.lock"
+  },
+  "fallback_auto_nudge": {
+    "enabled": true,
+    "stall_ms": 5000,
+    "last_tick_at": "2026-04-15T01:38:25.687Z",
+    "last_turn_at": "2026-04-14T23:20:47.466Z",
+    "last_turn_count": 7,
+    "last_message": "수정 완료했습니다.\n\n원인:\n- GitHub OAuth 콜백에서 동일 스코프에 `const accessToken`을 2번 선언해서 `SyntaxError`가 발생했습니다.\n\n조치:",
+    "last_reason": "eligible_but_not_sent",
+    "last_error": null,
+    "last_nudged_signature": "",
+    "last_nudged_at": ""
+  },
+  "authority_backoff": {
+    "active": false,
+    "reason": "pid_missing",
+    "primary_pid": null,
+    "primary_last_tick_at": "",
+    "freshness_ms": null,
+    "threshold_ms": null
+  },
+  "adaptive_poll": {
+    "enabled": true,
+    "base_ms": 75,
+    "max_ms": 1000,
+    "current_ms": 75,
+    "idle_streak": 0,
+    "last_tick_at": "2026-04-15T01:38:25.689Z",
+    "last_activity_at": "2026-04-15T01:38:25.689Z",
+    "last_activity_reason": "dispatch_drain"
+  },
+  "last_cycle_activity": "dispatch_drain"
+}

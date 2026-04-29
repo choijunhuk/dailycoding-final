@@ -1,0 +1,12 @@
+{
+  "turn_count": 2,
+  "last_session_id": "4c7c09e8-457b-4279-a948-663453b98f3d",
+  "last_event_key": "4c7c09e8-457b-4279-a948-663453b98f3d:transcript:b5ed4f7c2cb3d787429c491cd01ed3b634b1e56216974f07ac1fc9ccbf7cf133",
+  "last_transcript_hash": "b5ed4f7c2cb3d787429c491cd01ed3b634b1e56216974f07ac1fc9ccbf7cf133",
+  "last_model": "gemini-3-flash-preview",
+  "last_turn_total_tokens": 121722,
+  "last_session_total_tokens": 5232760,
+  "cwd_mode": "parent-leaf",
+  "last_cwd_label": "Desktop/dailycoding-final",
+  "updated_at": "2026-04-17T08:52:16.231Z"
+}
