@@ -789,7 +789,7 @@ export default function JudgePage() {
 
               {isSpecialProblem && problemType === 'bug-fix' && (
                 <section>
-                  <h4>버그 코드</h4>
+                  <h4>버그 코드 {problem?.preferredLanguage && <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text2)', marginLeft: 6 }}>({problem.preferredLanguage})</span>}</h4>
                   <pre className="io-box mono">{specialConfig?.buggyCode || '버그 코드 정보가 없습니다.'}</pre>
                   {specialConfig?.hint && <p style={{ marginTop: 8, color: 'var(--text2)' }}>💡 힌트: {specialConfig.hint}</p>}
                 </section>

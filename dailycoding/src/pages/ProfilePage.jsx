@@ -443,14 +443,16 @@ export default function ProfilePage() {
             {/* 티어 배지 격자 */}
             <div className="profile-top100-grid">
               {top100.map(p=>(
-                <TierBadge key={p.id} tier={p.tier} size={34} title={`${p.title} (+${TIER_POINTS[p.tier]||20})`}/>
+                <div key={p.id} title={`${p.title} (+${TIER_POINTS[p.tier]||20})`} onClick={() => navigate(`/problems/${p.id}`)} style={{ cursor: 'pointer' }}>
+                  <TierBadge tier={p.tier} size={34} />
+                </div>
               ))}
               {Array.from({ length: Math.max(0, 100-top100.length) }, (_,i)=>(
                 <div key={`e${i}`} className="profile-top100-empty-slot"/>
               ))}
             </div>
             <div className="profile-top100-note">
-              배지에 마우스를 올리면 문제 이름을 확인할 수 있어요 · B=브론즈 S=실버 G=골드 P=플래티넘 D=다이아
+              배지를 클릭하면 해당 문제로 이동합니다 · B=브론즈 S=실버 G=골드 P=플래티넘 D=다이아
             </div>
           </div>
 
@@ -464,7 +466,7 @@ export default function ProfilePage() {
               : (
                 <div className="profile-top100-list">
                   {top100.map((p,i)=>(
-                    <div key={p.id} className="profile-top100-item">
+                    <div key={p.id} className="profile-top100-item" onClick={() => navigate(`/problems/${p.id}`)} style={{ cursor: 'pointer' }}>
                       <span className="profile-top100-rank">{i+1}</span>
                       <TierBadge tier={p.tier} size={28}/>
                       <span className="profile-top100-title">{p.title}</span>

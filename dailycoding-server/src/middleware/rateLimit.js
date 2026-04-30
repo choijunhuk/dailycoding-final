@@ -106,8 +106,8 @@ export function rateLimit(max = 30, windowSec = 60) {
 export const authLimiter = rateLimit(100, 15 * 60);
 // AI 호출 제한
 export const aiLimiter   = rateLimit(20, 60);
-// 제출 제한
-export const submitLimiter = rateLimit(15, 60);
+// 제출 제한 (judge-status 조회도 포함되므로 충분히 허용)
+export const submitLimiter = rateLimit(60, 60);
 // 일반 API 제한 (문제 목록, 대회, 랭킹 등 공개 엔드포인트)
 export const generalLimiter = rateLimit(100, 60);
 // 비밀번호 찾기 제한

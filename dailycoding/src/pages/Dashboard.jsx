@@ -72,7 +72,6 @@ export default function Dashboard() {
   const { solved, grassData, problems: appProblems } = useApp();
   const toast = useToast();
   const { t, lang } = useLang();
-  const [dailyMissions, setDailyMissions] = useState([]);
   const [weeklyChallenge, setWeeklyChallenge] = useState(null);
   const [followFeed, setFollowFeed] = useState([]);
   const [promotion, setPromotion] = useState({ active: null, recent: null });
@@ -115,20 +114,6 @@ export default function Dashboard() {
     ((user?.rating||800) - ratingMin) / (ratingMax - ratingMin) * 100
   ));
 
-  useEffect(() => {
-    let cancelled = false;
-    api.get('/missions/daily')
-      .then(({ data }) => {
-        if (!cancelled) setDailyMissions(Array.isArray(data?.missions) ? data.missions : []);
-      })
-      .catch((err) => {
-        if (!cancelled) setDailyMissions([]);
-        if (err?.response?.status !== 401) {
-          showLoadErrorToast(err?.response?.data?.message || '일일 미션을 불러오지 못했습니다.');
-        }
-      });
-    return () => { cancelled = true; };
-  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -302,8 +287,8 @@ export default function Dashboard() {
       {/* 통계 카드 */}
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:12,marginBottom:20}}>
         <StatCard icon={<BookOpen size={20} />} value={PROBLEMS.length}    label={t('problems')}    color="var(--blue)" delta={t('dashboardProblemsDelta')} />
-        <StatCard icon={<CheckCircle2 size={20} />} value={solvedList.length}  label={t('solved')}  color="var(--green)" delta={`▲ ${Math.min(99, solvedList.length || 1)}%`} />
-        <StatCard icon={<TrendingUp size={20} />} value={user?.rating||800}  label={t('rating')}  color="var(--yellow)" delta={t('dashboardGrowthDelta').replace('{n}', String(Math.max(12, (user?.streak||0) * 2)))} />
+        <StatCard icon={<CheckCircle2 size={20} />} value={solvedList.length}  label={t('solved')}  color="var(--green)" delta={solvedList.length > 0 ? `▲ ${Math.min(99, Math.round(solvedList.length / Math.max(PROBLEMS.length, 1) * 100))}%` : null} />
+        <StatCard icon={<TrendingUp size={20} />} value={user?.rating||800}  label={t('rating')}  color="var(--yellow)" delta={(user?.streak||0) > 0 ? `+${(user.streak) * 2} 성장` : null} />
         <StatCard icon={<Target size={20} />} value={myRank?`#${myRank}`:'−'} label={t('dashboardMyRank')} color="var(--purple)" delta={t('dashboardRealtimeTrack')} />
       </div>
 
@@ -362,28 +347,6 @@ export default function Dashboard() {
             </div>
           )}
 
-          {dailyMissions.length > 0 && (
-            <div style={{
-              padding:'18px 22px',
-              borderRadius:16,
-              border:'1px solid var(--border)',
-              background:'var(--bg2)',
-            }}>
-              <h3 style={{ color:'var(--text)', marginBottom:12, fontSize:16, fontWeight:800 }}>📋 {t('dashboardDailyMissions')}</h3>
-              {dailyMissions.map((mission) => (
-                <div key={mission.type} style={{ display:'flex', alignItems:'center', gap:10, marginBottom:8 }}>
-                  <span style={{ fontSize:18 }}>{mission.isCompleted ? '✅' : '⬜'}</span>
-                  <span style={{
-                    color: mission.isCompleted ? 'var(--text3)' : 'var(--text)',
-                    textDecoration: mission.isCompleted ? 'line-through' : 'none',
-                  }}>
-                    {mission.label}
-                  </span>
-                  <span style={{ marginLeft:'auto', color:'var(--yellow)', fontSize:13 }}>+{mission.rewardValue}pt</span>
-                </div>
-              ))}
-            </div>
-          )}
 
           {referral && (
             <div style={{ border:'1px solid var(--border)', borderRadius:12, padding:20, marginBottom:4, background:'var(--bg2)' }}>

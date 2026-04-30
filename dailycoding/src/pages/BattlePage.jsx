@@ -738,12 +738,19 @@ export default function BattlePage() {
 
             <div className="bp-rules">
               <div className="bp-rules-title">배틀 규칙</div>
-              <ul>
-                <li>⏱️ 제한 시간: <strong>30분</strong></li>
-                <li>🗺️ 영토 선점: 문제를 먼저 맞힌 팀이 영토를 점령하며, 상대 팀은 해당 문제를 풀 수 없습니다.</li>
-                <li>👥 팀 배틀: 팀원끼리 점수를 합산하며, 실시간으로 소통하며 문제를 나눠 풀어보세요.</li>
-                <li>👁️ 관전 모드: 다른 플레이어의 배틀을 실시간으로 관전할 수 있습니다.</li>
-              </ul>
+              {(() => {
+                const dur = BATTLE_DURATIONS.find(d => d.sec === selectedDuration) || BATTLE_DURATIONS[1];
+                return (
+                  <ul>
+                    <li>⏱️ 제한 시간: <strong>{dur.desc}</strong> ({dur.label.replace(/[^\w가-힣]/g, '').trim()} 모드)</li>
+                    {dur.sec === 300 && <li>⚡ 블리츠: 빠른 판단이 핵심입니다. 쉬운 문제부터 빠르게 선점하세요.</li>}
+                    {dur.sec === 3600 && <li>🏔️ 마라톤: 긴 시간을 활용해 어려운 문제에 도전하세요. 팀원과 역할 분담이 중요합니다.</li>}
+                    <li>🗺️ 영토 선점: 문제를 먼저 맞힌 팀이 영토를 점령하며, 상대 팀은 해당 문제를 풀 수 없습니다.</li>
+                    <li>👥 팀 배틀: 팀원끼리 점수를 합산하며, 실시간으로 소통하며 문제를 나눠 풀어보세요.</li>
+                    <li>👁️ 관전 모드: 다른 플레이어의 배틀을 실시간으로 관전할 수 있습니다.</li>
+                  </ul>
+                );
+              })()}
             </div>
           </div>
         </div>

@@ -186,7 +186,7 @@
 }
 .profile-dist-header {
   display: grid;
-  grid-template-columns: 90px 1fr 60px 60px;
+  grid-template-columns: 110px 1fr 60px 60px;
   gap: 8px;
   padding: 4px 0 8px;
   border-bottom: 1px solid var(--border);
@@ -201,7 +201,7 @@
 
 .profile-dist-row {
   display: grid;
-  grid-template-columns: 90px 1fr 60px 60px;
+  grid-template-columns: 110px 1fr 60px 60px;
   gap: 8px;
   padding: 10px 0;
   border-bottom: 1px solid var(--border);
@@ -323,8 +323,13 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 0;
+  padding: 10px 4px;
   border-bottom: 1px solid var(--border);
+  border-radius: 6px;
+  transition: background .12s;
+}
+.profile-top100-item:hover {
+  background: var(--bg3);
 }
 .profile-top100-rank {
   width: 26px;
@@ -587,7 +592,7 @@
   }
 
   .profile-dist-header, .profile-dist-row {
-    grid-template-columns: 70px 1fr 40px 45px;
+    grid-template-columns: 88px 1fr 40px 45px;
     gap: 4px;
   }
   .dist-level { font-size: 11px; }
