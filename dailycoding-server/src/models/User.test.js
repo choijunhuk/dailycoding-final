@@ -35,7 +35,7 @@ test('calcRatingFromTop100 hydrates before adding a new problem when the cache i
   };
   redis.zRevRangeWithScores = async () => {
     calls.push('zRevRangeWithScores');
-    return [{ score: 3004, value: '101' }];
+    return [{ score: 4004, value: '101' }];
   };
 
   t.after(() => {

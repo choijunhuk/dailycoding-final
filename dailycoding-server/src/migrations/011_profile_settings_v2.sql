@@ -1,10 +1,9 @@
 -- ── 프로필 확장 & 설정 고도화 v2 ────────────────────────────────────────────
 
 -- 유저 프로필 확장
-ALTER TABLE users
-  ADD COLUMN IF NOT EXISTS display_name   VARCHAR(60)  NULL,
-  ADD COLUMN IF NOT EXISTS social_links   JSON         NULL,
-  ADD COLUMN IF NOT EXISTS tech_stack     JSON         NULL;
+ALTER TABLE users ADD COLUMN display_name   VARCHAR(60)  NULL;
+ALTER TABLE users ADD COLUMN social_links   JSON         NULL;
+ALTER TABLE users ADD COLUMN tech_stack     JSON         NULL;
 
 -- 커뮤니티 신고 테이블
 CREATE TABLE IF NOT EXISTS post_reports (

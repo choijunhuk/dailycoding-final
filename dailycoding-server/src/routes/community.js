@@ -214,8 +214,7 @@ router.get('/:board', auth, boardGuard, async (req, res) => {
       params.push(tag);
     }
 
-    sql += ' ORDER BY p.is_pinned DESC, p.created_at DESC LIMIT ? OFFSET ?';
-    params.push(PAGE_SIZE, offset);
+    sql += ` ORDER BY p.is_pinned DESC, p.created_at DESC LIMIT ${PAGE_SIZE} OFFSET ${offset}`;
 
     // 익명 글의 경우 작성자 정보 마스킹
     const rawRows = await query(sql, params);

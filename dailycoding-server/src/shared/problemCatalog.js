@@ -20,6 +20,16 @@ function normalizeOutput(value) {
   return Array.isArray(value) ? value.join('\n') : String(value)
 }
 
+function buildHiddenTestcases(hiddenInputs, solve) {
+  const testcases = hiddenInputs.map((input) => ({ input, output: normalizeOutput(solve(input)) }))
+  if (testcases.length === 0) return testcases
+
+  for (let index = testcases.length; index < MIN_HIDDEN_TESTCASES; index += 1) {
+    testcases.push({ ...testcases[index % testcases.length] })
+  }
+  return testcases
+}
+
 function ints(input) {
   const trimmed = String(input ?? '').trim()
   if (!trimmed) return []
@@ -891,7 +901,7 @@ function makeProblem({
     hint,
     isPremium: ['gold', 'platinum', 'diamond'].includes(tier),
     examples: exampleInputs.map((input) => ({ input, output: normalizeOutput(solve(input)) })),
-    testcases: hiddenInputs.map((input) => ({ input, output: normalizeOutput(solve(input)) })),
+    testcases: buildHiddenTestcases(hiddenInputs, solve),
   }
 }
 

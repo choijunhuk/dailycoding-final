@@ -88,8 +88,7 @@ export const User = {
       `SELECT ${selectedFields}
        FROM users
        ORDER BY rating DESC
-       LIMIT ? OFFSET ?`,
-      [safeLimit, safeOffset]
+       LIMIT ${safeLimit} OFFSET ${safeOffset}`
     );
   },
 
@@ -107,13 +106,12 @@ export const User = {
       params.push(tier);
     }
 
-    params.push(safeLimit, safeOffset);
     return query(
       `SELECT id, username, tier, rating, solved_count, avatar_url, equipped_badge, equipped_title
        FROM users
        ${where}
        ORDER BY ${orderBy}
-       LIMIT ? OFFSET ?`,
+       LIMIT ${safeLimit} OFFSET ${safeOffset}`,
       params
     );
   },

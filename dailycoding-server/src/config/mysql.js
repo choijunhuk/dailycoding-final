@@ -53,7 +53,6 @@ async function init() {
   }
   _resolveReady();
 }
-init();
 
 export function waitForDB() { return readyPromise; }
 
@@ -175,6 +174,8 @@ async function initMemory() {
     });
   });
 }
+
+init();
 
 function snapshotMemory() {
   return Object.fromEntries(
