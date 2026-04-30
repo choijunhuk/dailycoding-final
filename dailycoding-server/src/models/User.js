@@ -413,6 +413,7 @@ export const User = {
         default_board:     'qna',    // 기본 게시판
         show_solved_badge: true,
         code_font_size:    14,
+        fontFamily:        'noto',
       },
       editor: {
         font_size:         14,

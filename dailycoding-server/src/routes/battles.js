@@ -8,6 +8,7 @@ import { getCachedJudgeRuntime } from '../services/judgeRuntimeCache.js';
 import { executeSubmissionFlow } from '../services/submissionExecution.js';
 import { completeMission } from '../services/missionService.js';
 import { recordPromotionLoss } from '../services/promotionService.js';
+import { evaluateBugFixAnswer, evaluateFillBlankAnswer } from '../services/battleAnswerEvaluation.js';
 
 const router = Router();
 router.use(auth);
@@ -255,14 +256,9 @@ router.post('/room/:roomId/submit', async (req, res) => {
 
     let correct = false;
     if (problem.type === 'fill-blank') {
-      // 빈칸 채우기: 배열 또는 개별 문자열 정답
-      const userAnswers = Array.isArray(answer) ? answer : [answer];
-      correct = problem.blanks.every((b, i) =>
-        String(userAnswers[i] ?? '').trim() === String(b).trim()
-      );
+      correct = evaluateFillBlankAnswer(problem, answer);
     } else if (problem.type === 'bug-fix') {
-      // 버그 수정: 정답 키워드 포함 여부
-      correct = String(answer).includes(problem.correctAnswerKeyword);
+      correct = evaluateBugFixAnswer(problem, answer);
     }
 
     const updatedRoom = await Battle.submitAnswer(req.params.roomId, req.user.id, problemId, correct);

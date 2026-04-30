@@ -10,6 +10,7 @@ import {
   isPublicJudgeLanguage,
   isRuntimeLanguageSupported,
   normalizeJudgeLanguage,
+  outputsMatch,
   resolveNativeSupportedLanguages,
   judgeCodeNative,
   runCodeNative,
@@ -67,6 +68,11 @@ test('public language helpers expose allowlisted labels and runtime support chec
   assert.equal(getPublicJudgeLanguageLabel('python'), 'Python 3');
   assert.equal(isRuntimeLanguageSupported(runtime, 'javascript'), true);
   assert.equal(isRuntimeLanguageSupported(runtime, 'java'), false);
+});
+
+test('outputsMatch accepts harmless whitespace differences', () => {
+  assert.equal(outputsMatch('1  2\n3\n', '1 2 3'), true);
+  assert.equal(outputsMatch('hello world', 'helloworld'), false);
 });
 
 test('resolveNativeSupportedLanguages only exposes languages with installed runtimes', () => {
@@ -161,6 +167,23 @@ test('judgeCodeNative handles compilation error for C++', async () => {
 
   assert.equal(result.result, 'compile');
   assert.match(result.detail, /error/);
+});
+
+test('judgeCodeNative compiles advertised C++17 syntax', async () => {
+  const result = await judgeCodeNative({
+    lang: 'cpp',
+    code: '#include <bits/stdc++.h>\nusing namespace std;\nint main(){ optional<int> x = 3; cout << *x << "\\n"; }',
+    examples: [
+      { input: '', output: '3' }
+    ],
+    timeLimit: 1
+  });
+
+  if (result.result === 'compile' && /unable to make temporary file|Operation not permitted/.test(result.detail)) {
+    assert.ok(true);
+    return;
+  }
+  assert.equal(result.result, 'correct', result.detail);
 });
 
 test('runCodeNative handles large output and truncation', async () => {

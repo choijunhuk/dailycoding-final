@@ -190,13 +190,13 @@ const LANG_CONFIG = {
     image:   'gcc:13',
     file:    'main.cpp',
     cmd:     ['./main'],
-    compile: ['g++', '-O2', '-o', 'main', 'main.cpp'],
+    compile: ['g++', '-std=c++17', '-O2', '-o', 'main', 'main.cpp'],
   },
   c: {
     image:   'gcc:13',
     file:    'main.c',
     cmd:     ['./main'],
-    compile: ['gcc', '-O2', '-o', 'main', 'main.c'],
+    compile: ['gcc', '-std=c99', '-O2', '-o', 'main', 'main.c'],
   },
   java: {
     image:   'openjdk:21-slim',
@@ -207,6 +207,21 @@ const LANG_CONFIG = {
 };
 
 const OUTPUT_LIMIT = 512 * 1024; // 512KB — 출력 폭탄 방지 (Docker/native 공통)
+
+function normalizeOutputText(value) {
+  return String(value ?? '').replace(/\r\n/g, '\n').trim();
+}
+
+export function outputsMatch(actual, expected) {
+  const normalizedActual = normalizeOutputText(actual);
+  const normalizedExpected = normalizeOutputText(expected);
+  if (normalizedActual === normalizedExpected) return true;
+
+  const actualTokens = normalizedActual.length > 0 ? normalizedActual.split(/\s+/) : [];
+  const expectedTokens = normalizedExpected.length > 0 ? normalizedExpected.split(/\s+/) : [];
+  if (actualTokens.length !== expectedTokens.length) return false;
+  return actualTokens.every((token, index) => token === expectedTokens[index]);
+}
 
 // ── 채점 동시 실행 제한 ──────────────────────────────────────────────────────
 const MAX_CONCURRENT_JUDGES = 4;
@@ -408,9 +423,7 @@ export async function judgeCode({ lang, code, examples, timeLimit = 2, userTier 
       }
 
       // 정답 비교 (줄바꿈·공백 trim)
-      const got      = run.stdout.trim().replace(/\r\n/g, '\n');
-      const expected = ex.output.trim().replace(/\r\n/g, '\n');
-      if (got !== expected) {
+      if (!outputsMatch(run.stdout, ex.output)) {
         return {
           result: 'wrong',
           time: `${elapsed}ms`, mem: '-',
@@ -525,7 +538,7 @@ export async function isDockerAvailable() {
 const NATIVE_LANG = {
   python:     { file: 'main.py',   vmKb: 131072,  run: (d) => `python3 "${d}/main.py"`,                        compile: null },
   javascript: { file: 'main.js',   vmKb: 262144,  run: (d) => `node --max-old-space-size=64 "${d}/main.js"`,   compile: null },
-  cpp:        { file: 'main.cpp',  vmKb: 131072,  run: (d) => `"${d}/main"`,                                   compile: (d) => `g++ -O2 -o "${d}/main" "${d}/main.cpp"` },
+  cpp:        { file: 'main.cpp',  vmKb: 131072,  run: (d) => `"${d}/main"`,                                   compile: (d) => `g++ -std=c++17 -O2 -o "${d}/main" "${d}/main.cpp"` },
   c:          { file: 'main.c',    vmKb: 131072,  run: (d) => `"${d}/main"`,                                   compile: (d) => `gcc -std=c99 -O2 -o "${d}/main" "${d}/main.c"` },
   java:       { file: 'Main.java', vmKb: 524288,  run: (d) => `java -Xmx64m -Xms16m -cp "${d}" Main`,         compile: (d) => `javac "${d}/Main.java"` },
 };
@@ -611,9 +624,7 @@ export async function judgeCodeNative({ lang, code, examples, timeLimit = 2, use
       if (run.outputExceeded)  return { result: 'error',   time: `${elapsed}ms`, mem: '-', detail: '출력 크기 초과 (최대 512KB)' };
       if (run.exitCode !== 0)  return { result: 'error',   time: `${elapsed}ms`, mem: '-', detail: run.stderr || '런타임 오류' };
 
-      const got      = run.stdout.replace(/\r\n/g, '\n').trim();
-      const expected = ex.output.replace(/\r\n/g, '\n').trim();
-      if (got !== expected) {
+      if (!outputsMatch(run.stdout, ex.output)) {
         return { result: 'wrong', time: `${elapsed}ms`, mem: '-', detail: '정답과 일치하지 않습니다.' };
       }
     }

@@ -178,6 +178,8 @@ const STRINGS = {
     compactMode: '콤팩트 모드',
     compactModeDesc: '문제 목록을 더 빽빽하게',
     autoCollapseSidebar: '사이드바 자동 접기',
+    appFont: '앱 글씨체',
+    appFontDesc: '저장하면 전체 화면 글씨체에 적용됩니다.',
     // ── Settings — editor ─────────────────────────
     autoSave: '자동 저장',
     autoSaveDesc: '30초마다 코드 자동 저장',
@@ -1028,6 +1030,8 @@ const STRINGS = {
     compactMode: 'Compact Mode',
     compactModeDesc: 'Denser problem list',
     autoCollapseSidebar: 'Auto-collapse Sidebar',
+    appFont: 'App Font',
+    appFontDesc: 'Saved font applies across the whole app.',
     // ── Settings — editor ─────────────────────────
     autoSave: 'Auto Save',
     autoSaveDesc: 'Save code every 30s',

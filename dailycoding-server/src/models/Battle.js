@@ -21,6 +21,7 @@ const FILL_BLANK_PROBLEMS = [
     desc: '피보나치 수열을 구하는 재귀 함수의 빈칸을 채우세요.',
     codeTemplate: 'def fib(n):\n    if n <= ___1___:\n        return n\n    return fib(n - ___2___) + fib(n - ___3___)',
     blanks: ['1', '1', '2'],
+    answerGroups: [[0], [1, 2]],
     hint: 'fib(0)=0, fib(1)=1이므로 n이 작을 때 그냥 n을 반환합니다.',
   },
   {
@@ -83,6 +84,7 @@ export const Battle = {
         preferredLanguage: problem.preferredLanguage || problem.preferred_language || null,
         codeTemplate: config.codeTemplate || '',
         blanks: Array.isArray(config.blanks) ? config.blanks : [],
+        answerGroups: config.answerGroups || config.blankAnswerGroups || config.blankGroups || [],
         hint: config.hint || problem.hint || '',
       };
     }
@@ -106,8 +108,12 @@ export const Battle = {
       title: problem.title,
       tier: problem.tier,
       desc: problem.desc || problem.description || '',
+      inputDesc: problem.inputDesc || problem.input_desc || '',
+      outputDesc: problem.outputDesc || problem.output_desc || '',
       examples: (problem.examples || []).slice(0, 2),
       timeLimit: problem.timeLimit || problem.time_limit || 2,
+      memLimit: problem.memLimit || problem.mem_limit || 256,
+      difficulty: problem.difficulty,
       preferredLanguage: problem.preferredLanguage || problem.preferred_language || null,
       type: 'coding',
     };
@@ -131,7 +137,8 @@ export const Battle = {
     const params = [];
     let sql = `
       SELECT id, title, problem_type, preferred_language, special_config, tier,
-             description, hint, time_limit, visibility, battle_eligible
+             difficulty, description, input_desc, output_desc, hint, time_limit, mem_limit,
+             visibility, battle_eligible
       FROM problems
       WHERE COALESCE(visibility, 'global') = 'global'
         AND battle_eligible = 1
@@ -143,6 +150,37 @@ export const Battle = {
     }
 
     return query(sql, params);
+  },
+
+  async attachCodingExamples(problems) {
+    const ids = problems
+      .filter((problem) => problem.type === 'coding' && Number.isInteger(Number(problem.id)))
+      .map((problem) => Number(problem.id));
+    if (ids.length === 0) return problems;
+
+    try {
+      const rows = await query(
+        `SELECT problem_id, input_data AS input, output_data AS output
+         FROM problem_examples
+         WHERE problem_id IN (${ids.map(() => '?').join(',')})
+         ORDER BY problem_id ASC, ord ASC`,
+        ids
+      );
+      const examplesById = new Map();
+      for (const row of rows || []) {
+        const key = Number(row.problem_id);
+        const list = examplesById.get(key) || [];
+        if (list.length < 2) list.push({ input: row.input, output: row.output });
+        examplesById.set(key, list);
+      }
+      return problems.map((problem) => (
+        problem.type === 'coding'
+          ? { ...problem, examples: examplesById.get(Number(problem.id)) || problem.examples || [] }
+          : problem
+      ));
+    } catch {
+      return problems;
+    }
   },
 
   async selectProblems(dbProblemsOrOptions = [], options = {}) {
@@ -194,7 +232,7 @@ export const Battle = {
     const fb = pickMany(fbPool, settings.fillBlankCount);
     const bf = pickMany(bfPool, settings.bugFixCount);
     const problems = [...coding, ...fb, ...bf].slice(0, settings.maxTotalProblems);
-    return problems;
+    return Array.isArray(dbProblemsOrOptions) ? problems : this.attachCodingExamples(problems);
   },
 
   // 이전 호출 호환용: 기존 sync 호출이 있을 수 있어 Promise resolve 형태로 유지됨

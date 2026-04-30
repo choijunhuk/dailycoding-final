@@ -8,7 +8,7 @@ import { JUDGE_LANGUAGE_OPTIONS, getJudgeLanguageOptionsForSupported } from '../
 import { useSubscriptionStatus } from '../hooks/useSubscriptionStatus.js';
 import { useToast } from '../context/ToastContext.jsx';
 import { BATTLE_AD_SLOTS, BATTLE_DURATIONS, BATTLE_SEC, fmtTime, getSocketUrl, POLL_MS, TYPE_COLOR, TYPE_LABEL } from './battlePageUtils.js';
-import { BattleAdSlot, BugFixProblem, CodingProblem, FillBlankProblem } from './battleProblemViews.jsx';
+import { BattleAdSlot, BugFixProblem, CodingProblem, FillBlankProblem, getBattleStarterCode } from './battleProblemViews.jsx';
 import './BattlePage.css';
 
 // ── Web Audio 타이핑 사운드 (외부 라이브러리 없음) ────────────────────────
@@ -172,6 +172,27 @@ export default function BattlePage() {
       return changed ? next : prev;
     });
   }, [availableLangOptions, fallbackLang]);
+
+  useEffect(() => {
+    const lang = room?.preferredLanguage || fallbackLang;
+    if (phase !== 'battle' || !room?.problems?.length || !lang) return;
+
+    setCodeMap((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      room.problems.forEach((problem) => {
+        if (problem.type !== 'coding') return;
+        const current = next[problem.id];
+        if (String(current?.code || '').trim()) return;
+        next[problem.id] = {
+          lang,
+          code: getBattleStarterCode(problem, lang),
+        };
+        changed = true;
+      });
+      return changed ? next : prev;
+    });
+  }, [phase, room?.id, room?.preferredLanguage, room?.problems, fallbackLang]);
 
   // ── 배틀 종료 처리
   const handleRoomUpdate = useCallback((updatedRoom) => {
@@ -398,7 +419,7 @@ export default function BattlePage() {
 
   // ── 타이핑 이벤트 전송 (500ms 쓰로틀)
   const handleCodeChange = (pid, val) => {
-    setCodeMap(prev => ({ ...prev, [pid]: { ...(prev[pid] || {}), code: val } }));
+    setCodeMap(prev => ({ ...prev, [pid]: { ...(prev[pid] || {}), lang: room?.preferredLanguage || fallbackLang, code: val } }));
     const now = Date.now();
     if (now - lastTypingRef.current > 500 && roomId) {
       lastTypingRef.current = now;
@@ -896,6 +917,7 @@ export default function BattlePage() {
                   lang={codeEntry.lang}
                   lockedLanguageLabel={battleLangLabel}
                   onCodeChange={val => handleCodeChange(pid, val)}
+                  onInsertStarter={(starter) => handleCodeChange(pid, starter)}
                   locked={isLocked || isSpectator}
                   result={submitResults[pid]}
                   judgeDetail={judgeDetails[pid]}

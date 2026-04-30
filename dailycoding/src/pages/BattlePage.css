@@ -421,6 +421,7 @@
 }
 
 .bp-btn-small:hover { color: var(--blue); border-color: var(--blue); background: rgba(121,192,255,.05); }
+.bp-btn-small:disabled { opacity: .45; cursor: not-allowed; color: var(--text3); border-color: var(--border); background: var(--bg3); }
 
 .bp-btn-submit {
   margin-top: 16px;
@@ -624,6 +625,35 @@
   color: var(--yellow);
 }
 
+.bp-io-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.bp-io-card {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.bp-io-title {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--blue);
+  margin-bottom: 6px;
+  letter-spacing: .04em;
+}
+
+.bp-io-card p {
+  margin: 0;
+  color: var(--text2);
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
 /* ── 빈칸채우기 ──────────────────────────────────────────── */
 .bp-code-fill {
   font-family: 'Space Mono', monospace;
@@ -725,6 +755,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
 .bp-lang-select {
@@ -789,6 +820,43 @@
 
 .bp-code-editor:focus   { border-color: var(--blue); }
 .bp-code-editor:disabled { opacity: 0.6; cursor: not-allowed; }
+
+@media (max-width: 900px) {
+  .bp-page { padding: 20px 14px 36px; }
+  .bp-lobby-main { grid-template-columns: 1fr; }
+  .bp-battle-page { height: auto; min-height: calc(100vh - 54px); overflow: visible; }
+  .bp-problem-area { overflow: visible; padding: 14px; }
+}
+
+@media (max-width: 640px) {
+  .bp-lobby-hero { padding-top: 18px; }
+  .bp-lobby-hero h1 { font-size: 24px; }
+  .bp-invite-row,
+  .bp-invite-actions,
+  .bp-result-scores {
+    flex-direction: column;
+  }
+  .bp-invite-input { max-width: none !important; }
+  .bp-hud {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    padding: 8px 10px;
+  }
+  .bp-hud-player { min-width: 0; }
+  .bp-hud-score { font-size: 16px; }
+  .bp-scoreboard { grid-template-columns: 1fr; padding: 10px 12px 0; }
+  .bp-score-card.opponent { text-align: left; }
+  .bp-territory { padding: 8px 10px; }
+  .bp-territory-cell { min-width: 78px; padding: 7px 10px; }
+  .bp-problem-title { font-size: 16px; }
+  .bp-io-grid,
+  .bp-example-row {
+    grid-template-columns: 1fr;
+    display: grid;
+  }
+  .bp-code-editor { min-height: 280px; font-size: 12px; }
+  .bp-result-player.opp { align-items: flex-start; }
+}
 
 /* ── 피드백 ──────────────────────────────────────────────── */
 .bp-feedback {

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=Nanum+Gothic:wght@400;700;800&family=Noto+Sans+KR:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap');
 
 :root {
   /* Dark Theme (Default) */
@@ -18,6 +18,7 @@
   --red:     #f85149;
   --orange:  #ffa657;
   --accent:  #f78166;
+  --app-font: 'Noto Sans KR', sans-serif;
   --r:       8px;
   --r-lg:    14px;
 
@@ -68,7 +69,7 @@ html, body, #root { height: 100%; }
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: 'Noto Sans KR', sans-serif;
+  font-family: var(--app-font);
   font-size: 14px;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;

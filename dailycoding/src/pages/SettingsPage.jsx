@@ -4,6 +4,7 @@ import { useToast } from '../context/ToastContext';
 import api from '../api';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { useLang } from '../context/LangContext.jsx';
+import { FONT_OPTIONS, applyAppFontPreference } from '../utils/fontPreferences.js';
 
 const TABS = [
   { id: 'profile',       labelKey: 'profileTab' },
@@ -344,6 +345,18 @@ function NotifSettings({ data, onSave, saving }) {
 
 function UiSettings({ data, onSave, saving, theme, setTheme, lang, setLang, t }) {
   const [s, setS] = useState(data || {});
+  const selectedFont = s.fontFamily || 'noto';
+
+  function updateFont(fontId) {
+    applyAppFontPreference(fontId);
+    setS(p => ({ ...p, fontFamily: fontId }));
+  }
+
+  function saveUiSettings() {
+    applyAppFontPreference(selectedFont);
+    onSave(s);
+  }
+
   return (
     <div style={{ display:'flex', flexDirection:'column' }}>
       <Field label={t('settings')}>
@@ -375,10 +388,35 @@ function UiSettings({ data, onSave, saving, theme, setTheme, lang, setLang, t })
           ))}
         </div>
       </Field>
+      <Field label={t('appFont')}>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(180px, 1fr))', gap:10, marginBottom:14 }}>
+          {FONT_OPTIONS.map(option => (
+            <button
+              key={option.id}
+              type="button"
+              onClick={() => updateFont(option.id)}
+              style={{
+                textAlign:'left',
+                padding:'12px 14px',
+                borderRadius:12,
+                border:`2px solid ${selectedFont === option.id ? 'var(--blue)' : 'var(--border)'}`,
+                background:selectedFont === option.id ? 'rgba(88,166,255,.08)' : 'var(--bg2)',
+                color:'var(--text)',
+                cursor:'pointer',
+                fontFamily:option.stack,
+              }}
+            >
+              <div style={{ fontWeight:800, fontSize:14 }}>{option.label}</div>
+              <div style={{ color:'var(--text2)', fontSize:12, marginTop:4, lineHeight:1.5 }}>{option.sample}</div>
+            </button>
+          ))}
+        </div>
+        <div style={{ fontSize:12, color:'var(--text3)', marginBottom:6 }}>{t('appFontDesc')}</div>
+      </Field>
       <ToggleRow label={t('animations')} desc={t('animationsDesc')} checked={s.animations ?? true} onChange={v => setS(p => ({ ...p, animations: v }))} />
       <ToggleRow label={t('compactMode')} desc={t('compactModeDesc')} checked={s.compactMode ?? false} onChange={v => setS(p => ({ ...p, compactMode: v }))} />
       <ToggleRow label={t('autoCollapseSidebar')} checked={s.autoCollapseSidebar ?? false} onChange={v => setS(p => ({ ...p, autoCollapseSidebar: v }))} />
-      <div style={{ marginTop:20 }}><SaveBtn onClick={() => onSave(s)} saving={saving} /></div>
+      <div style={{ marginTop:20 }}><SaveBtn onClick={saveUiSettings} saving={saving} /></div>
     </div>
   );
 }

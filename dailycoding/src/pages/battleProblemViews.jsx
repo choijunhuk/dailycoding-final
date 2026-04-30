@@ -98,6 +98,32 @@ export function BugFixProblem({ problem, answer, onChange, locked, correct }) {
   );
 }
 
+function buildProblemComment(problem) {
+  const lines = [
+    problem?.title ? `문제: ${problem.title}` : '',
+    problem?.inputDesc ? `입력: ${problem.inputDesc}` : '',
+    problem?.outputDesc ? `출력: ${problem.outputDesc}` : '',
+  ].filter(Boolean);
+  return lines.length ? lines.join('\n') : '표준 입력을 읽고 표준 출력으로 답을 출력하세요.';
+}
+
+export function getBattleStarterCode(problem, lang) {
+  const comment = buildProblemComment(problem);
+  if (lang === 'javascript') {
+    return `const fs = require('fs');\nconst input = fs.readFileSync(0, 'utf8').trim();\n\n// ${comment.replace(/\n/g, '\n// ')}\nfunction solve(input) {\n  // TODO: 입력 형식에 맞춰 풀이를 작성하세요.\n  return '';\n}\n\nconst answer = solve(input);\nif (answer !== undefined) console.log(answer);`;
+  }
+  if (lang === 'cpp') {
+    return `#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n  ios::sync_with_stdio(false);\n  cin.tie(nullptr);\n\n  // ${comment.replace(/\n/g, '\n  // ')}\n  // TODO: 입력 형식에 맞춰 풀이를 작성하세요.\n  return 0;\n}`;
+  }
+  if (lang === 'c') {
+    return `#include <stdio.h>\n\nint main(void) {\n  // ${comment.replace(/\n/g, '\n  // ')}\n  // TODO: 입력 형식에 맞춰 풀이를 작성하세요.\n  return 0;\n}`;
+  }
+  if (lang === 'java') {
+    return `import java.io.*;\nimport java.util.*;\n\npublic class Main {\n  public static void main(String[] args) throws Exception {\n    BufferedReader br = new BufferedReader(new InputStreamReader(System.in));\n    // ${comment.replace(/\n/g, '\n    // ')}\n    // TODO: 입력 형식에 맞춰 풀이를 작성하세요.\n  }\n}`;
+  }
+  return `import sys\n\n# ${comment.replace(/\n/g, '\n# ')}\ndef solve():\n    data = sys.stdin.read().strip().split()\n    # TODO: 입력 형식에 맞춰 풀이를 작성하세요.\n\nif __name__ == "__main__":\n    solve()`;
+}
+
 const RESULT_LABEL = {
   correct: '정답',
   locked: '선점됨',
@@ -107,12 +133,26 @@ const RESULT_LABEL = {
   error: '실행 오류',
 };
 
-export function CodingProblem({ problem, code, lang, lockedLanguageLabel, onCodeChange, locked, result, judgeDetail }) {
+export function CodingProblem({ problem, code, lang, lockedLanguageLabel, onCodeChange, onInsertStarter, locked, result, judgeDetail }) {
   const resultLabel = RESULT_LABEL[result] || result;
+  const starterCode = getBattleStarterCode(problem, lang);
+  const hasCode = Boolean(String(code || '').trim());
 
   return (
     <div className="bp-problem-body">
       <p className="bp-problem-desc">{problem.desc}</p>
+      {(problem.inputDesc || problem.outputDesc) && (
+        <div className="bp-io-grid">
+          <div className="bp-io-card">
+            <div className="bp-io-title">입력</div>
+            <p>{problem.inputDesc || '표준 입력을 사용합니다.'}</p>
+          </div>
+          <div className="bp-io-card">
+            <div className="bp-io-title">출력</div>
+            <p>{problem.outputDesc || '정답을 표준 출력으로 출력합니다.'}</p>
+          </div>
+        </div>
+      )}
       {problem.examples?.length > 0 && (
         <div className="bp-examples">
           {problem.examples.slice(0, 2).map((example, index) => (
@@ -130,6 +170,15 @@ export function CodingProblem({ problem, code, lang, lockedLanguageLabel, onCode
         <span className="bp-lang-select" style={{ display: 'inline-flex', alignItems: 'center' }}>
           {lockedLanguageLabel || lang || '언어 미지정'}
         </span>
+        <button
+          type="button"
+          className="bp-btn-small"
+          onClick={() => onInsertStarter?.(starterCode)}
+          disabled={locked || result === 'correct' || hasCode}
+          title={hasCode ? '이미 코드가 있어 템플릿을 덮어쓰지 않습니다.' : '언어별 기본 템플릿 삽입'}
+        >
+          템플릿
+        </button>
         {result && (
           <span className={`bp-result-badge ${result}`}>
             {result === 'correct' ? '✅ ' : result === 'locked' ? '🔒 ' : '❌ '}
@@ -149,7 +198,7 @@ export function CodingProblem({ problem, code, lang, lockedLanguageLabel, onCode
         value={code || ''}
         onChange={(event) => onCodeChange(event.target.value)}
         disabled={locked || result === 'correct'}
-        placeholder="코드를 입력하세요..."
+        placeholder={starterCode}
         spellCheck={false}
       />
     </div>

@@ -19,6 +19,7 @@ import { LangProvider } from './context/LangContext.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 import OnboardingModal from './components/OnboardingModal.jsx';
 import api from './api.js';
+import { applyAppFontPreference } from './utils/fontPreferences.js';
 import './index.css';
 
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -80,6 +81,21 @@ function AppInner() {
   const location = useLocation();
   const navigate = useNavigate();
   const [onboardingOpen, setOnboardingOpen] = useState(false);
+
+  useEffect(() => {
+    applyAppFontPreference(localStorage.getItem('dc_app_font') || 'noto');
+  }, []);
+
+  useEffect(() => {
+    if (!user?.id) return undefined;
+    let ignore = false;
+    api.get('/auth/settings')
+      .then((res) => {
+        if (!ignore) applyAppFontPreference(res.data?.settings?.ui?.fontFamily || 'noto');
+      })
+      .catch(() => {});
+    return () => { ignore = true; };
+  }, [user?.id]);
 
   useEffect(() => {
     if (user) {
