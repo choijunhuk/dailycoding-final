@@ -254,6 +254,14 @@ function demuxDockerLogBuffer(buffer) {
   return { stdout, stderr };
 }
 
+function shellQuote(value) {
+  return `'${String(value).replace(/'/g, `'\\''`)}'`;
+}
+
+function withInputRedirect(cmd, inputPath = '/code/input.txt') {
+  return ['sh', '-lc', `${cmd.map(shellQuote).join(' ')} < ${shellQuote(inputPath)}`];
+}
+
 async function readContainerLogs(container) {
   try {
     const logs = await container.logs({ stdout: true, stderr: true });
@@ -315,18 +323,18 @@ async function ensureImage(image) {
 }
 
 // ── 컨테이너 실행 헬퍼 ────────────────────────────────────────────────────────
-async function runInContainer({ image, cmd, binds, stdin, timeoutMs, memoryLimit = 128 * 1024 * 1024, dropCaps = true }) {
+async function runInContainer({ image, cmd, binds, timeoutMs, memoryLimit = 128 * 1024 * 1024, dropCaps = true }) {
   let container;
   try {
     container = await docker.createContainer({
       Image:       image,
       Cmd:         cmd,
       WorkingDir:  '/code',
-      AttachStdin: true,
+      AttachStdin: false,
       AttachStdout: true,
       AttachStderr: true,
-      OpenStdin:   true,
-      StdinOnce:   true,
+      OpenStdin:   false,
+      StdinOnce:   false,
       NetworkDisabled: true,
       HostConfig: {
         Binds:       binds,
@@ -353,7 +361,7 @@ async function runInContainer({ image, cmd, binds, stdin, timeoutMs, memoryLimit
   let stderr = '';
 
   try {
-    const stream = await container.attach({ stream: true, stdin: true, stdout: true, stderr: true });
+    const stream = await container.attach({ stream: true, stdout: true, stderr: true });
     const streamClosed = new Promise((resolve) => {
       let settled = false;
       const done = () => {
@@ -373,9 +381,6 @@ async function runInContainer({ image, cmd, binds, stdin, timeoutMs, memoryLimit
     });
 
     await container.start();
-
-    stream.write(stdin || '');
-    stream.end();
 
     const timeoutPromise = new Promise((_, reject) =>
       setTimeout(() => reject(new Error('TIMEOUT')), timeoutMs)
@@ -454,7 +459,6 @@ export async function judgeCode({ lang, code, examples, timeLimit = 2, userTier 
         image:     cfg.image,
         cmd:       cfg.compile,
         binds:     rwBinds,           // 컴파일 결과물 쓰기 필요
-        stdin:     '',
         timeoutMs: 10000,
         memoryLimit: compileMemLimit,
         dropCaps: false,
@@ -472,11 +476,11 @@ export async function judgeCode({ lang, code, examples, timeLimit = 2, userTier 
     let totalMs = 0;
     for (const ex of examples) {
       const start = Date.now();
+      writeFileSync(join(workDir, 'input.txt'), ex.input || '', 'utf-8');
       const run   = await runInContainer({
         image:     cfg.image,
-        cmd:       cfg.cmd,
+        cmd:       withInputRedirect(cfg.cmd),
         binds:     roBinds,           // 실행 단계는 읽기 전용 마운트
-        stdin:     ex.input,
         timeoutMs: effectiveTimeLimit * 1000 + 500,
         memoryLimit: memLimit,
       });
@@ -537,7 +541,6 @@ export async function runCode({ lang, code, input = '', timeLimit = 2, userTier 
         image: cfg.image,
         cmd: cfg.compile,
         binds: rwBinds,
-        stdin: '',
         timeoutMs: 10000,
         memoryLimit: compileMemLimit,
         dropCaps: false,
@@ -554,11 +557,11 @@ export async function runCode({ lang, code, input = '', timeLimit = 2, userTier 
     }
 
     const start = Date.now();
+    writeFileSync(join(workDir, 'input.txt'), input || '', 'utf-8');
     const run = await runInContainer({
       image: cfg.image,
-      cmd: cfg.cmd,
+      cmd: withInputRedirect(cfg.cmd),
       binds: roBinds,
-      stdin: input,
       timeoutMs: effectiveTimeLimit * 1000 + 500,
       memoryLimit: memLimit,
     });
