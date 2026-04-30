@@ -183,6 +183,21 @@ Global CSS variables defined in `dailycoding/src/index.css`:
 - Utility classes: `.btn`, `.btn-primary`, `.btn-ghost`, `.btn-danger`, `.btn-success`, `.mono`
 - Component styles are inline JSX; page-level CSS files (e.g. `JudgePage.css`) handle layout only
 
+### Mobile Responsive CSS Pattern
+All page components use **inline `style={{}}`**, which CSS cannot override without `!important`. The mobile override workflow:
+1. Add `className="my-class"` to the JSX element
+2. Add `import './PageName.css'` at the top of the page file
+3. Write `@media` rules with `!important` in the CSS file
+
+**Critical layout pitfall**: Fixed-width flex/grid siblings crush adjacent elements on mobile. Known patterns that break on narrow screens:
+- `display: flex` with one child having a fixed `width: Npx` — the sibling gets `viewport - N - padding` which can go negative
+- `gridTemplateColumns: 'minmax(0, 1fr) minmax(320px, 1fr)'` — the `minmax(320px)` column demands 320px minimum, leaving the first column negative on 375px screens
+
+**AuthPage** (`Auth.css`): Left intro panel hidden at ≤768px, right login form takes 100% width.  
+**LandingPage** (`LandingPage.css`): Hero 2-column grid stacks to 1-column at ≤768px.  
+**Dashboard** (`Dashboard.css`): Main 2-column grid (`minmax(0,1fr) 360px`) stacks at ≤900px via `.dashboard-main-grid`.  
+**CommunityPage** (`CommunityPage.css`): Board tab descriptions hidden at ≤640px via `.community-tab-desc`; search bar becomes 2-row (`1fr auto` + nth-child placement).
+
 ---
 
 ### Deployment Target
