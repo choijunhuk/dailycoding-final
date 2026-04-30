@@ -223,6 +223,46 @@ export function outputsMatch(actual, expected) {
   return actualTokens.every((token, index) => token === expectedTokens[index]);
 }
 
+function demuxDockerLogBuffer(buffer) {
+  if (!Buffer.isBuffer(buffer)) {
+    return { stdout: '', stderr: '' };
+  }
+
+  let stdout = '';
+  let stderr = '';
+  let offset = 0;
+  let parsedFrames = 0;
+
+  while (offset + 8 <= buffer.length) {
+    const streamType = buffer[offset];
+    const frameLength = buffer.readUInt32BE(offset + 4);
+    const frameStart = offset + 8;
+    const frameEnd = frameStart + frameLength;
+    if (frameEnd > buffer.length) break;
+
+    const chunk = buffer.subarray(frameStart, frameEnd).toString();
+    if (streamType === 1) stdout += chunk;
+    else if (streamType === 2) stderr += chunk;
+    parsedFrames += 1;
+    offset = frameEnd;
+  }
+
+  if (parsedFrames === 0 && buffer.length > 0) {
+    stdout = buffer.toString();
+  }
+
+  return { stdout, stderr };
+}
+
+async function readContainerLogs(container) {
+  try {
+    const logs = await container.logs({ stdout: true, stderr: true });
+    return demuxDockerLogBuffer(logs);
+  } catch {
+    return { stdout: '', stderr: '' };
+  }
+}
+
 // ── 채점 동시 실행 제한 ──────────────────────────────────────────────────────
 const MAX_CONCURRENT_JUDGES = 4;
 let activeJudges = 0;
@@ -301,7 +341,7 @@ async function runInContainer({ image, cmd, binds, stdin, timeoutMs, memoryLimit
         SecurityOpt: ['no-new-privileges:true'],
         NetworkMode: 'none',          // 네트워크 완전 격리 (중복 보장)
         OomKillDisable: false,        // OOM 발생 시 즉시 종료 허용
-        AutoRemove:  true,
+        AutoRemove:  false,
       },
     });
   } catch (err) {
@@ -361,10 +401,18 @@ async function runInContainer({ image, cmd, binds, stdin, timeoutMs, memoryLimit
       new Promise((resolve) => setTimeout(resolve, 250)),
     ]);
 
+    const logged = await readContainerLogs(container);
+    if (logged.stdout || logged.stderr) {
+      stdout = logged.stdout || stdout;
+      stderr = logged.stderr || stderr;
+    }
+
     return { stdout: stdout.trim(), stderr: stderr.trim(), exitCode, timedOut: false };
   } catch (err) {
     console.error('[Judge] Container execution failed:', err.message);
     return { stdout: stdout.trim(), stderr: stderr.trim() || '샌드박스 실행 오류', exitCode: -1, timedOut: false };
+  } finally {
+    try { await container?.remove({ force: true }); } catch {}
   }
 }
 
