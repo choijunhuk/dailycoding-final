@@ -287,8 +287,8 @@ export const Battle = {
        FROM battle_history
        WHERE user_id = ?
        ORDER BY created_at DESC
-       LIMIT ?`,
-      [userId, cap]
+       LIMIT ${cap}`,
+      [userId]
     );
     return (rows || []).map((row) => ({
       id: row.id,

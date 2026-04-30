@@ -29,11 +29,11 @@ router.get('/search', auth, async (req, res) => {
              WHERE COALESCE(p.visibility, 'global') = 'global'
                AND (p.title LIKE ? OR EXISTS (
                  SELECT 1 FROM problem_tags t WHERE t.problem_id = p.id AND t.tag LIKE ?
-               ))
+             ))
              GROUP BY p.id
              ORDER BY p.solved_count DESC, p.id DESC
-             LIMIT ?`,
-            [`%${q}%`, `%${q}%`, limit]
+             LIMIT ${limit}`,
+            [`%${q}%`, `%${q}%`]
           ),
       type === 'problem'
         ? Promise.resolve([])
@@ -42,8 +42,8 @@ router.get('/search', auth, async (req, res) => {
              FROM posts
              WHERE title LIKE ? OR content LIKE ?
              ORDER BY like_count DESC, created_at DESC
-             LIMIT ?`,
-            [`%${q}%`, `%${q}%`, limit]
+             LIMIT ${limit}`,
+            [`%${q}%`, `%${q}%`]
           ),
     ]);
 

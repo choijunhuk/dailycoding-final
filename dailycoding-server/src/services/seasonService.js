@@ -46,6 +46,7 @@ export async function updateSeasonRating(userId, ratingDelta, { solvedIncrement 
 }
 
 export async function listSeasonRanking(season = getCurrentSeason(), limit = 100) {
+  const safeLimit = Math.min(100, Math.max(1, Number(limit) || 100));
   return query(
     `SELECT sr.user_id,
             sr.season,
@@ -61,7 +62,7 @@ export async function listSeasonRanking(season = getCurrentSeason(), limit = 100
      JOIN users u ON u.id = sr.user_id
      WHERE sr.season = ?
      ORDER BY sr.season_rating DESC, sr.solved_count DESC, sr.battle_wins DESC, sr.updated_at ASC
-     LIMIT ?`,
-    [season, Math.min(100, Math.max(1, Number(limit) || 100))]
+     LIMIT ${safeLimit}`,
+    [season]
   );
 }

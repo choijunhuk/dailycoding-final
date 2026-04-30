@@ -54,8 +54,8 @@ router.get('/', async (req, res) => {
        FROM exam_sets
        ${where}
        ORDER BY created_at DESC
-       LIMIT ? OFFSET ?`,
-      [...params, limit, offset]
+       LIMIT ${limit} OFFSET ${offset}`,
+      params
     );
     const items = rows.map((row) => {
       const isPro = Boolean(row.is_pro);

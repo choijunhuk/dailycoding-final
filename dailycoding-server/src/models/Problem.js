@@ -212,7 +212,7 @@ export const Problem = {
       params.push(...safeTags);
     }
 
-    params.push(tier, safeLimit);
+    params.push(tier);
 
     const rows = await query(
       `SELECT p.id, p.title, p.tier, p.difficulty, p.time_limit, p.mem_limit,
@@ -235,7 +235,7 @@ export const Problem = {
          AND (${similarityClause})
        GROUP BY p.id
        ORDER BY (p.tier = ?) DESC, p.solved_count DESC, p.id ASC
-       LIMIT ?`,
+       LIMIT ${safeLimit}`,
       params
     );
 
@@ -322,11 +322,11 @@ export const Problem = {
          AND NOT EXISTS (
            SELECT 1 FROM submissions s
            WHERE s.user_id = ? AND s.problem_id = p.id AND s.result = 'correct'
-         )
+       )
        GROUP BY p.id
        ORDER BY RAND()
-       LIMIT ?`,
-      [userId || 0, ...safeTiers, userId || 0, safeLimit]
+       LIMIT ${safeLimit}`,
+      [userId || 0, ...safeTiers, userId || 0]
     );
 
     return normalizeProblemListRows(rows);

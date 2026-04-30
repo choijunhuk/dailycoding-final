@@ -19,8 +19,7 @@ export const AdminLog = {
          FROM admin_logs l
          JOIN users u ON u.id = l.admin_id
          ORDER BY l.created_at DESC, l.id DESC
-         LIMIT ? OFFSET ?`,
-        [safeLimit, offset]
+         LIMIT ${safeLimit} OFFSET ${offset}`
       ),
       queryOne('SELECT COUNT(*) AS cnt FROM admin_logs', []),
     ]);

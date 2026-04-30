@@ -4,9 +4,10 @@ import { query, queryOne, insert, run } from '../config/mysql.js';
 
 export const Notification = {
   async findByUser(userId, limit = 30) {
+    const safeLimit = Math.min(100, Math.max(1, Number.parseInt(limit, 10) || 30));
     const rows = await query(
-      'SELECT * FROM notifications WHERE user_id=? ORDER BY created_at DESC LIMIT ?',
-      [userId, limit]
+      `SELECT * FROM notifications WHERE user_id=? ORDER BY created_at DESC LIMIT ${safeLimit}`,
+      [userId]
     );
     return rows || [];
   },

@@ -84,8 +84,7 @@ router.get('/', auth, async (req, res) => {
       query(
         `SELECT p.*, u.username
          FROM dump_posts p LEFT JOIN users u ON p.user_id = u.id
-         ORDER BY p.created_at DESC LIMIT ? OFFSET ?`,
-        [PAGE_SIZE, offset]
+         ORDER BY p.created_at DESC LIMIT ${PAGE_SIZE} OFFSET ${offset}`
       ),
       queryOne('SELECT COUNT(*) AS cnt FROM dump_posts'),
     ]);

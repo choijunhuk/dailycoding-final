@@ -642,8 +642,8 @@ router.get('/:id/comments', auth, async (req, res) => {
        JOIN users u ON pc.user_id = u.id
        WHERE pc.problem_id = ?
        ORDER BY pc.parent_id IS NOT NULL, pc.created_at ASC
-       LIMIT ? OFFSET ?`,
-      [req.user.id, Number(req.params.id), limit, offset]
+       LIMIT ${limit} OFFSET ${offset}`,
+      [req.user.id, Number(req.params.id)]
     );
     return res.json((rows || []).map((row) => ({
       ...row,
