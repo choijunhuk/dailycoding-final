@@ -197,6 +197,8 @@ export default function PublicProfilePage() {
     return <div style={{ maxWidth: 1120, margin: '0 auto', padding: '36px 20px', color: 'var(--text3)' }}>{t('publicProfileNotFound')}</div>
   }
 
+  const locale = lang === 'ko' ? 'ko-KR' : 'en-US'
+
   return (
     <div style={{ maxWidth: 1120, margin: '0 auto', padding: '28px 20px 40px', display: 'grid', gap: 24 }}>
       <div style={{ background: 'linear-gradient(135deg, var(--bg2), var(--bg3))', border: '1px solid var(--border)', borderRadius: 24, padding: '24px 22px' }}>
@@ -375,4 +377,3 @@ export default function PublicProfilePage() {
     </div>
   )
 }
-  const locale = lang === 'ko' ? 'ko-KR' : 'en-US'

@@ -100,6 +100,19 @@ function buildBlockedUserClause(alias, userId) {
 const blockFilter = (userId) => buildBlockedUserClause('p', userId);
 const replyBlockFilter = (userId) => buildBlockedUserClause('r', userId);
 
+function maskAnonymousPostAuthor(row, viewerId) {
+  if (!row?.is_anonymous || Number(row.user_id) === Number(viewerId)) return row;
+  return {
+    ...row,
+    user_id: null,
+    username: '익명',
+    nickname: null,
+    tier: null,
+    avatar_color: null,
+    avatar_emoji: null,
+  };
+}
+
 // ── 인기 게시판 (최근 24시간, 추천 10개 이상) ────────────────────────────────
 // GET /api/community/popular
 router.get('/popular', auth, async (req, res) => {
@@ -118,7 +131,7 @@ router.get('/popular', auth, async (req, res) => {
        LIMIT 50`,
       blocked.params
     );
-    res.json({ posts: posts || [] });
+    res.json({ posts: (posts || []).map((post) => maskAnonymousPostAuthor(post, req.user.id)) });
   } catch (err) {
     console.error('[community/popular]', err);
     res.status(500).json({ message: '서버 오류' });
@@ -130,7 +143,7 @@ router.get('/popular', auth, async (req, res) => {
 router.get('/scraps/mine', auth, async (req, res) => {
   try {
     const posts = await query(
-      `SELECT p.id, p.board_type, p.title, p.like_count, p.answer_count, p.created_at,
+      `SELECT p.id, p.board_type, p.user_id, p.title, p.like_count, p.answer_count, p.is_anonymous, p.created_at,
               u.username, u.nickname, u.tier, ps.created_at AS scrapped_at
        FROM post_scraps ps
        JOIN posts p ON ps.post_id = p.id
@@ -140,7 +153,7 @@ router.get('/scraps/mine', auth, async (req, res) => {
        LIMIT 50`,
       [req.user.id]
     );
-    res.json({ posts: posts || [] });
+    res.json({ posts: (posts || []).map((post) => maskAnonymousPostAuthor(post, req.user.id)) });
   } catch (err) {
     console.error('[community/scraps/mine]', err);
     res.status(500).json({ message: '서버 오류' });
@@ -216,12 +229,8 @@ router.get('/:board', auth, boardGuard, async (req, res) => {
 
     sql += ` ORDER BY p.is_pinned DESC, p.created_at DESC LIMIT ${PAGE_SIZE} OFFSET ${offset}`;
 
-    // 익명 글의 경우 작성자 정보 마스킹
     const rawRows = await query(sql, params);
-    const rows = (rawRows || []).map(r => r.is_anonymous
-      ? { ...r, user_id: null, username: '익명', nickname: null }
-      : r
-    );
+    const rows = (rawRows || []).map((row) => maskAnonymousPostAuthor(row, req.user.id));
 
     let countExtra = '';
     const countParams = [board];
@@ -266,13 +275,7 @@ router.get('/:board/:id', auth, boardGuard, async (req, res) => {
     // 조회수 비동기 증가
     run('UPDATE posts SET view_count = view_count + 1 WHERE id = ?', [postId]).catch(() => {});
 
-    // 익명 글 작성자 마스킹 (본인 제외)
-    const authorMasked = post.is_anonymous && post.user_id !== req.user.id;
-    if (authorMasked) {
-      post.user_id = null;
-      post.username = '익명';
-      post.nickname = null;
-    }
+    const safePost = maskAnonymousPostAuthor(post, req.user.id);
 
     const [replies, poll, scrapRow] = await Promise.all([
       query(
@@ -303,7 +306,7 @@ router.get('/:board/:id', auth, boardGuard, async (req, res) => {
     }
 
     res.json({
-      ...post,
+      ...safePost,
       isScrapped: !!scrapRow,
       boj_refs: extractBojRefs(post.content),
       poll: pollData,

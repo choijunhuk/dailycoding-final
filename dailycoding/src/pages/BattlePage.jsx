@@ -786,8 +786,13 @@ export default function BattlePage() {
     const battleLangLabel = JUDGE_LANGUAGE_OPTIONS.find((option) => option.value === battleLang)?.label || battleLang;
     const codeEntry = codeMap[pid] || { code: '', lang: battleLang };
 
-    const team1Score = Object.values(room.players || {}).filter(p => p.teamId === 'team_1').reduce((acc, p) => acc + p.score, 0);
-    const team2Score = Object.values(room.players || {}).filter(p => p.teamId === 'team_2').reduce((acc, p) => acc + p.score, 0);
+    const players = Object.values(room.players || {});
+    const team1Score = players.filter(p => p.teamId === 'team_1').reduce((acc, p) => acc + p.score, 0);
+    const team2Score = players.filter(p => p.teamId === 'team_2').reduce((acc, p) => acc + p.score, 0);
+    const myTeamScore = myTeamId === 'team_2' ? team2Score : team1Score;
+    const opponentTeamScore = myTeamId === 'team_2' ? team1Score : team2Score;
+    const opponentPlayers = players.filter((p) => p.teamId !== myTeamId);
+    const opponentLabel = opponentPlayers.map((p) => p.username).join(', ') || '상대';
 
     return (
       <div className="bp-page bp-battle-page">
@@ -817,6 +822,19 @@ export default function BattlePage() {
                 <span key={p.id} className={`bp-player-chip ${p.id === myId ? 'self' : ''}`}>{p.username}</span>
               ))}
             </div>
+          </div>
+        </div>
+
+        <div className="bp-scoreboard" aria-label="현재 배틀 점수">
+          <div className="bp-score-card mine">
+            <span className="bp-score-label">내 점수</span>
+            <strong>{myTeamScore}점</strong>
+            <small>{me?.username || '나'}</small>
+          </div>
+          <div className="bp-score-card opponent">
+            <span className="bp-score-label">상대 점수</span>
+            <strong>{opponentTeamScore}점</strong>
+            <small>{opponentLabel}</small>
           </div>
         </div>
 
