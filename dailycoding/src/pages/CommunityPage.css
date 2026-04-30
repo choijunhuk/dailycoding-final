@@ -1,38 +1,45 @@
 /* ── Community Mobile ── */
 
-/* 포스트 카드 아이템 */
 .community-post-item {
   padding: 18px 20px;
 }
 
-/* 포스트 통계 (좋아요/댓글/조회) */
 .community-post-metrics {
   min-width: 180px;
 }
 
-/* 상세 뷰 제목 */
 .community-detail-title {
   font-size: 28px;
 }
 
 @media (max-width: 640px) {
-  /* 검색바 단일 컬럼 */
+  /* 검색바: 입력+버튼 1행, 셀렉트 2행 (3→2행으로 축소) */
   .community-search-bar {
-    grid-template-columns: 1fr !important;
+    grid-template-columns: 1fr auto !important;
+    grid-template-rows: auto auto;
+  }
+  .community-search-bar > *:nth-child(1) { grid-column: 1; grid-row: 1; }
+  .community-search-bar > *:nth-child(2) { grid-column: 1 / -1; grid-row: 2; }
+  .community-search-bar > *:nth-child(3) { grid-column: 2; grid-row: 1; }
+
+  /* 탭 설명 텍스트 숨김 (탭이 줄 단위로 쌓이는 문제 해결) */
+  .community-tab-desc {
+    display: none !important;
+  }
+  .community-board-tabs button {
+    padding: 8px 14px !important;
+    font-size: 12px !important;
   }
 
-  /* 포스트 아이템 패딩 축소 */
   .community-post-item {
-    padding: 14px 14px !important;
+    padding: 12px 14px !important;
   }
 
-  /* 메트릭 그리드 크기 축소 */
   .community-post-metrics {
-    min-width: 130px;
+    min-width: 120px;
     gap: 5px !important;
   }
 
-  /* 상세 뷰 제목 폰트 축소 */
   .community-detail-title {
     font-size: 20px !important;
     letter-spacing: -0.3px !important;
@@ -41,11 +48,11 @@
 
 @media (max-width: 480px) {
   .community-post-item {
-    padding: 12px 12px !important;
+    padding: 10px 12px !important;
   }
 
   .community-post-metrics {
-    min-width: 110px;
+    min-width: 100px;
     gap: 4px !important;
   }
 

@@ -1,4 +1,12 @@
 /* ── Dashboard Mobile ── */
+
+/* 메인 2컬럼 그리드: 태블릿 이하에서 단일 컬럼 */
+@media (max-width: 900px) {
+  .dashboard-main-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
 @media (max-width: 768px) {
   .dashboard-root {
     padding: 16px 14px !important;
@@ -19,6 +27,6 @@
     padding: 12px 10px !important;
   }
   .dashboard-welcome {
-    padding: 14px 12px !important;
+    padding: 12px 14px !important;
   }
 }

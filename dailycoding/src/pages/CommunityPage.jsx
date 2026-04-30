@@ -69,7 +69,7 @@ function SectionTitle({ title, desc, action }) {
 
 function BoardTabs({ activeBoard, onChange }) {
   return (
-    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+    <div className="community-board-tabs" style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
       {Object.entries(BOARD_META).map(([key, meta]) => {
         const active = key === activeBoard
         return (
@@ -93,7 +93,7 @@ function BoardTabs({ activeBoard, onChange }) {
             }}
           >
             <span>{meta.label}</span>
-            <span style={{ fontSize: 11, opacity: active ? 0.9 : 0.7 }}>{meta.desc}</span>
+            <span className="community-tab-desc" style={{ fontSize: 11, opacity: active ? 0.9 : 0.7 }}>{meta.desc}</span>
           </button>
         )
       })}
