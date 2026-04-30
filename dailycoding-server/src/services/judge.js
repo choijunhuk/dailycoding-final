@@ -431,6 +431,7 @@ export async function judgeCode({ lang, code, examples, timeLimit = 2, userTier 
 
   const isPremium = userTier === 'pro' || userTier === 'team';
   const memLimit = (isPremium ? 512 : 128) * 1024 * 1024;
+  const compileMemLimit = Math.max(memLimit, 512 * 1024 * 1024);
   const maxTime = isPremium ? 15 : 5;
   const effectiveTimeLimit = Math.min(timeLimit, maxTime);
 
@@ -455,7 +456,7 @@ export async function judgeCode({ lang, code, examples, timeLimit = 2, userTier 
         binds:     rwBinds,           // 컴파일 결과물 쓰기 필요
         stdin:     '',
         timeoutMs: 10000,
-        memoryLimit: memLimit,
+        memoryLimit: compileMemLimit,
         dropCaps: false,
       });
       if (compileResult.exitCode !== 0) {
@@ -518,6 +519,7 @@ export async function runCode({ lang, code, input = '', timeLimit = 2, userTier 
 
   const isPremium = userTier === 'pro' || userTier === 'team';
   const memLimit = (isPremium ? 512 : 128) * 1024 * 1024;
+  const compileMemLimit = Math.max(memLimit, 512 * 1024 * 1024);
   const maxTime = isPremium ? 15 : 5;
   const effectiveTimeLimit = Math.min(timeLimit, maxTime);
 
@@ -537,7 +539,7 @@ export async function runCode({ lang, code, input = '', timeLimit = 2, userTier 
         binds: rwBinds,
         stdin: '',
         timeoutMs: 10000,
-        memoryLimit: memLimit,
+        memoryLimit: compileMemLimit,
         dropCaps: false,
       });
       if (compileResult.exitCode !== 0) {
