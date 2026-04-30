@@ -23,7 +23,7 @@ VITE_API_URL="" npm run build
 
 echo "📁 [5/8] 프론트엔드 배포..."
 mkdir -p "$FRONTEND_DIST"
-rm -rf "$FRONTEND_DIST"/*
+find "$FRONTEND_DIST" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
 cp -r "$REPO_DIR/dailycoding/dist"/* "$FRONTEND_DIST"/
 
 echo "🐳 [6/8] Docker (MySQL + Redis)..."
