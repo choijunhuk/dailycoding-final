@@ -78,6 +78,7 @@ export default function BattlePage() {
   const [answers, setAnswers]       = useState({});  // { [pid]: string | string[] }
   const [codeMap, setCodeMap]       = useState({});  // { [pid]: { code, lang } }
   const [submitResults, setSubmitResults] = useState({}); // { [pid]: true|false|'locked'|string }
+  const [judgeDetails, setJudgeDetails] = useState({}); // { [pid]: { detail, timeMs, memoryMb } }
   const [submitting, setSubmitting] = useState(false);
   const [timeLeft, setTimeLeft]     = useState(BATTLE_SEC);
   const [opponentTyping, setOpponentTyping] = useState(false);
@@ -430,6 +431,14 @@ export default function BattlePage() {
           problemId: problem.id, lang, code,
         });
         setSubmitResults(prev => ({ ...prev, [problem.id]: data.result }));
+        setJudgeDetails(prev => ({
+          ...prev,
+          [problem.id]: {
+            detail: data.detail || '',
+            timeMs: Number.isFinite(data.timeMs) ? data.timeMs : null,
+            memoryMb: Number.isFinite(data.memoryMb) ? data.memoryMb : null,
+          },
+        }));
         handleRoomUpdate(data.room);
       } else {
         const answer = answers[problem.id];
@@ -437,10 +446,15 @@ export default function BattlePage() {
           problemId: problem.id, answer,
         });
         setSubmitResults(prev => ({ ...prev, [problem.id]: data.correct ? true : false }));
+        setJudgeDetails(prev => ({ ...prev, [problem.id]: null }));
         if (data.room) handleRoomUpdate(data.room);
       }
     } catch (err) {
       setSubmitResults(prev => ({ ...prev, [problem.id]: 'error' }));
+      setJudgeDetails(prev => ({
+        ...prev,
+        [problem.id]: { detail: err.response?.data?.message || '채점 요청에 실패했습니다.', timeMs: null, memoryMb: null },
+      }));
     } finally {
       setSubmitting(false);
     }
@@ -866,6 +880,7 @@ export default function BattlePage() {
                   onCodeChange={val => handleCodeChange(pid, val)}
                   locked={isLocked || isSpectator}
                   result={submitResults[pid]}
+                  judgeDetail={judgeDetails[pid]}
                 />
               )}
 

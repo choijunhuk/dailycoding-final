@@ -607,7 +607,7 @@ export default function Dashboard() {
                       <div style={{fontSize:13,lineHeight:1.7}}>
                         <strong>{item.avatarEmoji || '🙂'} {item.username}</strong>{lang === 'ko' ? t('dashboardUserSuffix') : ''}{' '}
                         <button
-                          onClick={() => navigate(`/community?post=${item.postId}`)}
+                          onClick={() => navigate(`/community/${item.board || 'qna'}/${item.postId}`)}
                           style={{background:'none',border:'none',padding:0,color:'var(--blue)',cursor:'pointer',font: 'inherit'}}
                         >
                           {item.postTitle}

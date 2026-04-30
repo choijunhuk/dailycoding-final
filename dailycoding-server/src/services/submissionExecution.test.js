@@ -76,6 +76,41 @@ test('non-persist example run uses example cases only', async () => {
   assert.deepEqual(capturedPayload.cases, problem.examples);
 });
 
+test('non-persist judge can opt into hidden cases without persistence side effects', async () => {
+  let capturedPayload = null;
+  const calls = [];
+  const problem = {
+    id: 2,
+    title: 'Battle Sample',
+    tier: 'bronze',
+    timeLimit: 2,
+    examples: [{ input: '1', output: '1' }],
+    testcases: [{ input: '2', output: '2' }],
+  };
+
+  await executeSubmissionFlow({
+    problem,
+    problemId: 2,
+    userId: 7,
+    rawLang: 'Python 3',
+    code: 'print(input())',
+    judgeRuntime: { mode: 'native-subprocess', supportedLanguages: ['python'] },
+    persist: false,
+    includeHiddenCases: true,
+  }, {
+    executeJudgeRequest: async (payload) => {
+      capturedPayload = payload;
+      calls.push('executeJudgeRequest');
+      return { result: 'correct', time: '1ms', mem: '-', detail: 'ok' };
+    },
+    createSubmission: async () => { calls.push('createSubmission'); },
+  });
+
+  assert.equal(capturedPayload.executionMode, 'judge');
+  assert.deepEqual(capturedPayload.cases, [...problem.examples, ...problem.testcases]);
+  assert.deepEqual(calls, ['executeJudgeRequest']);
+});
+
 test('persisted correct submit preserves submission-side effects', async () => {
   const calls = [];
   const problem = {

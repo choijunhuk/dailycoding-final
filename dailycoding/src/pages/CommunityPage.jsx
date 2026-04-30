@@ -401,6 +401,177 @@ export default function CommunityPage() {
   const isMyPost = selectedPost?.user_id === user?.id
   const postAuthorName = selectedPost?.nickname || selectedPost?.username || '익명'
 
+  const composerModal = (
+    <Modal open={composerOpen} onClose={() => setComposerOpen(false)} title={editorMode === 'edit' ? '게시글 수정' : '새 게시글 작성'}>
+      <div style={{ display: 'grid', gap: 14 }}>
+        <input
+          value={draft.title}
+          onChange={(event) => setDraft((current) => ({ ...current, title: event.target.value }))}
+          placeholder="제목"
+          style={{ border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', borderRadius: 12, padding: '12px 14px', fontFamily: 'inherit', fontSize: 14, outline: 'none' }}
+        />
+        <textarea
+          value={draft.content}
+          onChange={(event) => setDraft((current) => ({ ...current, content: event.target.value }))}
+          placeholder="본문을 입력하세요. 사용자 멘션은 @username 형식으로 작성할 수 있습니다."
+          rows={12}
+          style={{ border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', borderRadius: 14, padding: '14px 16px', fontFamily: 'inherit', fontSize: 14, lineHeight: 1.7, resize: 'vertical', outline: 'none' }}
+        />
+        <input
+          value={draft.tags}
+          onChange={(event) => setDraft((current) => ({ ...current, tags: event.target.value }))}
+          placeholder="태그를 쉼표로 구분해 입력하세요. 예: dp, graph, review"
+          style={{ border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', borderRadius: 12, padding: '12px 14px', fontFamily: 'inherit', fontSize: 13, outline: 'none' }}
+        />
+        {editorMode === 'create' ? (
+          <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: 'var(--text2)' }}>
+            <input type="checkbox" checked={draft.isAnonymous} onChange={(event) => setDraft((current) => ({ ...current, isAnonymous: event.target.checked }))} />
+            익명으로 작성하기
+          </label>
+        ) : null}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, flexWrap: 'wrap' }}>
+          <button onClick={() => setComposerOpen(false)} style={{ border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--text)', borderRadius: 12, padding: '10px 14px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 700 }}>
+            취소
+          </button>
+          <button onClick={submitPost} disabled={savingPost} style={{ border: 'none', background: BOARD_META[activeBoard].tone, color: 'var(--bg)', borderRadius: 12, padding: '10px 16px', cursor: savingPost ? 'default' : 'pointer', fontFamily: 'inherit', fontWeight: 800, opacity: savingPost ? 0.5 : 1 }}>
+            {savingPost ? '저장 중...' : editorMode === 'edit' ? '수정 저장' : '게시하기'}
+          </button>
+        </div>
+      </div>
+    </Modal>
+  )
+
+  if (selectedPostId) {
+    return (
+      <div style={{ maxWidth: 980, margin: '0 auto', padding: '28px 20px 44px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 18 }}>
+          <button onClick={closePost} style={{ border: '1px solid var(--border)', background: 'var(--bg2)', color: 'var(--text)', borderRadius: 12, padding: '10px 14px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 800 }}>
+            ← 목록으로
+          </button>
+          <button onClick={() => openComposer('create')} style={{ border: 'none', background: BOARD_META[activeBoard].tone, color: 'var(--bg)', padding: '10px 16px', borderRadius: 12, fontFamily: 'inherit', fontSize: 13, fontWeight: 800, cursor: 'pointer' }}>
+            새 글 작성
+          </button>
+        </div>
+
+        <article style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 22, padding: 22, boxShadow: '0 18px 48px rgba(0,0,0,.18)' }}>
+          {detailLoading || !selectedPost ? (
+            <div style={{ padding: '56px 0', textAlign: 'center', color: 'var(--text3)' }}>게시글을 불러오는 중입니다.</div>
+          ) : (
+            <div style={{ display: 'grid', gap: 20 }}>
+              <div>
+                <div style={{ fontSize: 12, color: BOARD_META[activeBoard].tone, fontWeight: 900, marginBottom: 8 }}>{BOARD_META[activeBoard].label}</div>
+                <h1 style={{ margin: 0, fontSize: 28, lineHeight: 1.25, color: 'var(--text)', letterSpacing: -0.5 }}>{selectedPost.title}</h1>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+                  {makeAvatar(postAuthorName, BOARD_META[activeBoard].tone, 46)}
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>{postAuthorName}</div>
+                      {selectedPost.user_id ? (
+                        <button onClick={() => navigate(`/user/${selectedPost.user_id}`)} style={{ border: 'none', background: 'transparent', color: 'var(--blue)', cursor: 'pointer', fontSize: 12, fontWeight: 700, padding: 0 }}>
+                          공개 프로필 보기
+                        </button>
+                      ) : null}
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 4 }}>{formatDate(selectedPost.created_at)}</div>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <button onClick={() => togglePostLike(selectedPost.id)} style={{ border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--text)', borderRadius: 12, padding: '9px 12px', cursor: 'pointer', fontWeight: 700 }}>❤️ 좋아요 {selectedPost.like_count || 0}</button>
+                  <button onClick={() => toggleScrap(selectedPost.id)} style={{ border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--text)', borderRadius: 12, padding: '9px 12px', cursor: 'pointer', fontWeight: 700 }}>{selectedPost.isScrapped ? '스크랩 해제' : '스크랩'}</button>
+                  {!isMyPost && selectedPost.user_id ? (
+                    <button onClick={() => blockAuthor(selectedPost.user_id)} style={{ border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--red)', borderRadius: 12, padding: '9px 12px', cursor: 'pointer', fontWeight: 700 }}>차단</button>
+                  ) : null}
+                  {isMyPost ? (
+                    <>
+                      <button onClick={() => openComposer('edit', selectedPost)} style={{ border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--text)', borderRadius: 12, padding: '9px 12px', cursor: 'pointer', fontWeight: 700 }}>수정</button>
+                      <button onClick={deletePost} style={{ border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--red)', borderRadius: 12, padding: '9px 12px', cursor: 'pointer', fontWeight: 700 }}>삭제</button>
+                    </>
+                  ) : null}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {selectedPost.tags.map((item) => (
+                  <span key={`detail-page-tag-${item}`} style={{ fontSize: 11, color: 'var(--blue)', background: 'rgba(88,166,255,.12)', border: '1px solid rgba(88,166,255,.2)', borderRadius: 999, padding: '4px 8px' }}>#{item}</span>
+                ))}
+              </div>
+
+              <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 18, padding: '22px 20px', color: 'var(--text)', lineHeight: 1.85, whiteSpace: 'pre-wrap', fontSize: 15 }}>
+                {selectedPost.content}
+              </div>
+
+              {selectedPost.boj_refs?.length ? (
+                <div style={{ background: 'var(--bg3)', borderRadius: 16, padding: 16 }}>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)', marginBottom: 10 }}>문제 참조</div>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {selectedPost.boj_refs.map((item) => (
+                      <a key={item.problemNumber} href={item.url} target="_blank" rel="noreferrer" style={{ color: 'var(--blue)', fontSize: 12, fontWeight: 700, textDecoration: 'none' }}>
+                        #{item.problemNumber}
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              <section style={{ background: 'var(--bg3)', borderRadius: 18, padding: 18 }}>
+                <SectionTitle title={`댓글 ${selectedPost.replies?.length || 0}`} desc={activeBoard === 'qna' ? '답글 버튼은 멘션 프리필로 대댓글 흐름을 보조합니다.' : '답글 버튼으로 작성자 멘션을 빠르게 시작할 수 있습니다.'} />
+                <div style={{ display: 'grid', gap: 12, marginBottom: 16 }}>
+                  {(selectedPost.replies || []).map((reply) => {
+                    const canDelete = reply.user_id === user?.id || isMyPost
+                    const canAccept = activeBoard === 'qna' && isMyPost && reply.user_id !== user?.id && !reply.is_accepted
+                    return (
+                      <div key={reply.id} style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: 16 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            {makeAvatar(reply.nickname || reply.username || '?', 'var(--green)', 34)}
+                            <div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{reply.nickname || reply.username}</span>
+                                {reply.is_accepted ? <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--green)' }}>채택됨</span> : null}
+                              </div>
+                              <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 4 }}>{formatDate(reply.created_at)}</div>
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                            <button onClick={() => likeReply(reply.id)} style={{ border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', borderRadius: 10, padding: '7px 10px', cursor: 'pointer', fontWeight: 700 }}>👍 {reply.like_count || 0}</button>
+                            <button onClick={() => setReplyDraft(`@${reply.nickname || reply.username} `)} style={{ border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', borderRadius: 10, padding: '7px 10px', cursor: 'pointer', fontWeight: 700 }}>답글</button>
+                            {canAccept ? <button onClick={() => acceptReply(reply.id)} style={{ border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--green)', borderRadius: 10, padding: '7px 10px', cursor: 'pointer', fontWeight: 800 }}>채택</button> : null}
+                            {canDelete ? <button onClick={() => deleteReply(reply.id)} style={{ border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--red)', borderRadius: 10, padding: '7px 10px', cursor: 'pointer', fontWeight: 700 }}>삭제</button> : null}
+                          </div>
+                        </div>
+                        <div style={{ marginTop: 12, fontSize: 14, color: 'var(--text2)', lineHeight: 1.75, whiteSpace: 'pre-wrap' }}>{reply.content}</div>
+                      </div>
+                    )
+                  })}
+                  {!(selectedPost.replies || []).length ? (
+                    <div style={{ padding: '18px 0', textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>첫 댓글을 남겨보세요.</div>
+                  ) : null}
+                </div>
+                <div style={{ display: 'grid', gap: 10 }}>
+                  <textarea
+                    value={replyDraft}
+                    onChange={(event) => setReplyDraft(event.target.value)}
+                    rows={4}
+                    placeholder="댓글을 입력하세요. @username 으로 멘션할 수 있습니다."
+                    style={{ border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', borderRadius: 14, padding: '12px 14px', fontFamily: 'inherit', fontSize: 13, lineHeight: 1.7, resize: 'vertical', outline: 'none' }}
+                  />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                    <div style={{ fontSize: 12, color: 'var(--text3)' }}>멘션 알림, Q&A 채택, 좋아요/스크랩 흐름이 모두 연결되어 있습니다.</div>
+                    <button onClick={submitReply} disabled={replyBusy} style={{ border: 'none', background: 'var(--green)', color: 'var(--bg)', borderRadius: 12, padding: '10px 14px', cursor: replyBusy ? 'default' : 'pointer', fontFamily: 'inherit', fontWeight: 800, opacity: replyBusy ? 0.55 : 1 }}>{replyBusy ? '등록 중...' : '댓글 등록'}</button>
+                  </div>
+                </div>
+              </section>
+            </div>
+          )}
+        </article>
+        {composerModal}
+      </div>
+    )
+  }
+
   return (
     <div style={{ maxWidth: 1220, margin: '0 auto', padding: '28px 20px 40px' }}>
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr)', gap: 24 }}>
@@ -612,160 +783,14 @@ export default function CommunityPage() {
                 <div>• 익명 글은 작성자 본인을 제외하고 익명으로 표시됩니다.</div>
                 <div>• 답글 버튼은 대댓글 대신 멘션 프리필 방식으로 동작합니다.</div>
                 <div>• Q&A 게시판에서는 작성자가 댓글을 채택할 수 있습니다.</div>
-                <div>• 차단은 상세 모달에서 바로 처리할 수 있습니다.</div>
+                <div>• 차단은 게시글 상세 페이지에서 바로 처리할 수 있습니다.</div>
               </div>
             </div>
           </aside>
         </div>
       </div>
 
-      <Modal open={composerOpen} onClose={() => setComposerOpen(false)} title={editorMode === 'edit' ? '게시글 수정' : '새 게시글 작성'}>
-        <div style={{ display: 'grid', gap: 14 }}>
-          <input
-            value={draft.title}
-            onChange={(event) => setDraft((current) => ({ ...current, title: event.target.value }))}
-            placeholder="제목"
-            style={{ border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', borderRadius: 12, padding: '12px 14px', fontFamily: 'inherit', fontSize: 14, outline: 'none' }}
-          />
-          <textarea
-            value={draft.content}
-            onChange={(event) => setDraft((current) => ({ ...current, content: event.target.value }))}
-            placeholder="본문을 입력하세요. 사용자 멘션은 @username 형식으로 작성할 수 있습니다."
-            rows={12}
-            style={{ border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', borderRadius: 14, padding: '14px 16px', fontFamily: 'inherit', fontSize: 14, lineHeight: 1.7, resize: 'vertical', outline: 'none' }}
-          />
-          <input
-            value={draft.tags}
-            onChange={(event) => setDraft((current) => ({ ...current, tags: event.target.value }))}
-            placeholder="태그를 쉼표로 구분해 입력하세요. 예: dp, graph, review"
-            style={{ border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', borderRadius: 12, padding: '12px 14px', fontFamily: 'inherit', fontSize: 13, outline: 'none' }}
-          />
-          {editorMode === 'create' ? (
-            <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: 'var(--text2)' }}>
-              <input type="checkbox" checked={draft.isAnonymous} onChange={(event) => setDraft((current) => ({ ...current, isAnonymous: event.target.checked }))} />
-              익명으로 작성하기
-            </label>
-          ) : null}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, flexWrap: 'wrap' }}>
-            <button onClick={() => setComposerOpen(false)} style={{ border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--text)', borderRadius: 12, padding: '10px 14px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 700 }}>
-              취소
-            </button>
-            <button onClick={submitPost} disabled={savingPost} style={{ border: 'none', background: BOARD_META[activeBoard].tone, color: 'var(--bg)', borderRadius: 12, padding: '10px 16px', cursor: savingPost ? 'default' : 'pointer', fontFamily: 'inherit', fontWeight: 800, opacity: savingPost ? 0.5 : 1 }}>
-              {savingPost ? '저장 중...' : editorMode === 'edit' ? '수정 저장' : '게시하기'}
-            </button>
-          </div>
-        </div>
-      </Modal>
-
-      <Modal open={Boolean(selectedPostId)} onClose={closePost} title={selectedPost?.title || '게시글 상세'} wide>
-        {detailLoading || !selectedPost ? (
-          <div style={{ padding: '36px 0', textAlign: 'center', color: 'var(--text3)' }}>게시글을 불러오는 중입니다.</div>
-        ) : (
-          <div style={{ display: 'grid', gap: 20 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
-                {makeAvatar(postAuthorName, BOARD_META[activeBoard].tone, 46)}
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                    <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--text)' }}>{postAuthorName}</div>
-                    {selectedPost.user_id ? (
-                      <button onClick={() => navigate(`/user/${selectedPost.user_id}`)} style={{ border: 'none', background: 'transparent', color: 'var(--blue)', cursor: 'pointer', fontSize: 12, fontWeight: 700, padding: 0 }}>
-                        공개 프로필 보기
-                      </button>
-                    ) : null}
-                  </div>
-                  <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 4 }}>{formatDate(selectedPost.created_at)}</div>
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <button onClick={() => togglePostLike(selectedPost.id)} style={{ border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--text)', borderRadius: 12, padding: '9px 12px', cursor: 'pointer', fontWeight: 700 }}>❤️ 좋아요 {selectedPost.like_count || 0}</button>
-                <button onClick={() => toggleScrap(selectedPost.id)} style={{ border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--text)', borderRadius: 12, padding: '9px 12px', cursor: 'pointer', fontWeight: 700 }}>{selectedPost.isScrapped ? '스크랩 해제' : '스크랩'}</button>
-                {!isMyPost && selectedPost.user_id ? (
-                  <button onClick={() => blockAuthor(selectedPost.user_id)} style={{ border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--red)', borderRadius: 12, padding: '9px 12px', cursor: 'pointer', fontWeight: 700 }}>차단</button>
-                ) : null}
-                {isMyPost ? (
-                  <>
-                    <button onClick={() => openComposer('edit', selectedPost)} style={{ border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--text)', borderRadius: 12, padding: '9px 12px', cursor: 'pointer', fontWeight: 700 }}>수정</button>
-                    <button onClick={deletePost} style={{ border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--red)', borderRadius: 12, padding: '9px 12px', cursor: 'pointer', fontWeight: 700 }}>삭제</button>
-                  </>
-                ) : null}
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {selectedPost.tags.map((item) => (
-                <span key={`detail-tag-${item}`} style={{ fontSize: 11, color: 'var(--blue)', background: 'rgba(88,166,255,.12)', border: '1px solid rgba(88,166,255,.2)', borderRadius: 999, padding: '4px 8px' }}>#{item}</span>
-              ))}
-            </div>
-
-            <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 18, padding: '18px 18px 20px', color: 'var(--text)', lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>
-              {selectedPost.content}
-            </div>
-
-            {selectedPost.boj_refs?.length ? (
-              <div style={{ background: 'var(--bg3)', borderRadius: 16, padding: 16 }}>
-                <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)', marginBottom: 10 }}>문제 참조</div>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  {selectedPost.boj_refs.map((item) => (
-                    <a key={item.problemNumber} href={item.url} target="_blank" rel="noreferrer" style={{ color: 'var(--blue)', fontSize: 12, fontWeight: 700, textDecoration: 'none' }}>
-                      #{item.problemNumber}
-                    </a>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-
-            <div style={{ background: 'var(--bg3)', borderRadius: 18, padding: 18 }}>
-              <SectionTitle title={`댓글 ${selectedPost.replies?.length || 0}`} desc={activeBoard === 'qna' ? '답글 버튼은 멘션 프리필로 대댓글 흐름을 보조합니다.' : '답글 버튼으로 작성자 멘션을 빠르게 시작할 수 있습니다.'} />
-              <div style={{ display: 'grid', gap: 12, marginBottom: 16 }}>
-                {(selectedPost.replies || []).map((reply) => {
-                  const canDelete = reply.user_id === user?.id || isMyPost
-                  const canAccept = activeBoard === 'qna' && isMyPost && reply.user_id !== user?.id && !reply.is_accepted
-                  return (
-                    <div key={reply.id} style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: 16 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                          {makeAvatar(reply.nickname || reply.username || '?', 'var(--green)', 34)}
-                          <div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                              <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{reply.nickname || reply.username}</span>
-                              {reply.is_accepted ? <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--green)' }}>채택됨</span> : null}
-                            </div>
-                            <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 4 }}>{formatDate(reply.created_at)}</div>
-                          </div>
-                        </div>
-                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                          <button onClick={() => likeReply(reply.id)} style={{ border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', borderRadius: 10, padding: '7px 10px', cursor: 'pointer', fontWeight: 700 }}>👍 {reply.like_count || 0}</button>
-                          <button onClick={() => setReplyDraft(`@${reply.nickname || reply.username} `)} style={{ border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', borderRadius: 10, padding: '7px 10px', cursor: 'pointer', fontWeight: 700 }}>답글</button>
-                          {canAccept ? <button onClick={() => acceptReply(reply.id)} style={{ border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--green)', borderRadius: 10, padding: '7px 10px', cursor: 'pointer', fontWeight: 800 }}>채택</button> : null}
-                          {canDelete ? <button onClick={() => deleteReply(reply.id)} style={{ border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--red)', borderRadius: 10, padding: '7px 10px', cursor: 'pointer', fontWeight: 700 }}>삭제</button> : null}
-                        </div>
-                      </div>
-                      <div style={{ marginTop: 12, fontSize: 14, color: 'var(--text2)', lineHeight: 1.75, whiteSpace: 'pre-wrap' }}>{reply.content}</div>
-                    </div>
-                  )
-                })}
-                {!(selectedPost.replies || []).length ? (
-                  <div style={{ padding: '18px 0', textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>첫 댓글을 남겨보세요.</div>
-                ) : null}
-              </div>
-              <div style={{ display: 'grid', gap: 10 }}>
-                <textarea
-                  value={replyDraft}
-                  onChange={(event) => setReplyDraft(event.target.value)}
-                  rows={4}
-                  placeholder="댓글을 입력하세요. @username 으로 멘션할 수 있습니다."
-                  style={{ border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', borderRadius: 14, padding: '12px 14px', fontFamily: 'inherit', fontSize: 13, lineHeight: 1.7, resize: 'vertical', outline: 'none' }}
-                />
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                  <div style={{ fontSize: 12, color: 'var(--text3)' }}>멘션 알림, Q&A 채택, 좋아요/스크랩 흐름이 모두 연결되어 있습니다.</div>
-                  <button onClick={submitReply} disabled={replyBusy} style={{ border: 'none', background: 'var(--green)', color: 'var(--bg)', borderRadius: 12, padding: '10px 14px', cursor: replyBusy ? 'default' : 'pointer', fontFamily: 'inherit', fontWeight: 800, opacity: replyBusy ? 0.55 : 1 }}>{replyBusy ? '등록 중...' : '댓글 등록'}</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </Modal>
+      {composerModal}
     </div>
   )
 }

@@ -3,12 +3,9 @@ import { auth, requireVerified } from '../middleware/auth.js';
 import { Battle } from '../models/Battle.js';
 import { User }   from '../models/User.js';
 import { errorResponse, internalError } from '../middleware/errorHandler.js';
-import {
-  executeJudgeRequest,
-  isRuntimeLanguageSupported,
-  normalizeJudgeLanguage,
-} from '../services/judge.js';
+import { normalizeJudgeLanguage } from '../services/judge.js';
 import { getCachedJudgeRuntime } from '../services/judgeRuntimeCache.js';
+import { executeSubmissionFlow } from '../services/submissionExecution.js';
 import { completeMission } from '../services/missionService.js';
 import { recordPromotionLoss } from '../services/promotionService.js';
 
@@ -312,31 +309,34 @@ router.post('/room/:roomId/code-judge', async (req, res) => {
       return res.json({ result: 'locked', room });
     }
 
-    const judgeRuntime = await getCachedJudgeRuntime();
-    const normalizedLang = normalizeJudgeLanguage(lang);
-    if (!normalizedLang) return errorResponse(res, 400, 'VALIDATION_ERROR', '지원하지 않는 언어입니다.');
-    if (!isRuntimeLanguageSupported(judgeRuntime, normalizedLang)) {
-      return errorResponse(res, 400, 'VALIDATION_ERROR', `현재 채점 환경에서 지원하지 않는 언어입니다: ${lang}`, {
-        mode: judgeRuntime.mode,
-        supportedLanguages: judgeRuntime.supportedLanguages,
-      });
-    }
-
     // DB에서 실제 문제 정보 조회 (테스트케이스 포함)
     const Problem = await getProblemModel();
     const prob = await Problem.findById(Number(problemId));
     if (!prob) return errorResponse(res, 404, 'NOT_FOUND', '문제를 찾을 수 없습니다.');
+    const problemType = prob.problemType || prob.problem_type || 'coding';
+    if (problemType !== 'coding' && problemType !== 'build') {
+      return errorResponse(res, 400, 'VALIDATION_ERROR', '코딩 배틀 채점은 코딩 문제에서만 사용할 수 있습니다.');
+    }
 
-    const judgeCases = (prob.testcases && prob.testcases.length > 0)
-      ? [...prob.examples, ...prob.testcases]
-      : prob.examples || [];
-    const { result, time, mem, detail } = await executeJudgeRequest({
-      judgeRuntime,
-      lang: normalizedLang,
+    const judgeRuntime = await getCachedJudgeRuntime({ logOnRefresh: true });
+    if (judgeRuntime.mode === 'unavailable') {
+      return errorResponse(res, 503, 'INTERNAL_ERROR', '현재 서버에서 채점 런타임을 사용할 수 없습니다.', {
+        supportedLanguages: judgeRuntime.supportedLanguages || [],
+      });
+    }
+    const requester = await User.findById(req.user.id);
+    const { execution, displayLang, normalizedLang } = await executeSubmissionFlow({
+      problem: prob,
+      problemId: Number(problemId),
+      userId: req.user.id,
+      rawLang: lang,
       code,
-      cases: judgeCases,
-      timeLimit: prob.timeLimit || 2,
+      judgeRuntime,
+      persist: false,
+      includeHiddenCases: true,
+      userTier: requester?.subscription_tier || 'free',
     });
+    const { result, time, mem, detail } = execution;
     const timeMs = time ? parseInt(time, 10) : null;
     const memoryMb = mem && /^\d+/.test(mem) ? parseInt(mem, 10) : null;
 
@@ -364,8 +364,11 @@ router.post('/room/:roomId/code-judge', async (req, res) => {
       }
     }
 
-    res.json({ result, timeMs, memoryMb, detail, room: updatedRoom });
+    res.json({ result, lang: displayLang || normalizedLang, timeMs, memoryMb, detail, room: updatedRoom });
   } catch (err) {
+    if (err.status && err.body) {
+      return res.status(err.status).json(err.body);
+    }
     return internalError(res);
   }
 });

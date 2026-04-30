@@ -98,7 +98,18 @@ export function BugFixProblem({ problem, answer, onChange, locked, correct }) {
   );
 }
 
-export function CodingProblem({ problem, code, lang, lockedLanguageLabel, onCodeChange, locked, result }) {
+const RESULT_LABEL = {
+  correct: '정답',
+  locked: '선점됨',
+  wrong: '오답',
+  compile: '컴파일 오류',
+  timeout: '시간 초과',
+  error: '실행 오류',
+};
+
+export function CodingProblem({ problem, code, lang, lockedLanguageLabel, onCodeChange, locked, result, judgeDetail }) {
+  const resultLabel = RESULT_LABEL[result] || result;
+
   return (
     <div className="bp-problem-body">
       <p className="bp-problem-desc">{problem.desc}</p>
@@ -121,10 +132,18 @@ export function CodingProblem({ problem, code, lang, lockedLanguageLabel, onCode
         </span>
         {result && (
           <span className={`bp-result-badge ${result}`}>
-            {result === 'correct' ? '✅ 정답' : result === 'locked' ? '🔒 선점됨' : '❌ 오답'}
+            {result === 'correct' ? '✅ ' : result === 'locked' ? '🔒 ' : '❌ '}
+            {resultLabel}
           </span>
         )}
       </div>
+      {judgeDetail?.detail && (
+        <div className={`bp-judge-detail ${result === 'correct' ? 'correct' : 'wrong'}`}>
+          <strong>채점 상세</strong>
+          <span>{judgeDetail.detail}</span>
+          {Number.isFinite(judgeDetail.timeMs) ? <small>실행 시간 {judgeDetail.timeMs}ms</small> : null}
+        </div>
+      )}
       <textarea
         className="bp-code-editor"
         value={code || ''}

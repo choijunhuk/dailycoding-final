@@ -104,6 +104,7 @@ export async function executeSubmissionFlow({
   code,
   judgeRuntime,
   persist = true,
+  includeHiddenCases = persist,
   customInput = null,
   userTier = 'free',
   solveTimeSec = null,
@@ -127,7 +128,7 @@ export async function executeSubmissionFlow({
   const updateRedisLeaderboard = deps.updateRedisLeaderboard || defaultDeps.updateRedisLeaderboard;
   const grantReward = deps.grantReward || defaultDeps.grantReward;
   const executionCases = customInput == null
-    ? (persist ? buildSubmitCases(problem) : (problem.examples || []))
+    ? (includeHiddenCases ? buildSubmitCases(problem) : (problem.examples || []))
     : [];
 
   const normalizedLang = normalizeLanguage(rawLang || 'Python 3');
