@@ -4,6 +4,7 @@ import api from '../api.js'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext.jsx'
 import { useLang } from '../context/LangContext.jsx'
+import './CommunityPage.css'
 
 const BOARD_META = {
   qna: { label: 'Q&A', tone: 'var(--blue)', desc: '질문과 답변을 정리하는 공간' },
@@ -260,6 +261,11 @@ export default function CommunityPage() {
   }
 
   const openComposer = (mode = 'create', post = null) => {
+    if (mode === 'create' && !user?.emailVerified) {
+      toast?.show('이메일 인증 후 게시글 작성이 가능합니다. 받은 편지함을 확인하거나 인증 메일을 재전송해 주세요.', 'warning')
+      navigate('/verify-email')
+      return
+    }
     setEditorMode(mode)
     setDraft(mode === 'edit' && post ? {
       title: post.title || '',
@@ -612,7 +618,7 @@ export default function CommunityPage() {
                 title={`${BOARD_META[activeBoard].label} 게시판`}
                 desc={`${postsState.total.toLocaleString()}개의 글이 검색 조건과 일치합니다.`}
               />
-              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(140px,180px) auto', gap: 10, marginBottom: 12 }}>
+              <div className="community-search-bar" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(140px,180px) auto', gap: 10, marginBottom: 12 }}>
                 <input
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}

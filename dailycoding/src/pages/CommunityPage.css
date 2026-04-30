@@ -1,0 +1,13 @@
+/* ── Community Mobile ── */
+@media (max-width: 640px) {
+  .community-search-bar {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .community-search-bar {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+}
