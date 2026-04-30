@@ -75,7 +75,7 @@ export function useRankingData({ page = 1, limit = 20, tier = 'all', sort = 'rat
 
   useEffect(() => {
     const entry = ensureEntry(key)
-    if (!entry.data && !entry.promise) {
+    if (!entry.data && !entry.promise && !entry.error) {
       fetchRankingData({ page, limit, tier, sort }).catch(() => {})
     }
   }, [key, page, limit, tier, sort, version])
