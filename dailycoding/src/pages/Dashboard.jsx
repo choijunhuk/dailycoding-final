@@ -1,4 +1,5 @@
 import { memo, useState, useEffect, useRef, useCallback } from 'react';
+import './Dashboard.css';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
@@ -174,7 +175,7 @@ export default function Dashboard() {
 
   // 관리자 대시보드
   if (isAdmin) return (
-    <div style={{padding:'28px 32px',overflowY:'auto',height:'100%'}}>
+    <div className="dashboard-admin-root" style={{padding:'28px 32px',overflowY:'auto',height:'100%'}}>
       <div style={{marginBottom:28}}>
         <h1 style={{fontSize:22,fontWeight:800,marginBottom:4}}>👑 {t('dashboardAdminTitle')}</h1>
         <p style={{color:'var(--text2)',fontSize:13}}>{t('dashboardAdminDesc')}</p>
@@ -185,7 +186,7 @@ export default function Dashboard() {
         <StatCard icon={<CheckCircle2 size={20} />} value={PROBLEMS.reduce((s,p)=>s+(p.solved||p.solved_count||0),0)} label={t('solvedCount')} color="var(--yellow)" />
         <StatCard icon={<BarChart3 size={20} />} value={PROBLEMS.reduce((s,p)=>s+(p.submissions||p.submit_count||0),0)} label={t('submissionCount')} color="var(--orange)" />
       </div>
-      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16}}>
+      <div className="admin-dash-grid" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16}}>
         <div style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:12,padding:22}}>
           <div style={{fontWeight:700,fontSize:14,marginBottom:16}}>🏅 {t('dashboardRecentRanking')}</div>
           {recentRank.map((r,i)=>(
@@ -222,9 +223,9 @@ export default function Dashboard() {
   );
 
   return (
-    <div style={{padding:'24px 28px',overflowY:'auto',height:'100%',maxWidth:1200,margin:'0 auto'}}>
+    <div className="dashboard-root" style={{padding:'24px 28px',overflowY:'auto',height:'100%',maxWidth:1200,margin:'0 auto'}}>
       {/* 상단 환영 */}
-      <div style={{
+      <div className="dashboard-welcome" style={{
         background:`linear-gradient(135deg, ${tierMeta.bg} 0%, var(--bg2) 100%)`,
         border:`1px solid ${tierMeta.color}30`, borderRadius:14,
         padding:'24px 28px', marginBottom:20,

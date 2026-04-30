@@ -466,7 +466,7 @@ export default function CommunityPage() {
             <div style={{ display: 'grid', gap: 20 }}>
               <div>
                 <div style={{ fontSize: 12, color: BOARD_META[activeBoard].tone, fontWeight: 900, marginBottom: 8 }}>{BOARD_META[activeBoard].label}</div>
-                <h1 style={{ margin: 0, fontSize: 28, lineHeight: 1.25, color: 'var(--text)', letterSpacing: -0.5 }}>{selectedPost.title}</h1>
+                <h1 className="community-detail-title" style={{ margin: 0, fontSize: 28, lineHeight: 1.25, color: 'var(--text)', letterSpacing: -0.5 }}>{selectedPost.title}</h1>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
@@ -686,6 +686,7 @@ export default function CommunityPage() {
                   <button
                     key={post.id}
                     onClick={() => openPost(post.id)}
+                    className="community-post-item"
                     style={{
                       width: '100%',
                       textAlign: 'left',
@@ -718,7 +719,7 @@ export default function CommunityPage() {
                           <span>{formatDate(post.created_at)}</span>
                         </div>
                       </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(54px, 1fr))', gap: 8, textAlign: 'center', flexShrink: 0 }}>
+                      <div className="community-post-metrics" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(54px, 1fr))', gap: 8, textAlign: 'center', flexShrink: 0 }}>
                         {[
                           { label: '좋아요', value: post.like_count || 0, color: 'var(--red)' },
                           { label: '댓글', value: post.answer_count || 0, color: 'var(--green)' },

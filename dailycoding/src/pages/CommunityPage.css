@@ -1,13 +1,55 @@
 /* ── Community Mobile ── */
+
+/* 포스트 카드 아이템 */
+.community-post-item {
+  padding: 18px 20px;
+}
+
+/* 포스트 통계 (좋아요/댓글/조회) */
+.community-post-metrics {
+  min-width: 180px;
+}
+
+/* 상세 뷰 제목 */
+.community-detail-title {
+  font-size: 28px;
+}
+
 @media (max-width: 640px) {
+  /* 검색바 단일 컬럼 */
   .community-search-bar {
     grid-template-columns: 1fr !important;
+  }
+
+  /* 포스트 아이템 패딩 축소 */
+  .community-post-item {
+    padding: 14px 14px !important;
+  }
+
+  /* 메트릭 그리드 크기 축소 */
+  .community-post-metrics {
+    min-width: 130px;
+    gap: 5px !important;
+  }
+
+  /* 상세 뷰 제목 폰트 축소 */
+  .community-detail-title {
+    font-size: 20px !important;
+    letter-spacing: -0.3px !important;
   }
 }
 
 @media (max-width: 480px) {
-  .community-search-bar {
-    grid-template-columns: 1fr !important;
-    gap: 8px !important;
+  .community-post-item {
+    padding: 12px 12px !important;
+  }
+
+  .community-post-metrics {
+    min-width: 110px;
+    gap: 4px !important;
+  }
+
+  .community-detail-title {
+    font-size: 18px !important;
   }
 }

@@ -1,1 +1,24 @@
-/* Dashboard 스타일은 인라인으로 처리됨 */
+/* ── Dashboard Mobile ── */
+@media (max-width: 768px) {
+  .dashboard-root {
+    padding: 16px 14px !important;
+  }
+  .dashboard-admin-root {
+    padding: 18px 14px !important;
+  }
+  .dashboard-welcome {
+    padding: 16px 16px !important;
+  }
+  .admin-dash-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard-root {
+    padding: 12px 10px !important;
+  }
+  .dashboard-welcome {
+    padding: 14px 12px !important;
+  }
+}
