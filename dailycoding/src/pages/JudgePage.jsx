@@ -3,7 +3,7 @@ import { Link, useParams, useLocation, useNavigate } from 'react-router-dom';
 const Editor = lazy(() => import('@monaco-editor/react'));
 import confetti from 'canvas-confetti';
 import { PROBLEMS, TIERS } from '../data/problems';
-import { JUDGE_LANGUAGE_OPTIONS, getJudgeLanguageOption, getJudgeLanguageOptionsForSupported } from '../data/judgeLanguages.js';
+import { JUDGE_LANGUAGE_OPTIONS, getEffectiveJudgeLanguage, getJudgeLanguageOption, getJudgeLanguageOptionsForSupported } from '../data/judgeLanguages.js';
 import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -282,8 +282,6 @@ export default function JudgePage() {
     }
   }, [availableLangOptions, lang]);
 
-  const selectedLangOption = availableLangOptions.find(o => o.value === lang)
-    || getJudgeLanguageOption(lang);
   const isProblemLoading = !problem && !problemError;
   const isBookmarked = Boolean(bookmarks[problem?.id])
 
@@ -450,6 +448,16 @@ export default function JudgePage() {
     }
   }
 
+  const applyDetectedLanguage = (submitLang, actionLabel) => {
+    if (submitLang === lang) return
+    if (code && problem?.id) {
+      localStorage.setItem(getDraftStorageKey(problem.id, submitLang), code)
+      localStorage.setItem(getLegacyDraftStorageKey(problem.id, submitLang), code)
+    }
+    setLang(submitLang)
+    toast?.show(`코드 패턴을 보고 ${getJudgeLanguageOption(submitLang)?.label || submitLang}로 ${actionLabel}합니다.`, 'info')
+  }
+
   const runCode = async ({ input } = {}) => {
     if (isSpecialProblem) {
       toast?.show('특수 문제 유형은 실행 기능을 지원하지 않습니다. 바로 제출해 주세요.', 'info')
@@ -467,6 +475,8 @@ export default function JudgePage() {
 
     const runMode = input === undefined ? 'examples' : 'custom';
     const codeLength = new TextEncoder().encode(code).length;
+    const submitLang = getEffectiveJudgeLanguage(code, lang, judgeStatus?.supportedLanguages);
+    applyDetectedLanguage(submitLang, '실행');
 
     setIsJudging(true);
     setTestResults([]);
@@ -482,7 +492,7 @@ export default function JudgePage() {
     try {
       const payload = {
         problemId: problem.id,
-        lang,
+        lang: submitLang,
         code,
       };
       if (input !== undefined) payload.input = input;
@@ -492,8 +502,8 @@ export default function JudgePage() {
         status: res.data.result || 'success',
         mode: res.data.mode || runMode,
         source: 'run',
-        lang: res.data.lang || selectedLangOption?.label || lang,
-        normalizedLang: res.data.normalizedLang || lang,
+        lang: res.data.lang || getJudgeLanguageOption(submitLang)?.label || submitLang,
+        normalizedLang: res.data.normalizedLang || submitLang,
         time: res.data.time,
         mem: res.data.mem,
         detail: res.data.detail,
@@ -563,12 +573,14 @@ export default function JudgePage() {
       return;
     }
     const solveTimeSec = timerComponentRef.current?.getSec?.() || null
+    const submitLang = getEffectiveJudgeLanguage(code, lang, judgeStatus?.supportedLanguages);
+    applyDetectedLanguage(submitLang, '제출');
     setIsJudging(true); setTestResults([]); setResult({ status: 'judging' });
     setTimerOn(false);
     try {
       const sub = await addSubmission({
         problemId: problem.id, problemTitle: problem.title,
-        lang, code, solveTimeSec,
+        lang: submitLang, code, solveTimeSec,
       });
       setResult({ status: sub.result, time: sub.time, mem: sub.mem, detail: sub.detail, codeLength: sub.codeLength || new TextEncoder().encode(code).length });
       setLeftTab(sub.result === 'correct' ? 'discuss' : 'submissions');
@@ -792,21 +804,6 @@ export default function JudgePage() {
                   <h4>버그 코드 {problem?.preferredLanguage && <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text2)', marginLeft: 6 }}>({problem.preferredLanguage})</span>}</h4>
                   <pre className="io-box mono">{specialConfig?.buggyCode || '버그 코드 정보가 없습니다.'}</pre>
                   {specialConfig?.hint && <p style={{ marginTop: 8, color: 'var(--text2)' }}>💡 힌트: {specialConfig.hint}</p>}
-                </section>
-              )}
-
-              {!isSpecialProblem && (problem.testcases || []).length > 0 && (
-                <section style={{marginTop:16}}>
-                  <h4>히든 테스트케이스 공개</h4>
-                  <p style={{fontSize:12,color:'var(--text2)',marginBottom:10}}>
-                    채점에 사용되는 테스트케이스 입력/출력입니다.
-                  </p>
-                  {(problem.testcases || []).map((tc, i) => (
-                    <div key={`hidden-${i}`} className="ex-grid">
-                      <div><h4>히든 입력 {i + 1}</h4><pre className="io-box mono">{tc.input}</pre></div>
-                      <div><h4>히든 출력 {i + 1}</h4><pre className="io-box mono">{tc.output}</pre></div>
-                    </div>
-                  ))}
                 </section>
               )}
 

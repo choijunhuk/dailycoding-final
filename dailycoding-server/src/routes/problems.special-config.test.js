@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 process.env.JWT_SECRET = 'test_secret';
 
-const { normalizeProblemMutationPayload } = await import('./problems.js');
+const { normalizeProblemMutationPayload, sanitizeProblemForClient } = await import('./problems.js');
 
 test('coding problems still require minimum hidden testcases', () => {
   const result = normalizeProblemMutationPayload({
@@ -61,4 +61,30 @@ test('bug-fix problems require at least one keyword and buggy code', () => {
     keywords: ['return 0', '초기값'],
     explanation: '초기값이 잘못되었습니다.',
   });
+});
+
+test('public problem payload hides solution and hidden testcases', () => {
+  const safe = sanitizeProblemForClient({
+    id: 1001,
+    title: 'A+B',
+    solution: 'printf("%d", a + b);',
+    testcases: [
+      { input: '1 2', output: '3' },
+      { input: '3 4', output: '7' },
+    ],
+  });
+
+  assert.equal(safe.solution, undefined);
+  assert.equal(safe.testcases, undefined);
+  assert.equal(safe.hiddenCount, 2);
+});
+
+test('admin problem payload keeps judge-only fields for editing', () => {
+  const problem = {
+    id: 1001,
+    solution: 'answer',
+    testcases: [{ input: '1 2', output: '3' }],
+  };
+
+  assert.equal(sanitizeProblemForClient(problem, { isAdmin: true }), problem);
 });
