@@ -315,7 +315,7 @@ async function ensureImage(image) {
 }
 
 // ── 컨테이너 실행 헬퍼 ────────────────────────────────────────────────────────
-async function runInContainer({ image, cmd, binds, stdin, timeoutMs, memoryLimit = 128 * 1024 * 1024 }) {
+async function runInContainer({ image, cmd, binds, stdin, timeoutMs, memoryLimit = 128 * 1024 * 1024, dropCaps = true }) {
   let container;
   try {
     container = await docker.createContainer({
@@ -337,7 +337,7 @@ async function runInContainer({ image, cmd, binds, stdin, timeoutMs, memoryLimit
         PidsLimit:   64,
         ReadonlyRootfs: true,        // 루트 파일시스템 쓰기 금지
         Tmpfs: { '/tmp': 'rw,noexec,nosuid,size=32m' }, // 임시 파일용 tmpfs만 허용
-        CapDrop: ['ALL'],             // 모든 커널 권한 제거
+        ...(dropCaps ? { CapDrop: ['ALL'] } : {}),
         SecurityOpt: ['no-new-privileges:true'],
         NetworkMode: 'none',          // 네트워크 완전 격리 (중복 보장)
         OomKillDisable: false,        // OOM 발생 시 즉시 종료 허용
@@ -456,6 +456,7 @@ export async function judgeCode({ lang, code, examples, timeLimit = 2, userTier 
         stdin:     '',
         timeoutMs: 10000,
         memoryLimit: memLimit,
+        dropCaps: false,
       });
       if (compileResult.exitCode !== 0) {
         return {
@@ -537,6 +538,7 @@ export async function runCode({ lang, code, input = '', timeLimit = 2, userTier 
         stdin: '',
         timeoutMs: 10000,
         memoryLimit: memLimit,
+        dropCaps: false,
       });
       if (compileResult.exitCode !== 0) {
         return {
