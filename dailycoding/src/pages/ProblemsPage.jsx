@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { PROBLEMS as DEFAULT_PROBLEMS, TIERS } from '../data/problems'
+import './ProblemsPage.css'
 import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext.jsx'
@@ -445,7 +446,7 @@ export default function ProblemsPage() {
           </div>
         </div>
 
-        <div style={{
+        <div className="problems-filter-grid" style={{
           display: 'grid',
           gap: 12,
           gridTemplateColumns: 'minmax(240px, 1.4fr) repeat(4, minmax(120px, .75fr))',

@@ -1,1 +1,20 @@
-/* AuthPage 스타일은 인라인으로 처리됨 */
+/* ── Auth Mobile ── */
+
+@media (max-width: 768px) {
+  /* 왼쪽 소개 패널 숨김 — 모바일에서 공간 없음 */
+  .auth-left-panel {
+    display: none !important;
+  }
+
+  /* 오른쪽 로그인 폼이 전체 너비 차지 */
+  .auth-right-panel {
+    width: 100% !important;
+    padding: 40px 24px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .auth-right-panel {
+    padding: 28px 20px !important;
+  }
+}

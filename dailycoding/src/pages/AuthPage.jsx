@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import './Auth.css'
 import { useToast } from '../context/ToastContext.jsx';
 import { useLang } from '../context/LangContext.jsx';
 
@@ -132,10 +133,10 @@ export default function AuthPage() {
   };
 
   return (
-    <div style={{ display:'flex', height:'100vh', overflow:'hidden', background:'var(--bg)' }}>
+    <div className="auth-page-layout" style={{ display:'flex', height:'100vh', overflow:'hidden', background:'var(--bg)' }}>
 
       {/* ── 왼쪽 소개 패널 ── */}
-      <div style={{
+      <div className="auth-left-panel" style={{
         flex:1, display:'flex', flexDirection:'column', justifyContent:'center',
         padding:'48px 56px',
         background:'linear-gradient(145deg,var(--bg),var(--bg2))',
@@ -214,7 +215,7 @@ export default function AuthPage() {
       </div>
 
       {/* ── 오른쪽 로그인 폼 ── */}
-      <div style={{
+      <div className="auth-right-panel" style={{
         width:420, display:'flex', flexDirection:'column',
         justifyContent:'center', padding:'48px 40px', overflowY:'auto',
       }}>

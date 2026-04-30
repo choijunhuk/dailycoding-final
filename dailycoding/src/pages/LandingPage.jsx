@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowRight, CheckCircle2, PlayCircle, Moon, Sun, Sparkles, Star } from 'lucide-react'
 import { useTheme } from '../context/ThemeContext.jsx'
+import './LandingPage.css'
 import { TIER_THRESHOLDS } from '../data/constants.js'
 import { PLAN_META } from '../data/pricingPlans.js'
 
@@ -148,7 +149,7 @@ export default function LandingPage({ onLogin, onSignup, onPricing }) {
           </div>
         </div>
 
-        <section style={{ maxWidth: 1200, margin: '0 auto', padding: '72px 24px 64px', display: 'grid', gridTemplateColumns: 'minmax(0, 1.1fr) minmax(320px, .9fr)', gap: 28, alignItems: 'center' }}>
+        <section className="landing-hero-grid" style={{ maxWidth: 1200, margin: '0 auto', padding: '72px 24px 64px', display: 'grid', gridTemplateColumns: 'minmax(0, 1.1fr) minmax(320px, .9fr)', gap: 28, alignItems: 'center' }}>
           <div className="animate-fade-in-up">
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '8px 14px', borderRadius: 999, background: 'rgba(121,192,255,.1)', border: '1px solid rgba(121,192,255,.2)', color: 'var(--blue)', fontSize: 12, fontWeight: 700, marginBottom: 20 }}>
               <Star size={14} />

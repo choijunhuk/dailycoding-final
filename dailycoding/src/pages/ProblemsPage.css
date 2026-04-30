@@ -1,1 +1,23 @@
-/* ProblemsPage 스타일은 인라인으로 처리됨 */
+/* ── Problems Mobile ── */
+
+@media (max-width: 768px) {
+  /* 필터 5컬럼 그리드 → 가로 스크롤 허용 */
+  .problems-filter-grid {
+    grid-template-columns: minmax(200px, 1fr) repeat(4, minmax(110px, auto)) !important;
+    overflow-x: auto;
+    padding-bottom: 8px !important;
+  }
+}
+
+@media (max-width: 640px) {
+  /* 모바일: 검색창 전체 너비, 나머지 2열 */
+  .problems-filter-grid {
+    grid-template-columns: 1fr 1fr !important;
+    overflow-x: visible;
+  }
+
+  /* 검색창이 전체 너비 차지 */
+  .problems-filter-grid > *:first-child {
+    grid-column: 1 / -1;
+  }
+}
