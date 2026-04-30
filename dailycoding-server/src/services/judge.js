@@ -314,6 +314,17 @@ async function runInContainer({ image, cmd, binds, stdin, timeoutMs, memoryLimit
 
   try {
     const stream = await container.attach({ stream: true, stdin: true, stdout: true, stderr: true });
+    const streamClosed = new Promise((resolve) => {
+      let settled = false;
+      const done = () => {
+        if (settled) return;
+        settled = true;
+        resolve();
+      };
+      stream.on('end', done);
+      stream.on('close', done);
+      stream.on('error', done);
+    });
 
     container.modem.demuxStream(stream, {
       write: (chunk) => { stdout += chunk.toString(); },
@@ -342,6 +353,13 @@ async function runInContainer({ image, cmd, binds, stdin, timeoutMs, memoryLimit
       }
       throw e;
     }
+
+    // Docker's wait can resolve before the attached stdout/stderr stream has
+    // delivered its final chunk, which makes fast correct programs look wrong.
+    await Promise.race([
+      streamClosed,
+      new Promise((resolve) => setTimeout(resolve, 250)),
+    ]);
 
     return { stdout: stdout.trim(), stderr: stderr.trim(), exitCode, timedOut: false };
   } catch (err) {
