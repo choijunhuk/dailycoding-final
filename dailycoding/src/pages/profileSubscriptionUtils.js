@@ -27,7 +27,7 @@ export function getProfileUpgradePlans() {
       name: PLAN_META.pro.name,
       price: PLAN_META.pro.detailPrice,
       color: PLAN_META.pro.accent,
-      features: ['무제한 AI 힌트', '프리미엄 문제', '배틀 우선 매칭', '상세 분석 리포트'],
+      features: ['무제한 AI 힌트', '광고 제거', '배틀 우선 매칭', '상세 분석 리포트'],
     },
     {
       id: 'team',

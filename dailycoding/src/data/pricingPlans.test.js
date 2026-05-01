@@ -14,7 +14,9 @@ test('pricing plan metadata stays consistent with shared constants', () => {
   assert.equal(PLAN_META.pro.annualPrice, SUBSCRIPTION_PRICE.pro_yearly);
   assert.equal(PLAN_META.team.monthlyPrice, TEAM_SUBSCRIPTION_PRICE.monthly);
   assert.equal(PLAN_META.team.annualPrice, TEAM_SUBSCRIPTION_PRICE.yearly);
+  assert.ok(PLAN_META.free.summary.includes('전체 문제 풀이'));
   assert.ok(PLAN_META.free.summary.includes(`AI 힌트 ${AI_DAILY_QUOTA}회/일`));
+  assert.ok(!PLAN_META.pro.summary.includes('프리미엄 문제'));
 });
 
 test('formatPlanPrice formats free and paid plans correctly', () => {

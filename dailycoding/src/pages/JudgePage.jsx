@@ -7,7 +7,6 @@ import { JUDGE_LANGUAGE_OPTIONS, getEffectiveJudgeLanguage, getJudgeLanguageOpti
 import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { useSubscriptionStatus } from '../hooks/useSubscriptionStatus.js';
 import api from '../api.js';
 import { useToast } from '../context/ToastContext.jsx';
 import { useLang } from '../context/LangContext.jsx';
@@ -91,7 +90,6 @@ export default function JudgePage() {
     compile: { label: t('compileError'),        color: RESULT_INFO_COLORS.compile },
     judging: { label: '채점 중...',             color: RESULT_INFO_COLORS.judging },
   };
-  const { tier: subscriptionTier, loading: subLoading } = useSubscriptionStatus(user?.id);
   const { solved, submissions, addSubmission, problems: appProblems, bookmarks, toggleBookmark } = useApp();
   const toast = useToast();
   const allProblems    = appProblems.length > 0 ? appProblems : PROBLEMS;
@@ -162,11 +160,6 @@ export default function JudgePage() {
       setIsSavingNote(false);
     }
   };
-
-  // 프리미엄 체크
-  const isPremiumUser = isAdmin || subscriptionTier === 'pro' || subscriptionTier === 'team';
-  const isLocked = problem ? ['gold', 'platinum', 'diamond'].includes(problem.tier) : false;
-  const showPaywall = isLocked && !isPremiumUser;
 
   // isSpecialProblem must be declared BEFORE any useEffect that references it
   const problemType = problem?.problemType || 'coding'
@@ -680,26 +673,6 @@ export default function JudgePage() {
         <div className="judge-right">
           <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', color:'var(--text3)', background:'var(--bg)' }}>
             문제 데이터를 불러오지 못했습니다.
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (showPaywall) {
-    return (
-      <div className="judge-layout" style={{ alignItems: 'center', justifyContent: 'center', background: 'var(--bg)', display: 'flex' }}>
-        <div style={{ textAlign: 'center', padding: '60px 40px', maxWidth: 480, background: 'var(--bg2)', borderRadius: 24, border: '1px solid var(--border)', boxShadow: '0 8px 40px rgba(0,0,0,0.3)', position: 'relative', overflow: 'hidden' }}>
-          <div style={{ position: 'absolute', top: -30, left: '50%', transform: 'translateX(-50%)', width: 200, height: 100, background: 'linear-gradient(180deg, var(--blue) 0%, transparent 100%)', opacity: 0.2, filter: 'blur(30px)' }}></div>
-          <div style={{ fontSize: 56, marginBottom: 16 }}>👑</div>
-          <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 12 }}>프리미엄 전용 문제입니다</h2>
-          <p style={{ color: 'var(--text2)', lineHeight: 1.6, marginBottom: 32, fontSize: 15 }}>
-            이 문제는 <strong style={{ color: 'var(--blue)' }}>Pro</strong> 또는 <strong style={{ color: 'var(--yellow)' }}>Team</strong> 플랜 구독자만 이용할 수 있습니다.<br />
-            무제한 AI 힌트와 다양한 프리미엄 알고리즘 문제를 지금 바로 만나보세요.
-          </p>
-          <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
-            <button onClick={() => navigate('/problems')} style={{ padding: '14px 24px', borderRadius: 12, border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--text)', cursor: 'pointer', fontWeight: 700, transition: 'background 0.2s' }} onMouseEnter={e => e.currentTarget.style.background='var(--border)'} onMouseLeave={e => e.currentTarget.style.background='var(--bg3)'}>목록으로 돌아가기</button>
-            <button onClick={() => navigate('/pricing')} style={{ padding: '14px 24px', borderRadius: 12, border: 'none', background: 'var(--blue)', color: '#0d1117', cursor: 'pointer', fontWeight: 800, transition: 'transform 0.2s', boxShadow: '0 4px 14px rgba(88, 166, 255, 0.4)' }} onMouseEnter={e => e.currentTarget.style.transform='translateY(-2px)'} onMouseLeave={e => e.currentTarget.style.transform='none'}>플랜 살펴보기</button>
           </div>
         </div>
       </div>

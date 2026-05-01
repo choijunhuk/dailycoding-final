@@ -5,7 +5,6 @@ import './ProblemsPage.css'
 import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext.jsx'
-import { useSubscriptionStatus } from '../hooks/useSubscriptionStatus.js'
 import { useLang } from '../context/LangContext.jsx'
 import api from '../api.js'
 import { Filter, Grid, List, Search, Share2, Star, X } from 'lucide-react'
@@ -26,8 +25,7 @@ export default function ProblemsPage() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const { solved, bookmarks, toggleBookmark, problems: appProblems } = useApp()
-  const { user, isAdmin } = useAuth()
-  const { tier: subscriptionTier } = useSubscriptionStatus(user?.id)
+  const { isAdmin } = useAuth()
   const toast = useToast()
   const { t } = useLang()
   const PROBLEMS = appProblems.length > 0 ? appProblems : DEFAULT_PROBLEMS
@@ -40,8 +38,6 @@ export default function ProblemsPage() {
     const map = { coding: t('typeShortCoding'), 'fill-blank': t('typeShortFillBlank'), 'bug-fix': t('typeShortBugFix') }
     return map[type] || type
   }
-
-  const isPremiumUser = isAdmin || subscriptionTier === 'pro' || subscriptionTier === 'team'
 
   const search = (searchParams.get('search') || '').trim()
   const problemType = searchParams.get('problemType') || 'all'
@@ -73,11 +69,6 @@ export default function ProblemsPage() {
     hasNext: false,
   })
   const requestErrorToastShownRef = useRef(false)
-
-  const isLocked = useCallback((problem) => {
-    if (isPremiumUser) return false
-    return ['gold', 'platinum', 'diamond'].includes(problem?.tier)
-  }, [isPremiumUser])
 
   const updateQuery = useCallback((updates, options = {}) => {
     const { replace = true } = options
@@ -270,13 +261,8 @@ export default function ProblemsPage() {
   ].filter(Boolean)
 
   const go = useCallback((problem) => {
-    if (isLocked(problem)) {
-      toast?.show(t('upgradeRequired'), 'info')
-      navigate('/pricing')
-      return
-    }
     navigate(`/problems/${problem.id}`, { state: { problem } })
-  }, [isLocked, navigate, toast])
+  }, [navigate])
 
   const updateFilter = useCallback((key, value, options = {}) => {
     const { resetPage = true } = options
@@ -765,7 +751,6 @@ export default function ProblemsPage() {
               const tierMeta = TIERS[problem.tier] || TIERS.bronze
               const solvedState = Boolean(problem.isSolved)
               const bookmarkedState = Boolean(problem.isBookmarked)
-              const locked = isLocked(problem)
               const solvedCountForProblem = problem.solved || problem.solved_count || 0
               const submitCount = problem.submissions || problem.submit_count || 0
               const rate = submitCount > 0 ? Math.round((solvedCountForProblem / submitCount) * 100) : 0
@@ -783,7 +768,6 @@ export default function ProblemsPage() {
                     cursor: 'pointer',
                     borderBottom: index < paginated.length - 1 ? '1px solid var(--border)' : 'none',
                     borderLeft: `3px solid ${solvedState ? 'var(--green)' : 'transparent'}`,
-                    opacity: locked ? 0.75 : 1,
                   }}
                 >
                   <span style={{ fontSize: 12, color: 'var(--text3)', fontFamily: 'Space Mono,monospace' }}>#{problem.id}</span>
@@ -791,7 +775,6 @@ export default function ProblemsPage() {
                     <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 3, display: 'flex', alignItems: 'center', gap: 6 }}>
                       {problem.title}
                       <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 999, background: typeMeta.bg, color: typeMeta.color }}>{getTypeShort(problem.problemType || 'coding')}</span>
-                      {locked && <span title={t('premiumOnly')} style={{ fontSize: 9, padding: '2px 6px', borderRadius: 999, background: 'linear-gradient(90deg, #ffd700, #ffb000)', color: '#4d3300', fontWeight: 800, letterSpacing: 0.5, boxShadow: '0 2px 8px rgba(255,215,0,0.4)' }}>PRO</span>}
                     </div>
                     <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                       {(problem.tags || []).slice(0, 3).map(item => (
@@ -857,7 +840,6 @@ export default function ProblemsPage() {
               const tierMeta = TIERS[problem.tier] || TIERS.bronze
               const solvedState = Boolean(problem.isSolved)
               const bookmarkedState = Boolean(problem.isBookmarked)
-              const locked = isLocked(problem)
               const solvedCountForProblem = problem.solved || problem.solved_count || 0
               const typeMeta = PROBLEM_TYPE_META[problem.problemType || 'coding'] || PROBLEM_TYPE_META.coding
 
@@ -871,12 +853,11 @@ export default function ProblemsPage() {
                   transition: 'all .2s',
                   position: 'relative',
                   borderTop: `3px solid ${tierMeta.color}60`,
-                  opacity: locked ? 0.75 : 1,
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
                     <span style={{ fontSize: 11, fontFamily: 'Space Mono,monospace', color: 'var(--text3)' }}>#{problem.id}</span>
                     <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                      {locked ? <span>🔒</span> : solvedState && <span style={{ fontSize: 13 }}>✅</span>}
+                      {solvedState && <span style={{ fontSize: 13 }}>✅</span>}
                       <button onClick={e => bm(e, problem.id)} style={{
                         background: 'none',
                         border: 'none',
@@ -981,7 +962,6 @@ export default function ProblemsPage() {
                   }}>● {TIERS[preview.tier]?.label}</span>
                   <span style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'Space Mono,monospace' }}>#{preview.id}</span>
                   {(preview.isSolved || solved[preview.id]) && <span style={{ fontSize: 12, color: 'var(--green)' }}>{t('solvedBadge')}</span>}
-                  {isLocked(preview) && <span style={{ fontSize: 12, color: 'var(--orange)' }}>{t('premiumBadge')}</span>}
                 </div>
                 <h2 style={{ fontSize: 20, fontWeight: 800 }}>{preview.title}</h2>
               </div>
@@ -1013,7 +993,7 @@ export default function ProblemsPage() {
               </div>
             )}
 
-            {preview.examples?.[0] && !isLocked(preview) && (
+            {preview.examples?.[0] && (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
                 {[[t('exInput'), preview.examples[0].input], [t('exOutput'), preview.examples[0].output]].map(([label, value]) => (
                   <div key={label}>
@@ -1025,22 +1005,11 @@ export default function ProblemsPage() {
             )}
 
             <div style={{ display: 'flex', gap: 10 }}>
-              {isLocked(preview) ? (
-                <button onClick={() => { navigate('/pricing'); setPreview(null) }} style={{
-                  flex: 1, padding: '12px', borderRadius: 9,
-                  background: 'var(--orange)', border: 'none', color: 'var(--bg)',
-                  fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                }}>
-                  {t('upgradeAndSolve')}
-                </button>
-              ) : (
-                <button onClick={() => { go(preview); setPreview(null) }} style={{
-                  flex: 1, padding: '12px', borderRadius: 9,
-                  background: 'var(--blue)', border: 'none', color: 'var(--bg)',
-                  fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
-                }}>{t('solveProblem')}</button>
-              )}
+              <button onClick={() => { go(preview); setPreview(null) }} style={{
+                flex: 1, padding: '12px', borderRadius: 9,
+                background: 'var(--blue)', border: 'none', color: 'var(--bg)',
+                fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
+              }}>{t('solveProblem')}</button>
               <button onClick={e => bm(e, preview.id)} style={{
                 padding: '12px 16px', borderRadius: 9,
                 background: (preview.isBookmarked || bookmarks[preview.id]) ? 'rgba(227,179,65,.15)' : 'var(--bg3)',

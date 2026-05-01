@@ -3,6 +3,14 @@ import assert from 'node:assert/strict';
 
 process.env.NODE_ENV = 'test';
 
+test('tier calculation keeps low positive ratings in iron and out of challenger', async () => {
+  const { User } = await import('./User.js');
+
+  assert.equal(User.calcTier(0), 'unranked');
+  assert.equal(User.calcTier(20), 'iron');
+  assert.equal(User.calcTier(16000), 'grandmaster');
+});
+
 test('calcRatingFromTop100 hydrates before adding a new problem when the cache is missing', async (t) => {
   const { User } = await import('./User.js');
   const { redis } = await import('../config/redis.js');
@@ -64,4 +72,25 @@ test('calcRatingFromTop100 hydrates before adding a new problem when the cache i
     'expire',
     'zRevRangeWithScores',
   ]);
+});
+
+test('syncChallengerTiers demotes low-rating challengers on small leaderboards', async () => {
+  const { User } = await import('./User.js');
+  const { insert, queryOne, waitForDB } = await import('../config/mysql.js');
+
+  await waitForDB();
+  const suffix = Date.now();
+  const lowId = await insert(
+    'INSERT INTO users (email, username, role, rating, tier, solved_count) VALUES (?,?,?,?,?,?)',
+    [`low-${suffix}@test.com`, `low-${suffix}`, 'user', 20, 'challenger', 1]
+  );
+  await insert(
+    'INSERT INTO users (email, username, role, rating, tier, solved_count) VALUES (?,?,?,?,?,?)',
+    [`high-${suffix}@test.com`, `high-${suffix}`, 'user', 17000, 'grandmaster', 100]
+  );
+
+  await User.syncChallengerTiers();
+
+  const lowUser = await queryOne('SELECT tier FROM users WHERE id = ?', [lowId]);
+  assert.equal(lowUser.tier, 'iron');
 });

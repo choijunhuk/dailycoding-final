@@ -5,6 +5,7 @@ import { buildYearHeatmap, formatDuration, PROFILE_TIER_LABELS, PROFILE_TIER_THR
 test('profile tier helpers expose expected labels and thresholds', () => {
   assert.equal(PROFILE_TIER_LABELS.gold, 'GOLD');
   assert.equal(PROFILE_TIER_THRESHOLDS.unranked, 0);
+  assert.equal(PROFILE_TIER_THRESHOLDS.iron, 1);
   assert.ok(PROFILE_TIER_THRESHOLDS.diamond > PROFILE_TIER_THRESHOLDS.gold);
 });
 

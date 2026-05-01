@@ -1,5 +1,5 @@
 export const TIER_THRESHOLDS = {
-  iron:         50,
+  iron:         1,
   bronze:       300,
   silver:       1000,
   gold:         2800,

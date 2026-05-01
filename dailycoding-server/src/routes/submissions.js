@@ -98,16 +98,8 @@ router.post('/', auth, requireVerified, async (req, res) => {
   if (!prob) return errorResponse(res, 404, 'NOT_FOUND', '문제를 찾을 수 없습니다.');
   const solveTimeSec = normalizeSolveTimeSecInput(req.body?.solveTimeSec);
 
-  // 프리미엄 문제 제출 제한
   const requester = await User.findById(req.user.id);
   const subTier = requester?.subscription_tier || 'free';
-  const isAdmin = requester?.role === 'admin';
-
-  if (prob.isPremium && !isAdmin && subTier !== 'pro' && subTier !== 'team') {
-    return errorResponse(res, 403, 'FORBIDDEN', '프리미엄 문제에 제출하려면 Pro 이상의 멤버십이 필요합니다.', {
-      isPremium: true
-    });
-  }
 
   const problemType = prob.problemType || prob.problem_type || 'coding';
   if (problemType !== 'coding' && problemType !== 'build') {
@@ -234,17 +226,9 @@ router.post('/run', auth, requireVerified, validateBody(runSchema), async (req, 
   const prob = await Problem.findById(Number(problemId));
   if (!prob) return errorResponse(res, 404, 'NOT_FOUND', '문제를 찾을 수 없습니다.');
 
-  // 프리미엄 문제 실행 제한
   const User = await getUserModel();
   const requester = await User.findById(req.user.id);
   const subTier = requester?.subscription_tier || 'free';
-  const isAdmin = requester?.role === 'admin';
-
-  if (prob.isPremium && !isAdmin && subTier !== 'pro' && subTier !== 'team') {
-    return errorResponse(res, 403, 'FORBIDDEN', '프리미엄 문제의 실행 기능은 Pro 이상의 멤버십에서 이용 가능합니다.', {
-      isPremium: true
-    });
-  }
 
   try {
     const judgeRuntime = await getCachedJudgeRuntime({ logOnRefresh: true });

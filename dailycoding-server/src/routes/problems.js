@@ -554,23 +554,14 @@ router.get('/:id', auth, async (req, res) => {
     const problemId = Number(req.params.id);
     const User = await getUserModel();
     const requester = await User.findById(req.user.id);
-    const subTier = requester?.subscription_tier || 'free';
     const isAdmin = requester?.role === 'admin';
-    const cacheKey = `problem:detail:v2:${isAdmin ? 'admin' : subTier}:${problemId}:${req.user.id}`;
+    const cacheKey = `problem:detail:v3:${isAdmin ? 'admin' : 'user'}:${problemId}:${req.user.id}`;
     const cached = await redis.getJSON(cacheKey);
     if (cached) return res.json(cached);
 
     const Problem = await getProblemModel();
     const p = await Problem.findById(problemId, req.user.id);
     if (!p) return errorResponse(res, 404, 'NOT_FOUND', '문제를 찾을 수 없습니다.');
-
-    // 프리미엄 문제 접근 제어
-    if (p.isPremium && !isAdmin && subTier !== 'pro' && subTier !== 'team') {
-      return errorResponse(res, 403, 'FORBIDDEN', '이 문제는 프리미엄 회원 전용입니다.', {
-        isPremium: true,
-        requiredTier: 'pro'
-      });
-    }
 
     let result = sanitizeProblemForClient(p, { isAdmin });
 
@@ -594,6 +585,7 @@ router.put('/:id', auth, adminOnly, validateBody(problemSchema), async (req, res
     await redis.clearPrefix('problems:list:');
     await redis.clearPrefix(`problem:detail:${req.params.id}:`);
     await redis.clearPrefix(`problem:detail:v2:`);
+    await redis.clearPrefix(`problem:detail:v3:`);
     res.json(p);
   } catch (err) { console.error('[problems/update]', err.message); return internalError(res); }
 });
@@ -606,6 +598,7 @@ router.delete('/:id', auth, adminOnly, async (req, res) => {
     await redis.clearPrefix('problems:list:');
     await redis.clearPrefix(`problem:detail:${req.params.id}:`);
     await redis.clearPrefix(`problem:detail:v2:`);
+    await redis.clearPrefix(`problem:detail:v3:`);
     res.json({ message: '삭제됐습니다.' });
   } catch (err) {
     console.error('[problems/delete]', err.message);

@@ -1,7 +1,7 @@
 // 언랭 → 아이언 → 브론즈 → 실버 → 골드 → 플레 → 에메 → 다이아 → 마스터 → 그랜드마스터 → 챌린저
 // 챌린저는 rating 기반 threshold 없음 — 상위 3명에게 동적으로 부여
 export const TIER_THRESHOLDS = {
-  iron:         50,
+  iron:         1,
   bronze:       300,
   silver:       1000,
   gold:         2800,

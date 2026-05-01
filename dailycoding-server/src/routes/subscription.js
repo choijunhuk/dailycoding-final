@@ -130,8 +130,8 @@ async function rememberStripeError(meta) {
 router.get('/plans', (req, res) => {
   res.json({
     plans: [
-      { id: 'free', name: '무료', priceMonthly: 0, priceAnnual: 0, features: ['기본 문제 풀이', 'AI 힌트 하루 5회', '기본 통계'] },
-      { id: 'pro', name: '프로', priceMonthly: SUBSCRIPTION_PRICE.pro_monthly, priceAnnual: SUBSCRIPTION_PRICE.pro_yearly, features: ['무제한 AI 힌트', '프리미엄 문제', '우선 매칭', '심화 분석'] },
+      { id: 'free', name: '무료', priceMonthly: 0, priceAnnual: 0, features: ['전체 문제 풀이', 'AI 힌트 하루 5회', '기본 통계'] },
+      { id: 'pro', name: '프로', priceMonthly: SUBSCRIPTION_PRICE.pro_monthly, priceAnnual: SUBSCRIPTION_PRICE.pro_yearly, features: ['무제한 AI 힌트', '광고 제거', '우선 매칭', '심화 분석'] },
       { id: 'team', name: '팀', priceMonthly: TEAM_SUBSCRIPTION_PRICE.monthly, priceAnnual: TEAM_SUBSCRIPTION_PRICE.yearly, features: ['프로 기능 전체', '팀 대시보드', '커스텀 대회', 'API 연동'] },
     ]
   });

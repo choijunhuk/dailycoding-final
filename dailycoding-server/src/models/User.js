@@ -367,6 +367,7 @@ export const User = {
 
   // 상위 3명을 challenger로 지정, 밀려난 유저는 rating 기반 tier로 복원
   async syncChallengerTiers() {
+    const challengerMinimumRating = TIER_THRESHOLDS.grandmaster || Infinity;
     const top3 = await query(
       `SELECT id, rating FROM users WHERE banned_at IS NULL AND role != 'admin'
        ORDER BY rating DESC, solved_count DESC LIMIT 3`,
@@ -380,14 +381,15 @@ export const User = {
       []
     );
     for (const u of stale) {
-      if (!top3Ids.has(u.id)) {
+      if (!top3Ids.has(u.id) || (u.rating || 0) < challengerMinimumRating) {
         await run('UPDATE users SET tier = ? WHERE id = ?', [this.calcTier(u.rating), u.id]);
       }
     }
 
-    // top3 중 rating > 0인 유저에게 challenger 부여
+    // Top 3 still need grandmaster-level rating; tiny leaderboards must not turn
+    // low-rating users into challenger.
     for (const u of top3) {
-      if ((u.rating || 0) > 0) {
+      if ((u.rating || 0) >= challengerMinimumRating) {
         await run('UPDATE users SET tier = ? WHERE id = ?', ['challenger', u.id]);
       }
     }

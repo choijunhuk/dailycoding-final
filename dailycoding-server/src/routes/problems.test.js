@@ -51,7 +51,7 @@ test('Premium Gating Tests', async (t) => {
     assert.equal(res.json.mock.calls[0].arguments[0].id, freeProblemId);
   });
 
-  await t.test('Free user is blocked from premium problem', async () => {
+  await t.test('Free user can access premium problem for solving', async () => {
     const req = { params: { id: String(premiumProblemId) }, user: { id: freeUserId } };
     const res = {
       status: mock.fn(() => res),
@@ -59,9 +59,9 @@ test('Premium Gating Tests', async (t) => {
     };
     await handler(req, res);
 
-    assert.equal(res.status.mock.calls.length, 1);
-    assert.equal(res.status.mock.calls[0].arguments[0], 403);
-    assert.equal(res.json.mock.calls[0].arguments[0].isPremium, true);
+    assert.equal(res.status.mock.calls.length, 0);
+    assert.equal(res.json.mock.calls.length, 1);
+    assert.equal(res.json.mock.calls[0].arguments[0].id, premiumProblemId);
   });
 
   await t.test('Pro user can access premium problem', async () => {
