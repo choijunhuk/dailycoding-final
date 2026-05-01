@@ -228,7 +228,7 @@ section p { font-size: 13px; color: var(--text2); line-height: 1.7; }
 @media (max-width: 1024px) {
   .judge-layout {
     flex-direction: column;
-    height: auto;
+    height: calc(100dvh - 54px);
     overflow-y: auto;
     background: var(--bg);
   }
@@ -238,8 +238,8 @@ section p { font-size: 13px; color: var(--text2); line-height: 1.7; }
     border-right: none;
     border-bottom: 1px solid var(--border);
     flex: none;
-    max-height: 45vh;
-    min-height: 300px;
+    max-height: none;
+    min-height: 38dvh;
   }
 
   .judge-right {
@@ -251,7 +251,8 @@ section p { font-size: 13px; color: var(--text2); line-height: 1.7; }
   }
 
   .editor-wrap {
-    height: 450px;
+    height: 48dvh;
+    min-height: 320px;
     flex: none;
     border-bottom: 1px solid var(--border);
   }
@@ -267,8 +268,16 @@ section p { font-size: 13px; color: var(--text2); line-height: 1.7; }
 }
 
 @media (max-width: 768px) {
+  .judge-layout {
+    height: calc(100dvh - 54px);
+  }
+
+  .judge-left {
+    min-height: 42dvh;
+  }
+
   .prob-content {
-    padding: 20px 16px;
+    padding: 18px 14px 22px;
     gap: 14px;
   }
 
@@ -284,6 +293,14 @@ section p { font-size: 13px; color: var(--text2); line-height: 1.7; }
     overflow-x: auto;
     white-space: nowrap;
     justify-content: flex-start;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .editor-toolbar::-webkit-scrollbar,
+  .judge-tab-bar::-webkit-scrollbar,
+  .result-tabs::-webkit-scrollbar {
+    display: none;
   }
 
   .editor-toolbar > * {
@@ -308,6 +325,7 @@ section p { font-size: 13px; color: var(--text2); line-height: 1.7; }
   .result-tabs {
     overflow-x: auto;
     white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
   }
   
   .analysis-grid {
@@ -324,11 +342,16 @@ section p { font-size: 13px; color: var(--text2); line-height: 1.7; }
 
 @media (max-width: 480px) {
   .judge-left {
-    max-height: 50vh;
+    min-height: 44dvh;
   }
 
   .editor-wrap {
-    height: 400px;
+    height: 42dvh;
+    min-height: 300px;
+  }
+
+  .result-panel {
+    min-height: 240px;
   }
 
   .pmeta {

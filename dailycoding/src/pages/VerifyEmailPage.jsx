@@ -44,7 +44,9 @@ export default function VerifyEmailPage() {
     try {
       await api.post('/auth/resend-verification');
       setResendSent(true);
-    } catch {}
+    } catch {
+      // Keep resend failures silent so the user can retry without noisy errors.
+    }
     finally {
       setResendLoading(false);
     }

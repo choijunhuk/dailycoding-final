@@ -727,8 +727,8 @@ export default function ProblemsPage() {
         )}
 
         {view === 'table' && paginated.length > 0 && (
-          <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
-            <div style={{
+          <div className="problems-table-card" style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
+            <div className="problems-table-head" style={{
               display: 'grid',
               gridTemplateColumns: '60px 1fr 100px 80px 90px 70px 60px 50px 82px',
               padding: '9px 18px',
@@ -759,6 +759,7 @@ export default function ProblemsPage() {
               return (
                 <div
                   key={problem.id}
+                  className="problems-table-row"
                   onClick={() => setPreview(problem)}
                   style={{
                     display: 'grid',
@@ -812,7 +813,7 @@ export default function ProblemsPage() {
                     color: rate >= 70 ? 'var(--green)' : rate >= 40 ? 'var(--yellow)' : 'var(--red)',
                     fontFamily: 'Space Mono,monospace',
                   }}>{rate}%</span>
-                  <div style={{ textAlign: 'center', fontSize: 16 }}>{locked ? '🔒' : solvedState ? '✅' : '⬜'}</div>
+                  <div style={{ textAlign: 'center', fontSize: 16 }}>{solvedState ? '✅' : '⬜'}</div>
                   <button onClick={e => bm(e, problem.id)} style={{
                     background: 'none',
                     border: 'none',
@@ -835,7 +836,7 @@ export default function ProblemsPage() {
         )}
 
         {view === 'card' && paginated.length > 0 && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(280px,1fr))', gap: 12 }}>
+          <div className="problem-card-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(280px,1fr))', gap: 12 }}>
             {paginated.map(problem => {
               const tierMeta = TIERS[problem.tier] || TIERS.bronze
               const solvedState = Boolean(problem.isSolved)
@@ -844,7 +845,7 @@ export default function ProblemsPage() {
               const typeMeta = PROBLEM_TYPE_META[problem.problemType || 'coding'] || PROBLEM_TYPE_META.coding
 
               return (
-                <div key={problem.id} onClick={() => setPreview(problem)} style={{
+                <div key={problem.id} className="problem-card" onClick={() => setPreview(problem)} style={{
                   background: 'var(--bg2)',
                   border: `1px solid ${solvedState ? 'rgba(86,211,100,.25)' : 'var(--border)'}`,
                   borderRadius: 14,
@@ -937,12 +938,12 @@ export default function ProblemsPage() {
       </div>
 
       {preview && (
-        <div style={{
+        <div className="problem-preview-overlay" style={{
           position: 'fixed', inset: 0, background: 'rgba(0,0,0,.7)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           zIndex: 300, backdropFilter: 'blur(4px)',
         }} onClick={e => e.target === e.currentTarget && setPreview(null)}>
-          <div style={{
+          <div className="problem-preview-modal" style={{
             width: 580, maxWidth: '95vw', maxHeight: '85vh', overflowY: 'auto',
             background: 'var(--bg2)', border: '1px solid var(--border)',
             borderRadius: 16, padding: 28,
@@ -994,7 +995,7 @@ export default function ProblemsPage() {
             )}
 
             {preview.examples?.[0] && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
+              <div className="problem-preview-examples" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
                 {[[t('exInput'), preview.examples[0].input], [t('exOutput'), preview.examples[0].output]].map(([label, value]) => (
                   <div key={label}>
                     <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text2)', marginBottom: 5, textTransform: 'uppercase', letterSpacing: .5 }}>{label}</div>
@@ -1004,7 +1005,7 @@ export default function ProblemsPage() {
               </div>
             )}
 
-            <div style={{ display: 'flex', gap: 10 }}>
+            <div className="problem-preview-actions" style={{ display: 'flex', gap: 10 }}>
               <button onClick={() => { go(preview); setPreview(null) }} style={{
                 flex: 1, padding: '12px', borderRadius: 9,
                 background: 'var(--blue)', border: 'none', color: 'var(--bg)',

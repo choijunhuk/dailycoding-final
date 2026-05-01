@@ -195,14 +195,18 @@ export default function ContestPage() {
     try {
       const res = await api.patch(`/contests/${id}/start`);
       setContests(p => p.map(c => c.id===id ? mapStatus(res.data) : c));
-    } catch {}
+    } catch {
+      // Status changes are best-effort; the list stays unchanged on failure.
+    }
   };
 
   const handleEnd = async (id) => {
     try {
       const res = await api.patch(`/contests/${id}/end`);
       setContests(p => p.map(c => c.id===id ? mapStatus(res.data) : c));
-    } catch {}
+    } catch {
+      // Status changes are best-effort; the list stays unchanged on failure.
+    }
   };
 
   const handleDelete = (id) => setDeleteConfirmId(id);
