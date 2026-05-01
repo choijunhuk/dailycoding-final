@@ -131,7 +131,9 @@ router.post('/', auth, requireVerified, async (req, res) => {
         await Promise.all([
           Problem.incrementSolved(Number(problemId)),
           Notification.create(req.user.id, `🧩 "${prob.title}" 정답! (특수 유형)`, 'submissions'),
+          User.onSolve(req.user.id, prob),
         ]);
+        redis.clearPrefix('ranking:').catch(() => {});
         const seasonPoints = User.tierPoints(prob.tier || 'bronze');
         try {
           await Promise.all([

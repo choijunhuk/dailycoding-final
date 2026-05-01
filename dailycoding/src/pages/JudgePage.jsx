@@ -3,7 +3,7 @@ import { Link, useParams, useLocation, useNavigate } from 'react-router-dom';
 const Editor = lazy(() => import('@monaco-editor/react'));
 import confetti from 'canvas-confetti';
 import { PROBLEMS, TIERS } from '../data/problems';
-import { JUDGE_LANGUAGE_OPTIONS, getEffectiveJudgeLanguage, getJudgeLanguageOption, getJudgeLanguageOptionsForSupported } from '../data/judgeLanguages.js';
+import { getEffectiveJudgeLanguage, getJudgeLanguageOption, getJudgeLanguageOptionsForSupported } from '../data/judgeLanguages.js';
 import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -107,7 +107,7 @@ export default function JudgePage() {
   const [result,      setResult]      = useState(null);
   const [testResults, setTestResults] = useState([]);
   const [isJudging,   setIsJudging]   = useState(false);
-  const [similar,     setSimilar]     = useState([]);
+  const [,            setSimilar]     = useState([]);
   const [customInput, setCustomInput] = useState('');
   const [aiReview,    setAiReview]    = useState(null);
   const [reviewLoading,setReviewLoading]=useState(false);
@@ -129,7 +129,7 @@ export default function JudgePage() {
   // ★ 코드 템플릿
   const [showTpl,     setShowTpl]     = useState(false);
   // ★ 힌트
-  const [showHint,    setShowHint]    = useState(false);
+  const [,            setShowHint]    = useState(false);
   const [judgeStatus,  setJudgeStatus]  = useState(null);
   const [judgeStatusError, setJudgeStatusError] = useState('');
   const [fillBlankAnswers, setFillBlankAnswers] = useState([])
@@ -278,11 +278,6 @@ export default function JudgePage() {
   const isProblemLoading = !problem && !problemError;
   const isBookmarked = Boolean(bookmarks[problem?.id])
 
-  const fmtTimer = (s) => {
-    const m = Math.floor(s / 60);
-    const sec = s % 60;
-    return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
-  };
 
   const saveWrongNote = () => {
     if (wrongNote.trim()) {

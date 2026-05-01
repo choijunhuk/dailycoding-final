@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowRight, CheckCircle2, PlayCircle, Moon, Sun, Sparkles, Star } from 'lucide-react'
+import { ArrowRight, PlayCircle, Moon, Sun, Sparkles, Star } from 'lucide-react'
 import { useTheme } from '../context/ThemeContext.jsx'
 import './LandingPage.css'
 import { TIER_THRESHOLDS } from '../data/constants.js'

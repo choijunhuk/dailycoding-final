@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
 import { useToast } from '../context/ToastContext.jsx';
-import { PROBLEMS as DEFAULT_PROBLEMS, TIERS, TIER_COLORS } from '../data/problems';
+import { PROBLEMS as DEFAULT_PROBLEMS, TIERS } from '../data/problems';
 import api from '../api.js';
 import { useRankingData } from '../hooks/useRankingData.js';
 import { BarChart3, BookOpen, Bot, CheckCircle2, FileText, Flame, Sparkles, Swords, Target, TrendingUp, Trophy } from 'lucide-react';

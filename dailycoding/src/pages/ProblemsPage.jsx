@@ -10,7 +10,6 @@ import api from '../api.js'
 import { Filter, Grid, List, Search, Share2, Star, X } from 'lucide-react'
 import {
   FALLBACK_TAGS,
-  getProblemTypeMeta,
   getStoredView,
   parsePositiveInt,
   PROBLEM_TYPE_META,

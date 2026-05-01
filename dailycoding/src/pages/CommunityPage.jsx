@@ -161,7 +161,7 @@ export default function CommunityPage() {
   const location = useLocation()
   const { user } = useAuth()
   const toast = useToast()
-  const { t } = useLang()
+  useLang()
   const activeBoard = BOARD_META[params.board] ? params.board : 'qna'
   const postIdFromRoute = Number(params.id) || null
   const postIdFromQuery = Number(new URLSearchParams(location.search).get('post')) || null

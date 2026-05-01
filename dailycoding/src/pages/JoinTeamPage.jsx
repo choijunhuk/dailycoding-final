@@ -7,7 +7,7 @@ export default function JoinTeamPage() {
   const { token } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
 
   useEffect(() => {
     const join = async () => {

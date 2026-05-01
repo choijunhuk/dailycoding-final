@@ -5,9 +5,12 @@
     "sourceType": "module",
     "ecmaFeatures": { "jsx": true }
   },
+  "plugins": ["react"],
   "extends": ["eslint:recommended"],
   "rules": {
     "no-unused-vars": "warn",
-    "no-console": "off"
+    "no-console": "off",
+    "react/jsx-uses-vars": "error",
+    "react/jsx-uses-react": "error"
   }
 }

@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
 import api from '../api.js';
 import { useToast } from '../context/ToastContext.jsx';
-import { MIN_HIDDEN_TESTCASES } from '../data/problems';
+import {} from '../data/problems';
 import EmailVerifyGate from '../components/EmailVerifyGate.jsx';
 import { useLang } from '../context/LangContext.jsx';
 import './ContestPage.css';
@@ -36,7 +36,7 @@ function getRewardCodesForRank(rules = [], rankPosition) {
 }
 
 export default function ContestPage() {
-  const { isAdmin, user } = useAuth();
+  const { isAdmin } = useAuth();
   const { addNotification, problems: allProblems } = useApp();
   const toast = useToast();
   const { t } = useLang();
