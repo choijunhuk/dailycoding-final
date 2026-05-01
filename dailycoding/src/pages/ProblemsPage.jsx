@@ -431,10 +431,40 @@ export default function ProblemsPage() {
           </div>
         </div>
 
+        {/* 문제 유형 탭 - 필터 위에 전폭으로 표시 */}
+        <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+          {[
+            { key: 'all', label: t('allTypes'), icon: '📋' },
+            { key: 'coding', label: '코딩 문제', icon: '💻' },
+            { key: 'fill-blank', label: '빈칸 채우기', icon: '✏️' },
+            { key: 'bug-fix', label: '틀린부분 찾기', icon: '🐛' },
+          ].map(({ key, label, icon }) => {
+            const count = key === 'all' ? PROBLEMS.length : PROBLEMS.filter(p => (p.problemType || 'coding') === key).length;
+            const isActive = problemType === key;
+            return (
+              <button key={key} onClick={() => updateFilter('problemType', key)} style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '8px 14px', borderRadius: 10, border: `1px solid ${isActive ? 'var(--blue)' : 'var(--border)'}`,
+                background: isActive ? 'var(--blue)' : 'var(--bg2)',
+                color: isActive ? '#0d1117' : 'var(--text2)',
+                fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'all .15s',
+              }}>
+                <span style={{ fontSize: 14 }}>{icon}</span>
+                {label}
+                <span style={{
+                  fontSize: 11, fontWeight: 700, padding: '1px 6px', borderRadius: 99,
+                  background: isActive ? 'rgba(0,0,0,.15)' : 'var(--bg3)',
+                  color: isActive ? '#0d1117' : 'var(--text3)',
+                }}>{count}</span>
+              </button>
+            );
+          })}
+        </div>
+
         <div className="problems-filter-grid" style={{
           display: 'grid',
           gap: 12,
-          gridTemplateColumns: 'minmax(240px, 1.4fr) repeat(4, minmax(120px, .75fr))',
+          gridTemplateColumns: 'minmax(240px, 1.4fr) repeat(3, minmax(120px, .75fr))',
           paddingBottom: 12,
         }}>
           <div style={{ position: 'relative' }}>
@@ -529,14 +559,6 @@ export default function ProblemsPage() {
           }}>
             <option value="all">{t('allTiers')}</option>
             {Object.entries(TIERS).map(([key, value]) => <option key={key} value={key}>{value.label}</option>)}
-          </select>
-
-          <select value={problemType} onChange={e => updateFilter('problemType', e.target.value)} style={{
-            background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 10,
-            color: 'var(--text)', padding: '8px 12px', fontSize: 13, fontFamily: 'inherit', outline: 'none',
-          }}>
-            <option value="all">{t('allTypes')}</option>
-            {Object.entries(PROBLEM_TYPE_META).map(([key]) => <option key={key} value={key}>{getTypeLabel(key)}</option>)}
           </select>
 
           <select value={tag} onChange={e => updateFilter('tag', e.target.value)} style={{
@@ -775,6 +797,9 @@ export default function ProblemsPage() {
                     <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 3, display: 'flex', alignItems: 'center', gap: 6 }}>
                       {problem.title}
                       <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 999, background: typeMeta.bg, color: typeMeta.color }}>{getTypeShort(problem.problemType || 'coding')}</span>
+                      {(problem.problemType === 'fill-blank' || problem.problemType === 'bug-fix') && problem.preferredLanguage && (
+                        <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 999, background: 'rgba(88,166,255,.1)', color: 'var(--blue)', border: '1px solid rgba(88,166,255,.2)' }}>{problem.preferredLanguage}</span>
+                      )}
                     </div>
                     <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                       {(problem.tags || []).slice(0, 3).map(item => (
@@ -874,6 +899,11 @@ export default function ProblemsPage() {
                     <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 10, fontWeight: 700, background: typeMeta.bg, color: typeMeta.color }}>
                       {getTypeShort(problem.problemType || 'coding')}
                     </span>
+                    {(problem.problemType === 'fill-blank' || problem.problemType === 'bug-fix') && problem.preferredLanguage && (
+                      <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 10, fontWeight: 700, background: 'rgba(88,166,255,.1)', color: 'var(--blue)', border: '1px solid rgba(88,166,255,.2)' }}>
+                        {problem.preferredLanguage}
+                      </span>
+                    )}
                     <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 10, fontWeight: 700, background: tierMeta.bg, color: tierMeta.color }}>
                       ● {tierMeta.label}
                     </span>

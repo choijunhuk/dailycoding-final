@@ -1,14 +1,34 @@
-import React from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSubscriptionStatus } from '../hooks/useSubscriptionStatus';
 import { useAuth } from '../context/AuthContext';
 import { useLang } from '../context/LangContext.jsx';
 
-export default function MockAd({ position = 'sidebar' }) {
+// 샘플 광고 영상 ID (실제 광고 집행 시 교체)
+const VIDEO_AD_IDS = [
+  'dQw4w9WgXcQ', // placeholder — 실제 광고 영상 ID로 교체
+];
+
+export default function MockAd({ position = 'sidebar', onSkip }) {
   const { t } = useLang();
   const { user } = useAuth();
   const { tier } = useSubscriptionStatus(user?.id);
+  const [skipCountdown, setSkipCountdown] = useState(5);
+  const [skipped, setSkipped] = useState(false);
+  const timerRef = useRef(null);
+
+  useEffect(() => {
+    if (position !== 'video') return;
+    timerRef.current = setInterval(() => {
+      setSkipCountdown(prev => {
+        if (prev <= 1) { clearInterval(timerRef.current); return 0; }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timerRef.current);
+  }, [position]);
 
   if (tier !== 'free') return null;
+  if (skipped) return null;
 
   const styles = {
     sidebar: {
@@ -35,14 +55,65 @@ export default function MockAd({ position = 'sidebar' }) {
       justifyContent: 'center',
       padding: '0 20px',
       position: 'relative',
-    }
+    },
   };
 
   const adContent = [
     { title: t('mockAdRemoveTitle'), desc: t('mockAdRemoveDesc') },
     { title: t('mockAdAiTitle'), desc: t('mockAdAiDesc') },
-    { title: t('mockAdRankingTitle'), desc: t('mockAdRankingDesc') }
+    { title: t('mockAdRankingTitle'), desc: t('mockAdRankingDesc') },
   ][Math.floor(Math.random() * 3)];
+
+  if (position === 'video') {
+    const videoId = VIDEO_AD_IDS[Math.floor(Math.random() * VIDEO_AD_IDS.length)];
+    const handleSkip = () => {
+      setSkipped(true);
+      onSkip?.();
+    };
+    return (
+      <div style={{
+        position: 'fixed', inset: 0, zIndex: 9999,
+        background: 'rgba(0,0,0,.85)',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <div style={{ position: 'relative', width: '100%', maxWidth: 720 }}>
+          <div style={{ fontSize: 10, color: 'rgba(255,255,255,.5)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 }}>
+            광고 · Pro 플랜으로 광고 없이 이용하세요
+          </div>
+          <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, borderRadius: 12, overflow: 'hidden', background: '#000' }}>
+            <iframe
+              src={`https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&controls=0&modestbranding=1`}
+              style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
+              allow="autoplay; encrypted-media"
+              title="Advertisement"
+            />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, gap: 12 }}>
+            <a href="/pricing" style={{
+              padding: '8px 18px', borderRadius: 8, background: 'var(--blue)', color: '#0d1117',
+              fontSize: 13, fontWeight: 800, textDecoration: 'none',
+            }}>
+              Pro로 업그레이드 — 광고 제거
+            </a>
+            <button
+              onClick={skipCountdown === 0 ? handleSkip : undefined}
+              disabled={skipCountdown > 0}
+              style={{
+                padding: '8px 18px', borderRadius: 8,
+                background: skipCountdown === 0 ? 'var(--bg2)' : 'rgba(255,255,255,.1)',
+                border: '1px solid rgba(255,255,255,.2)',
+                color: skipCountdown === 0 ? 'var(--text)' : 'rgba(255,255,255,.5)',
+                fontSize: 13, fontWeight: 700, cursor: skipCountdown === 0 ? 'pointer' : 'not-allowed',
+                transition: 'all .2s',
+              }}
+            >
+              {skipCountdown > 0 ? `${skipCountdown}초 후 건너뛰기` : '건너뛰기 →'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (position === 'bottom') {
     return (
@@ -56,7 +127,7 @@ export default function MockAd({ position = 'sidebar' }) {
           </div>
           <a href="/pricing" style={{
             padding: '6px 16px', borderRadius: 6, background: 'var(--bg3)', color: 'var(--blue)',
-            fontSize: 12, fontWeight: 700, textDecoration: 'none', border: '1px solid var(--blue)40'
+            fontSize: 12, fontWeight: 700, textDecoration: 'none', border: '1px solid var(--blue)40',
           }}>{t('upgrade')}</a>
         </div>
       </div>
@@ -69,9 +140,9 @@ export default function MockAd({ position = 'sidebar' }) {
       <div style={{ width: 64, height: 64, background: 'var(--bg3)', borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, marginBottom: 16, boxShadow: 'inset 0 0 20px rgba(0,0,0,0.2)' }}>💎</div>
       <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text)', marginBottom: 8 }}>{adContent.title}</div>
       <div style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 20, lineHeight: 1.5 }}>{adContent.desc}</div>
-      <a href="/pricing" style={{ 
-        width: '100%', padding: '10px 0', borderRadius: 8, background: 'var(--blue)', color: '#0d1117', 
-        fontSize: 13, fontWeight: 800, textDecoration: 'none', transition: 'transform 0.2s'
+      <a href="/pricing" style={{
+        width: '100%', padding: '10px 0', borderRadius: 8, background: 'var(--blue)', color: '#0d1117',
+        fontSize: 13, fontWeight: 800, textDecoration: 'none', transition: 'transform 0.2s',
       }} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.02)'} onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}>
         {t('mockAdBenefitsCta')}
       </a>

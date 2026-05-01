@@ -18,6 +18,16 @@ function parseJsonList(raw) {
   return [];
 }
 
+function parseSpecialConfig(problem) {
+  const raw = problem?.specialConfig ?? problem?.special_config ?? null;
+  if (!raw) return null;
+  if (typeof raw === 'object') return raw;
+  if (typeof raw === 'string') {
+    try { return JSON.parse(raw); } catch { return null; }
+  }
+  return null;
+}
+
 async function requireExamSet(id) {
   const row = await queryOne('SELECT * FROM exam_sets WHERE id = ?', [id]);
   if (!row) return null;
@@ -153,6 +163,33 @@ router.post('/:id/submit', async (req, res) => {
 
     for (const problem of problems) {
       const answer = answers[problem.id];
+      const problemType = problem.problemType || problem.problem_type || 'coding';
+
+      if (problemType === 'fill-blank') {
+        const config = parseSpecialConfig(problem);
+        const blanks = Array.isArray(config?.blanks) ? config.blanks : [];
+        const userBlanks = Array.isArray(answer?.blankAnswers) ? answer.blankAnswers : [];
+        const correct = blanks.length > 0 && blanks.every((v, i) =>
+          String(v ?? '').trim() === String(userBlanks[i] ?? '').trim()
+        );
+        breakdown.push({ problemId: problem.id, result: !answer ? 'empty' : correct ? 'correct' : 'wrong', timeMs: null });
+        continue;
+      }
+
+      if (problemType === 'bug-fix') {
+        const config = parseSpecialConfig(problem);
+        const keywords = Array.isArray(config?.keywords) ? config.keywords : [];
+        const answerText = String(answer?.answer ?? '').trim();
+        if (!answerText) {
+          breakdown.push({ problemId: problem.id, result: 'empty', timeMs: null });
+          continue;
+        }
+        const lowered = answerText.toLowerCase();
+        const correct = keywords.length > 0 && keywords.some((k) => lowered.includes(String(k).toLowerCase()));
+        breakdown.push({ problemId: problem.id, result: correct ? 'correct' : 'wrong', timeMs: null });
+        continue;
+      }
+
       if (!answer?.code || !answer?.lang) {
         breakdown.push({ problemId: problem.id, result: 'empty', timeMs: null });
         continue;

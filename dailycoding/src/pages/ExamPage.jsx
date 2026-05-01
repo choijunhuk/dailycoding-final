@@ -1,9 +1,26 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../api.js';
 import { useLang } from '../context/LangContext.jsx';
 
 const Editor = lazy(() => import('@monaco-editor/react'));
+
+const LANG_OPTIONS = [
+  { value: 'python', label: 'Python', monaco: 'python' },
+  { value: 'javascript', label: 'JavaScript', monaco: 'javascript' },
+  { value: 'c', label: 'C', monaco: 'c' },
+  { value: 'cpp', label: 'C++', monaco: 'cpp' },
+  { value: 'java', label: 'Java', monaco: 'java' },
+];
+
+const TYPE_LABEL = { coding: '코딩', 'fill-blank': '빈칸', 'bug-fix': '버그수정' };
+const TYPE_COLOR = { coding: 'var(--blue)', 'fill-blank': 'var(--green)', 'bug-fix': 'var(--orange)' };
+
+function parseConfig(raw) {
+  if (!raw) return {};
+  if (typeof raw === 'object') return raw;
+  try { return JSON.parse(raw); } catch { return {}; }
+}
 
 export default function ExamPage() {
   const { id } = useParams();
@@ -41,10 +58,7 @@ export default function ExamPage() {
     if (!timeLeft) return undefined;
     const timer = setInterval(() => {
       setTimeLeft((current) => {
-        if (current <= 1) {
-          clearInterval(timer);
-          return 0;
-        }
+        if (current <= 1) { clearInterval(timer); return 0; }
         return current - 1;
       });
     }, 1000);
@@ -52,9 +66,37 @@ export default function ExamPage() {
   }, [timeLeft]);
 
   const activeProblem = exam?.problems?.[activeIndex];
-  const editorValue = answers[activeProblem?.id]?.code || '';
+  const problemType = activeProblem?.problemType || 'coding';
+  const specialConfig = useMemo(() => parseConfig(activeProblem?.specialConfig), [activeProblem]);
   const minutes = String(Math.floor(timeLeft / 60)).padStart(2, '0');
   const seconds = String(timeLeft % 60).padStart(2, '0');
+  const currentAnswer = answers[activeProblem?.id] || {};
+  const currentLang = currentAnswer.lang || 'python';
+  const monacoLang = LANG_OPTIONS.find(o => o.value === currentLang)?.monaco || 'python';
+
+  const setLang = (lang) => setAnswers(prev => ({
+    ...prev,
+    [activeProblem.id]: { ...(prev[activeProblem.id] || {}), lang },
+  }));
+
+  const setCode = (code) => setAnswers(prev => ({
+    ...prev,
+    [activeProblem.id]: { ...(prev[activeProblem.id] || {}), code: code || '', lang: currentLang },
+  }));
+
+  const setBlankAnswer = (index, value) => {
+    const blanks = [...(currentAnswer.blankAnswers || [])];
+    blanks[index] = value;
+    setAnswers(prev => ({
+      ...prev,
+      [activeProblem.id]: { blankAnswers: blanks, lang: 'fill-blank' },
+    }));
+  };
+
+  const setBugAnswer = (value) => setAnswers(prev => ({
+    ...prev,
+    [activeProblem.id]: { answer: value, lang: 'bug-fix' },
+  }));
 
   const submitAll = async () => {
     if (!attemptId) return;
@@ -62,75 +104,200 @@ export default function ExamPage() {
     setResult(data);
   };
 
-  if (!exam) {
-    return <div style={{ padding:40 }}>{t('examLoading')}</div>;
-  }
+  if (!exam) return <div style={{ padding: 40 }}>{t('examLoading')}</div>;
 
   return (
-    <div style={{ padding:'24px', height:'100%', display:'flex', flexDirection:'column', gap:16 }}>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+    <div style={{ padding: '24px', height: '100%', display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h1 style={{ fontSize:24, fontWeight:800 }}>{exam.title}</h1>
-          <div style={{ color:'var(--text3)', fontSize:13 }}>{t('examSummary').replace('{minutes}', String(exam.durationMin)).replace('{count}', String(exam.problems.length))}</div>
+          <h1 style={{ fontSize: 24, fontWeight: 800 }}>{exam.title}</h1>
+          <div style={{ color: 'var(--text3)', fontSize: 13 }}>
+            {t('examSummary').replace('{minutes}', String(exam.durationMin)).replace('{count}', String(exam.problems.length))}
+          </div>
         </div>
-        <div style={{ fontFamily:'Space Mono, monospace', fontSize:24, fontWeight:800, color: timeLeft < 600 ? 'var(--red)' : 'var(--blue)' }}>
+        <div style={{ fontFamily: 'Space Mono, monospace', fontSize: 24, fontWeight: 800, color: timeLeft < 600 ? 'var(--red)' : 'var(--blue)' }}>
           {minutes}:{seconds}
         </div>
       </div>
 
       {result ? (
-        <div style={{ background:'var(--bg2)', border:'1px solid var(--border)', borderRadius:12, padding:20 }}>
-          <h2 style={{ fontSize:22, fontWeight:800, marginBottom:12 }}>{t('examResultTitle')}</h2>
-          <div style={{ marginBottom:12 }}>{t('examScoreSummary').replace('{score}', String(result.score)).replace('{total}', String(result.totalProblems))}</div>
-          <div style={{ display:'grid', gap:10 }}>
+        <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 }}>
+          <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 12 }}>{t('examResultTitle')}</h2>
+          <div style={{ marginBottom: 12 }}>
+            {t('examScoreSummary').replace('{score}', String(result.score)).replace('{total}', String(result.totalProblems))}
+          </div>
+          <div style={{ display: 'grid', gap: 10 }}>
             {result.breakdown.map((item) => (
-              <div key={item.problemId} style={{ padding:'10px 12px', border:'1px solid var(--border)', borderRadius:8 }}>
-                {t('examProblemResult').replace('{id}', String(item.problemId)).replace('{result}', String(item.result))} {item.timeMs != null ? `· ${item.timeMs}ms` : ''}
+              <div key={item.problemId} style={{
+                padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8,
+                borderLeft: `3px solid ${item.result === 'correct' ? 'var(--green)' : item.result === 'empty' ? 'var(--text3)' : 'var(--red)'}`,
+              }}>
+                {t('examProblemResult').replace('{id}', String(item.problemId)).replace('{result}', String(item.result))}
+                {item.timeMs != null ? ` · ${item.timeMs}ms` : ''}
               </div>
             ))}
           </div>
-          <button className="btn btn-primary" style={{ marginTop:16 }} onClick={() => navigate('/exams')}>{t('backToExamList')}</button>
+          <button className="btn btn-primary" style={{ marginTop: 16 }} onClick={() => navigate('/exams')}>
+            {t('backToExamList')}
+          </button>
         </div>
       ) : (
-        <div style={{ display:'grid', gridTemplateColumns:'220px minmax(0,1fr)', gap:16, flex:1, minHeight:0 }}>
-          <div style={{ background:'var(--bg2)', border:'1px solid var(--border)', borderRadius:12, padding:12, overflowY:'auto' }}>
-            {exam.problems.map((problem, index) => (
-              <button key={problem.id} onClick={() => setActiveIndex(index)} style={{
-                width:'100%',
-                padding:'10px 12px',
-                borderRadius:8,
-                border:'1px solid var(--border)',
-                background: activeIndex === index ? 'rgba(88,166,255,.12)' : 'transparent',
-                color:'var(--text)',
-                textAlign:'left',
-                cursor:'pointer',
-                marginBottom:8,
-              }}>
-                {t('examProblemTitle').replace('{n}', String(index + 1))}. {problem.title}
-              </button>
-            ))}
+        <div style={{ display: 'grid', gridTemplateColumns: '220px minmax(0,1fr)', gap: 16, flex: 1, minHeight: 0 }}>
+          {/* 문제 목록 사이드바 */}
+          <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 12, padding: 12, overflowY: 'auto' }}>
+            {exam.problems.map((problem, index) => {
+              const pType = problem.problemType || 'coding';
+              const hasAnswer = answers[problem.id] && (
+                pType === 'coding' ? answers[problem.id].code :
+                pType === 'fill-blank' ? answers[problem.id].blankAnswers?.some(Boolean) :
+                answers[problem.id].answer
+              );
+              return (
+                <button key={problem.id} onClick={() => setActiveIndex(index)} style={{
+                  width: '100%', padding: '10px 12px', borderRadius: 8,
+                  border: `1px solid ${activeIndex === index ? 'rgba(88,166,255,.4)' : 'var(--border)'}`,
+                  background: activeIndex === index ? 'rgba(88,166,255,.12)' : 'transparent',
+                  color: 'var(--text)', textAlign: 'left', cursor: 'pointer', marginBottom: 8,
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, fontSize: 13 }}>
+                    {hasAnswer && <span style={{ color: 'var(--green)', fontSize: 11 }}>✓</span>}
+                    {t('examProblemTitle').replace('{n}', String(index + 1))}. {problem.title}
+                  </div>
+                  <div style={{ fontSize: 11, color: TYPE_COLOR[pType], marginTop: 3 }}>
+                    {TYPE_LABEL[pType] || pType}
+                    {problem.preferredLanguage ? ` · ${problem.preferredLanguage}` : ''}
+                  </div>
+                </button>
+              );
+            })}
           </div>
 
-          <div style={{ display:'grid', gridTemplateColumns:'minmax(0,1fr) minmax(360px, 1fr)', gap:16, minHeight:0 }}>
-            <div style={{ background:'var(--bg2)', border:'1px solid var(--border)', borderRadius:12, padding:20, overflowY:'auto' }}>
-              <h2 style={{ fontSize:18, fontWeight:700, marginBottom:10 }}>{activeProblem?.title}</h2>
-              <div style={{ color:'var(--text3)', fontSize:13 }}>{t('examTierLabel').replace('{tier}', String(activeProblem?.tier || '-'))}</div>
-              <p style={{ color:'var(--text2)', marginTop:12 }}>{t('examSimulatorDesc')}</p>
+          {/* 문제 + 답안 */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(360px, 1fr)', gap: 16, minHeight: 0 }}>
+            {/* 문제 설명 패널 */}
+            <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, overflowY: 'auto' }}>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
+                <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 999, background: 'var(--bg3)', color: TYPE_COLOR[problemType], fontWeight: 700 }}>
+                  {TYPE_LABEL[problemType] || problemType}
+                </span>
+                {activeProblem?.preferredLanguage && (
+                  <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 999, background: 'rgba(88,166,255,.1)', color: 'var(--blue)', fontWeight: 700 }}>
+                    {activeProblem.preferredLanguage}
+                  </span>
+                )}
+              </div>
+              <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 6 }}>{activeProblem?.title}</h2>
+              <div style={{ color: 'var(--text3)', fontSize: 12, marginBottom: 14 }}>
+                {t('examTierLabel').replace('{tier}', String(activeProblem?.tier || '-'))}
+              </div>
+              {activeProblem?.description && (
+                <p style={{ color: 'var(--text2)', fontSize: 14, lineHeight: 1.7, marginBottom: 16 }}>{activeProblem.description}</p>
+              )}
+              {!activeProblem?.description && (
+                <p style={{ color: 'var(--text2)', fontSize: 13 }}>{t('examSimulatorDesc')}</p>
+              )}
+              {problemType === 'fill-blank' && specialConfig?.codeTemplate && (
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text3)', marginBottom: 6 }}>코드 템플릿</div>
+                  <pre style={{
+                    background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 8,
+                    padding: 12, fontSize: 12, overflowX: 'auto', fontFamily: 'Space Mono, monospace',
+                    whiteSpace: 'pre-wrap', lineHeight: 1.6,
+                  }}>{specialConfig.codeTemplate}</pre>
+                </div>
+              )}
+              {problemType === 'bug-fix' && specialConfig?.buggyCode && (
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text3)', marginBottom: 6 }}>
+                    버그 코드
+                    {activeProblem?.preferredLanguage && (
+                      <span style={{ fontWeight: 400, marginLeft: 6, color: 'var(--text2)' }}>
+                        ({activeProblem.preferredLanguage})
+                      </span>
+                    )}
+                  </div>
+                  <pre style={{
+                    background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 8,
+                    padding: 12, fontSize: 12, overflowX: 'auto', fontFamily: 'Space Mono, monospace',
+                    whiteSpace: 'pre-wrap', lineHeight: 1.6,
+                  }}>{specialConfig.buggyCode}</pre>
+                  {specialConfig?.hint && (
+                    <p style={{ marginTop: 8, color: 'var(--text2)', fontSize: 13 }}>💡 힌트: {specialConfig.hint}</p>
+                  )}
+                </div>
+              )}
             </div>
-            <div style={{ background:'var(--bg2)', border:'1px solid var(--border)', borderRadius:12, padding:12, minHeight:0 }}>
-              <Suspense fallback={<div>{t('editorLoading')}</div>}>
-                <Editor
-                  height="60vh"
-                  language="javascript"
-                  value={editorValue}
-                  onChange={(value) => setAnswers((prev) => ({
-                    ...prev,
-                    [activeProblem.id]: { ...(prev[activeProblem.id] || {}), code: value || '', lang: 'javascript' },
-                  }))}
-                  options={{ minimap: { enabled: false } }}
-                />
-              </Suspense>
-              <div style={{ display:'flex', justifyContent:'flex-end', gap:8, marginTop:12 }}>
+
+            {/* 답안 입력 패널 */}
+            <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 12, padding: 12, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+              {problemType === 'coding' && (
+                <>
+                  <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
+                    {LANG_OPTIONS.map(opt => (
+                      <button key={opt.value} onClick={() => setLang(opt.value)} style={{
+                        padding: '4px 10px', borderRadius: 6,
+                        border: `1px solid ${currentLang === opt.value ? 'var(--blue)' : 'var(--border)'}`,
+                        background: currentLang === opt.value ? 'var(--blue)' : 'var(--bg3)',
+                        color: currentLang === opt.value ? '#0d1117' : 'var(--text2)',
+                        fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                      }}>{opt.label}</button>
+                    ))}
+                  </div>
+                  <Suspense fallback={<div>{t('editorLoading')}</div>}>
+                    <Editor
+                      height="55vh"
+                      language={monacoLang}
+                      value={currentAnswer.code || ''}
+                      onChange={setCode}
+                      options={{ minimap: { enabled: false } }}
+                    />
+                  </Suspense>
+                </>
+              )}
+
+              {problemType === 'fill-blank' && (
+                <div style={{ flex: 1, overflowY: 'auto' }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12, color: 'var(--text2)' }}>빈칸 답안 입력</div>
+                  {(Array.isArray(specialConfig?.blanks) ? specialConfig.blanks : []).map((_, index) => (
+                    <div key={index} style={{ marginBottom: 10 }}>
+                      <label style={{ fontSize: 12, color: 'var(--text3)', display: 'block', marginBottom: 4 }}>빈칸 {index + 1}</label>
+                      <input
+                        value={currentAnswer.blankAnswers?.[index] || ''}
+                        onChange={e => setBlankAnswer(index, e.target.value)}
+                        placeholder={`빈칸 ${index + 1} 값 입력`}
+                        style={{
+                          width: '100%', padding: '8px 12px', borderRadius: 8,
+                          border: '1px solid var(--border)', background: 'var(--bg3)',
+                          color: 'var(--text)', fontSize: 13, fontFamily: 'Space Mono, monospace',
+                          boxSizing: 'border-box', outline: 'none',
+                        }}
+                      />
+                    </div>
+                  ))}
+                  {(!specialConfig?.blanks || specialConfig.blanks.length === 0) && (
+                    <div style={{ color: 'var(--text3)', fontSize: 13 }}>빈칸 정보를 불러올 수 없습니다.</div>
+                  )}
+                </div>
+              )}
+
+              {problemType === 'bug-fix' && (
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8, color: 'var(--text2)' }}>수정된 코드 입력</div>
+                  <textarea
+                    value={currentAnswer.answer || ''}
+                    onChange={e => setBugAnswer(e.target.value)}
+                    placeholder="버그를 수정한 코드를 입력하세요..."
+                    style={{
+                      flex: 1, minHeight: 280, padding: 12, borderRadius: 8,
+                      border: '1px solid var(--border)', background: 'var(--bg3)',
+                      color: 'var(--text)', fontSize: 13, fontFamily: 'Space Mono, monospace',
+                      resize: 'vertical', boxSizing: 'border-box', outline: 'none', lineHeight: 1.6,
+                    }}
+                  />
+                </div>
+              )}
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
                 <button className="btn btn-ghost" onClick={submitAll}>{t('submitAll')}</button>
               </div>
             </div>

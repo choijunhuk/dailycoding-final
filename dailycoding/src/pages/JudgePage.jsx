@@ -761,7 +761,7 @@ export default function JudgePage() {
 
               {isSpecialProblem && problemType === 'fill-blank' && (
                 <section>
-                  <h4>코드 템플릿</h4>
+                  <h4>코드 템플릿 {problem?.preferredLanguage && <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text2)', marginLeft: 6 }}>({problem.preferredLanguage})</span>}</h4>
                   <pre className="io-box mono">{specialConfig?.codeTemplate || '템플릿 정보가 없습니다.'}</pre>
                   {specialConfig?.hint && <p style={{ marginTop: 8, color: 'var(--text2)' }}>💡 힌트: {specialConfig.hint}</p>}
                 </section>
