@@ -944,8 +944,8 @@ export default function ProfilePage() {
                 >
                   {cancelLoading ? '처리 중...' : '구독 해지 예약'}
                 </button>
-                <a href="mailto:support@dailycoding.kr" style={{ color:'var(--blue)', fontSize:13 }}>
-                  support@dailycoding.kr
+                <a href="mailto:choijunhuk2007@gmail.com" style={{ color:'var(--blue)', fontSize:13 }}>
+                  choijunhuk2007@gmail.com
                 </a>
               </div>
             )}

@@ -257,7 +257,13 @@ async function ensureLocalBootstrapUsers(config) {
 
 async function seedGrowthCollections() {
   if (!mysqlConnected()) return;
+  const pool = getPool();
+  async function countRows(table) {
+    const [[row]] = await pool.execute(`SELECT COUNT(*) AS cnt FROM ${table}`);
+    return Number(row?.cnt ?? 0);
+  }
   try {
+    // profile_backgrounds has slug as unique key — INSERT IGNORE is safe
     await dbRun(
       `INSERT IGNORE INTO profile_backgrounds (slug, name, image_url, is_default, is_premium)
        VALUES
@@ -268,40 +274,46 @@ async function seedGrowthCollections() {
       []
     );
 
-    await dbRun(
-      `INSERT IGNORE INTO learning_paths (title, description, order_index, tag, icon, problem_ids)
-       VALUES
-       ('입력과 출력', '프로그래밍의 기초. 값을 입력받고 출력하는 방법을 배웁니다.', 1, '입출력', '📥', '[1,2]'),
-       ('조건문', 'if/else를 이용해 조건에 따라 다른 동작을 만듭니다.', 2, '조건문', '🔀', '[3]'),
-       ('반복문', 'for/while로 반복 작업을 처리합니다.', 3, '반복문', '🔁', '[4]')`,
-      []
-    );
+    if (await countRows('learning_paths') === 0) {
+      await dbRun(
+        `INSERT INTO learning_paths (title, description, order_index, tag, icon, problem_ids)
+         VALUES
+         ('입력과 출력', '프로그래밍의 기초. 값을 입력받고 출력하는 방법을 배웁니다.', 1, '입출력', '📥', '[1,2]'),
+         ('조건문', 'if/else를 이용해 조건에 따라 다른 동작을 만듭니다.', 2, '조건문', '🔀', '[3]'),
+         ('반복문', 'for/while로 반복 작업을 처리합니다.', 3, '반복문', '🔁', '[4]')`,
+        []
+      );
+    }
 
-    await dbRun(
-      `INSERT IGNORE INTO problem_sheets (title, description, category, contest_name, contest_year, problem_ids, is_official, created_by, thumbnail_color)
-       VALUES
-       ('초보자 입문 트랙', '프로그래밍을 처음 시작하는 분들을 위한 문제 모음', 'learning', NULL, NULL, '[1,2,3,4]', 1, 1, '#d2a8ff'),
-       ('일반 코테 연습 A', '기초 알고리즘 2문제 · 80분', 'custom', NULL, NULL, '[1,2]', 1, 1, '#79c0ff'),
-       ('KOI 2023 기출 — 초등부·중등부', '정렬, 에라토스테네스의 체 유형 | 비상업적 교육 목적', 'contest', 'KOI', 2023, '[6001,6002]', 1, 1, '#1f6feb'),
-       ('KOI 2022 기출 — 초등부·중등부', '탐욕법(거스름돈), 회문수 유형 | 비상업적 교육 목적', 'contest', 'KOI', 2022, '[6003,6004]', 1, 1, '#388bfd'),
-       ('KOI 2021 기출 — 초등부·중등부', '문자열 암호, 해시+누적합 유형 | 비상업적 교육 목적', 'contest', 'KOI', 2021, '[6005,6006]', 1, 1, '#58a6ff'),
-       ('KOI 2020 기출 — 초등부·중등부', '구현, 최장 공통 부분 문자열 유형 | 비상업적 교육 목적', 'contest', 'KOI', 2020, '[6007,6008]', 1, 1, '#79c0ff'),
-       ('KOI 2019–2018 기출 — 고등부', '소수 경로 BFS, 히스토그램 스택 유형 | 비상업적 교육 목적', 'contest', 'KOI', 2019, '[6009,6010]', 1, 1, '#a5d6ff'),
-       ('KOI 전체 기출 모음', '한국정보올림피아드 2018–2023 기출 유형 10선 | 비상업적 교육 목적', 'contest', 'KOI', NULL, '[6001,6002,6003,6004,6005,6006,6007,6008,6009,6010]', 1, 1, '#0d419d'),
-       ('IOI 2016–2020 기출 유형', '팰린드롬 DP, BFS, 그리디 유형 | 비상업적 교육 목적', 'contest', 'IOI', 2020, '[7003,7004,7005,7001,7002]', 1, 1, '#8957e5'),
-       ('IOI 2021–2023 기출 유형', 'XOR 쿼리, 최소 경로, 단조 스택 유형 | 비상업적 교육 목적', 'contest', 'IOI', 2023, '[7006,7007,7008]', 1, 1, '#d2a8ff'),
-       ('IOI 전체 기출 모음', '국제정보올림피아드 2016–2023 기출 유형 8선 | 비상업적 교육 목적', 'contest', 'IOI', NULL, '[7001,7002,7003,7004,7005,7006,7007,7008]', 1, 1, '#6e40c9')`,
-      []
-    );
+    if (await countRows('problem_sheets') === 0) {
+      await dbRun(
+        `INSERT INTO problem_sheets (title, description, category, contest_name, contest_year, problem_ids, is_official, created_by, thumbnail_color)
+         VALUES
+         ('초보자 입문 트랙', '프로그래밍을 처음 시작하는 분들을 위한 문제 모음', 'learning', NULL, NULL, '[1,2,3,4]', 1, 1, '#d2a8ff'),
+         ('일반 코테 연습 A', '기초 알고리즘 2문제 · 80분', 'custom', NULL, NULL, '[1,2]', 1, 1, '#79c0ff'),
+         ('KOI 2023 기출 — 초등부·중등부', '정렬, 에라토스테네스의 체 유형 | 비상업적 교육 목적', 'contest', 'KOI', 2023, '[6001,6002]', 1, 1, '#1f6feb'),
+         ('KOI 2022 기출 — 초등부·중등부', '탐욕법(거스름돈), 회문수 유형 | 비상업적 교육 목적', 'contest', 'KOI', 2022, '[6003,6004]', 1, 1, '#388bfd'),
+         ('KOI 2021 기출 — 초등부·중등부', '문자열 암호, 해시+누적합 유형 | 비상업적 교육 목적', 'contest', 'KOI', 2021, '[6005,6006]', 1, 1, '#58a6ff'),
+         ('KOI 2020 기출 — 초등부·중등부', '구현, 최장 공통 부분 문자열 유형 | 비상업적 교육 목적', 'contest', 'KOI', 2020, '[6007,6008]', 1, 1, '#79c0ff'),
+         ('KOI 2019–2018 기출 — 고등부', '소수 경로 BFS, 히스토그램 스택 유형 | 비상업적 교육 목적', 'contest', 'KOI', 2019, '[6009,6010]', 1, 1, '#a5d6ff'),
+         ('KOI 전체 기출 모음', '한국정보올림피아드 2018–2023 기출 유형 10선 | 비상업적 교육 목적', 'contest', 'KOI', NULL, '[6001,6002,6003,6004,6005,6006,6007,6008,6009,6010]', 1, 1, '#0d419d'),
+         ('IOI 2016–2020 기출 유형', '팰린드롬 DP, BFS, 그리디 유형 | 비상업적 교육 목적', 'contest', 'IOI', 2020, '[7003,7004,7005,7001,7002]', 1, 1, '#8957e5'),
+         ('IOI 2021–2023 기출 유형', 'XOR 쿼리, 최소 경로, 단조 스택 유형 | 비상업적 교육 목적', 'contest', 'IOI', 2023, '[7006,7007,7008]', 1, 1, '#d2a8ff'),
+         ('IOI 전체 기출 모음', '국제정보올림피아드 2016–2023 기출 유형 8선 | 비상업적 교육 목적', 'contest', 'IOI', NULL, '[7001,7002,7003,7004,7005,7006,7007,7008]', 1, 1, '#6e40c9')`,
+        []
+      );
+    }
 
-    await dbRun(
-      `INSERT IGNORE INTO exam_sets (title, description, duration_min, problem_ids, difficulty_avg, is_pro, company_tag, created_by)
-       VALUES
-       ('일반 코테 연습 A', '기초 알고리즘 2문제 · 80분', 80, '[1,2]', 2.0, 0, NULL, 1),
-       ('카카오 스타일 모의고사', '카카오 코테 유형 분석 세트', 120, '[1,2,3]', 3.5, 1, 'kakao', 1),
-       ('네이버 스타일 모의고사', '네이버 코테 유형 분석 세트', 120, '[2,3,4]', 4.0, 1, 'naver', 1)`,
-      []
-    );
+    if (await countRows('exam_sets') === 0) {
+      await dbRun(
+        `INSERT INTO exam_sets (title, description, duration_min, problem_ids, difficulty_avg, is_pro, company_tag, created_by)
+         VALUES
+         ('일반 코테 연습 A', '기초 알고리즘 2문제 · 80분', 80, '[1,2]', 2.0, 0, NULL, 1),
+         ('카카오 스타일 모의고사', '카카오 코테 유형 분석 세트', 120, '[1,2,3]', 3.5, 1, 'kakao', 1),
+         ('네이버 스타일 모의고사', '네이버 코테 유형 분석 세트', 120, '[2,3,4]', 4.0, 1, 'naver', 1)`,
+        []
+      );
+    }
   } catch (err) {
     logger.warn('⚠️ 성장 컬렉션 시드 실패:', { message: err.message });
   }

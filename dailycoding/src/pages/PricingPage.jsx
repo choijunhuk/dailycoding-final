@@ -344,7 +344,7 @@ export default function PricingPage() {
             <div style={{ padding: '20px', borderRadius: 26, background: 'var(--bg2)', border: '1px solid var(--border)', color: 'var(--text3)', fontSize: 13, lineHeight: 1.8 }}>
               모든 유료 플랜은 <strong style={{ color: 'var(--text)' }}>결제 후 7일 이내 전액 환불</strong> 요청이 가능합니다.
               <br />
-              문의: <a href="mailto:support@dailycoding.kr" style={{ color: 'var(--blue)' }}>support@dailycoding.kr</a>
+              문의: <a href="mailto:choijunhuk2007@gmail.com" style={{ color: 'var(--blue)' }}>choijunhuk2007@gmail.com</a>
               {' · '}
               <button
                 onClick={() => navigate('/terms')}

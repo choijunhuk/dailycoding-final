@@ -21,7 +21,7 @@ const sections = [
   },
   {
     title: '5. 이용자 권리',
-    content: `이용자는 언제든지 다음 권리를 행사할 수 있습니다.\n\n• 열람권: 보유 중인 개인정보 내용 확인\n• 수정권: 부정확한 개인정보 정정 요청\n• 삭제권: 계정 및 개인정보 삭제 요청 (회원 탈퇴)\n• 처리 정지권: 일부 데이터 수집·처리 중단 요청\n\n권리 행사는 서비스 내 설정 메뉴 또는 support@dailycoding.kr 로 요청하실 수 있습니다.`,
+    content: `이용자는 언제든지 다음 권리를 행사할 수 있습니다.\n\n• 열람권: 보유 중인 개인정보 내용 확인\n• 수정권: 부정확한 개인정보 정정 요청\n• 삭제권: 계정 및 개인정보 삭제 요청 (회원 탈퇴)\n• 처리 정지권: 일부 데이터 수집·처리 중단 요청\n\n권리 행사는 서비스 내 설정 메뉴 또는 choijunhuk2007@gmail.com 로 요청하실 수 있습니다.`,
   },
   {
     title: '6. 쿠키 및 로컬 스토리지',
@@ -29,7 +29,7 @@ const sections = [
   },
   {
     title: '7. 문의',
-    content: `개인정보 처리에 관한 문의, 열람·수정·삭제 요청은 아래로 연락해 주세요.\n\n이메일: support@dailycoding.kr\n운영 시간: 평일 09:00 – 18:00 (KST)\n\n개인정보 침해 신고는 개인정보보호위원회(privacy.go.kr) 또는 한국인터넷진흥원(118.go.kr)에도 접수할 수 있습니다.`,
+    content: `개인정보 처리에 관한 문의, 열람·수정·삭제 요청은 아래로 연락해 주세요.\n\n이메일: choijunhuk2007@gmail.com\n운영 시간: 평일 09:00 – 18:00 (KST)\n\n개인정보 침해 신고는 개인정보보호위원회(privacy.go.kr) 또는 한국인터넷진흥원(118.go.kr)에도 접수할 수 있습니다.`,
   },
 ];
 
@@ -120,7 +120,7 @@ export default function PrivacyPage() {
         lineHeight: 1.7,
       }}>
         본 방침은 {LAST_UPDATED}부터 적용됩니다.<br />
-        문의: <a href="mailto:support@dailycoding.kr" style={{ color: 'var(--blue)', textDecoration: 'none' }}>support@dailycoding.kr</a>
+        문의: <a href="mailto:choijunhuk2007@gmail.com" style={{ color: 'var(--blue)', textDecoration: 'none' }}>choijunhuk2007@gmail.com</a>
       </div>
     </div>
   );

@@ -21,7 +21,7 @@ const sections = [
   },
   {
     title: '5. 유료 서비스',
-    content: `DailyCoding은 Pro 플랜 및 Team 플랜을 유료로 제공합니다. 결제는 Stripe를 통해 처리되며, 구독 요금은 선불로 청구됩니다.\n\n환불 정책: 결제일로부터 7일 이내에 서비스를 실질적으로 이용하지 않은 경우 전액 환불을 요청할 수 있습니다. 7일 경과 후에는 환불이 제한될 수 있습니다. 환불 요청은 support@dailycoding.kr로 문의하세요.`,
+    content: `DailyCoding은 Pro 플랜 및 Team 플랜을 유료로 제공합니다. 결제는 Stripe를 통해 처리되며, 구독 요금은 선불로 청구됩니다.\n\n환불 정책: 결제일로부터 7일 이내에 서비스를 실질적으로 이용하지 않은 경우 전액 환불을 요청할 수 있습니다. 7일 경과 후에는 환불이 제한될 수 있습니다. 환불 요청은 choijunhuk2007@gmail.com로 문의하세요.`,
   },
   {
     title: '6. 지적재산권',
@@ -33,7 +33,7 @@ const sections = [
   },
   {
     title: '8. 문의',
-    content: `본 약관에 대한 문의 사항은 아래 이메일로 연락해 주세요.\n\n이메일: support@dailycoding.kr\n운영 시간: 평일 09:00 – 18:00 (KST)`,
+    content: `본 약관에 대한 문의 사항은 아래 이메일로 연락해 주세요.\n\n이메일: choijunhuk2007@gmail.com\n운영 시간: 평일 09:00 – 18:00 (KST)`,
   },
 ];
 
@@ -124,7 +124,7 @@ export default function TermsPage() {
         lineHeight: 1.7,
       }}>
         본 약관은 {LAST_UPDATED}부터 적용됩니다.<br />
-        문의: <a href="mailto:support@dailycoding.kr" style={{ color: 'var(--blue)', textDecoration: 'none' }}>support@dailycoding.kr</a>
+        문의: <a href="mailto:choijunhuk2007@gmail.com" style={{ color: 'var(--blue)', textDecoration: 'none' }}>choijunhuk2007@gmail.com</a>
       </div>
     </div>
   );
