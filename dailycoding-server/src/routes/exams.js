@@ -60,9 +60,9 @@ router.get('/', async (req, res) => {
       params.push(company);
     }
     const rows = await query(
-      `SELECT *
-       FROM exam_sets
+      `SELECT * FROM exam_sets
        ${where}
+       GROUP BY id
        ORDER BY created_at DESC
        LIMIT ${limit} OFFSET ${offset}`,
       params

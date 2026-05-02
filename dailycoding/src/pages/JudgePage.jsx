@@ -735,10 +735,21 @@ export default function JudgePage() {
                   <section><h4>출력</h4><p style={{ whiteSpace: 'pre-line' }}>{problem.outputDesc}</p></section>
 
                   {(problem.examples||[]).map((ex, i) => (
-                    <div key={i} className="ex-grid">
-                      <div><h4>예제 입력 {i + 1}</h4><pre className="io-box mono">{ex.input}</pre></div>
-                      <div><h4>예제 출력 {i + 1}</h4><pre className="io-box mono">{ex.output}</pre></div>
-                    </div>
+                    <section key={i} style={{ border:'1px solid var(--border)', borderRadius:10, overflow:'hidden', marginBottom:8 }}>
+                      <div style={{ padding:'6px 12px', background:'var(--bg3)', borderBottom:'1px solid var(--border)', fontSize:12, fontWeight:700, color:'var(--text3)' }}>
+                        예제 {i + 1}
+                      </div>
+                      <div className="ex-grid" style={{ padding:'10px 12px', gap:12 }}>
+                        <div>
+                          <div style={{ fontSize:11, fontWeight:700, color:'var(--text3)', marginBottom:4 }}>입력</div>
+                          <pre className="io-box mono" style={{ margin:0 }}>{ex.input}</pre>
+                        </div>
+                        <div>
+                          <div style={{ fontSize:11, fontWeight:700, color:'var(--text3)', marginBottom:4 }}>출력</div>
+                          <pre className="io-box mono" style={{ margin:0 }}>{ex.output}</pre>
+                        </div>
+                      </div>
+                    </section>
                   ))}
                 </>
               )}
