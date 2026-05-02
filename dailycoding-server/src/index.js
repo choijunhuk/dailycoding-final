@@ -45,6 +45,7 @@ httpServer.listen(PORT, async () => {
   await waitForDB();
   await initDatabase();
   await seedDefaultProblems();
+  await seedSpecialProblems();
   await seedGrowthCollections();
   if (process.env.RESET_DB === 'true') {
     logger.warn('⚠️  RESET_DB=true 감지 — 모든 유저 데이터를 초기화합니다.');
@@ -255,6 +256,158 @@ async function ensureLocalBootstrapUsers(config) {
   }
 }
 
+async function seedSpecialProblems() {
+  if (!mysqlConnected()) return;
+  const pool = getPool();
+  const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+
+  const problems = [
+    // ── JavaScript 빈칸 채우기 (101–105) ─────────────────────────────
+    { id: 101, title: 'JS: Hello, World! 출력', difficulty: 1, lang: 'javascript', type: 'fill-blank',
+      desc: 'Node.js에서 "Hello, World!"를 출력하는 빈칸을 채우세요.',
+      hint: 'Node.js의 표준 콘솔 출력 함수 이름을 입력하세요.',
+      config: { codeTemplate: "___1___('Hello, World!');", blanks: ['console.log'], hint: 'Node.js에서 콘솔에 값을 출력할 때 사용하는 전역 함수입니다.' } },
+    { id: 102, title: 'JS: 두 수의 합', difficulty: 1, lang: 'javascript', type: 'fill-blank',
+      desc: '표준 입력으로 두 정수를 받아 합을 출력합니다.',
+      hint: 'split 후 map(Number)로 정수 배열을 만드세요.',
+      config: { codeTemplate: "const [a, b] = require('fs').readFileSync('/dev/stdin','utf8').trim().split(' ').___1___(Number);\nconsole.log(___2___);", blanks: ['map', 'a + b'], hint: '문자열 배열을 숫자 배열로 바꾸는 배열 메서드와, 두 수를 더하는 식을 채우세요.' } },
+    { id: 103, title: 'JS: 홀짝 판별', difficulty: 1, lang: 'javascript', type: 'fill-blank',
+      desc: '정수 n이 홀수인지 짝수인지 판별하세요.',
+      hint: '나머지 연산자(%)를 사용합니다.',
+      config: { codeTemplate: "const n = Number(require('fs').readFileSync('/dev/stdin','utf8').trim());\nif (n ___1___ 2 === 0) {\n  console.log('짝수');\n} else {\n  console.log('___2___');\n}", blanks: ['%', '홀수'], hint: '나머지 연산자와 홀수일 때 출력할 문자열을 채우세요.' } },
+    { id: 104, title: 'JS: 배열 최댓값', difficulty: 1, lang: 'javascript', type: 'fill-blank',
+      desc: '배열에서 최댓값을 구하세요. Math 객체의 메서드를 활용합니다.',
+      hint: 'Math.max(...배열) 형태로 사용합니다.',
+      config: { codeTemplate: "const nums = [3, 1, 4, 1, 5, 9, 2, 6];\nconst max = ___1___.___2___(...nums);\nconsole.log(max);", blanks: ['Math', 'max'], hint: 'Math 네임스페이스와 최댓값 함수 이름을 채우세요.' } },
+    { id: 105, title: 'JS: 배열 평균', difficulty: 1, lang: 'javascript', type: 'fill-blank',
+      desc: '배열 원소의 평균값을 구하세요. reduce를 사용합니다.',
+      hint: 'reduce로 합계를 구한 뒤 length로 나눕니다.',
+      config: { codeTemplate: "const nums = [10, 20, 30, 40, 50];\nconst sum = nums.___1___((acc, v) => acc + v, 0);\nconst avg = sum / nums.___2___;\nconsole.log(avg);", blanks: ['reduce', 'length'], hint: '배열 합산 고차함수와 배열 길이 속성을 채우세요.' } },
+
+    // ── C 빈칸 채우기 (201–205) ───────────────────────────────────────
+    { id: 201, title: 'C: Hello, World! 출력', difficulty: 1, lang: 'c', type: 'fill-blank',
+      desc: 'C 언어로 "Hello, World!"를 출력합니다.',
+      hint: 'printf 함수를 사용하고, stdio.h 헤더가 필요합니다.',
+      config: { codeTemplate: "#include <___1___>\nint main() {\n  ___2___(\"Hello, World!\\n\");\n  return 0;\n}", blanks: ['stdio.h', 'printf'], hint: '표준 입출력 헤더파일 이름과 출력 함수 이름을 채우세요.' } },
+    { id: 202, title: 'C: 두 수의 합', difficulty: 1, lang: 'c', type: 'fill-blank',
+      desc: 'scanf로 두 정수를 입력받아 합을 출력하세요.',
+      hint: 'scanf로 입력받고 printf로 출력합니다.',
+      config: { codeTemplate: "#include <stdio.h>\nint main() {\n  int a, b;\n  ___1___(\"%d %d\", &a, &b);\n  printf(\"%d\\n\", ___2___);\n  return 0;\n}", blanks: ['scanf', 'a + b'], hint: '표준 입력 함수와 두 변수의 합 식을 채우세요.' } },
+    { id: 203, title: 'C: 홀짝 판별', difficulty: 1, lang: 'c', type: 'fill-blank',
+      desc: '정수가 홀수인지 짝수인지 판별하여 출력하세요.',
+      hint: '% 연산자로 나머지를 구합니다.',
+      config: { codeTemplate: "#include <stdio.h>\nint main() {\n  int n;\n  scanf(\"%d\", &n);\n  if (n % 2 ___1___ 0) {\n    printf(\"짝수\\n\");\n  } else {\n    printf(\"___2___\\n\");\n  }\n  return 0;\n}", blanks: ['==', '홀수'], hint: '짝수 비교 연산자와 홀수일 때 출력할 문자열을 채우세요.' } },
+    { id: 204, title: 'C: 팩토리얼', difficulty: 1, lang: 'c', type: 'fill-blank',
+      desc: '재귀 함수를 사용하여 n!을 계산하세요.',
+      hint: '기저 조건(n<=1)과 재귀 호출 이름을 채웁니다.',
+      config: { codeTemplate: "#include <stdio.h>\nint factorial(int n) {\n  if (n ___1___ 1) return 1;\n  return n * ___2___(n - 1);\n}\nint main() {\n  int n;\n  scanf(\"%d\", &n);\n  printf(\"%d\\n\", factorial(n));\n  return 0;\n}", blanks: ['<=', 'factorial'], hint: '기저 조건 비교 연산자와 재귀 호출할 함수 이름을 채우세요.' } },
+    { id: 205, title: 'C: 배열 최솟값', difficulty: 1, lang: 'c', type: 'fill-blank',
+      desc: '정수 배열에서 최솟값을 찾으세요.',
+      hint: 'sizeof로 배열 크기를 구하고, < 로 비교합니다.',
+      config: { codeTemplate: "#include <stdio.h>\nint main() {\n  int arr[] = {5, 3, 8, 1, 9, 2};\n  int n = ___1___(arr) / sizeof(arr[0]);\n  int min = arr[0];\n  for (int i = 1; i < n; i++) {\n    if (arr[i] ___2___ min) min = arr[i];\n  }\n  printf(\"%d\\n\", min);\n  return 0;\n}", blanks: ['sizeof', '<'], hint: '배열 전체 크기를 구하는 C 연산자와 최솟값 비교 연산자를 채우세요.' } },
+
+    // ── C++ 빈칸 채우기 (301–305) ─────────────────────────────────────
+    { id: 301, title: 'C++: Hello, World! 출력', difficulty: 1, lang: 'cpp', type: 'fill-blank',
+      desc: 'C++에서 "Hello, World!"를 출력합니다.',
+      hint: 'iostream 헤더와 cout을 사용합니다.',
+      config: { codeTemplate: "#include <___1___>\nusing namespace std;\nint main() {\n  ___2___ << \"Hello, World!\" << endl;\n  return 0;\n}", blanks: ['iostream', 'cout'], hint: '표준 입출력 헤더와 출력 스트림 객체를 채우세요.' } },
+    { id: 302, title: 'C++: 두 수의 합', difficulty: 1, lang: 'cpp', type: 'fill-blank',
+      desc: 'cin으로 두 정수를 입력받아 합을 출력하세요.',
+      hint: 'cin과 cout을 사용합니다.',
+      config: { codeTemplate: "#include <iostream>\nusing namespace std;\nint main() {\n  int a, b;\n  ___1___ >> a >> b;\n  cout << ___2___ << endl;\n  return 0;\n}", blanks: ['cin', 'a + b'], hint: '표준 입력 스트림 객체와 두 수의 합 식을 채우세요.' } },
+    { id: 303, title: 'C++: 홀짝 판별', difficulty: 1, lang: 'cpp', type: 'fill-blank',
+      desc: '정수가 홀수인지 짝수인지 판별하세요.',
+      hint: '나머지 연산자(%)를 사용합니다.',
+      config: { codeTemplate: "#include <iostream>\nusing namespace std;\nint main() {\n  int n;\n  cin >> n;\n  if (n % 2 == ___1___) {\n    cout << \"짝수\" << endl;\n  } else {\n    cout << \"___2___\" << endl;\n  }\n  return 0;\n}", blanks: ['0', '홀수'], hint: '짝수 조건의 나머지 값과 홀수일 때 출력할 문자열을 채우세요.' } },
+    { id: 304, title: 'C++: 벡터 정렬', difficulty: 2, lang: 'cpp', type: 'fill-blank',
+      desc: 'vector를 오름차순으로 정렬하세요.',
+      hint: 'algorithm 헤더의 sort 함수를 사용합니다.',
+      config: { codeTemplate: "#include <iostream>\n#include <vector>\n#include <___1___>\nusing namespace std;\nint main() {\n  vector<int> v = {5, 3, 1, 4, 2};\n  ___2___(v.begin(), v.end());\n  for (int x : v) cout << x << \" \";\n  return 0;\n}", blanks: ['algorithm', 'sort'], hint: '정렬 알고리즘 헤더와 STL 정렬 함수 이름을 채우세요.' } },
+    { id: 305, title: 'C++: 문자열 길이', difficulty: 1, lang: 'cpp', type: 'fill-blank',
+      desc: '입력받은 문자열의 길이를 출력하세요.',
+      hint: 'string 클래스의 멤버 함수를 사용합니다.',
+      config: { codeTemplate: "#include <iostream>\n#include <string>\nusing namespace std;\nint main() {\n  string s;\n  ___1___ >> s;\n  cout << s.___2___() << endl;\n  return 0;\n}", blanks: ['cin', 'length'], hint: '입력 스트림 객체와 문자열 길이 반환 메서드를 채우세요.' } },
+
+    // ── Java 빈칸 채우기 (401–405) ────────────────────────────────────
+    { id: 401, title: 'Java: Hello, World! 출력', difficulty: 1, lang: 'java', type: 'fill-blank',
+      desc: 'Java에서 "Hello, World!"를 출력하는 빈칸을 채우세요.',
+      hint: 'System.out 객체의 메서드를 사용합니다.',
+      config: { codeTemplate: "public class Main {\n  public static void main(String[] ___1___) {\n    System.out.___2___(\"Hello, World!\");\n  }\n}", blanks: ['args', 'println'], hint: 'main 메서드 매개변수명과 줄바꿈 포함 출력 메서드를 채우세요.' } },
+    { id: 402, title: 'Java: 두 수의 합', difficulty: 1, lang: 'java', type: 'fill-blank',
+      desc: 'Scanner로 두 정수를 입력받아 합을 출력하세요.',
+      hint: 'java.util.Scanner를 사용합니다.',
+      config: { codeTemplate: "import java.util.Scanner;\npublic class Main {\n  public static void main(String[] args) {\n    Scanner sc = new ___1___(System.in);\n    int a = sc.nextInt();\n    int b = sc.nextInt();\n    System.out.println(___2___);\n  }\n}", blanks: ['Scanner', 'a + b'], hint: 'Scanner 클래스 이름과 두 수의 합 식을 채우세요.' } },
+    { id: 403, title: 'Java: 홀짝 판별', difficulty: 1, lang: 'java', type: 'fill-blank',
+      desc: '정수가 홀수인지 짝수인지 판별하여 출력하세요.',
+      hint: '% 연산자로 나머지를 구합니다.',
+      config: { codeTemplate: "import java.util.Scanner;\npublic class Main {\n  public static void main(String[] args) {\n    Scanner sc = new Scanner(System.in);\n    int n = sc.nextInt();\n    if (n ___1___ 2 == 0) {\n      System.out.println(\"짝수\");\n    } else {\n      System.out.println(\"___2___\");\n    }\n  }\n}", blanks: ['%', '홀수'], hint: '나머지 연산자와 홀수일 때 출력할 문자열을 채우세요.' } },
+    { id: 404, title: 'Java: 배열 합계', difficulty: 1, lang: 'java', type: 'fill-blank',
+      desc: '정수 배열의 모든 원소의 합을 구하세요.',
+      hint: '향상된 for문(for-each)으로 순회합니다.',
+      config: { codeTemplate: "public class Main {\n  public static void main(String[] args) {\n    int[] nums = {1, 2, 3, 4, 5};\n    int sum = ___1___;\n    for (int n : nums) {\n      sum += ___2___;\n    }\n    System.out.println(sum);\n  }\n}", blanks: ['0', 'n'], hint: '합계 누적을 위한 초기값과 각 원소를 나타내는 변수명을 채우세요.' } },
+    { id: 405, title: 'Java: 배열 최솟값', difficulty: 1, lang: 'java', type: 'fill-blank',
+      desc: '정수 배열에서 최솟값을 찾으세요. 정렬 후 첫 번째 원소를 사용합니다.',
+      hint: 'Arrays.sort() 후 첫 번째 인덱스를 확인합니다.',
+      config: { codeTemplate: "import java.util.Arrays;\npublic class Main {\n  public static void main(String[] args) {\n    int[] nums = {5, 3, 8, 1, 9, 2};\n    Arrays.___1___(nums);\n    System.out.println(nums[___2___]);\n  }\n}", blanks: ['sort', '0'], hint: '배열을 정렬하는 메서드와 정렬 후 최솟값이 있는 인덱스를 채우세요.' } },
+
+    // ── JavaScript 버그 찾기 (92001–92002) ───────────────────────────
+    { id: 92001, title: 'JS 버그: 배열 최댓값 초기값 오류', difficulty: 2, lang: 'javascript', type: 'bug-fix',
+      desc: '배열에서 최댓값을 구하지만 음수 배열에서 잘못된 결과를 반환합니다. 버그를 찾아 수정하세요.',
+      hint: '초기값이 특정 경우에 문제가 됩니다.',
+      config: { buggyCode: "// 배열의 최댓값을 구하는 함수\n// 버그: 모든 원소가 음수일 때 잘못된 결과 반환\nfunction findMax(arr) {\n  let max = 0;\n  for (let i = 0; i < arr.length; i++) {\n    if (arr[i] > max) max = arr[i];\n  }\n  return max;\n}\nconsole.log(findMax([-3, -1, -4]));  // -1이어야 하지만 0 반환", keywords: ['arr[0]', '-Infinity', 'Math.max'], explanation: 'max를 0으로 초기화하면 모든 원소가 음수일 때 0이 반환됩니다. arr[0] 또는 -Infinity로 초기화해야 합니다.', hint: 'max 초기값을 배열의 첫 번째 원소로 바꾸세요.' } },
+    { id: 92002, title: 'JS 버그: 문자열 뒤집기 공백 오류', difficulty: 2, lang: 'javascript', type: 'bug-fix',
+      desc: '문자열을 뒤집는 코드에 버그가 있습니다. "hello"가 "olleh"로 출력되어야 합니다.',
+      hint: '배열 메서드 join의 인수를 확인하세요.',
+      config: { buggyCode: "// 문자열을 뒤집는 함수\nfunction reverseString(s) {\n  return s.split('').reverse().join(' ');  // 버그 있음\n}\nconsole.log(reverseString('hello'));  // 'olleh' 출력해야 함", keywords: ["join('')", 'join'], explanation: "join(' ')는 각 문자 사이에 공백을 삽입합니다. join('')으로 고쳐야 공백 없이 합쳐집니다.", hint: "join의 인수를 공백 문자열(' ')에서 빈 문자열('')로 바꾸세요." } },
+
+    // ── C 버그 찾기 (93001–93002) ─────────────────────────────────────
+    { id: 93001, title: 'C 버그: swap 값 전달 오류', difficulty: 2, lang: 'c', type: 'bug-fix',
+      desc: '두 변수를 교환하는 swap 함수가 제대로 동작하지 않습니다. 버그를 찾아 수정하세요.',
+      hint: 'C에서 함수 밖의 변수를 수정하려면 포인터가 필요합니다.',
+      config: { buggyCode: "#include <stdio.h>\n// 버그: 값에 의한 전달 — 원본이 바뀌지 않음\nvoid swap(int a, int b) {\n  int tmp = a;\n  a = b;\n  b = tmp;\n}\nint main() {\n  int x = 3, y = 7;\n  swap(x, y);\n  printf(\"%d %d\\n\", x, y);  // 7 3이어야 하지만 3 7 출력\n  return 0;\n}", keywords: ['int *a', 'int *b', '*a', '*b', '&x', '&y'], explanation: 'C는 함수 인자를 값으로 복사합니다. 원본을 바꾸려면 포인터로 받아야 합니다: swap(int *a, int *b).', hint: 'swap 매개변수를 포인터로 변경하고 main에서 &x, &y로 호출하세요.' } },
+    { id: 93002, title: 'C 버그: 팩토리얼 범위 오류', difficulty: 2, lang: 'c', type: 'bug-fix',
+      desc: 'n!을 계산하는 코드에 버그가 있습니다. 5! = 120이어야 합니다.',
+      hint: '반복 범위를 다시 확인하세요.',
+      config: { buggyCode: "#include <stdio.h>\nint main() {\n  int n = 5;\n  int fact = 1;\n  for (int i = 1; i < n; i++) {  // 버그: n을 포함하지 않음\n    fact *= i;\n  }\n  printf(\"%d\\n\", fact);  // 120이어야 하지만 24 출력\n  return 0;\n}", keywords: ['i <= n', '<='], explanation: 'i < n은 i가 1~4까지만 곱합니다. n까지 포함하려면 i <= n으로 바꿔야 합니다.', hint: 'for 루프의 조건을 i < n에서 i <= n으로 수정하세요.' } },
+
+    // ── C++ 버그 찾기 (94001–94002) ───────────────────────────────────
+    { id: 94001, title: 'C++ 버그: 벡터 범위 초과', difficulty: 2, lang: 'cpp', type: 'bug-fix',
+      desc: '벡터를 순회하는 코드에 배열 범위 초과 버그가 있습니다.',
+      hint: '인덱스 범위를 다시 확인하세요.',
+      config: { buggyCode: "#include <iostream>\n#include <vector>\nusing namespace std;\nint main() {\n  vector<int> v = {1, 2, 3, 4, 5};\n  for (int i = 0; i <= v.size(); i++) {  // 버그: 범위 초과\n    cout << v[i] << \" \";\n  }\n  cout << endl;\n  return 0;\n}", keywords: ['i < v.size()', '<'], explanation: 'i <= v.size()는 인덱스 5(존재하지 않음)까지 접근합니다. i < v.size()로 수정해야 합니다.', hint: 'for 루프 조건을 i <= v.size()에서 i < v.size()로 바꾸세요.' } },
+    { id: 94002, title: 'C++ 버그: 피보나치 기저 조건 오류', difficulty: 2, lang: 'cpp', type: 'bug-fix',
+      desc: '재귀 피보나치 함수의 기저 조건에 버그가 있습니다. fib(10)은 55여야 합니다.',
+      hint: 'fib(0)=0, fib(1)=1의 올바른 기저 조건을 생각해보세요.',
+      config: { buggyCode: "#include <iostream>\nusing namespace std;\nint fib(int n) {\n  if (n <= 1) return 1;  // 버그: fib(0)=0이어야 함\n  return fib(n-1) + fib(n-2);\n}\nint main() {\n  cout << fib(10) << endl;  // 55이어야 하지만 89 출력\n  return 0;\n}", keywords: ['return n', 'if (n <= 1) return n'], explanation: 'fib(0)=0, fib(1)=1이어야 합니다. return n으로 바꾸면 n=0일 때 0, n=1일 때 1을 반환합니다.', hint: 'if (n <= 1) return n;으로 수정하세요.' } },
+
+    // ── Java 버그 찾기 (95001–95002) ──────────────────────────────────
+    { id: 95001, title: 'Java 버그: 배열 출력 주소값 오류', difficulty: 2, lang: 'java', type: 'bug-fix',
+      desc: '정렬된 배열을 출력하는 코드가 의미없는 값을 출력합니다.',
+      hint: '배열을 직접 println하면 어떻게 되는지 생각해보세요.',
+      config: { buggyCode: "import java.util.Arrays;\npublic class Main {\n  public static void main(String[] args) {\n    int[] arr = {5, 3, 1, 4, 2};\n    Arrays.sort(arr);\n    System.out.println(arr);  // 버그: [I@해시값 출력\n  }\n}", keywords: ['Arrays.toString(arr)', 'Arrays.toString'], explanation: 'Java에서 배열을 직접 println하면 메모리 주소 해시값이 출력됩니다. Arrays.toString(arr)을 사용해야 합니다.', hint: 'println(arr) 대신 println(Arrays.toString(arr))을 사용하세요.' } },
+    { id: 95002, title: 'Java 버그: 문자열 참조 비교 오류', difficulty: 2, lang: 'java', type: 'bug-fix',
+      desc: '두 문자열이 같은지 비교하는 코드에 버그가 있습니다.',
+      hint: 'Java에서 == 연산자와 equals() 메서드의 차이를 생각해보세요.',
+      config: { buggyCode: "public class Main {\n  public static void main(String[] args) {\n    String s1 = new String(\"hello\");\n    String s2 = new String(\"hello\");\n    if (s1 == s2) {  // 버그: 참조(주소값) 비교\n      System.out.println(\"같다\");\n    } else {\n      System.out.println(\"다르다\");  // 잘못 출력됨\n    }\n  }\n}", keywords: ['s1.equals(s2)', '.equals('], explanation: 'Java에서 ==는 객체 참조(메모리 주소)를 비교합니다. 문자열 내용을 비교하려면 .equals() 메서드를 사용해야 합니다.', hint: 's1 == s2를 s1.equals(s2)로 바꾸세요.' } },
+  ];
+
+  try {
+    let inserted = 0;
+    for (const p of problems) {
+      const [result] = await pool.execute(
+        `INSERT IGNORE INTO problems
+           (id,title,tier,difficulty,time_limit,mem_limit,description,input_desc,output_desc,hint,solution,author_id,created_at,visibility,is_premium,contest_id,problem_type,preferred_language,special_config)
+         VALUES (?,?,?,?,2000,256,?,?,?,?,?,NULL,?,?,0,NULL,?,?,?)`,
+        [p.id, p.title, 'bronze', p.difficulty, p.desc, '없음', '정해진 출력', p.hint, '', now, 'global', p.type, p.lang, JSON.stringify(p.config)]
+      );
+      if (result.affectedRows > 0) inserted++;
+    }
+    logger.info(`✅ 특수 문제 시드 완료 (총 ${problems.length}개, 신규 ${inserted}개)`);
+  } catch (err) {
+    logger.warn('⚠️ 특수 문제 시드 실패:', { message: err.message });
+  }
+}
+
 async function seedGrowthCollections() {
   if (!mysqlConnected()) return;
   const pool = getPool();
@@ -274,13 +427,20 @@ async function seedGrowthCollections() {
       []
     );
 
-    if (await countRows('learning_paths') === 0) {
+    if (await countRows('learning_paths') < 10) {
+      await dbRun('DELETE FROM learning_paths');
       await dbRun(
-        `INSERT INTO learning_paths (title, description, order_index, tag, icon, problem_ids)
-         VALUES
-         ('입력과 출력', '프로그래밍의 기초. 값을 입력받고 출력하는 방법을 배웁니다.', 1, '입출력', '📥', '[1,2]'),
-         ('조건문', 'if/else를 이용해 조건에 따라 다른 동작을 만듭니다.', 2, '조건문', '🔀', '[3]'),
-         ('반복문', 'for/while로 반복 작업을 처리합니다.', 3, '반복문', '🔁', '[4]')`,
+        `INSERT INTO learning_paths (title, description, order_index, tag, icon, problem_ids) VALUES
+         ('Hello, World!: 입력과 출력', '첫 번째 프로그램! JS·C·C++·Java로 Hello World를 출력하며 각 언어의 출력 방식을 배웁니다.', 1, '입출력', '📥', '[101,201,301,401]'),
+         ('사칙연산과 변수', '두 수를 입력받아 합을 출력합니다. 기본 입력 흐름과 변수 사용법을 배웁니다.', 2, '연산', '🔢', '[102,202,302,402]'),
+         ('조건문 기초', 'if/else로 홀짝을 판별합니다. 조건부 실행 흐름의 핵심을 이해합니다.', 3, '조건문', '🔀', '[103,203,303,403]'),
+         ('반복문과 누적 계산', '반복문으로 팩토리얼·최댓값을 구합니다. 루프의 제어 흐름을 익힙니다.', 4, '반복문', '🔁', '[104,204,304,404]'),
+         ('배열과 컬렉션', '배열에서 합계·최솟값을 구하고 정렬합니다. 자료구조의 기초를 다집니다.', 5, '배열', '📦', '[105,205,305,405]'),
+         ('버그 찾기: 기초 오류', '음수 처리, 문자열 join, 포인터 전달 등 초보자가 흔히 실수하는 버그를 분석합니다.', 6, '디버깅', '🐛', '[92001,93001,94001,95001]'),
+         ('버그 찾기: 반복·경계 오류', '반복 범위 off-by-one, 피보나치 기저 조건, 문자열 비교 등 경계 오류를 집중 훈련합니다.', 7, '디버깅', '🐛', '[92002,93002,94002,95002]'),
+         ('청동 알고리즘 A', 'A+B·사칙연산·피보나치·홀짝·최댓값. 코딩테스트 입문 5문제입니다.', 8, '알고리즘', '💻', '[1001,1002,1003,1004,1005]'),
+         ('청동 알고리즘 B', '팩토리얼·문자열 뒤집기·자릿수 합·약수·최솟값. 청동 알고리즘을 완성합니다.', 9, '알고리즘', '💻', '[1006,1007,1008,1009,1010]'),
+         ('실버 도전', '스택·큐·완전탐색 등 실버 수준 알고리즘 문제입니다. 코딩테스트를 본격 준비합니다.', 10, '중급', '🥈', '[2001,2002,2003,2004,2005]')`,
         []
       );
     }
