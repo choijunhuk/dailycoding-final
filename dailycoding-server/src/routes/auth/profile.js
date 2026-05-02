@@ -224,7 +224,7 @@ router.get('/profile/:id', auth, async (req, res) => {
   }
 });
 
-router.get('/profile/:id/activity', async (req, res) => {
+router.get('/profile/:id/activity', auth, async (req, res) => {
   const id = Number(req.params.id);
   const requestedYear = Number.parseInt(req.query.year, 10);
   const year = Number.isFinite(requestedYear)
@@ -240,6 +240,13 @@ router.get('/profile/:id/activity', async (req, res) => {
     if (!user) return errorResponse(res, 404, 'NOT_FOUND', '유저를 찾을 수 없습니다.');
     if (user.profile_visibility === 'private') {
       return errorResponse(res, 403, 'FORBIDDEN', '비공개 프로필입니다.');
+    }
+    if (user.profile_visibility === 'followers' && req.user.id !== id) {
+      const isFollowing = await queryOne(
+        'SELECT 1 FROM follows WHERE follower_id = ? AND following_id = ?',
+        [req.user.id, id]
+      );
+      if (!isFollowing) return errorResponse(res, 403, 'FORBIDDEN', '팔로워만 볼 수 있습니다.');
     }
 
     const rows = await query(

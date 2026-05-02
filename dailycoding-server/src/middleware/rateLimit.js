@@ -67,9 +67,9 @@ function inMemoryCheck(key, max, windowSec) {
  */
 export function rateLimit(max = 30, windowSec = 60) {
   return async (req, res, next) => {
-    // originalUrl 사용으로 경로별 독립적인 카운터 적용
     const identifier = req.user?.id || req.ip;
-    const key = `rl:${identifier}:${req.method}:${req.originalUrl.split('?')[0]}`;
+    const routePath = req.route?.path ?? req.originalUrl.split('?')[0];
+    const key = `rl:${identifier}:${req.method}:${routePath}`;
     let count;
     let retryAfter = windowSec;
     try {

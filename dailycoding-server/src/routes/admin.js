@@ -235,16 +235,29 @@ router.get('/reports', auth, adminOnly, async (req, res) => {
   }
 });
 
+const BLIND_SQL = {
+  dump_posts:   'UPDATE dump_posts SET is_blinded = ? WHERE id = ?',
+  dump_replies: 'UPDATE dump_replies SET is_blinded = ? WHERE id = ?',
+  posts:        'UPDATE posts SET is_blinded = ? WHERE id = ?',
+  post_replies: 'UPDATE post_replies SET is_blinded = ? WHERE id = ?',
+};
+
+const DELETE_SQL = {
+  dump_posts:   'DELETE FROM dump_posts WHERE id = ?',
+  dump_replies: 'DELETE FROM dump_replies WHERE id = ?',
+  posts:        'DELETE FROM posts WHERE id = ?',
+  post_replies: 'DELETE FROM post_replies WHERE id = ?',
+};
+
 // ── 수동 심사: 블라인드 처리 ──────────────────────────────────────────────
 // PATCH /api/admin/reports/blind  body: { table, id, blind: true|false }
 router.patch('/reports/blind', auth, adminOnly, async (req, res) => {
   const { table, id, blind } = req.body;
-  const VALID_TABLES = new Set(['dump_posts', 'dump_replies', 'posts', 'post_replies']);
-  if (!VALID_TABLES.has(table) || !id) {
+  if (!BLIND_SQL[table] || !id) {
     return res.status(400).json({ message: '유효하지 않은 요청입니다.' });
   }
   try {
-    await run(`UPDATE ${table} SET is_blinded = ? WHERE id = ?`, [blind ? 1 : 0, Number(id)]);
+    await run(BLIND_SQL[table], [blind ? 1 : 0, Number(id)]);
     await logAdminAction(req, blind ? 'content.blind' : 'content.unblind', table, Number(id), { blind: !!blind });
     res.json({ message: `${blind ? '블라인드' : '블라인드 해제'} 처리됐습니다.` });
   } catch (err) {
@@ -257,12 +270,11 @@ router.patch('/reports/blind', auth, adminOnly, async (req, res) => {
 // DELETE /api/admin/reports/delete  body: { table, id }
 router.delete('/reports/delete', auth, adminOnly, async (req, res) => {
   const { table, id } = req.body;
-  const VALID_TABLES = new Set(['dump_posts', 'dump_replies', 'posts', 'post_replies']);
-  if (!VALID_TABLES.has(table) || !id) {
+  if (!DELETE_SQL[table] || !id) {
     return res.status(400).json({ message: '유효하지 않은 요청입니다.' });
   }
   try {
-    await run(`DELETE FROM ${table} WHERE id = ?`, [Number(id)]);
+    await run(DELETE_SQL[table], [Number(id)]);
     await logAdminAction(req, 'content.delete', table, Number(id), {});
     res.json({ message: '삭제됐습니다.' });
   } catch (err) {

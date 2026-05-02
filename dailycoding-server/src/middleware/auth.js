@@ -102,11 +102,12 @@ export async function requireVerified(req, res, next) {
   }
 }
 
-// DB role 재검증 — Redis 캐싱 활용
+// DB에서 직접 role 검증 — 캐시 미사용 (강등 즉시 반영 필요)
 export async function adminOnly(req, res, next) {
   try {
-    const status = await getCachedUserStatus(req.user?.id);
-    if (!status || status.role !== 'admin') {
+    const { User } = await import('../models/User.js');
+    const dbUser = await User.findById(req.user?.id);
+    if (!dbUser || dbUser.role !== 'admin') {
       return res.status(403).json({ message: '관리자만 접근할 수 있습니다.' });
     }
     next();

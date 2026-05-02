@@ -246,9 +246,14 @@ router.post('/:id/vote', auth, async (req, res) => {
       [anonId, type, tid, Number(vote)]
     );
 
-    const table  = type === 'post' ? 'dump_posts' : 'dump_replies';
-    const col    = Number(vote) === 1 ? 'upvote' : 'downvote';
-    await run(`UPDATE ${table} SET ${col} = ${col} + 1 WHERE id = ?`, [tid]);
+    if (type === 'post') {
+      if (Number(vote) === 1) await run('UPDATE dump_posts SET upvote = upvote + 1 WHERE id = ?', [tid]);
+      else await run('UPDATE dump_posts SET downvote = downvote + 1 WHERE id = ?', [tid]);
+    } else if (Number(vote) === 1) {
+      await run('UPDATE dump_replies SET upvote = upvote + 1 WHERE id = ?', [tid]);
+    } else {
+      await run('UPDATE dump_replies SET downvote = downvote + 1 WHERE id = ?', [tid]);
+    }
 
     res.json({ message: '투표 완료' });
   } catch (err) {
@@ -267,13 +272,18 @@ router.post('/report', auth, async (req, res) => {
   }
 
   try {
+    const tid = Number(target_id);
     await insert(
       'INSERT INTO dump_reports (reporter_id, target_type, target_id, reason, created_at) VALUES (?,?,?,?,NOW())',
-      [req.user.id, target_type, Number(target_id), reason]
+      [req.user.id, target_type, tid, reason]
     );
-    // 신고 횟수 카운트 업데이트
-    const table = target_type === 'post' ? 'dump_posts' : 'dump_replies';
-    await run(`UPDATE ${table} SET report_count = report_count + 1 WHERE id = ?`, [Number(target_id)]);
+    if (target_type === 'post') {
+      await run('UPDATE dump_posts SET report_count = report_count + 1 WHERE id = ?', [tid]);
+      await run('UPDATE dump_posts SET is_blinded = 1 WHERE id = ? AND report_count >= 10', [tid]);
+    } else {
+      await run('UPDATE dump_replies SET report_count = report_count + 1 WHERE id = ?', [tid]);
+      await run('UPDATE dump_replies SET is_blinded = 1 WHERE id = ? AND report_count >= 10', [tid]);
+    }
     res.json({ message: '신고가 접수됐습니다.' });
   } catch (err) {
     if (err.code === 'ER_DUP_ENTRY') return res.status(409).json({ message: '이미 신고한 게시물입니다.' });

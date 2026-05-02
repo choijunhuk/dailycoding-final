@@ -64,6 +64,7 @@ router.get('/github/callback', async (req, res) => {
       username: ghUser.login,
       avatarUrl: ghUser.avatar_url,
     });
+    if (user.banned_at) return res.redirect(`${frontendUrl}#oauth_error=account_banned`);
     await clearAuthStatus(user.id);
     await issueTokens(res, user);
     res.redirect(frontendUrl);
@@ -123,6 +124,7 @@ router.get('/google/callback', async (req, res) => {
       username: gUser.name || gUser.email.split('@')[0],
       avatarUrl: gUser.picture,
     });
+    if (user.banned_at) return res.redirect(`${frontendUrl}#oauth_error=account_banned`);
     await clearAuthStatus(user.id);
     await issueTokens(res, user);
     res.redirect(frontendUrl);
