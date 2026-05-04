@@ -2,7 +2,12 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import redis from '../config/redis.js';
 
 let genAI = process.env.GEMINI_API_KEY ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY) : null;
-const DEFAULT_MODELS = ['gemini-2.0-flash-lite', 'gemini-2.0-flash'];
+const DEFAULT_MODELS = [
+  'gemini-2.5-flash-lite',
+  'gemini-2.5-flash',
+  'gemini-2.0-flash-lite',
+  'gemini-2.0-flash',
+];
 const PROVIDER_COOLDOWN_KEY = 'ai:cooldown:provider';
 
 function parseModelList(value) {
