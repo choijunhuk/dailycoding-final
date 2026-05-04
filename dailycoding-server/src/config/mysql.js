@@ -1,6 +1,7 @@
 import mysql  from 'mysql2/promise';
 import bcrypt from 'bcryptjs';
 import { resolveBootstrapConfig } from './bootstrap.js';
+import { PROFILE_BACKGROUND_SEEDS } from './profileBackgroundSeeds.js';
 import { PROBLEMS as SHARED_PROBLEMS } from '../shared/problemCatalog.js';
 
 if (!Array.isArray(SHARED_PROBLEMS) || SHARED_PROBLEMS.length === 0) {
@@ -174,31 +175,7 @@ async function initMemory() {
     });
   });
 
-  const bgSeeds = [
-    { slug: 'gradient-blue',     name: '블루',      image_url: 'gradient:linear-gradient(135deg,#0d1117,#0a2a4a)' },
-    { slug: 'gradient-purple',   name: '퍼플',      image_url: 'gradient:linear-gradient(135deg,#0d1117,#1a0a2e)' },
-    { slug: 'gradient-green',    name: '그린',      image_url: 'gradient:linear-gradient(135deg,#0d1117,#0a2e1a)' },
-    { slug: 'gradient-red',      name: '레드',      image_url: 'gradient:linear-gradient(135deg,#0d1117,#2e0a0a)' },
-    { slug: 'gradient-orange',   name: '오렌지',    image_url: 'gradient:linear-gradient(135deg,#0d1117,#2e1a0a)' },
-    { slug: 'gradient-pink',     name: '핑크',      image_url: 'gradient:linear-gradient(135deg,#1a0d1a,#2e0a1e)' },
-    { slug: 'gradient-teal',     name: '청록',      image_url: 'gradient:linear-gradient(135deg,#0d1a1a,#0a2e2a)' },
-    { slug: 'gradient-gold',     name: '골드',      image_url: 'gradient:linear-gradient(135deg,#1a1400,#2e2800)' },
-    { slug: 'gradient-sunset',   name: '선셋',      image_url: 'gradient:linear-gradient(135deg,#1a0800,#2e1500,#1a0a2e)' },
-    { slug: 'gradient-ocean',    name: '오션',      image_url: 'gradient:linear-gradient(135deg,#000d1a,#001a33,#0a2a4a)' },
-    { slug: 'gradient-forest',   name: '포레스트',  image_url: 'gradient:linear-gradient(135deg,#001a0d,#0a2e1a,#001a0d)' },
-    { slug: 'gradient-midnight', name: '미드나잇',  image_url: 'gradient:linear-gradient(135deg,#050510,#0d0d2e,#05050e)' },
-    { slug: 'gradient-rose',     name: '로즈',      image_url: 'gradient:linear-gradient(135deg,#1a0010,#2e0020,#1a000d)' },
-    { slug: 'gradient-cyber',    name: '사이버',    image_url: 'gradient:linear-gradient(135deg,#000d1a,#001a1a,#0a2e2a)' },
-    { slug: 'gradient-lava',     name: '라바',      image_url: 'gradient:linear-gradient(135deg,#1a0000,#2e0a00,#1a1400)' },
-    { slug: 'solid-dark',        name: '다크',      image_url: 'gradient:#0d1117' },
-    { slug: 'solid-black',       name: '블랙',      image_url: 'gradient:#000000' },
-    { slug: 'solid-navy',        name: '네이비',    image_url: 'gradient:#0a0e1a' },
-    { slug: 'photo-1',           name: '사진 1',    image_url: '/backgrounds/background.avif' },
-    { slug: 'photo-2',           name: '사진 2',    image_url: '/backgrounds/background2.avif' },
-    { slug: 'photo-3',           name: '사진 3',    image_url: '/backgrounds/background3.avif' },
-    { slug: 'photo-4',           name: '사진 4',    image_url: '/backgrounds/background4.jpg' },
-  ];
-  bgSeeds.forEach((bg, i) => {
+  PROFILE_BACKGROUND_SEEDS.forEach((bg, i) => {
     MEM.profile_backgrounds.push({ id: i + 1, ...bg, is_default: 1, is_premium: 0 });
   });
 }
