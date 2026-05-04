@@ -68,10 +68,7 @@ export default function ProfilePage() {
   const [equippedBadge, setEquippedBadge] = useState(user?.equippedBadge || null);
   const [equippedTitle, setEquippedTitle] = useState(user?.equippedTitle || null);
   const [followStats,   setFollowStats]   = useState({ followers:0, following:0 });
-  const [editing,       setEditing]       = useState(false);
-  const [newName,       setNewName]       = useState(user?.username || '');
   const [bio,           setBio]           = useState(user?.bio || '');
-  const [saveErr,       setSaveErr]       = useState('');
   const [pwCurrent,     setPwCurrent]     = useState('');
   const [pwNext,        setPwNext]        = useState('');
   const [pwConfirm,     setPwConfirm]     = useState('');
@@ -206,17 +203,6 @@ export default function ProfilePage() {
   const activeHeatmapDays = heatmapCells.filter((item) => item.level > 0).length;
   const upgradePlans = getProfileUpgradePlans();
 
-  const handleSave = async () => {
-    if (!newName.trim()) return;
-    try {
-      await updateUser({ username: newName.trim(), bio: bio.trim() });
-      setEditing(false); setSaveErr('');
-      toast?.show('✅ 프로필이 저장됐습니다.', 'success');
-    } catch (err) {
-      setSaveErr(err.response?.data?.message || '저장 실패');
-    }
-  };
-
   const handlePwChange = async () => {
     if (pwNext !== pwConfirm) { setPwMsg('새 비밀번호가 일치하지 않습니다.'); return; }
     if (pwNext.length < 8)    { setPwMsg('비밀번호는 8자 이상이어야 합니다.'); return; }
@@ -313,109 +299,78 @@ export default function ProfilePage() {
       {/* ── 배너 헤더 ── */}
       <div className="profile-header-card">
         {/* 배너 배경 */}
-        <div className="profile-header-banner" style={{
-          background: profileBannerBackground,
-          position: 'relative',
-        }}>
-          <button
-            onClick={() => setMainTab('settings')}
-            title="배경 변경"
-            style={{
-              position:'absolute', bottom:8, right:10,
-              fontSize:11, padding:'4px 10px', borderRadius:20,
-              background:'rgba(0,0,0,0.45)', color:'#fff',
-              border:'1px solid rgba(255,255,255,0.2)', cursor:'pointer',
-              backdropFilter:'blur(4px)',
-            }}
-          >🖼️ 배경 변경</button>
-        </div>
+        <div className="profile-header-banner" style={{ background: profileBannerBackground }}/>
 
         {/* 프로필 콘텐츠 */}
         <div className="profile-header-content">
           {/* 아바타 */}
           <div className="profile-header-avatar" style={{
             border: `3px solid ${tc}`, background: avatarColor || 'var(--bg3)',
-            boxShadow: `0 4px 20px ${tc}30`,
+            boxShadow: `0 0 0 4px var(--bg2), 0 6px 28px ${tc}55`,
           }}>
             {avatarUrlCustom
-              ? <img src={avatarUrlCustom} alt="avatar" style={{ width:'100%', height:'100%', objectFit:'cover', borderRadius:'50%' }} />
+              ? <img src={avatarUrlCustom} alt="avatar" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
               : (avatarEmoji || user?.username?.slice(0,2).toUpperCase())}
           </div>
 
           {/* 정보 */}
           <div className="profile-header-info">
-            {editing ? (
-              <div className="profile-edit-mode">
-                <div className="profile-edit-row">
-                  <input value={newName} onChange={e=>setNewName(e.target.value)} style={{ width:160, fontSize:14 }} placeholder="닉네임"/>
-                  <button className="btn btn-primary btn-sm" onClick={handleSave}>저장</button>
-                  <button className="btn btn-ghost btn-sm" onClick={()=>setEditing(false)}>취소</button>
-                </div>
-                <input value={bio} onChange={e=>setBio(e.target.value)} placeholder="자기소개 (선택)" style={{ fontSize:13 }}/>
-                {saveErr && <div style={{ fontSize:12, color:'var(--red)' }}>{saveErr}</div>}
+            <div className="profile-header-name-row">
+              {equippedBadge && (
+                <span className="profile-equipped-badge" title={rewards.find(r=>r.code===equippedBadge)?.name}>
+                  {rewards.find(r=>r.code===equippedBadge)?.icon}
+                </span>
+              )}
+              <span className="profile-username">{user?.username}</span>
+              <span className="profile-tier-badge" style={{
+                background:`${tc}20`, color:tc, border:`1px solid ${tc}50`,
+              }}>{PROFILE_TIER_LABELS[user?.tier || 'unranked']}</span>
+              {subPlan?.tier && subPlan.tier !== 'free' && (
+                <span className="profile-sub-badge" style={{
+                  background: subPlan.tier==='team'?'rgba(255,215,0,.15)':'rgba(121,192,255,.15)',
+                  color: subPlan.tier==='team'?'#ffd700':'#79c0ff',
+                  border: `1px solid ${subPlan.tier==='team'?'rgba(255,215,0,.3)':'rgba(121,192,255,.3)'}`,
+                }}>{subPlan.tier.toUpperCase()}</span>
+              )}
+              {equippedTitle && (
+                <span className="profile-title-badge">
+                  {rewards.find(r=>r.code===equippedTitle)?.icon} {rewards.find(r=>r.code===equippedTitle)?.name}
+                </span>
+              )}
+            </div>
+            {user?.bio && <div className="profile-bio">{user.bio}</div>}
+            <div className="profile-meta-info">가입일 {user?.joinDate} · {user?.email}</div>
+            {techStack.length > 0 && (
+              <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginTop:8 }}>
+                {techStack.slice(0, 10).map(tech => (
+                  <span key={tech} style={{ display:'flex', alignItems:'center', gap:4, fontSize:11, padding:'3px 8px', borderRadius:20, background:'var(--bg3)', border:'1px solid var(--border)', color:'var(--text2)' }}>
+                    {TECH_LOGO_MAP[tech] && <img src={TECH_LOGO_MAP[tech]} width={12} height={12} alt="" style={{ objectFit:'contain', flexShrink:0 }}/>}
+                    {tech}
+                  </span>
+                ))}
               </div>
-            ) : (
-              <>
-                <div className="profile-header-name-row">
-                  {equippedBadge && (
-                    <span className="profile-equipped-badge" title={rewards.find(r=>r.code===equippedBadge)?.name}>
-                      {rewards.find(r=>r.code===equippedBadge)?.icon}
-                    </span>
-                  )}
-                  <span className="profile-username">{user?.username}</span>
-                  {/* 티어 배지 */}
-                  <span className="profile-tier-badge" style={{
-                    background:`${tc}20`, color:tc, border:`1px solid ${tc}50`,
-                  }}>{PROFILE_TIER_LABELS[user?.tier || 'unranked']}</span>
-                  {subPlan?.tier && subPlan.tier !== 'free' && (
-                    <span className="profile-sub-badge" style={{
-                      background: subPlan.tier==='team'?'rgba(255,215,0,.15)':'rgba(121,192,255,.15)',
-                      color: subPlan.tier==='team'?'#ffd700':'#79c0ff',
-                      border: `1px solid ${subPlan.tier==='team'?'rgba(255,215,0,.3)':'rgba(121,192,255,.3)'}`,
-                    }}>{subPlan.tier.toUpperCase()}</span>
-                  )}
-                  {equippedTitle && (
-                    <span className="profile-title-badge">
-                      {rewards.find(r=>r.code===equippedTitle)?.icon} {rewards.find(r=>r.code===equippedTitle)?.name}
-                    </span>
-                  )}
-                  <button className="btn btn-ghost btn-sm profile-edit-btn" onClick={()=>setEditing(true)}>✏️ 수정</button>
-                </div>
-                {user?.bio && <div className="profile-bio">{user.bio}</div>}
-                <div className="profile-meta-info">가입일 {user?.joinDate} · {user?.email}</div>
-                {techStack.length > 0 && (
-                  <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginTop:8 }}>
-                    {techStack.slice(0, 10).map(tech => (
-                      <span key={tech} style={{ display:'flex', alignItems:'center', gap:4, fontSize:11, padding:'3px 8px', borderRadius:20, background:'var(--bg3)', border:'1px solid var(--border)', color:'var(--text2)' }}>
-                        {TECH_LOGO_MAP[tech] && <img src={TECH_LOGO_MAP[tech]} width={12} height={12} alt="" style={{ objectFit:'contain', flexShrink:0 }}/>}
-                        {tech}
-                      </span>
-                    ))}
-                  </div>
-                )}
-                {Object.entries(socialLinks).some(([, v]) => v) && (
-                  <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginTop:6 }}>
-                    {Object.entries(socialLinks).filter(([, url]) => url).map(([key, url]) => {
-                      const meta = SOCIAL_ICON_META[key];
-                      if (!meta) return null;
-                      const href = url.startsWith('http') ? url : `https://${url}`;
-                      return (
-                        <a key={key} href={href} target="_blank" rel="noopener noreferrer"
-                          title={meta.label}
-                          style={{
-                            display:'flex', alignItems:'center', gap:4,
-                            padding:'3px 8px', borderRadius:20, background:'var(--bg3)',
-                            border:'1px solid var(--border)', color:meta.color,
-                            fontSize:11, fontWeight:600, textDecoration:'none',
-                          }}
-                          onMouseEnter={e => e.currentTarget.style.opacity='0.75'}
-                          onMouseLeave={e => e.currentTarget.style.opacity='1'}
-                        >{meta.icon}{meta.label}</a>
-                      );
-                    })}
-                  </div>
-                )}
-              </>
+            )}
+            {Object.entries(socialLinks).some(([, v]) => v) && (
+              <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginTop:6 }}>
+                {Object.entries(socialLinks).filter(([, url]) => url).map(([key, url]) => {
+                  const meta = SOCIAL_ICON_META[key];
+                  if (!meta) return null;
+                  const href = url.startsWith('http') ? url : `https://${url}`;
+                  return (
+                    <a key={key} href={href} target="_blank" rel="noopener noreferrer"
+                      title={meta.label}
+                      style={{
+                        display:'flex', alignItems:'center', gap:4,
+                        padding:'3px 8px', borderRadius:20, background:'var(--bg3)',
+                        border:'1px solid var(--border)', color:meta.color,
+                        fontSize:11, fontWeight:600, textDecoration:'none',
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.opacity='0.75'}
+                      onMouseLeave={e => e.currentTarget.style.opacity='1'}
+                    >{meta.icon}{meta.label}</a>
+                  );
+                })}
+              </div>
             )}
 
             {/* 스탯 */}
