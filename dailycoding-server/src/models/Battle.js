@@ -345,13 +345,14 @@ export const Battle = {
 
   async createRoom(inviter, invited, options = {}) {
     const roomId = 'room_' + crypto.randomBytes(5).toString('hex');
-    const { isTeamBattle = false, teamSize = 1, preferredLanguage = null } = options;
-    
+    const { isTeamBattle = false, teamSize = 1, preferredLanguage = null, battleMode = 'time' } = options;
+
     const room = {
       id: roomId,
       status: 'waiting',
       isTeamBattle,
       teamSize,
+      battleMode,
       playerIds: [inviter.id, invited.id],
       teams: {
         'team_1': [inviter.id],
@@ -442,8 +443,14 @@ export const Battle = {
     if (!player.solved.includes(pid) && correct) {
       player.solved.push(pid);
       player.score += 1;
-      room.locked[pid] = player.teamId;  // territory capture is now team-based
-      if (Object.keys(room.locked).length >= room.problems.length) room.status = 'ended';
+      room.locked[pid] = player.teamId;
+      if (room.battleMode === 'race') {
+        // 선착순전: 한 플레이어가 모든 문제를 풀면 즉시 종료
+        if (player.solved.length >= room.problems.length) room.status = 'ended';
+      } else {
+        // 타이머전: 모든 문제가 누군가에 의해 풀리면 종료
+        if (Object.keys(room.locked).length >= room.problems.length) room.status = 'ended';
+      }
     }
     await redis.setJSON(`battle:room:${roomId}`, room, ROOM_TTL);
     if (room.status === 'ended') {

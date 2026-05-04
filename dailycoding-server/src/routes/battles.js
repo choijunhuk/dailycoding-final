@@ -144,12 +144,13 @@ router.get('/invite', async (req, res) => {
 // POST /api/battles/invite — 사용자명으로 배틀 신청
 router.post('/invite', async (req, res) => {
   try {
-    const { username, language } = req.body;
+    const { username, language, battleMode } = req.body;
     if (!username) return errorResponse(res, 400, 'VALIDATION_ERROR', 'username 필요');
     const normalizedLanguage = normalizeJudgeLanguage(language || '') || null;
     if (language && !normalizedLanguage) {
       return errorResponse(res, 400, 'VALIDATION_ERROR', '지원하지 않는 배틀 언어입니다.');
     }
+    const normalizedBattleMode = battleMode === 'race' ? 'race' : 'time';
 
     const invited = await User.findByUsername(username);
     if (!invited) return errorResponse(res, 404, 'NOT_FOUND', '해당 사용자를 찾을 수 없습니다.');
@@ -163,7 +164,7 @@ router.post('/invite', async (req, res) => {
     const room = await Battle.createRoom(
       { id: inviter.id, username: inviter.username },
       { id: invited.id, username: invited.username },
-      { preferredLanguage: normalizedLanguage }
+      { preferredLanguage: normalizedLanguage, battleMode: normalizedBattleMode }
     );
     res.json({ roomId: room.id });
   } catch (err) {
@@ -246,8 +247,8 @@ router.post('/room/:roomId/submit', async (req, res) => {
     if (!room.playerIds.includes(req.user.id)) return errorResponse(res, 403, 'FORBIDDEN', '접근 권한이 없습니다.');
     if (room.status !== 'active') return errorResponse(res, 400, 'VALIDATION_ERROR', '진행 중인 배틀이 아닙니다.');
 
-    // 이미 누군가 선점한 문제는 제출 불가 (territory capture)
-    if (room.locked[String(problemId)]) {
+    // 타이머전에서는 선점된 문제 제출 불가 (race 모드는 제한 없음)
+    if (room.battleMode !== 'race' && room.locked[String(problemId)]) {
       return res.json({ correct: false, locked: true, room });
     }
 
@@ -301,7 +302,7 @@ router.post('/room/:roomId/code-judge', async (req, res) => {
     if (!room.playerIds.includes(req.user.id)) return errorResponse(res, 403, 'FORBIDDEN', '접근 권한이 없습니다.');
     if (room.status !== 'active') return errorResponse(res, 400, 'VALIDATION_ERROR', '진행 중인 배틀이 아닙니다.');
 
-    if (room.locked[String(problemId)]) {
+    if (room.battleMode !== 'race' && room.locked[String(problemId)]) {
       return res.json({ result: 'locked', room });
     }
 

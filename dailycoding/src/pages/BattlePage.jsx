@@ -7,7 +7,7 @@ import EmailVerifyGate from '../components/EmailVerifyGate.jsx';
 import { JUDGE_LANGUAGE_OPTIONS, getJudgeLanguageOptionsForSupported } from '../data/judgeLanguages.js';
 import { useSubscriptionStatus } from '../hooks/useSubscriptionStatus.js';
 import { useToast } from '../context/ToastContext.jsx';
-import { BATTLE_AD_SLOTS, BATTLE_DURATIONS, BATTLE_SEC, fmtTime, getSocketUrl, POLL_MS, TYPE_COLOR, TYPE_LABEL } from './battlePageUtils.js';
+import { BATTLE_AD_SLOTS, BATTLE_DURATIONS, BATTLE_MODES, BATTLE_SEC, fmtTime, getSocketUrl, POLL_MS, TYPE_COLOR, TYPE_LABEL } from './battlePageUtils.js';
 import { BattleAdSlot, BugFixProblem, CodingProblem, FillBlankProblem, getBattleStarterCode } from './battleProblemViews.jsx';
 import './BattlePage.css';
 
@@ -86,6 +86,7 @@ export default function BattlePage() {
   const [activeBattles, setActiveBattles] = useState([]);
   const [selectedBattleLanguage, setSelectedBattleLanguage] = useState(user?.defaultLanguage || 'python');
   const [selectedDuration, setSelectedDuration] = useState(BATTLE_SEC);
+  const [selectedBattleMode, setSelectedBattleMode] = useState('time');
 
   const timerRef       = useRef(null);
   const typingTimerRef = useRef(null);
@@ -353,7 +354,7 @@ export default function BattlePage() {
     setInviteError('');
     if (!inviteInput.trim()) return;
     try {
-      const payload = { username: inviteInput.trim(), language: selectedBattleLanguage, duration: selectedDuration };
+      const payload = { username: inviteInput.trim(), language: selectedBattleLanguage, duration: selectedDuration, battleMode: selectedBattleMode };
       const { data } = await api.post('/battles/invite', payload);
       setRoomId(data.roomId);
       roomIdRef.current = data.roomId;
@@ -633,7 +634,25 @@ export default function BattlePage() {
               {lobbyPhase === 'idle' && (
                 <div className="bp-invite-box">
                   <div className="bp-invite-title">상대방 초대</div>
-                  <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+                  <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+                    {BATTLE_MODES.map(m => (
+                      <button
+                        key={m.key}
+                        onClick={() => setSelectedBattleMode(m.key)}
+                        style={{
+                          padding: '5px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700,
+                          border: `1px solid ${selectedBattleMode === m.key ? 'var(--purple)' : 'var(--border)'}`,
+                          background: selectedBattleMode === m.key ? 'rgba(188,140,255,.15)' : 'var(--bg3)',
+                          color: selectedBattleMode === m.key ? 'var(--purple)' : 'var(--text2)',
+                          cursor: 'pointer', transition: 'all .15s', fontFamily: 'inherit',
+                        }}
+                        title={m.desc}
+                      >
+                        {m.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, marginBottom: 10, opacity: selectedBattleMode === 'race' ? 0.4 : 1, pointerEvents: selectedBattleMode === 'race' ? 'none' : 'auto' }}>
                     {BATTLE_DURATIONS.map(d => (
                       <button
                         key={d.sec}
@@ -832,7 +851,10 @@ export default function BattlePage() {
           </div>
 
           <div className="bp-hud-center">
-            <div className={`bp-timer ${timeLeft < 60 ? 'urgent' : timeLeft < 300 ? 'warning' : ''}`}>{fmtTime(timeLeft)}</div>
+            {room?.battleMode === 'race'
+              ? <div className="bp-timer" style={{ fontSize: 18, letterSpacing: 1 }}>🏁 선착순</div>
+              : <div className={`bp-timer ${timeLeft < 60 ? 'urgent' : timeLeft < 300 ? 'warning' : ''}`}>{fmtTime(timeLeft)}</div>
+            }
             {opponentTyping && <div className="bp-opp-typing">⌨️ 입력 중...</div>}
           </div>
 

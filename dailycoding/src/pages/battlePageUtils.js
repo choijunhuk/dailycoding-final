@@ -6,6 +6,11 @@ export const BATTLE_DURATIONS = [
   { label: '⚔️ 스탠다드', sec: 1800, desc: '30분' },
   { label: '🏔️ 마라톤', sec: 3600, desc: '60분' },
 ];
+
+export const BATTLE_MODES = [
+  { key: 'time', label: '⏱️ 타이머전', desc: '제한 시간 내 더 많이 풀기' },
+  { key: 'race', label: '🏁 선착순전', desc: '먼저 모든 문제를 풀면 승리' },
+];
 export const TYPE_LABEL = { coding: '코딩', 'fill-blank': '빈칸채우기', 'bug-fix': '버그수정' };
 export const TYPE_COLOR = { coding: 'var(--blue)', 'fill-blank': 'var(--green)', 'bug-fix': 'var(--yellow)' };
 export const BATTLE_AD_SLOTS = Object.freeze({

@@ -262,6 +262,38 @@ async function seedSpecialProblems() {
   const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
 
   const problems = [
+    // ── Python 빈칸 채우기 (11–15) ───────────────────────────────────
+    { id: 11, title: 'Python: Hello, World! 출력', difficulty: 1, lang: 'python', type: 'fill-blank',
+      desc: 'Python에서 "Hello, World!"를 출력하는 빈칸을 채우세요.',
+      hint: 'Python의 표준 출력 함수 이름을 입력하세요.',
+      config: { codeTemplate: "___1___('Hello, World!')", blanks: ['print'], hint: 'Python에서 콘솔에 값을 출력할 때 사용하는 내장 함수입니다.' } },
+    { id: 12, title: 'Python: 두 수의 합', difficulty: 1, lang: 'python', type: 'fill-blank',
+      desc: '표준 입력으로 두 정수를 받아 합을 출력합니다.',
+      hint: 'input().split() 후 map(int, ...)으로 정수를 받습니다.',
+      config: { codeTemplate: "a, b = ___1___(int, input().split())\n___2___(a + b)", blanks: ['map', 'print'], hint: '문자열 리스트를 정수로 변환하는 함수와 출력 함수를 채우세요.' } },
+    { id: 13, title: 'Python: 홀짝 판별', difficulty: 1, lang: 'python', type: 'fill-blank',
+      desc: '정수 n이 홀수인지 짝수인지 판별하세요.',
+      hint: '나머지 연산자(%)를 사용합니다.',
+      config: { codeTemplate: "n = int(input())\nif n ___1___ 2 == 0:\n    print('짝수')\nelse:\n    print('___2___')", blanks: ['%', '홀수'], hint: '나머지 연산자와 홀수일 때 출력할 문자열을 채우세요.' } },
+    { id: 14, title: 'Python: 배열 최댓값', difficulty: 1, lang: 'python', type: 'fill-blank',
+      desc: '리스트에서 최댓값을 구하세요. Python 내장 함수를 활용합니다.',
+      hint: 'max() 내장 함수를 사용합니다.',
+      config: { codeTemplate: "nums = [3, 1, 4, 1, 5, 9, 2, 6]\nresult = ___1___(nums)\nprint(___2___)", blanks: ['max', 'result'], hint: '리스트 최댓값 내장 함수와 출력할 변수명을 채우세요.' } },
+    { id: 15, title: 'Python: 배열 평균', difficulty: 1, lang: 'python', type: 'fill-blank',
+      desc: '리스트 원소의 평균값을 구하세요. sum과 len을 사용합니다.',
+      hint: 'sum(리스트) / len(리스트)로 평균을 구합니다.',
+      config: { codeTemplate: "nums = [10, 20, 30, 40, 50]\navg = ___1___(nums) / ___2___(nums)\nprint(avg)", blanks: ['sum', 'len'], hint: '리스트 합계 함수와 길이 함수를 채우세요.' } },
+
+    // ── Python 버그 찾기 (91001–91002) ───────────────────────────────
+    { id: 91001, title: 'Python 버그: 최댓값 초기값 오류', difficulty: 2, lang: 'python', type: 'bug-fix',
+      desc: '배열에서 최댓값을 구하지만 음수 배열에서 잘못된 결과를 반환합니다. 버그를 찾아 수정하세요.',
+      hint: '초기값이 특정 경우에 문제가 됩니다.',
+      config: { buggyCode: "# 배열의 최댓값을 구하는 함수\n# 버그: 모든 원소가 음수일 때 잘못된 결과 반환\ndef find_max(arr):\n    max_val = 0\n    for x in arr:\n        if x > max_val:\n            max_val = x\n    return max_val\nprint(find_max([-3, -1, -4]))  # -1이어야 하지만 0 반환", keywords: ['arr[0]', 'float(\'-inf\')', '-inf'], explanation: 'max_val을 0으로 초기화하면 모든 원소가 음수일 때 0이 반환됩니다. arr[0] 또는 float(\'-inf\')로 초기화해야 합니다.', hint: 'max_val 초기값을 arr[0]으로 바꾸세요.' } },
+    { id: 91002, title: 'Python 버그: 리스트 복사 오류', difficulty: 2, lang: 'python', type: 'bug-fix',
+      desc: '리스트를 복사해서 정렬하려 했는데 원본이 바뀌어 버립니다. 버그를 찾아 수정하세요.',
+      hint: '할당(=)은 복사가 아니라 참조를 공유합니다.',
+      config: { buggyCode: "# 원본을 유지하면서 정렬된 복사본을 반환\n# 버그: = 로 할당하면 같은 객체를 가리킴\ndef sorted_copy(arr):\n    copy = arr  # 버그!\n    copy.sort()\n    return copy\n\noriginal = [3, 1, 4, 1, 5]\nresult = sorted_copy(original)\nprint(original)  # [3,1,4,1,5]여야 하지만 정렬됨", keywords: ['arr[:]', 'arr.copy()', 'list(arr)'], explanation: 'copy = arr은 같은 리스트 객체를 가리킵니다. copy = arr[:] 또는 arr.copy()로 실제 복사를 해야 합니다.', hint: 'copy = arr을 copy = arr[:]로 바꾸세요.' } },
+
     // ── JavaScript 빈칸 채우기 (101–105) ─────────────────────────────
     { id: 101, title: 'JS: Hello, World! 출력', difficulty: 1, lang: 'javascript', type: 'fill-blank',
       desc: 'Node.js에서 "Hello, World!"를 출력하는 빈칸을 채우세요.',
@@ -427,23 +459,22 @@ async function seedGrowthCollections() {
       []
     );
 
-    if (await countRows('learning_paths') < 10) {
-      await dbRun('DELETE FROM learning_paths');
-      await dbRun(
-        `INSERT INTO learning_paths (title, description, order_index, tag, icon, problem_ids) VALUES
-         ('Hello, World!: 입력과 출력', '첫 번째 프로그램! JS·C·C++·Java로 Hello World를 출력하며 각 언어의 출력 방식을 배웁니다.', 1, '입출력', '📥', '[101,201,301,401]'),
-         ('사칙연산과 변수', '두 수를 입력받아 합을 출력합니다. 기본 입력 흐름과 변수 사용법을 배웁니다.', 2, '연산', '🔢', '[102,202,302,402]'),
-         ('조건문 기초', 'if/else로 홀짝을 판별합니다. 조건부 실행 흐름의 핵심을 이해합니다.', 3, '조건문', '🔀', '[103,203,303,403]'),
-         ('반복문과 누적 계산', '반복문으로 팩토리얼·최댓값을 구합니다. 루프의 제어 흐름을 익힙니다.', 4, '반복문', '🔁', '[104,204,304,404]'),
-         ('배열과 컬렉션', '배열에서 합계·최솟값을 구하고 정렬합니다. 자료구조의 기초를 다집니다.', 5, '배열', '📦', '[105,205,305,405]'),
-         ('버그 찾기: 기초 오류', '음수 처리, 문자열 join, 포인터 전달 등 초보자가 흔히 실수하는 버그를 분석합니다.', 6, '디버깅', '🐛', '[92001,93001,94001,95001]'),
-         ('버그 찾기: 반복·경계 오류', '반복 범위 off-by-one, 피보나치 기저 조건, 문자열 비교 등 경계 오류를 집중 훈련합니다.', 7, '디버깅', '🐛', '[92002,93002,94002,95002]'),
-         ('청동 알고리즘 A', 'A+B·사칙연산·피보나치·홀짝·최댓값. 코딩테스트 입문 5문제입니다.', 8, '알고리즘', '💻', '[1001,1002,1003,1004,1005]'),
-         ('청동 알고리즘 B', '팩토리얼·문자열 뒤집기·자릿수 합·약수·최솟값. 청동 알고리즘을 완성합니다.', 9, '알고리즘', '💻', '[1006,1007,1008,1009,1010]'),
-         ('실버 도전', '스택·큐·완전탐색 등 실버 수준 알고리즘 문제입니다. 코딩테스트를 본격 준비합니다.', 10, '중급', '🥈', '[2001,2002,2003,2004,2005]')`,
-        []
-      );
-    }
+    // 항상 재시드 — 제목/문제 변경이 즉시 반영되도록
+    await dbRun('DELETE FROM learning_paths');
+    await dbRun(
+      `INSERT INTO learning_paths (title, description, order_index, tag, icon, problem_ids) VALUES
+       ('Hello, World!: 입력과 출력', '첫 번째 프로그램! Python·JS·C·C++·Java로 Hello World를 출력하며 각 언어의 출력 방식을 배웁니다.', 1, '입출력', '📥', '[11,101,201,301,401]'),
+       ('사칙연산과 변수', '두 수를 입력받아 합을 출력합니다. 기본 입력 흐름과 변수 사용법을 5개 언어로 배웁니다.', 2, '연산', '🔢', '[12,102,202,302,402]'),
+       ('조건문 기초', 'if/else로 홀짝을 판별합니다. 조건부 실행 흐름의 핵심을 5개 언어로 이해합니다.', 3, '조건문', '🔀', '[13,103,203,303,403]'),
+       ('반복문과 누적 계산', '반복문으로 최댓값·팩토리얼을 구합니다. 루프의 제어 흐름을 5개 언어로 익힙니다.', 4, '반복문', '🔁', '[14,104,204,304,404]'),
+       ('배열과 컬렉션', '배열에서 평균·최솟값을 구하고 정렬합니다. 자료구조의 기초를 5개 언어로 다집니다.', 5, '배열', '📦', '[15,105,205,305,405]'),
+       ('버그 찾기: 기초 오류', '음수 처리, join 인자, 포인터 전달 등 초보자가 흔히 실수하는 버그를 5개 언어로 분석합니다.', 6, '디버깅', '🐛', '[91001,92001,93001,94001,95001]'),
+       ('버그 찾기: 반복·경계 오류', '참조 복사, off-by-one, 피보나치 기저 조건, 문자열 비교 등 경계 오류를 집중 훈련합니다.', 7, '디버깅', '🐛', '[91002,92002,93002,94002,95002]'),
+       ('코딩테스트 입문 A', 'A+B·사칙연산·피보나치·홀짝·최댓값 등 코딩테스트 빈출 유형 7문제입니다.', 8, '알고리즘', '💻', '[1001,1002,1003,1004,1005,1006,1007]'),
+       ('코딩테스트 입문 B', '팩토리얼·문자열 뒤집기·자릿수 합·약수·최솟값 등 코딩테스트 입문을 완성하는 7문제입니다.', 9, '알고리즘', '💻', '[1008,1009,1010,11,12,13,14]'),
+       ('실버 도전', '스택·큐·완전탐색 등 실버 수준 알고리즘 문제입니다. 코딩테스트를 본격 준비합니다.', 10, '중급', '🥈', '[2001,2002,2003,2004,2005,91001,92001]')`,
+      []
+    );
 
     if (await countRows('problem_sheets') === 0) {
       await dbRun(
