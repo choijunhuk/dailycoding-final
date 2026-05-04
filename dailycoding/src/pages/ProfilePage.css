@@ -1,7 +1,11 @@
 .profile-page {
-  padding: 24px 28px; max-width: 1200px; margin: 0 auto;
-  height: calc(100vh - 54px); overflow-y: auto;
-  display: flex; flex-direction: column; gap: 14px;
+  width: min(100%, 1360px);
+  padding: 28px 36px 56px;
+  margin: 0 auto;
+  min-height: calc(100vh - 54px);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
 }
 
 .profile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
@@ -13,26 +17,50 @@
 /* ── Profile Header ── */
 .profile-header-card {
   position: relative;
-  border-radius: 16px;
+  border-radius: 22px;
   overflow: hidden;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
   background: var(--bg2);
   border: 1px solid var(--border);
+  box-shadow: 0 22px 70px rgba(0,0,0,.26);
 }
 .profile-header-banner {
-  height: 150px;
+  position: relative;
+  height: clamp(220px, 27vw, 340px);
+  background-position: center !important;
+  background-size: cover !important;
+  background-repeat: no-repeat !important;
+}
+.profile-header-banner::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(0,0,0,.06) 0%, rgba(0,0,0,.38) 100%),
+    radial-gradient(circle at 18% 12%, rgba(121,192,255,.18), transparent 32%),
+    radial-gradient(circle at 86% 18%, rgba(227,179,65,.12), transparent 28%);
 }
 .profile-header-content {
-  padding: 0 28px 26px;
-  display: flex;
-  gap: 20px;
-  align-items: flex-end;
-  margin-top: -48px;
+  position: relative;
+  z-index: 1;
+  width: calc(100% - 56px);
+  max-width: 1120px;
+  margin: -82px auto 30px;
+  padding: 22px 26px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 24px;
+  align-items: center;
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 20px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 18px 48px rgba(0,0,0,.22);
 }
 
 .profile-header-avatar {
-  width: 96px;
-  height: 96px;
+  width: 118px;
+  height: 118px;
   border-radius: 50%;
   flex-shrink: 0;
   display: flex;
@@ -47,6 +75,7 @@
 .profile-header-info {
   flex: 1;
   padding-bottom: 2px;
+  min-width: 0;
 }
 
 .profile-header-name-row {
@@ -57,8 +86,9 @@
   margin-bottom: 4px;
 }
 .profile-username {
-  font-size: 20px;
+  font-size: clamp(24px, 3vw, 34px);
   font-weight: 800;
+  line-height: 1.1;
 }
 .profile-tier-badge {
   padding: 2px 10px;
@@ -88,9 +118,10 @@
   font-size: 11px;
 }
 .profile-bio {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text2);
-  margin-bottom: 4px;
+  margin-bottom: 6px;
+  max-width: 760px;
 }
 .profile-meta-info {
   font-size: 12px;
@@ -98,20 +129,20 @@
 }
 
 .profile-header-stats {
-  display: flex;
-  gap: 8px;
-  margin-top: 14px;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(96px, 1fr));
+  gap: 10px;
+  margin-top: 18px;
 }
 .profile-stat-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: var(--bg3);
+  background: rgba(255,255,255,.045);
   border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 10px 16px;
-  min-width: 68px;
+  border-radius: 14px;
+  padding: 12px 14px;
+  min-width: 0;
 }
 .profile-stat-value {
   font-weight: 800;
@@ -125,8 +156,8 @@
 }
 
 .profile-tier-progress-container {
-  margin-top: 12px;
-  max-width: 420px;
+  margin-top: 16px;
+  max-width: 680px;
 }
 .profile-tier-progress-labels {
   display: flex;
@@ -527,6 +558,16 @@
 
 /* ── Tabs ── */
 .profile-tabs { display: flex; gap: 4px; }
+.profile-page > .profile-tabs {
+  justify-content: center;
+  align-self: center;
+  max-width: 100%;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg2);
+  box-shadow: var(--shadow);
+}
 .ptab {
   background: none; border: none; color: var(--text2);
   padding: 7px 16px; border-radius: 6px; cursor: pointer;
@@ -534,6 +575,52 @@
 }
 .ptab:hover  { background: var(--bg3); color: var(--text); }
 .ptab.active { background: var(--bg3); color: var(--text); }
+
+.profile-settings-layout {
+  width: min(100%, 980px);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.profile-background-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  gap: 12px;
+}
+
+.profile-background-option {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+}
+
+.profile-background-preview {
+  width: 100%;
+  aspect-ratio: 16 / 7;
+  border-radius: 12px;
+  cursor: pointer;
+  background-position: center !important;
+  background-size: cover !important;
+  background-repeat: no-repeat !important;
+  transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease;
+}
+
+.profile-background-preview:hover {
+  transform: translateY(-2px);
+}
+
+.profile-background-name {
+  min-width: 0;
+  font-size: 11px;
+  color: var(--text3);
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 /* ── Media Queries ── */
 @media (max-width: 1024px) {
@@ -544,15 +631,22 @@
 
 @media (max-width: 768px) {
   .profile-page {
-    padding: 16px;
+    padding: 16px 14px 36px;
+  }
+
+  .profile-header-banner {
+    height: 210px;
   }
   
   .profile-header-content {
-    flex-direction: column;
+    width: calc(100% - 28px);
+    grid-template-columns: 1fr;
     align-items: center;
     text-align: center;
-    padding: 0 16px 20px;
-    margin-top: -48px;
+    padding: 18px 16px 20px;
+    margin-top: -70px;
+    margin-bottom: 20px;
+    gap: 14px;
   }
 
   .profile-header-info {
@@ -564,8 +658,8 @@
   }
 
   .profile-header-stats {
-    justify-content: center;
-    gap: 12px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
   }
 
   .profile-stat-item {
@@ -605,6 +699,8 @@
     white-space: nowrap;
     padding-bottom: 4px;
     gap: 4px;
+    justify-content: flex-start;
+    align-self: stretch;
   }
   .ptab {
     padding: 7px 12px;
@@ -630,13 +726,21 @@
 }
 
 @media (max-width: 480px) {
+  .profile-header-banner {
+    height: 180px;
+  }
+
   .profile-stats-summary {
     grid-template-columns: 1fr;
   }
   
   .profile-header-avatar {
-    width: 80px;
-    height: 80px;
+    width: 88px;
+    height: 88px;
+  }
+
+  .profile-background-grid {
+    grid-template-columns: 1fr 1fr;
   }
 
   .profile-top100-value {

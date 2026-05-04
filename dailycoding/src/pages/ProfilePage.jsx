@@ -743,7 +743,7 @@ export default function ProfilePage() {
           탭 5: 설정 (아바타 · 보상 · 구독 · 비밀번호)
       ══════════════════════════════════════ */}
       {mainTab==='settings' && (
-        <div className="fade-up" style={{ display:'flex', flexDirection:'column', gap:16 }}>
+        <div className="fade-up profile-settings-layout">
 
           {/* 프로필 정보 */}
           <div className="card">
@@ -796,7 +796,7 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          <div className="card" style={{ maxWidth:560 }}>
+          <div className="card" style={{ width:'100%' }}>
             <div className="pp-title">⚙️ 제출 & 기본 언어 설정</div>
             <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
               <div className="form-group">
@@ -869,8 +869,8 @@ export default function ProfilePage() {
             </div>
             <div style={{ marginBottom:16 }}>
               <div style={{ fontSize:13, color:'var(--text3)', fontWeight:600, marginBottom:10 }}>🖼️ 프로필 배경</div>
-              <div style={{ display:'flex', flexWrap:'wrap', gap:10 }}>
-                <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
+              <div className="profile-background-grid">
+                <div className="profile-background-option">
                   <button
                     onClick={async () => {
                       try {
@@ -881,17 +881,17 @@ export default function ProfilePage() {
                         toast?.show(err.response?.data?.message || '배경 초기화 실패', 'error')
                       }
                     }}
+                    className="profile-background-preview"
                     style={{
-                      width:72, height:52, borderRadius:10,
                       border:`2px ${!equippedBackground ? 'solid var(--blue)' : 'dashed var(--border)'}`,
                       background:'var(--bg3)', cursor:'pointer', fontSize:18, color:'var(--text3)',
                     }}
                     title="배경 없음"
                   >✕</button>
-                  <div style={{ fontSize:10, color:'var(--text3)' }}>없음</div>
+                  <div className="profile-background-name">없음</div>
                 </div>
                 {backgrounds.map((bg) => (
-                  <div key={bg.slug} style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
+                  <div key={bg.slug} className="profile-background-option">
                     <button
                       onClick={async () => {
                         try {
@@ -902,8 +902,8 @@ export default function ProfilePage() {
                           toast?.show(err.response?.data?.message || '배경 적용 실패', 'error')
                         }
                       }}
+                      className="profile-background-preview"
                       style={{
-                        width:72, height:52, borderRadius:10,
                         border:`2px solid ${equippedBackground === bg.slug ? 'var(--blue)' : 'var(--border)'}`,
                         background:bg.image_url?.startsWith('gradient:') ? bg.image_url.replace('gradient:', '') : `url(${bg.image_url}) center/cover`,
                         cursor:'pointer',
@@ -911,7 +911,7 @@ export default function ProfilePage() {
                       }}
                       title={bg.name}
                     />
-                    <div style={{ fontSize:10, color:'var(--text3)', maxWidth:72, textAlign:'center', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{bg.name}</div>
+                    <div className="profile-background-name">{bg.name}</div>
                   </div>
                 ))}
               </div>
