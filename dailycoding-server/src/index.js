@@ -113,7 +113,9 @@ async function cleanupUsersKeepAdmin() {
     for (const table of tables) {
       try {
         await dbRun(`DELETE FROM ${table} WHERE user_id NOT IN (SELECT id FROM users WHERE role = ?)`, ['admin']);
-      } catch {}
+      } catch {
+        // Some optional tables may not exist in older local schemas.
+      }
     }
     await dbRun('DELETE FROM users WHERE role != ?', ['admin']);
     logger.info('🧹 유저 데이터 초기화 완료 (admin만 유지)');
@@ -459,6 +461,10 @@ async function seedGrowthCollections() {
       []
     );
 
+    // Deprecated practice set cleanup: keep old DBs aligned with current seed data.
+    await dbRun("DELETE FROM problem_sheets WHERE REPLACE(title, ' ', '') = ?", ['일반코테연습A']);
+    await dbRun("DELETE FROM exam_sets WHERE REPLACE(title, ' ', '') = ?", ['일반코테연습A']);
+
     // 항상 재시드 — 제목/문제 변경이 즉시 반영되도록
     await dbRun('DELETE FROM learning_paths');
     await dbRun(
@@ -481,7 +487,6 @@ async function seedGrowthCollections() {
         `INSERT INTO problem_sheets (title, description, category, contest_name, contest_year, problem_ids, is_official, created_by, thumbnail_color)
          VALUES
          ('초보자 입문 트랙', '프로그래밍을 처음 시작하는 분들을 위한 문제 모음', 'learning', NULL, NULL, '[1,2,3,4]', 1, 1, '#d2a8ff'),
-         ('일반 코테 연습 A', '기초 알고리즘 2문제 · 80분', 'custom', NULL, NULL, '[1,2]', 1, 1, '#79c0ff'),
          ('KOI 2023 기출 — 초등부·중등부', '정렬, 에라토스테네스의 체 유형 | 비상업적 교육 목적', 'contest', 'KOI', 2023, '[6001,6002]', 1, 1, '#1f6feb'),
          ('KOI 2022 기출 — 초등부·중등부', '탐욕법(거스름돈), 회문수 유형 | 비상업적 교육 목적', 'contest', 'KOI', 2022, '[6003,6004]', 1, 1, '#388bfd'),
          ('KOI 2021 기출 — 초등부·중등부', '문자열 암호, 해시+누적합 유형 | 비상업적 교육 목적', 'contest', 'KOI', 2021, '[6005,6006]', 1, 1, '#58a6ff'),
@@ -499,7 +504,6 @@ async function seedGrowthCollections() {
       await dbRun(
         `INSERT INTO exam_sets (title, description, duration_min, problem_ids, difficulty_avg, is_pro, company_tag, created_by)
          VALUES
-         ('일반 코테 연습 A', '기초 알고리즘 2문제 · 80분', 80, '[1,2]', 2.0, 0, NULL, 1),
          ('카카오 스타일 모의고사', '카카오 코테 유형 분석 세트', 120, '[1,2,3]', 3.5, 1, 'kakao', 1),
          ('네이버 스타일 모의고사', '네이버 코테 유형 분석 세트', 120, '[2,3,4]', 4.0, 1, 'naver', 1)`,
         []

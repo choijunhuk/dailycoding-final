@@ -2,7 +2,7 @@ import { Router }               from 'express';
 import { auth, adminOnly, requireVerified } from '../middleware/auth.js';
 import { User }                 from '../models/User.js';
 import { Problem }              from '../models/Problem.js';
-import { askAI }                from '../services/ai.js';
+import { askAI, askAIWithMeta } from '../services/ai.js';
 import redis                    from '../config/redis.js';
 import { AI_DAILY_QUOTA } from '../shared/constants.js';
 import { completeMission } from '../services/missionService.js';
@@ -104,8 +104,11 @@ router.post('/analyze', auth, requireVerified, serveAnalyzeCache, async (req, re
   "nextMilestone": "다음 목표 지점"
 }`;
 
-  const result = await askAI(req.user.id, prompt, fallback, 300);
-  await redis.setJSON(req.analyzeCacheKey, result, 3600);
+  const aiResult = await askAIWithMeta(req.user.id, prompt, fallback, 300);
+  const result = aiResult.data;
+  if (aiResult.source === 'ai') {
+    await redis.setJSON(req.analyzeCacheKey, result, 3600);
+  }
   res.json(result);
 });
 
@@ -117,16 +120,18 @@ router.post('/chat', auth, requireVerified, checkAiQuota, async (req, res) => {
             || messages[messages.length - 1]?.content
             || '';
 
-  const question = last.slice(0, 400);
   const prompt = `당신은 친절한 알고리즘 멘토입니다. 
 유저 정보: ${user?.tier} 티어, 레이팅 ${user?.rating}점.
-유저의 질문에 대해 한국어로 명확하고 교육적인 답변을 3문장 이내의 JSON으로 반환하세요.
+유저 질문: ${last.slice(0, 400)}
+위 질문에 대해 한국어로 명확하고 교육적인 답변을 3문장 이내의 JSON으로 반환하세요.
 반환형식: {"text": "답변 내용"}`;
 
-  const result = await askAI(req.user.id, prompt, { text: '알고리즘 공부 화이팅입니다!' }, 250);
+  const aiResult = await askAIWithMeta(req.user.id, prompt, { text: '알고리즘 공부 화이팅입니다!' }, 250);
+  const result = aiResult.data;
   
-  // 성공 시 쿼터 차감 (Free 유저만)
-  await incrementAiQuotaIfFree(req, user);
+  if (aiResult.source === 'ai') {
+    await incrementAiQuotaIfFree(req, user);
+  }
 
   res.json({ text: result.text || result });
 });
@@ -152,6 +157,7 @@ router.post('/hint', auth, requireVerified, checkAiQuota, async (req, res) => {
     const cacheKey = `ai:hint:${problemId}`;
     let hintData = await redis.getJSON(cacheKey);
     const cacheHit = !!hintData;
+    let hintAiSource = cacheHit ? 'cache' : 'fallback';
 
     if (!hintData) {
       const prompt = `다음 코딩 문제에 대해 3단계 점진적 힌트를 JSON으로 작성하세요 (한국어).
@@ -174,8 +180,12 @@ JSON 형식으로만 응답:
   "commonMistake": "이 문제에서 자주 실수하는 부분",
   "relatedConcept": "관련 알고리즘/개념 이름"
 }`;
-      hintData = await askAI(req.user.id, prompt, fallback, 600);
-      await redis.setJSON(cacheKey, hintData, 3600);
+      const aiResult = await askAIWithMeta(req.user.id, prompt, fallback, 600);
+      hintData = aiResult.data;
+      hintAiSource = aiResult.source;
+      if (aiResult.source === 'ai') {
+        await redis.setJSON(cacheKey, hintData, 3600);
+      }
     }
 
     // 쿼터 차감 후 remaining 계산 (Free 유저만)
@@ -183,7 +193,7 @@ JSON 형식으로만 응답:
     let remaining;
     const today = new Date().toISOString().split('T')[0];
     const key = `quota:ai:${req.user.id}:${today}`;
-    if (!cacheHit && (user.subscription_tier === 'free' || !user.subscription_tier)) {
+    if (!cacheHit && hintAiSource === 'ai' && (user.subscription_tier === 'free' || !user.subscription_tier)) {
       const newCount = await redis.incr(key, 86400);
       remaining = Math.max(0, AI_DAILY_QUOTA - newCount);
     } else {
@@ -236,8 +246,11 @@ router.post('/daily-quiz', auth, requireVerified, async (req, res) => {
   "topic": "관련 개념 키워드"
 }`;
 
-    const result = await askAI(req.user.id, prompt, fallback, 400);
-    await redis.setJSON(cacheKey, result, 86400);
+    const aiResult = await askAIWithMeta(req.user.id, prompt, fallback, 400);
+    const result = aiResult.data;
+    if (aiResult.source === 'ai') {
+      await redis.setJSON(cacheKey, result, 86400);
+    }
     res.json(result);
   } catch (err) {
     console.error('[ai/daily-quiz]', err.message);
@@ -280,15 +293,17 @@ ${code.slice(0, 1000)}
   "betterCode": "개선된 코드 문자열 또는 null"
 }`;
 
-    const result = await askAI(req.user.id, prompt, fallback, 600);
+    const aiResult = await askAIWithMeta(req.user.id, prompt, fallback, 600);
+    const result = aiResult.data;
 
-    // 쿼터 차감 (Free 유저만)
     const user = req.aiUser || await User.findById(req.user.id);
-    await incrementAiQuotaIfFree(req, user);
-    try {
-      await completeMission(req.user.id, 'review_ai');
-    } catch (missionErr) {
-      console.error('[ai/review:mission]', missionErr);
+    if (aiResult.source === 'ai') {
+      await incrementAiQuotaIfFree(req, user);
+      try {
+        await completeMission(req.user.id, 'review_ai');
+      } catch (missionErr) {
+        console.error('[ai/review:mission]', missionErr);
+      }
     }
 
     res.json(result);
