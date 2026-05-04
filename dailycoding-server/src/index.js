@@ -454,10 +454,24 @@ async function seedGrowthCollections() {
     await dbRun(
       `INSERT IGNORE INTO profile_backgrounds (slug, name, image_url, is_default, is_premium)
        VALUES
-       ('default-dark', '기본 다크', '/backgrounds/bg-default.jpg', 1, 0),
-       ('gradient-blue', '블루 그라데이션', 'gradient:linear-gradient(135deg,#0d1117,#0a2a4a)', 1, 0),
-       ('gradient-purple', '퍼플 그라데이션', 'gradient:linear-gradient(135deg,#0d1117,#1a0a2e)', 1, 0),
-       ('gradient-green', '그린 그라데이션', 'gradient:linear-gradient(135deg,#0d1117,#0a2e1a)', 1, 0)`,
+       ('gradient-blue',    '블루',     'gradient:linear-gradient(135deg,#0d1117,#0a2a4a)', 1, 0),
+       ('gradient-purple',  '퍼플',     'gradient:linear-gradient(135deg,#0d1117,#1a0a2e)', 1, 0),
+       ('gradient-green',   '그린',     'gradient:linear-gradient(135deg,#0d1117,#0a2e1a)', 1, 0),
+       ('gradient-red',     '레드',     'gradient:linear-gradient(135deg,#0d1117,#2e0a0a)', 1, 0),
+       ('gradient-orange',  '오렌지',   'gradient:linear-gradient(135deg,#0d1117,#2e1a0a)', 1, 0),
+       ('gradient-pink',    '핑크',     'gradient:linear-gradient(135deg,#1a0d1a,#2e0a1e)', 1, 0),
+       ('gradient-teal',    '청록',     'gradient:linear-gradient(135deg,#0d1a1a,#0a2e2a)', 1, 0),
+       ('gradient-gold',    '골드',     'gradient:linear-gradient(135deg,#1a1400,#2e2800)', 1, 0),
+       ('gradient-sunset',  '선셋',     'gradient:linear-gradient(135deg,#1a0800,#2e1500,#1a0a2e)', 1, 0),
+       ('gradient-ocean',   '오션',     'gradient:linear-gradient(135deg,#000d1a,#001a33,#0a2a4a)', 1, 0),
+       ('gradient-forest',  '포레스트', 'gradient:linear-gradient(135deg,#001a0d,#0a2e1a,#001a0d)', 1, 0),
+       ('gradient-midnight','미드나잇', 'gradient:linear-gradient(135deg,#050510,#0d0d2e,#05050e)', 1, 0),
+       ('gradient-rose',    '로즈',     'gradient:linear-gradient(135deg,#1a0010,#2e0020,#1a000d)', 1, 0),
+       ('gradient-cyber',   '사이버',   'gradient:linear-gradient(135deg,#000d1a,#001a1a,#0a2e2a)', 1, 0),
+       ('gradient-lava',    '라바',     'gradient:linear-gradient(135deg,#1a0000,#2e0a00,#1a1400)', 1, 0),
+       ('solid-dark',       '다크',     'gradient:#0d1117', 1, 0),
+       ('solid-black',      '블랙',     'gradient:#000000', 1, 0),
+       ('solid-navy',       '네이비',   'gradient:#0a0e1a', 1, 0)`,
       []
     );
 

@@ -761,11 +761,34 @@ export default function ProfilePage() {
                     }}
                   />
                 </label>
-                <div style={{ fontSize:12, color:'var(--text3)' }}>커버 배경</div>
-                <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
-                  {backgrounds.map((bg) => (
+              </div>
+            </div>
+            <div style={{ marginBottom:16 }}>
+              <div style={{ fontSize:13, color:'var(--text3)', fontWeight:600, marginBottom:10 }}>🖼️ 프로필 배경</div>
+              <div style={{ display:'flex', flexWrap:'wrap', gap:10 }}>
+                <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
+                  <button
+                    onClick={async () => {
+                      try {
+                        await api.patch('/auth/profile/background', { backgroundSlug: null })
+                        setEquippedBackground(null)
+                        toast?.show('배경이 초기화되었습니다.', 'success')
+                      } catch (err) {
+                        toast?.show(err.response?.data?.message || '배경 초기화 실패', 'error')
+                      }
+                    }}
+                    style={{
+                      width:72, height:52, borderRadius:10,
+                      border:`2px ${!equippedBackground ? 'solid var(--blue)' : 'dashed var(--border)'}`,
+                      background:'var(--bg3)', cursor:'pointer', fontSize:18, color:'var(--text3)',
+                    }}
+                    title="배경 없음"
+                  >✕</button>
+                  <div style={{ fontSize:10, color:'var(--text3)' }}>없음</div>
+                </div>
+                {backgrounds.map((bg) => (
+                  <div key={bg.slug} style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
                     <button
-                      key={bg.slug}
                       onClick={async () => {
                         try {
                           await api.patch('/auth/profile/background', { backgroundSlug: bg.slug })
@@ -776,17 +799,17 @@ export default function ProfilePage() {
                         }
                       }}
                       style={{
-                        width:56,
-                        height:40,
-                        borderRadius:8,
+                        width:72, height:52, borderRadius:10,
                         border:`2px solid ${equippedBackground === bg.slug ? 'var(--blue)' : 'var(--border)'}`,
                         background:bg.image_url?.startsWith('gradient:') ? bg.image_url.replace('gradient:', '') : `url(${bg.image_url}) center/cover`,
                         cursor:'pointer',
+                        boxShadow: equippedBackground === bg.slug ? '0 0 0 3px rgba(88,166,255,0.3)' : 'none',
                       }}
                       title={bg.name}
                     />
-                  ))}
-                </div>
+                    <div style={{ fontSize:10, color:'var(--text3)', maxWidth:72, textAlign:'center', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{bg.name}</div>
+                  </div>
+                ))}
               </div>
             </div>
             <div style={{ marginBottom:16 }}>
