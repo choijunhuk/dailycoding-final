@@ -193,6 +193,10 @@ async function initMemory() {
     { slug: 'solid-dark',        name: '다크',      image_url: 'gradient:#0d1117' },
     { slug: 'solid-black',       name: '블랙',      image_url: 'gradient:#000000' },
     { slug: 'solid-navy',        name: '네이비',    image_url: 'gradient:#0a0e1a' },
+    { slug: 'photo-1',           name: '사진 1',    image_url: '/backgrounds/background.avif' },
+    { slug: 'photo-2',           name: '사진 2',    image_url: '/backgrounds/background2.avif' },
+    { slug: 'photo-3',           name: '사진 3',    image_url: '/backgrounds/background3.avif' },
+    { slug: 'photo-4',           name: '사진 4',    image_url: '/backgrounds/background4.jpg' },
   ];
   bgSeeds.forEach((bg, i) => {
     MEM.profile_backgrounds.push({ id: i + 1, ...bg, is_default: 1, is_premium: 0 });

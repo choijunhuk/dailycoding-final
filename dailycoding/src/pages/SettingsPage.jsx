@@ -15,13 +15,6 @@ const TABS = [
   { id: 'account',       labelKey: 'accountTab' },
 ];
 
-const TECH_OPTIONS = [
-  'JavaScript','TypeScript','Python','Java','C++','C','Go','Rust','Kotlin','Swift',
-  'React','Vue','Angular','Next.js','Node.js','Express','Spring','Django','FastAPI','Flutter',
-  'MySQL','PostgreSQL','MongoDB','Redis','Docker','Kubernetes','AWS','GCP','Azure','Git',
-];
-
-const LINK_LABELS = { github:'GitHub', boj:'BOJ', blog:'Blog', linkedin:'LinkedIn', twitter:'Twitter' };
 
 export default function SettingsPage() {
   const { user } = useAuth();
@@ -33,10 +26,6 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  const [displayName, setDisplayName] = useState('');
-  const [bio, setBio] = useState('');
-  const [socialLinks, setSocialLinks] = useState({ github:'', boj:'', blog:'', linkedin:'', twitter:'' });
-  const [techStack, setTechStack] = useState([]);
   const [nickname, setNickname] = useState('');
   const [nicknameStatus, setNicknameStatus] = useState(null);
   const nicknameTimer = useRef(null);
@@ -50,11 +39,6 @@ export default function SettingsPage() {
       try {
         const res = await api.get('/auth/settings');
         setSettings(res.data.settings);
-        setDisplayName(user?.displayName || '');
-        setBio(user?.bio || '');
-        const sl = user?.socialLinks || {};
-        setSocialLinks({ github: sl.github||'', boj: sl.boj||'', blog: sl.blog||'', linkedin: sl.linkedin||'', twitter: sl.twitter||'' });
-        setTechStack(user?.techStack || []);
         setNickname(user?.nickname || '');
         setProfileVisibility(user?.profileVisibility || 'public');
         setPostVisibility(user?.postVisibility || 'public');
@@ -85,13 +69,6 @@ export default function SettingsPage() {
   async function saveProfile() {
     setSaving(true);
     try {
-      const filteredLinks = Object.fromEntries(Object.entries(socialLinks).filter(([,v]) => v));
-      await api.patch('/auth/profile/extended', {
-        display_name: displayName,
-        bio,
-        social_links: filteredLinks,
-        tech_stack: techStack,
-      });
       if (nickname && nickname !== user?.nickname && nicknameStatus === 'available') {
         await api.patch('/auth/nickname', { nickname });
       }
@@ -143,9 +120,6 @@ export default function SettingsPage() {
     }
   }
 
-  function toggleTech(tech) {
-    setTechStack(prev => prev.includes(tech) ? prev.filter(x => x !== tech) : prev.length < 20 ? [...prev, tech] : prev);
-  }
 
   if (loading) return (
     <div style={{ padding:'40px 28px', maxWidth:700, margin:'0 auto' }}>
@@ -184,46 +158,18 @@ export default function SettingsPage() {
             </div>
           </Field>
 
-          <Field label={t('displayName')}>
-            <input className="settings-input" value={displayName} onChange={e => setDisplayName(e.target.value)}
-              placeholder={t('displayName')} />
-          </Field>
-
-          <Field label={t('bio')}>
-            <textarea className="settings-input" value={bio} onChange={e => setBio(e.target.value)}
-              placeholder={t('bio')} rows={3}
-              style={{ resize:'vertical', fontFamily:'inherit', lineHeight:1.6 }} />
-          </Field>
-
-          <Field label={t('socialLinks')}>
-            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-              {Object.entries(LINK_LABELS).map(([key, label]) => (
-                <div key={key} style={{ display:'flex', alignItems:'center', gap:8 }}>
-                  <span style={{ width:80, fontSize:13, color:'var(--text2)' }}>{label}</span>
-                  <input className="settings-input" style={{ flex:1 }}
-                    value={socialLinks[key]} onChange={e => setSocialLinks(p => ({ ...p, [key]: e.target.value }))}
-                    placeholder={`${label} URL`} />
-                </div>
-              ))}
-            </div>
-          </Field>
-
-          <Field label={t('techStack')}>
-            <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
-              {TECH_OPTIONS.map(tech => (
-                <button key={tech} onClick={() => toggleTech(tech)}
-                  style={{
-                    padding:'4px 10px', borderRadius:20, fontSize:12, cursor:'pointer', border:'1px solid var(--border)',
-                    background: techStack.includes(tech) ? 'var(--accent)' : 'var(--bg3)',
-                    color: techStack.includes(tech) ? '#fff' : 'var(--text2)',
-                  }}>
-                  {tech}
-                </button>
-              ))}
-            </div>
-          </Field>
-
           <SaveBtn onClick={saveProfile} saving={saving} />
+
+          <div style={{ padding:'18px', borderRadius:12, background:'var(--bg2)', border:'1px solid var(--border)' }}>
+            <div style={{ fontSize:14, fontWeight:700, marginBottom:6 }}>🧑 기타 프로필 정보</div>
+            <div style={{ fontSize:13, color:'var(--text2)', lineHeight:1.7, marginBottom:12 }}>
+              자기소개 · 소셜 링크 · 기술 스택 등은 <strong>내 프로필</strong> 페이지 → 설정 탭에서 편집할 수 있습니다.
+            </div>
+            <a href="/profile" style={{
+              display:'inline-block', padding:'8px 16px', borderRadius:8, fontSize:13, fontWeight:600,
+              background:'var(--accent)', color:'#fff', textDecoration:'none',
+            }}>내 프로필로 이동 →</a>
+          </div>
         </div>
       )}
 

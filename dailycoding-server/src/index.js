@@ -471,7 +471,11 @@ async function seedGrowthCollections() {
        ('gradient-lava',    '라바',     'gradient:linear-gradient(135deg,#1a0000,#2e0a00,#1a1400)', 1, 0),
        ('solid-dark',       '다크',     'gradient:#0d1117', 1, 0),
        ('solid-black',      '블랙',     'gradient:#000000', 1, 0),
-       ('solid-navy',       '네이비',   'gradient:#0a0e1a', 1, 0)`,
+       ('solid-navy',       '네이비',   'gradient:#0a0e1a', 1, 0),
+       ('photo-1',          '사진 1',   '/backgrounds/background.avif', 1, 0),
+       ('photo-2',          '사진 2',   '/backgrounds/background2.avif', 1, 0),
+       ('photo-3',          '사진 3',   '/backgrounds/background3.avif', 1, 0),
+       ('photo-4',          '사진 4',   '/backgrounds/background4.jpg',  1, 0)`,
       []
     );
 

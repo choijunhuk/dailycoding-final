@@ -14,6 +14,25 @@ import { buildPaymentFeedback, formatCurrentSubscriptionLabel, getProfileUpgrade
 import { DonutChart, TierBadge, YearHeatmap } from './profilePageWidgets.jsx';
 import './ProfilePage.css';
 
+const TECH_OPTIONS = [
+  'JavaScript','TypeScript','Python','Java','C++','C','Go','Rust','Kotlin','Swift',
+  'React','Vue','Angular','Next.js','Node.js','Express','Spring','Django','FastAPI','Flutter',
+  'MySQL','PostgreSQL','MongoDB','Redis','Docker','Kubernetes','AWS','GCP','Azure','Git',
+];
+const PROFILE_LINK_LABELS = { github:'GitHub', instagram:'Instagram', x:'X', linkedin:'LinkedIn', velog:'Velog', tistory:'Tistory' };
+
+const TECH_LOGO_MAP = {
+  JavaScript:'/tech/javascript.webp', Python:'/tech/python.png', Java:'/tech/java.webp',
+  'C++':'/tech/cpp.png', C:'/tech/c.png', Go:'/tech/go.png', Rust:'/tech/rust.png',
+  Kotlin:'/tech/kotlin.png', Swift:'/tech/swift.png', React:'/tech/react.png',
+  Vue:'/tech/vue.png', Angular:'/tech/angular.png', 'Next.js':'/tech/nextjs.png',
+  'Node.js':'/tech/nodejs.png', Express:'/tech/express.png', Spring:'/tech/spring.png',
+  Django:'/tech/django.png', FastAPI:'/tech/fastapi.svg', Flutter:'/tech/flutter.png',
+  MySQL:'/tech/mysql.png', PostgreSQL:'/tech/postgresql.png', MongoDB:'/tech/mongodb.png',
+  Redis:'/tech/redis.webp', Docker:'/tech/docker.png', Kubernetes:'/tech/kubernetes.png',
+  AWS:'/tech/aws.webp', GCP:'/tech/gcp.png', Azure:'/tech/azure.svg',
+};
+
 export default function ProfilePage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -54,6 +73,10 @@ export default function ProfilePage() {
   const [defaultLanguage, setDefaultLanguage] = useState(user?.defaultLanguage || 'python');
   const [submissionsPublic, setSubmissionsPublic] = useState(user?.submissionsPublic ?? true);
   const [prefsSaving, setPrefsSaving] = useState(false);
+  const [displayName, setDisplayName] = useState(user?.displayName || '');
+  const [socialLinks, setSocialLinks] = useState(user?.socialLinks || {});
+  const [techStack, setTechStack] = useState(user?.techStack || []);
+  const [profileInfoSaving, setProfileInfoSaving] = useState(false);
   const [fullGrass, setFullGrass] = useState([]);
   const [solveStats, setSolveStats] = useState({
     avgSolveTime: null,
@@ -67,7 +90,10 @@ export default function ProfilePage() {
   useEffect(() => {
     setDefaultLanguage(user?.defaultLanguage || 'python');
     setSubmissionsPublic(user?.submissionsPublic ?? true);
-  }, [user?.defaultLanguage, user?.submissionsPublic]);
+    setDisplayName(user?.displayName || '');
+    setSocialLinks(user?.socialLinks || {});
+    setTechStack(user?.techStack || []);
+  }, [user?.id]);
 
   const showLoadErrorToast = (message = '프로필 데이터를 불러오지 못했습니다.') => {
     if (loadErrorToastShownRef.current) return;
@@ -244,6 +270,23 @@ export default function ProfilePage() {
       toast?.show(err.response?.data?.message || '설정 저장 실패', 'error');
     }
     setPrefsSaving(false);
+  };
+
+  const handleSaveProfileInfo = async () => {
+    setProfileInfoSaving(true);
+    try {
+      const filteredLinks = Object.fromEntries(Object.entries(socialLinks).filter(([, v]) => v));
+      await api.patch('/auth/profile/extended', {
+        display_name: displayName,
+        bio,
+        social_links: filteredLinks,
+        tech_stack: techStack,
+      });
+      toast?.show('✅ 프로필 정보가 저장됐습니다.', 'success');
+    } catch (err) {
+      toast?.show(err.response?.data?.message || '저장 실패', 'error');
+    }
+    setProfileInfoSaving(false);
   };
 
   const TABS = [
@@ -691,6 +734,57 @@ export default function ProfilePage() {
       ══════════════════════════════════════ */}
       {mainTab==='settings' && (
         <div className="fade-up" style={{ display:'flex', flexDirection:'column', gap:16 }}>
+
+          {/* 프로필 정보 */}
+          <div className="card">
+            <div className="pp-title">🧑 프로필 정보</div>
+            <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+              <div className="form-group">
+                <label>표시 이름</label>
+                <input className="settings-input" value={displayName} onChange={e => setDisplayName(e.target.value)}
+                  placeholder={user?.username || '표시 이름'} style={{ maxWidth:360 }} />
+              </div>
+              <div className="form-group">
+                <label>자기소개</label>
+                <textarea className="settings-input" value={bio} onChange={e => setBio(e.target.value)}
+                  placeholder="자기소개를 입력하세요" rows={3}
+                  style={{ resize:'vertical', fontFamily:'inherit', lineHeight:1.6, maxWidth:480 }} />
+              </div>
+              <div className="form-group">
+                <label>소셜 링크</label>
+                <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                  {Object.entries(PROFILE_LINK_LABELS).map(([key, label]) => (
+                    <div key={key} style={{ display:'flex', alignItems:'center', gap:8, maxWidth:480 }}>
+                      <span style={{ width:90, fontSize:13, color:'var(--text2)', flexShrink:0 }}>{label}</span>
+                      <input className="settings-input" style={{ flex:1 }}
+                        value={socialLinks[key] || ''} onChange={e => setSocialLinks(p => ({ ...p, [key]: e.target.value }))}
+                        placeholder={`${label} URL`} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="form-group">
+                <label>기술 스택</label>
+                <div style={{ display:'flex', flexWrap:'wrap', gap:6, maxWidth:560 }}>
+                  {TECH_OPTIONS.map(tech => (
+                    <button key={tech} onClick={() => setTechStack(prev => prev.includes(tech) ? prev.filter(x => x !== tech) : prev.length < 20 ? [...prev, tech] : prev)}
+                      style={{
+                        display:'flex', alignItems:'center', gap:4,
+                        padding:'4px 10px', borderRadius:20, fontSize:12, cursor:'pointer', border:'1px solid var(--border)',
+                        background: techStack.includes(tech) ? 'var(--accent)' : 'var(--bg3)',
+                        color: techStack.includes(tech) ? '#fff' : 'var(--text2)',
+                      }}>
+                      {TECH_LOGO_MAP[tech] && <img src={TECH_LOGO_MAP[tech]} width={13} height={13} alt="" style={{ objectFit:'contain', flexShrink:0 }} />}
+                      {tech}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <button className="btn btn-primary" onClick={handleSaveProfileInfo} disabled={profileInfoSaving} style={{ alignSelf:'flex-start', padding:'10px 24px' }}>
+                {profileInfoSaving ? <span className="spinner"/> : '프로필 저장'}
+              </button>
+            </div>
+          </div>
 
           <div className="card" style={{ maxWidth:560 }}>
             <div className="pp-title">⚙️ 제출 & 기본 언어 설정</div>
