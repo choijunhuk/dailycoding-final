@@ -59,6 +59,7 @@ export default function AdminPage() {
   const [battleSettingsSaving, setBattleSettingsSaving] = useState(false);
   const [adminStats, setAdminStats] = useState(null);
   const [adminStatsLoading, setAdminStatsLoading] = useState(false);
+  const [aiStatus, setAiStatus] = useState(null);
   const [stripeOps, setStripeOps] = useState(null);
   const [weeklyChallenge, setWeeklyChallenge] = useState(null);
   const [weeklyForm, setWeeklyForm] = useState({ problemId: '', rewardCode: 'weekly_solver' });
@@ -73,10 +74,12 @@ export default function AdminPage() {
       setAdminStatsLoading(true);
       Promise.all([
         api.get('/admin/stats').then(r => r.data).catch(() => null),
+        api.get('/admin/ai-status').then(r => r.data).catch(() => null),
         api.get('/weekly').then(r => r.data).catch(() => null),
         api.get('/subscription/ops').then(r => r.data).catch(() => null),
-      ]).then(([stats, weekly, stripe]) => {
+      ]).then(([stats, ai, weekly, stripe]) => {
         setAdminStats(stats);
+        setAiStatus(ai);
         setWeeklyChallenge(weekly);
         setStripeOps(stripe);
         if (weekly) {
@@ -558,6 +561,32 @@ export default function AdminPage() {
                 </div>
               );
             })}
+          </div>
+          <div className="card admin-stat-card" style={{gridColumn:'span 2', textAlign:'left'}}>
+            <div className="asc-label" style={{marginBottom:12}}>AI 운영 상태</div>
+            {!aiStatus && <div style={{fontSize:12,color:'var(--text3)'}}>AI 상태를 불러오지 못했습니다.</div>}
+            {aiStatus && (
+              <div style={{display:'grid', gap:12}}>
+                <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(130px, 1fr))',gap:10}}>
+                  {[
+                    { label:'API 설정', value: aiStatus.configured ? '정상' : '키 없음', color: aiStatus.configured ? 'var(--green)' : 'var(--red)' },
+                    { label:'현재 모델', value: aiStatus.primaryModel || '없음', color:'var(--blue)' },
+                    { label:'쿨다운', value: aiStatus.providerCooldown ? `${aiStatus.providerCooldownSec}s` : '없음', color: aiStatus.providerCooldown ? 'var(--yellow)' : 'var(--green)' },
+                    { label:'Fallback률', value: `${aiStatus.metricsToday?.fallbackRate || 0}%`, color: Number(aiStatus.metricsToday?.fallbackRate || 0) > 30 ? 'var(--orange)' : 'var(--green)' },
+                  ].map(item => (
+                    <div key={item.label} style={{padding:'10px 12px',borderRadius:12,background:'var(--bg3)',border:'1px solid var(--border)',minWidth:0}}>
+                      <div style={{fontSize:11,color:'var(--text3)',marginBottom:4}}>{item.label}</div>
+                      <div style={{fontWeight:800,color:item.color,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{item.value}</div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{fontSize:12,color:'var(--text2)',lineHeight:1.8}}>
+                  오늘 성공 {aiStatus.metricsToday?.success || 0}회 · fallback {aiStatus.metricsToday?.fallback || 0}회 · provider 호출 {aiStatus.metricsToday?.providerCalls || 0}회
+                  {aiStatus.fallbackModels?.length ? <><br/>Fallback 모델: {aiStatus.fallbackModels.slice(0, 4).join(', ')}</> : null}
+                  {aiStatus.lastEvent?.at ? <><br/>최근 이벤트: {aiStatus.lastEvent.source}{aiStatus.lastEvent.reason ? ` (${aiStatus.lastEvent.reason})` : ''} · {new Date(aiStatus.lastEvent.at).toLocaleString('ko-KR')}</> : null}
+                </div>
+              </div>
+            )}
           </div>
           <div className="card admin-stat-card" style={{gridColumn:'span 2', textAlign:'left'}}>
             <div className="asc-label" style={{marginBottom:12}}>Stripe 운영 상태</div>

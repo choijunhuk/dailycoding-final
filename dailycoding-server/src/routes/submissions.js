@@ -302,12 +302,13 @@ router.get('/', auth, async (req, res) => {
 // GET /api/submissions/stats
 router.get('/stats', auth, async (req, res) => {
   try {
-    const [stats, langStats] = await Promise.all([
+    const [stats, langStats, weaknessStats] = await Promise.all([
       Submission.getStats(req.user.id),
       Submission.getLangStats(req.user.id),
+      Submission.getWeaknessStats(req.user.id),
     ]);
-    res.json({ ...stats, langStats });
-  } catch { res.json({ total:0, correct:0, wrong:0, langStats:[] }); }
+    res.json({ ...stats, langStats, weaknessStats });
+  } catch { res.json({ total:0, correct:0, wrong:0, langStats:[], weaknessStats:[] }); }
 });
 
 // GET /api/submissions/judge-status

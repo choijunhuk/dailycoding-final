@@ -61,6 +61,7 @@ export default function ProfilePage() {
     totalSolveTime: 0,
     solveTimeByTier: {},
   });
+  const [weaknessStats, setWeaknessStats] = useState([]);
   const loadErrorToastShownRef = useRef(false);
 
   useEffect(() => {
@@ -92,6 +93,9 @@ export default function ProfilePage() {
       });
       api.get('/auth/me/stats').then(r => setSolveStats(r.data)).catch((err) => {
         if (err?.response?.status !== 401) showLoadErrorToast(err?.response?.data?.message || '풀이 통계를 불러오지 못했습니다.');
+      });
+      api.get('/submissions/stats').then(r => setWeaknessStats(r.data?.weaknessStats || [])).catch(() => {
+        setWeaknessStats([]);
       });
     }
     const params = new URLSearchParams(location.search);
@@ -573,6 +577,38 @@ export default function ProfilePage() {
                 </div>
               );
             })()}
+          </div>
+
+          <div className="card">
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:12, marginBottom:12 }}>
+              <div style={{ fontWeight:700, fontSize:14 }}>취약 유형 분석</div>
+              <span style={{ fontSize:11, color:'var(--text3)' }}>오답률 높은 태그 기준</span>
+            </div>
+            {weaknessStats.length === 0 ? (
+              <div style={{ color:'var(--text3)', fontSize:13, lineHeight:1.7 }}>
+                같은 유형 제출이 2회 이상 쌓이면 취약 태그가 자동으로 표시됩니다.
+              </div>
+            ) : (
+              <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+                {weaknessStats.slice(0, 5).map((item) => {
+                  const color = item.priority === 'high' ? 'var(--red)' : item.priority === 'medium' ? 'var(--yellow)' : 'var(--blue)';
+                  return (
+                    <div key={item.label} style={{ padding:'11px 12px', border:'1px solid var(--border)', borderRadius:10, background:'var(--bg3)' }}>
+                      <div style={{ display:'flex', justifyContent:'space-between', gap:10, marginBottom:6 }}>
+                        <span style={{ fontSize:13, fontWeight:800, color }}>{item.label}</span>
+                        <span style={{ fontSize:12, color:'var(--text2)' }}>
+                          오답률 {item.missRate}% · {item.attempts}회
+                        </span>
+                      </div>
+                      <div style={{ height:6, background:'var(--bg2)', borderRadius:4, overflow:'hidden', marginBottom:8 }}>
+                        <div style={{ width:`${Math.min(100, item.missRate)}%`, height:'100%', background:color }} />
+                      </div>
+                      <div style={{ fontSize:12, color:'var(--text2)', lineHeight:1.6 }}>{item.recommendation}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           <div className="card">

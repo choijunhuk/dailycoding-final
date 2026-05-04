@@ -46,6 +46,72 @@ async function getExamProblems(problemIds) {
   return problems;
 }
 
+function buildExamReport({ problems, breakdown, score, timeUsedSec, durationMin }) {
+  const problemsById = new Map(problems.map((problem) => [Number(problem.id), problem]));
+  const total = problems.length;
+  const accuracy = total > 0 ? Math.round((score / total) * 100) : 0;
+  const durationSec = Math.max(1, Number(durationMin || 0) * 60);
+  const paceRate = Math.min(100, Math.round((timeUsedSec / durationSec) * 100));
+  const tagMap = new Map();
+  const typeMap = new Map();
+
+  for (const item of breakdown) {
+    const problem = problemsById.get(Number(item.problemId));
+    const result = item.result || 'empty';
+    const missed = result !== 'correct';
+    const type = problem?.problemType || problem?.problem_type || 'coding';
+    const typeEntry = typeMap.get(type) || { label: type, total: 0, misses: 0 };
+    typeEntry.total += 1;
+    if (missed) typeEntry.misses += 1;
+    typeMap.set(type, typeEntry);
+
+    const tags = Array.isArray(problem?.tags) && problem.tags.length > 0 ? problem.tags : [problem?.tier || '기타'];
+    for (const tag of tags.slice(0, 5)) {
+      const entry = tagMap.get(tag) || { label: tag, total: 0, misses: 0 };
+      entry.total += 1;
+      if (missed) entry.misses += 1;
+      tagMap.set(tag, entry);
+    }
+  }
+
+  const weakTags = [...tagMap.values()]
+    .filter((entry) => entry.misses > 0)
+    .map((entry) => ({
+      ...entry,
+      missRate: Math.round((entry.misses / Math.max(1, entry.total)) * 100),
+    }))
+    .sort((a, b) => b.missRate - a.missRate || b.misses - a.misses)
+    .slice(0, 4);
+
+  const weakTypes = [...typeMap.values()]
+    .filter((entry) => entry.misses > 0)
+    .map((entry) => ({
+      ...entry,
+      missRate: Math.round((entry.misses / Math.max(1, entry.total)) * 100),
+    }))
+    .sort((a, b) => b.missRate - a.missRate || b.misses - a.misses);
+
+  const emptyCount = breakdown.filter((item) => item.result === 'empty').length;
+  const wrongCount = breakdown.filter((item) => item.result !== 'correct' && item.result !== 'empty').length;
+  const nextPractice = weakTags.length > 0
+    ? `${weakTags[0].label} 태그의 낮은 난이도 문제를 2개 풀고, 같은 조건으로 다시 모의코테를 보세요.`
+    : accuracy >= 80
+      ? '정답률이 안정적입니다. 제한 시간을 10~15% 줄여서 한 번 더 풀어보세요.'
+      : '오답 문제를 먼저 복기하고 같은 난이도 세트로 재도전하세요.';
+
+  return {
+    accuracy,
+    paceRate,
+    timeUsedSec,
+    emptyCount,
+    wrongCount,
+    weakTags,
+    weakTypes,
+    summary: `정답률 ${accuracy}%, 제한 시간의 ${paceRate}%를 사용했습니다.`,
+    nextPractice,
+  };
+}
+
 router.get('/', async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
@@ -172,7 +238,14 @@ router.post('/:id/submit', async (req, res) => {
         const correct = blanks.length > 0 && blanks.every((v, i) =>
           String(v ?? '').trim() === String(userBlanks[i] ?? '').trim()
         );
-        breakdown.push({ problemId: problem.id, result: !answer ? 'empty' : correct ? 'correct' : 'wrong', timeMs: null });
+        breakdown.push({
+          problemId: problem.id,
+          problemTitle: problem.title,
+          tier: problem.tier,
+          problemType,
+          result: !answer ? 'empty' : correct ? 'correct' : 'wrong',
+          timeMs: null,
+        });
         continue;
       }
 
@@ -181,17 +254,17 @@ router.post('/:id/submit', async (req, res) => {
         const keywords = Array.isArray(config?.keywords) ? config.keywords : [];
         const answerText = String(answer?.answer ?? '').trim();
         if (!answerText) {
-          breakdown.push({ problemId: problem.id, result: 'empty', timeMs: null });
+          breakdown.push({ problemId: problem.id, problemTitle: problem.title, tier: problem.tier, problemType, result: 'empty', timeMs: null });
           continue;
         }
         const lowered = answerText.toLowerCase();
         const correct = keywords.length > 0 && keywords.some((k) => lowered.includes(String(k).toLowerCase()));
-        breakdown.push({ problemId: problem.id, result: correct ? 'correct' : 'wrong', timeMs: null });
+        breakdown.push({ problemId: problem.id, problemTitle: problem.title, tier: problem.tier, problemType, result: correct ? 'correct' : 'wrong', timeMs: null });
         continue;
       }
 
       if (!answer?.code || !answer?.lang) {
-        breakdown.push({ problemId: problem.id, result: 'empty', timeMs: null });
+        breakdown.push({ problemId: problem.id, problemTitle: problem.title, tier: problem.tier, problemType, result: 'empty', timeMs: null });
         continue;
       }
       const { execution } = await executeSubmissionFlow({
@@ -206,6 +279,9 @@ router.post('/:id/submit', async (req, res) => {
       });
       breakdown.push({
         problemId: problem.id,
+        problemTitle: problem.title,
+        tier: problem.tier,
+        problemType,
         result: execution.result,
         timeMs: execution.time ? parseInt(execution.time, 10) : null,
       });
@@ -233,6 +309,13 @@ router.post('/:id/submit', async (req, res) => {
       totalProblems: problems.length,
       timeUsed: timeUsedSec,
       breakdown,
+      report: buildExamReport({
+        problems,
+        breakdown,
+        score,
+        timeUsedSec,
+        durationMin: examSet.duration_min,
+      }),
     });
   } catch (err) {
     console.error('[exams/submit]', err);

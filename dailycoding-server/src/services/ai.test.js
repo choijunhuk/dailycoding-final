@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { askAIWithMeta, __getModelCandidatesForTests, __resetGenAIForTests, __setGenAIForTests } from './ai.js';
+import { askAIWithMeta, getAIServiceStatus, __getModelCandidatesForTests, __resetGenAIForTests, __setGenAIForTests } from './ai.js';
 import redis from '../config/redis.js';
 
 function mockGenAI(handler) {
@@ -20,6 +20,25 @@ test.afterEach(async () => {
   await redis.del('ai:cooldown:provider');
   await redis.del('ai:cooldown:test-user');
   await redis.del('ai:cooldown:quota-user');
+  await redis.del(`ai:metrics:${new Date().toISOString().slice(0, 10)}`);
+  await redis.del('ai:metrics:last');
+});
+
+test('getAIServiceStatus exposes redacted operational metrics', async () => {
+  process.env.GEMINI_MODEL = 'status-model';
+  __setGenAIForTests(mockGenAI(async (model) => {
+    return { response: { text: () => JSON.stringify({ ok: true, model }) } };
+  }));
+
+  await askAIWithMeta('status-user', 'prompt', { ok: false }, 20);
+  const status = await getAIServiceStatus();
+
+  assert.equal(status.primaryModel, 'status-model');
+  assert.equal(status.metricsToday.success, 1);
+  assert.equal(status.metricsToday.providerCalls, 1);
+  assert.equal(status.lastEvent.source, 'ai');
+  assert.equal(status.lastEvent.model, 'status-model');
+  assert.equal(Object.hasOwn(status, 'apiKey'), false);
 });
 
 test('AI model candidates prefer env models and keep defaults as fallback', () => {

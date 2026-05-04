@@ -3,6 +3,7 @@ import redis from '../config/redis.js';
 import { auth, adminOnly } from '../middleware/auth.js';
 import { query, queryOne, run } from '../config/mysql.js';
 import { AdminLog } from '../models/AdminLog.js';
+import { getAIServiceStatus } from '../services/ai.js';
 
 const router = Router();
 const BATTLE_SETTINGS_KEY = 'admin:battle:settings';
@@ -107,6 +108,16 @@ router.get('/stats', auth, adminOnly, async (req, res) => {
   } catch (err) {
     console.error('[admin/stats]', err);
     return res.status(500).json({ message: '통계를 불러오지 못했습니다.' });
+  }
+});
+
+router.get('/ai-status', auth, adminOnly, async (req, res) => {
+  try {
+    const status = await getAIServiceStatus();
+    return res.json(status);
+  } catch (err) {
+    console.error('[admin/ai-status]', err);
+    return res.status(500).json({ message: 'AI 상태를 불러오지 못했습니다.' });
   }
 });
 

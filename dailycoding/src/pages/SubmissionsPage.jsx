@@ -35,6 +35,8 @@ export default function SubmissionsPage() {
   const [exp, setExp] = useState(null);
   const [cache, setCache] = useState({});
   const [codeLoading, setCodeLoading] = useState({});
+  const [coachById, setCoachById] = useState({});
+  const [coachLoading, setCoachLoading] = useState({});
   const [compareIds, setCompareIds] = useState([]);
   const [compareOpen, setCompareOpen] = useState(false);
   const highlightId = location.state?.highlightId || null;
@@ -116,6 +118,20 @@ export default function SubmissionsPage() {
     }
     await ensureCodeLoaded(row);
     setCompareIds((prev) => prev.length >= 2 ? [prev[1], row.id] : [...prev, row.id]);
+  };
+
+  const loadCoach = async (row) => {
+    if (!row?.isMine) return;
+    if (coachById[row.id] || coachLoading[row.id]) return;
+    setCoachLoading((prev) => ({ ...prev, [row.id]: true }));
+    try {
+      const { data } = await api.post('/ai/submission-coach', { submissionId: row.id });
+      setCoachById((prev) => ({ ...prev, [row.id]: data }));
+    } catch (err) {
+      toast?.show(err.response?.data?.message || 'AI 오답 코치를 불러오지 못했습니다.', 'error');
+    } finally {
+      setCoachLoading((prev) => ({ ...prev, [row.id]: false }));
+    }
   };
 
   const compareRows = compareIds.map((id) => rows.find((row) => row.id === id)).filter(Boolean);
@@ -242,6 +258,8 @@ export default function SubmissionsPage() {
             const ri = R[row.result] || R.error;
             const isExp = exp === row.id;
             const highlighted = highlightId === row.id;
+            const canCoach = row.isMine && ['wrong', 'timeout', 'error', 'compile'].includes(row.result);
+            const coach = coachById[row.id];
             return (
               <div key={row.id} style={{
                 background:'var(--bg2)',
@@ -288,6 +306,20 @@ export default function SubmissionsPage() {
                       {compareIds.includes(row.id) ? t('submissionsSelected') : t('submissionsCompareSelect')}
                     </button>
                   )}
+                  {canCoach && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); loadCoach(row); setExp(row.id); }}
+                      style={{
+                        padding:'4px 10px', borderRadius:999, border:'1px solid rgba(121,192,255,.35)',
+                        background: coach ? 'rgba(86,211,100,.12)' : 'rgba(121,192,255,.12)',
+                        color: coach ? 'var(--green)' : 'var(--blue)',
+                        cursor:'pointer', fontSize:11, fontWeight:800, fontFamily:'inherit',
+                      }}
+                      disabled={coachLoading[row.id]}
+                    >
+                      {coachLoading[row.id] ? '분석 중' : coach ? '코치 완료' : 'AI 오답 코치'}
+                    </button>
+                  )}
                 </div>
 
                 {isExp && (
@@ -321,6 +353,45 @@ export default function SubmissionsPage() {
                         borderTop:'1px solid var(--border)', background:'rgba(255,255,255,.02)',
                       }}>
                         💬 {row.detail}
+                      </div>
+                    )}
+                    {canCoach && (
+                      <div style={{ padding:'14px 18px', borderTop:'1px solid var(--border)', background:'rgba(121,192,255,.04)' }}>
+                        {!coach && !coachLoading[row.id] && (
+                          <button
+                            onClick={() => loadCoach(row)}
+                            style={{
+                              padding:'8px 12px', borderRadius:8, border:'1px solid rgba(121,192,255,.35)',
+                              background:'rgba(121,192,255,.12)', color:'var(--blue)', cursor:'pointer',
+                              fontSize:12, fontWeight:800, fontFamily:'inherit',
+                            }}
+                          >
+                            AI로 재도전 방향 보기
+                          </button>
+                        )}
+                        {coachLoading[row.id] && <div style={{ fontSize:13, color:'var(--text3)' }}>AI가 오답 원인을 정리하는 중입니다.</div>}
+                        {coach && (
+                          <div style={{ display:'grid', gap:10 }}>
+                            <div style={{ fontSize:13, fontWeight:800, color:'var(--text)' }}>{coach.summary}</div>
+                            <div style={{ fontSize:12, color:'var(--text2)', lineHeight:1.7 }}>
+                              <strong style={{ color:'var(--yellow)' }}>가능성 높은 원인:</strong> {coach.likelyCause}
+                            </div>
+                            <ol style={{ margin:'0 0 0 18px', padding:0, color:'var(--text2)', fontSize:12, lineHeight:1.8 }}>
+                              {(coach.nextSteps || []).slice(0, 4).map((step, index) => <li key={index}>{step}</li>)}
+                            </ol>
+                            <div style={{ fontSize:12, color:'var(--text3)' }}>다음 테스트 포커스: {coach.testFocus}</div>
+                            <button
+                              onClick={() => navigate(`/problems/${coach.retryProblemId || row.problemId}`)}
+                              style={{
+                                justifySelf:'start', padding:'7px 12px', borderRadius:8, border:'1px solid var(--border)',
+                                background:'var(--bg2)', color:'var(--blue)', cursor:'pointer', fontSize:12, fontWeight:800,
+                                fontFamily:'inherit',
+                              }}
+                            >
+                              같은 문제 다시 풀기
+                            </button>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

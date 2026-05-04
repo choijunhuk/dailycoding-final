@@ -22,6 +22,13 @@ function parseConfig(raw) {
   try { return JSON.parse(raw); } catch { return {}; }
 }
 
+function formatDuration(sec) {
+  const total = Math.max(0, Number(sec) || 0);
+  const min = Math.floor(total / 60);
+  const rest = total % 60;
+  return min > 0 ? `${min}분 ${rest}초` : `${rest}초`;
+}
+
 export default function ExamPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -126,13 +133,62 @@ export default function ExamPage() {
           <div style={{ marginBottom: 12 }}>
             {t('examScoreSummary').replace('{score}', String(result.score)).replace('{total}', String(result.totalProblems))}
           </div>
+          {result.report && (
+            <div style={{ display:'grid', gap:14, marginBottom:16 }}>
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(130px, 1fr))', gap:10 }}>
+                {[
+                  { label:'정답률', value:`${result.report.accuracy}%`, color:'var(--green)' },
+                  { label:'소요 시간', value:formatDuration(result.report.timeUsedSec), color:'var(--blue)' },
+                  { label:'시간 사용률', value:`${result.report.paceRate}%`, color:'var(--yellow)' },
+                  { label:'미풀이', value:`${result.report.emptyCount}문제`, color:'var(--text3)' },
+                ].map((item) => (
+                  <div key={item.label} style={{ padding:'12px 14px', border:'1px solid var(--border)', borderRadius:10, background:'var(--bg3)' }}>
+                    <div style={{ fontSize:11, color:'var(--text3)', marginBottom:5 }}>{item.label}</div>
+                    <div style={{ fontSize:18, fontWeight:800, color:item.color }}>{item.value}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ padding:'14px 16px', border:'1px solid var(--border)', borderRadius:10, background:'var(--bg3)', fontSize:13, lineHeight:1.7 }}>
+                <div style={{ fontWeight:800, color:'var(--text)', marginBottom:4 }}>모의코테 리포트</div>
+                <div style={{ color:'var(--text2)' }}>{result.report.summary}</div>
+                <div style={{ color:'var(--blue)', marginTop:6 }}>{result.report.nextPractice}</div>
+              </div>
+              {(result.report.weakTags?.length > 0 || result.report.weakTypes?.length > 0) && (
+                <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(220px, 1fr))', gap:10 }}>
+                  <div style={{ padding:'12px 14px', border:'1px solid var(--border)', borderRadius:10, background:'var(--bg3)' }}>
+                    <div style={{ fontSize:12, fontWeight:800, marginBottom:8 }}>취약 태그</div>
+                    {(result.report.weakTags || []).length === 0
+                      ? <div style={{ fontSize:12, color:'var(--text3)' }}>뚜렷한 취약 태그가 없습니다.</div>
+                      : result.report.weakTags.map((tag) => (
+                        <div key={tag.label} style={{ display:'flex', justifyContent:'space-between', gap:10, fontSize:12, color:'var(--text2)', marginBottom:6 }}>
+                          <span>{tag.label}</span>
+                          <span>{tag.misses}/{tag.total} miss</span>
+                        </div>
+                      ))}
+                  </div>
+                  <div style={{ padding:'12px 14px', border:'1px solid var(--border)', borderRadius:10, background:'var(--bg3)' }}>
+                    <div style={{ fontSize:12, fontWeight:800, marginBottom:8 }}>문제 유형별 실수</div>
+                    {(result.report.weakTypes || []).length === 0
+                      ? <div style={{ fontSize:12, color:'var(--text3)' }}>유형별 실수가 없습니다.</div>
+                      : result.report.weakTypes.map((type) => (
+                        <div key={type.label} style={{ display:'flex', justifyContent:'space-between', gap:10, fontSize:12, color:'var(--text2)', marginBottom:6 }}>
+                          <span>{TYPE_LABEL[type.label] || type.label}</span>
+                          <span>{type.missRate}%</span>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
           <div style={{ display: 'grid', gap: 10 }}>
             {result.breakdown.map((item) => (
               <div key={item.problemId} style={{
                 padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8,
                 borderLeft: `3px solid ${item.result === 'correct' ? 'var(--green)' : item.result === 'empty' ? 'var(--text3)' : 'var(--red)'}`,
               }}>
-                {t('examProblemResult').replace('{id}', String(item.problemId)).replace('{result}', String(item.result))}
+                {(item.problemTitle || t('examProblemResult').replace('{id}', String(item.problemId)).replace('{result}', String(item.result)))}
+                <span style={{ color:'var(--text3)', marginLeft:8, fontSize:12 }}>#{item.problemId} · {item.result}</span>
                 {item.timeMs != null ? ` · ${item.timeMs}ms` : ''}
               </div>
             ))}

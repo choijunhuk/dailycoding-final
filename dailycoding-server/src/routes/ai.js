@@ -2,6 +2,7 @@ import { Router }               from 'express';
 import { auth, adminOnly, requireVerified } from '../middleware/auth.js';
 import { User }                 from '../models/User.js';
 import { Problem }              from '../models/Problem.js';
+import { Submission }           from '../models/Submission.js';
 import { askAI, askAIWithMeta } from '../services/ai.js';
 import redis                    from '../config/redis.js';
 import { AI_DAILY_QUOTA } from '../shared/constants.js';
@@ -134,6 +135,69 @@ router.post('/chat', auth, requireVerified, checkAiQuota, async (req, res) => {
   }
 
   res.json({ text: result.text || result });
+});
+
+// ── 오답 재도전 코치 ──────────────────────────────────────────────────────
+router.post('/submission-coach', auth, requireVerified, checkAiQuota, async (req, res) => {
+  const submissionId = Number(req.body?.submissionId);
+  if (!Number.isInteger(submissionId) || submissionId <= 0) {
+    return res.status(400).json({ message: 'submissionId가 필요합니다.' });
+  }
+
+  try {
+    const submission = await Submission.getWithCode(submissionId);
+    if (!submission) return res.status(404).json({ message: '제출을 찾을 수 없습니다.' });
+    if (submission.user_id !== req.user.id) return res.status(403).json({ message: '본인 제출만 분석할 수 있습니다.' });
+
+    const problem = await Problem.findById(Number(submission.problem_id), req.user.id);
+    if (!problem) return res.status(404).json({ message: '문제를 찾을 수 없습니다.' });
+
+    const fallback = {
+      summary: '채점 결과와 코드를 기준으로 재도전 순서를 정리했습니다.',
+      likelyCause: submission.result === 'timeout'
+        ? '시간 복잡도나 반복 구조가 입력 크기를 견디지 못했을 가능성이 큽니다.'
+        : submission.result === 'compile'
+          ? '문법, import, 함수명, 입출력 형식 중 하나가 채점 환경과 맞지 않을 가능성이 큽니다.'
+          : '입출력 처리, 경계 조건, 조건 분기 중 하나를 먼저 의심해보세요.',
+      nextSteps: [
+        '예제 입력을 손으로 추적해서 실제 출력과 기대 출력을 비교하세요.',
+        '빈 입력, 최소/최대 입력, 중복 값 같은 경계 조건을 따로 테스트하세요.',
+        '수정 후 바로 제출하지 말고 실행 버튼으로 작은 케이스부터 확인하세요.',
+      ],
+      testFocus: '예제와 다른 최소/최대 경계 케이스',
+      retryProblemId: problem.id,
+    };
+
+    const prompt = `아래 코딩 문제 오답 제출을 분석해 JSON으로만 답하세요.
+문제 제목: ${problem.title}
+난이도: ${problem.tier}
+태그: ${(problem.tags || []).slice(0, 6).join(', ')}
+문제 설명: ${(problem.desc || '').slice(0, 700)}
+제출 언어: ${submission.lang}
+채점 결과: ${submission.result}
+채점 메시지: ${(submission.detail || '').slice(0, 500)}
+제출 코드:
+${String(submission.code || '').slice(0, 3500)}
+
+필수 JSON 필드:
+{
+  "summary": "한 줄 요약",
+  "likelyCause": "가장 가능성 높은 실패 원인",
+  "nextSteps": ["재도전 단계1", "재도전 단계2", "재도전 단계3"],
+  "testFocus": "다음에 직접 만들어볼 테스트 케이스 방향",
+  "retryProblemId": ${problem.id}
+}
+정답 코드 전체를 직접 작성하지 말고, 사용자가 직접 고치도록 방향만 제시하세요.`;
+
+    const aiResult = await askAIWithMeta(req.user.id, prompt, fallback, 500);
+    if (aiResult.source === 'ai') {
+      await incrementAiQuotaIfFree(req);
+    }
+    return res.json({ ...aiResult.data, source: aiResult.source, reason: aiResult.reason || null });
+  } catch (err) {
+    console.error('[ai/submission-coach]', err.message);
+    return res.status(500).json({ message: '오답 코치를 불러오지 못했습니다.' });
+  }
 });
 
 // ── AI 힌트 ──────────────────────────────────────────────────────────────

@@ -63,6 +63,47 @@ export const Submission = {
     };
   },
 
+  async getWeaknessStats(userId) {
+    const rows = await query(
+      `SELECT
+         COALESCE(pt.tag, p.tier, '기타') AS label,
+         COUNT(*) AS attempts,
+         SUM(CASE WHEN s.result = 'correct' THEN 1 ELSE 0 END) AS correct,
+         SUM(CASE WHEN s.result IN ('wrong', 'timeout', 'error', 'compile') THEN 1 ELSE 0 END) AS misses,
+         MAX(s.submitted_at) AS last_submitted_at
+       FROM submissions s
+       LEFT JOIN problems p ON p.id = s.problem_id
+       LEFT JOIN problem_tags pt ON pt.problem_id = p.id
+       WHERE s.user_id = ?
+       GROUP BY COALESCE(pt.tag, p.tier, '기타')
+       HAVING attempts >= 2
+       ORDER BY (misses / attempts) DESC, misses DESC, attempts DESC
+       LIMIT 8`,
+      [userId]
+    );
+
+    return (rows || []).map((row) => {
+      const attempts = Number(row.attempts) || 0;
+      const correct = Number(row.correct) || 0;
+      const misses = Number(row.misses) || 0;
+      const accuracy = attempts > 0 ? Math.round((correct / attempts) * 100) : 0;
+      const missRate = attempts > 0 ? Math.round((misses / attempts) * 100) : 0;
+      return {
+        label: row.label || '기타',
+        attempts,
+        correct,
+        misses,
+        accuracy,
+        missRate,
+        priority: misses >= 3 && missRate >= 50 ? 'high' : missRate >= 35 ? 'medium' : 'low',
+        recommendation: misses > 0
+          ? `${row.label || '기타'} 유형은 최근 오답률이 ${missRate}%입니다. 같은 태그의 쉬운 문제 2개를 먼저 재풀이하세요.`
+          : `${row.label || '기타'} 유형은 안정적입니다. 더 높은 난이도로 확장하세요.`,
+        lastSubmittedAt: row.last_submitted_at || null,
+      };
+    });
+  },
+
   async getSolveTimeStats(userId) {
     const submissionRows = await query('SELECT problem_id, solve_time_sec FROM submissions WHERE user_id=? AND result=?', [userId, 'correct']);
     const validRows = (submissionRows || [])
