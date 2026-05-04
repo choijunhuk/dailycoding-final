@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { query, queryOne as qOne, insert, run } from '../config/mysql.js';
+import { query, queryOne as qOne, insert } from '../config/mysql.js';
 import { nowMySQL } from '../config/dateutil.js';
 
 export const Submission = {

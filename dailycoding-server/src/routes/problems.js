@@ -169,7 +169,8 @@ export function sanitizeProblemForClient(problem, { isAdmin = false } = {}) {
   if (!problem || typeof problem !== 'object') return problem;
   if (isAdmin) return problem;
 
-  const { solution, testcases, ...safe } = problem;
+  const { testcases, ...safe } = problem;
+  delete safe.solution;
   return {
     ...safe,
     hiddenCount: problem.hiddenCount ?? (Array.isArray(testcases) ? testcases.length : 0),
@@ -227,7 +228,9 @@ async function notifyProblemCommentMentions(content, authorId, problemTitle) {
           'problems'
         ).catch((err) => console.warn('[problem-comment mention]', err.message));
       }
-    } catch {}
+    } catch {
+      // Mention notifications are best-effort and should not block comments.
+    }
   }
 }
 
@@ -267,7 +270,9 @@ router.get('/tags', auth, async (req, res) => {
   try {
     const Problem = await getProblemModel();
     res.json(await Problem.getAllTags());
-  } catch { res.json([]); }
+  } catch {
+    res.json([]);
+  }
 });
 
 // GET /api/problems/search
@@ -278,13 +283,14 @@ router.get('/search', auth, async (req, res) => {
     return res.status(400).json({ message: '검색어는 100자 이하여야 합니다.' });
   }
   try {
-    const Problem = await getProblemModel();
     const rows = await query(
       "SELECT id, title, tier, difficulty FROM problems WHERE COALESCE(visibility, 'global') = 'global' AND title LIKE ? LIMIT 10",
       [`%${q}%`]
     );
     res.json((rows || []).filter((row) => (row.visibility || 'global') === 'global'));
-  } catch { res.json([]); }
+  } catch {
+    res.json([]);
+  }
 });
 
 // ★ 랜덤 디펜스 (/:id 보다 먼저!)

@@ -1,5 +1,4 @@
 import { createClient } from 'redis';
-import { RANKING_CACHE_TTL } from '../shared/constants.js';
 
 let client = null;
 let connected = false;
@@ -84,7 +83,9 @@ export const redis = {
           cursor = reply.cursor;
           if (reply.keys.length > 0) await client.del(reply.keys);
         } while (cursor !== 0);
-      } catch {}
+      } catch {
+        // Cache invalidation is best-effort; callers should not fail on Redis scan issues.
+      }
     } else {
       for (const k of memStore.keys()) {
         if (k.startsWith(prefix)) { memStore.delete(k); memTTL.delete(k); }
@@ -224,7 +225,9 @@ export async function closeRedis() {
   if (!client) return;
   try {
     await client.quit();
-  } catch {}
+  } catch {
+    // Shutdown cleanup should tolerate already-closed Redis connections.
+  }
   client = null;
   connected = false;
 }

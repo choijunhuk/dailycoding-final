@@ -18,7 +18,9 @@ export async function getOrCreateReferralCode(userId) {
     try {
       await insert('INSERT INTO referrals (referrer_id, referral_code) VALUES (?, ?)', [userId, code]);
       return code;
-    } catch {}
+    } catch {
+      // Retry on rare referral-code collision.
+    }
   }
 
   row = await queryOne('SELECT * FROM referrals WHERE referrer_id = ? ORDER BY id ASC LIMIT 1', [userId]);

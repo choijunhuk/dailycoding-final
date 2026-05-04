@@ -107,12 +107,16 @@ export function registerRoutes(app) {
         : runtime.mode === 'native-subprocess'
           ? 'native'
           : 'unavailable';
-    } catch {}
+    } catch {
+      // Keep health endpoint available even when judge runtime probing fails.
+    }
 
     try {
       const stripeOps = await getStripeOpsStatus();
       billing = stripeOps.mode;
-    } catch {}
+    } catch {
+      // Billing status is diagnostic only; health should still return core services.
+    }
 
     res.json({
       status: 'ok',

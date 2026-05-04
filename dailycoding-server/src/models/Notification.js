@@ -1,4 +1,4 @@
-import { nowMySQL, toMySQL } from '../config/dateutil.js';
+import { nowMySQL } from '../config/dateutil.js';
 import { query, queryOne, insert, run } from '../config/mysql.js';
 
 

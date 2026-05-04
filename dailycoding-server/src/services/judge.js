@@ -393,7 +393,11 @@ async function runInContainer({ image, cmd, binds, timeoutMs, memoryLimit = 128 
       exitCode = result?.StatusCode ?? 0;
     } catch (e) {
       if (e.message === 'TIMEOUT') {
-        try { await container.kill(); } catch {}
+        try {
+          await container.kill();
+        } catch {
+          // Container cleanup continues in finally even if kill races with exit.
+        }
         return { stdout: '', stderr: '', exitCode: -1, timedOut: true };
       }
       throw e;
@@ -417,7 +421,11 @@ async function runInContainer({ image, cmd, binds, timeoutMs, memoryLimit = 128 
     console.error('[Judge] Container execution failed:', err.message);
     return { stdout: stdout.trim(), stderr: stderr.trim() || '샌드박스 실행 오류', exitCode: -1, timedOut: false };
   } finally {
-    try { await container?.remove({ force: true }); } catch {}
+    try {
+      await container?.remove({ force: true });
+    } catch {
+      // Best-effort cleanup; stale containers are handled by Docker policies.
+    }
   }
 }
 
@@ -513,7 +521,11 @@ export async function judgeCode({ lang, code, examples, timeLimit = 2, userTier 
 
   } finally {
     // 작업 디렉토리 정리
-    try { rmSync(workDir, { recursive: true, force: true }); } catch {}
+    try {
+      rmSync(workDir, { recursive: true, force: true });
+    } catch {
+      // Temporary work directories are best-effort cleanup.
+    }
   }
 }
 
@@ -588,7 +600,11 @@ export async function runCode({ lang, code, input = '', timeLimit = 2, userTier 
       output: run.stdout.trim(),
     };
   } finally {
-    try { rmSync(workDir, { recursive: true, force: true }); } catch {}
+    try {
+      rmSync(workDir, { recursive: true, force: true });
+    } catch {
+      // Temporary work directories are best-effort cleanup.
+    }
   }
 }
 
@@ -705,7 +721,11 @@ export async function judgeCodeNative({ lang, code, examples, timeLimit = 2, use
     return { result: 'correct', time: `${totalMs}ms`, mem: '-', detail: '모든 테스트케이스 통과' };
 
   } finally {
-    try { rmSync(workDir, { recursive: true, force: true }); } catch {}
+    try {
+      rmSync(workDir, { recursive: true, force: true });
+    } catch {
+      // Temporary work directories are best-effort cleanup.
+    }
   }
 }
 
@@ -773,7 +793,11 @@ export async function runCodeNative({ lang, code, input = '', timeLimit = 2, use
       output: run.stdout.trim(),
     };
   } finally {
-    try { rmSync(workDir, { recursive: true, force: true }); } catch {}
+    try {
+      rmSync(workDir, { recursive: true, force: true });
+    } catch {
+      // Temporary work directories are best-effort cleanup.
+    }
   }
 }
 

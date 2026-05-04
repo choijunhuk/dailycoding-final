@@ -364,7 +364,11 @@ export async function transaction(callback) {
       await conn.commit();
       return result;
     } catch (err) {
-      try { await conn.rollback(); } catch {}
+      try {
+        await conn.rollback();
+      } catch {
+        // Preserve the original transaction error if rollback also fails.
+      }
       throw err;
     } finally {
       conn.release();
@@ -403,7 +407,9 @@ export async function closePool() {
   if (!pool) return;
   try {
     await pool.end();
-  } catch {}
+  } catch {
+    // Closing is best-effort during test and shutdown cleanup.
+  }
   pool = null;
   connected = false;
 }

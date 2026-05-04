@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { auth } from '../middleware/auth.js';
-import { insert, query, queryOne } from '../config/mysql.js';
+import { query, queryOne } from '../config/mysql.js';
 import { Problem } from '../models/Problem.js';
 import { errorResponse, internalError } from '../middleware/errorHandler.js';
 

@@ -7,7 +7,7 @@ process.env.DB_HOST = 'invalid_host';
 process.env.REDIS_URL = 'redis://invalid:6379';
 process.env.JWT_SECRET = 'test_secret';
 
-import { run, insert, query, waitForDB } from '../config/mysql.js';
+import { insert, waitForDB } from '../config/mysql.js';
 const { default: router } = await import('./problems.js');
 
 // Helper to find the route handler in Express router

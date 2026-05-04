@@ -1,7 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Battle } from '../models/Battle.js';
-import redis from '../config/redis.js';
 
 test('Full Battle Flow: Invite -> Accept -> Submit -> End', async () => {
   // 1. 초기화 (Redis 폴백 확인)

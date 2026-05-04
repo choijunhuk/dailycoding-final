@@ -1,4 +1,4 @@
-import { query, queryOne, insert, run } from '../config/mysql.js';
+import { query, queryOne, run } from '../config/mysql.js';
 
 export const Note = {
   async findByUserAndProblem(userId, problemId) {

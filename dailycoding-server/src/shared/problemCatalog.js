@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars, no-constant-condition */
 export const MIN_HIDDEN_TESTCASES = 10
 
 export const TIERS = {
