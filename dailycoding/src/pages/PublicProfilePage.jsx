@@ -223,7 +223,7 @@ export default function PublicProfilePage() {
 
   return (
     <div style={{ maxWidth: 1120, margin: '0 auto', padding: '28px 20px 40px', display: 'grid', gap: 24 }}>
-      <div style={{ background: 'linear-gradient(135deg, var(--bg2), var(--bg3))', border: '1px solid var(--border)', borderRadius: 24, padding: '24px 22px' }}>
+      <div style={{ background: profile.equippedBackgroundUrl || 'linear-gradient(135deg, var(--bg2), var(--bg3))', border: '1px solid var(--border)', borderRadius: 24, padding: '24px 22px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', gap: 18, alignItems: 'center' }}>
             <Avatar profile={profile} />

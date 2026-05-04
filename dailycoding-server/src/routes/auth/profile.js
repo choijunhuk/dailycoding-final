@@ -172,6 +172,15 @@ router.get('/profile/:id', auth, async (req, res) => {
     const parsedTechStack = safeParseJSON(user.tech_stack, []);
     const rewards = await Reward.findByUser(id);
 
+    const bgRow = user.equipped_background
+      ? await queryOne('SELECT image_url FROM profile_backgrounds WHERE slug = ?', [user.equipped_background])
+      : null;
+    const equippedBackgroundUrl = bgRow?.image_url?.startsWith('gradient:')
+      ? bgRow.image_url.replace('gradient:', '')
+      : bgRow?.image_url
+        ? `url(${bgRow.image_url}) center/cover`
+        : null;
+
     const base = {
       id: user.id,
       username: user.username,
@@ -201,6 +210,7 @@ router.get('/profile/:id', auth, async (req, res) => {
       isFollowing: isSelf ? false : !!isFollowing,
       solvedTierCounts,
       rewards,
+      equippedBackgroundUrl,
     };
 
     if (isSelf) {
@@ -298,7 +308,7 @@ router.patch('/profile/extended', auth, async (req, res) => {
     if (typeof social_links !== 'object' || Array.isArray(social_links)) {
       return errorResponse(res, 400, 'VALIDATION_ERROR', 'social_links는 객체여야 합니다.');
     }
-    const allowedLinks = new Set(['github', 'boj', 'blog', 'linkedin', 'twitter', 'website']);
+    const allowedLinks = new Set(['github', 'instagram', 'x', 'linkedin', 'velog', 'tistory', 'twitter']);
     const filtered = {};
     for (const [key, value] of Object.entries(social_links)) {
       if (allowedLinks.has(key) && typeof value === 'string') filtered[key] = value.trim().slice(0, 200);
@@ -349,7 +359,13 @@ router.get('/profile/backgrounds', auth, async (req, res) => {
 
 router.patch('/profile/background', auth, async (req, res) => {
   try {
-    const backgroundSlug = String(req.body?.backgroundSlug || '').trim();
+    const raw = req.body?.backgroundSlug;
+    if (raw === null || raw === undefined || raw === '') {
+      const updated = await User.update(req.user.id, { equipped_background: null });
+      await clearAuthStatus(req.user.id);
+      return res.json(User.safe(updated));
+    }
+    const backgroundSlug = String(raw).trim();
     if (!backgroundSlug) return errorResponse(res, 400, 'VALIDATION_ERROR', '배경 slug가 필요합니다.');
     const background = await queryOne('SELECT * FROM profile_backgrounds WHERE slug = ?', [backgroundSlug]);
     if (!background) return errorResponse(res, 404, 'NOT_FOUND', '배경을 찾을 수 없습니다.');
