@@ -5,6 +5,7 @@ import api from '../api';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { useLang } from '../context/LangContext.jsx';
 import { FONT_OPTIONS, applyAppFontPreference } from '../utils/fontPreferences.js';
+import { Bell, Code2, Lock, Monitor, Shield, User } from 'lucide-react';
 
 const TABS = [
   { id: 'profile',       labelKey: 'profileTab' },
@@ -14,6 +15,15 @@ const TABS = [
   { id: 'privacy',       labelKey: 'privacyTab' },
   { id: 'account',       labelKey: 'accountTab' },
 ];
+
+const TAB_ICONS = {
+  profile:       <User size={15} />,
+  notifications: <Bell size={15} />,
+  ui:            <Monitor size={15} />,
+  editor:        <Code2 size={15} />,
+  privacy:       <Shield size={15} />,
+  account:       <Lock size={15} />,
+};
 
 
 export default function SettingsPage() {
@@ -121,102 +131,138 @@ export default function SettingsPage() {
   }
 
 
+  const activeTabLabel = t(TABS.find(x => x.id === tab)?.labelKey ?? 'profileTab');
+
   if (loading) return (
-    <div style={{ padding:'40px 28px', maxWidth:700, margin:'0 auto' }}>
-      {[1,2,3].map(i => <div key={i} className="skeleton-line" style={{ height:48, borderRadius:10, marginBottom:12 }} />)}
+    <div className="settings-layout" style={{ maxWidth:1100, margin:'0 auto', padding:'32px 24px', display:'grid', gap:24 }}>
+      <div className="skeleton-line" style={{ height:220, borderRadius:14 }} />
+      <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+        {[1,2,3,4].map(i => <div key={i} className="skeleton-line" style={{ height:52, borderRadius:10 }} />)}
+      </div>
     </div>
   );
 
   return (
-    <div style={{ maxWidth:740, margin:'0 auto', padding:'32px 20px' }}>
-      <h2 style={{ fontWeight:700, fontSize:22, marginBottom:24 }}>{t('settings')}</h2>
+    <div className="settings-layout" style={{ maxWidth:1100, margin:'0 auto', padding:'32px 24px', display:'grid', gridTemplateColumns:'220px 1fr', gap:24, alignItems:'start' }}>
 
-      <div style={{ display:'flex', gap:4, marginBottom:28, borderBottom:'1px solid var(--border)', paddingBottom:0 }}>
-        {TABS.map(tabItem => (
-          <button key={tabItem.id} onClick={() => setTab(tabItem.id)}
-            style={{
-              padding:'8px 16px', border:'none', cursor:'pointer', fontWeight: tab===tabItem.id ? 700 : 400,
-              background:'transparent', fontSize:14,
-              color: tab===tabItem.id ? 'var(--accent)' : 'var(--text2)',
-              borderBottom: tab===tabItem.id ? '2px solid var(--accent)' : '2px solid transparent',
-              marginBottom:-1,
-            }}>
-            {t(tabItem.labelKey)}
-          </button>
-        ))}
-      </div>
-
-      {tab === 'profile' && (
-        <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
-          <Field label={t('nickname')}>
-            <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-              <input className="settings-input" value={nickname} onChange={e => onNicknameChange(e.target.value)}
-                placeholder={user?.nickname || t('nickname')} style={{ flex:1 }} />
-              {nicknameStatus === 'checking' && <span style={{ fontSize:12, color:'var(--text3)' }}>…</span>}
-              {nicknameStatus === 'available' && <span style={{ fontSize:12, color:'#22c55e' }}>✓</span>}
-              {nicknameStatus === 'taken' && <span style={{ fontSize:12, color:'#ef4444' }}>✗</span>}
-            </div>
-          </Field>
-
-          <SaveBtn onClick={saveProfile} saving={saving} />
-
-          <div style={{ padding:'18px', borderRadius:12, background:'var(--bg2)', border:'1px solid var(--border)' }}>
-            <div style={{ fontSize:14, fontWeight:700, marginBottom:6 }}>🧑 기타 프로필 정보</div>
-            <div style={{ fontSize:13, color:'var(--text2)', lineHeight:1.7, marginBottom:12 }}>
-              자기소개 · 소셜 링크 · 기술 스택 등은 <strong>내 프로필</strong> 페이지 → 설정 탭에서 편집할 수 있습니다.
-            </div>
-            <a href="/profile" style={{
-              display:'inline-block', padding:'8px 16px', borderRadius:8, fontSize:13, fontWeight:600,
-              background:'var(--accent)', color:'#fff', textDecoration:'none',
-            }}>내 프로필로 이동 →</a>
+      {/* ── Left sidebar ── */}
+      <aside style={{ background:'var(--bg2)', border:'1px solid var(--border)', borderRadius:14, overflow:'hidden', position:'sticky', top:80 }}>
+        <div style={{ padding:'20px 16px 16px', borderBottom:'1px solid var(--border)', background:'linear-gradient(135deg, rgba(121,192,255,.04), rgba(210,168,255,.04))' }}>
+          <div style={{ width:44, height:44, borderRadius:12, background:'linear-gradient(135deg, var(--accent), #d2a8ff)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, marginBottom:10 }}>
+            {(user?.nickname || user?.username || '?')[0].toUpperCase()}
           </div>
+          <div style={{ fontSize:15, fontWeight:700, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+            {user?.nickname || user?.username || '사용자'}
+          </div>
+          {user?.email && (
+            <div style={{ fontSize:11, color:'var(--text3)', marginTop:3, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{user.email}</div>
+          )}
         </div>
-      )}
+        <nav style={{ padding:'8px' }}>
+          {TABS.map(tabItem => (
+            <button key={tabItem.id} onClick={() => setTab(tabItem.id)}
+              style={{
+                display:'flex', alignItems:'center', gap:10, width:'100%', padding:'10px 12px',
+                borderRadius:8, border:'none', cursor:'pointer', fontSize:13,
+                fontWeight: tab === tabItem.id ? 700 : 400,
+                background: tab === tabItem.id ? 'var(--bg3)' : 'transparent',
+                color: tab === tabItem.id ? 'var(--text)' : 'var(--text2)',
+                textAlign:'left', marginBottom:2,
+                transition:'background .15s, color .15s',
+              }}>
+              <span style={{ color: tab === tabItem.id ? 'var(--accent)' : 'var(--text3)', display:'flex', flexShrink:0 }}>
+                {TAB_ICONS[tabItem.id]}
+              </span>
+              {t(tabItem.labelKey)}
+              {tab === tabItem.id && (
+                <span style={{ marginLeft:'auto', width:5, height:5, borderRadius:'50%', background:'var(--accent)', flexShrink:0 }} />
+              )}
+            </button>
+          ))}
+        </nav>
+      </aside>
 
-      {tab === 'notifications' && settings && (
-        <NotifSettings data={settings.notifications} onSave={patch => saveSection('notifications', patch)} saving={saving} />
-      )}
-
-      {tab === 'ui' && settings && (
-        <UiSettings data={settings.ui} onSave={patch => saveSection('ui', patch)} saving={saving} theme={theme} setTheme={setTheme} lang={lang} setLang={setLang} t={t} />
-      )}
-
-      {tab === 'editor' && settings && (
-        <EditorSettings data={settings.editor} onSave={patch => saveSection('editor', patch)} saving={saving} />
-      )}
-
-      {tab === 'privacy' && (
-        <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
-          <Field label={t('profileVisibility')}>
-            <SelectRow value={profileVisibility} onChange={setProfileVisibility}
-              options={[[`public`,t('visPublic')],[`followers`,t('visFollowers')],[`private`,t('visPrivate')]]} />
-          </Field>
-          <Field label={t('postVisibility')}>
-            <SelectRow value={postVisibility} onChange={setPostVisibility}
-              options={[[`public`,t('visPublic')],[`followers`,t('visFollowers')],[`private`,t('visPrivate')]]} />
-          </Field>
-          <SaveBtn onClick={saveVisibility} saving={saving} />
+      {/* ── Right content panel ── */}
+      <div style={{ background:'var(--bg2)', border:'1px solid var(--border)', borderRadius:14, padding:'32px', minWidth:0 }}>
+        <div style={{ marginBottom:28, paddingBottom:20, borderBottom:'1px solid var(--border)', display:'flex', alignItems:'center', gap:12 }}>
+          <span style={{ color:'var(--accent)', display:'flex' }}>{TAB_ICONS[tab]}</span>
+          <h2 style={{ fontWeight:800, fontSize:20, margin:0 }}>{activeTabLabel}</h2>
         </div>
-      )}
 
-      {tab === 'account' && (
-        <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
-          <h3 style={{ fontWeight:600, fontSize:16 }}>{t('changePassword')}</h3>
-          <Field label={t('currentPassword')}>
-            <input className="settings-input" type="password" value={pwForm.current}
-              onChange={e => setPwForm(p => ({ ...p, current: e.target.value }))} />
-          </Field>
-          <Field label={t('newPassword')}>
-            <input className="settings-input" type="password" value={pwForm.next}
-              onChange={e => setPwForm(p => ({ ...p, next: e.target.value }))} />
-          </Field>
-          <Field label={t('confirmPassword')}>
-            <input className="settings-input" type="password" value={pwForm.confirm}
-              onChange={e => setPwForm(p => ({ ...p, confirm: e.target.value }))} />
-          </Field>
-          <SaveBtn onClick={changePassword} saving={saving} label={t('changePassword')} />
-        </div>
-      )}
+        {tab === 'profile' && (
+          <div style={{ display:'flex', flexDirection:'column', gap:24 }}>
+            <Field label={t('nickname')}>
+              <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                <input className="settings-input" value={nickname} onChange={e => onNicknameChange(e.target.value)}
+                  placeholder={user?.nickname || t('nickname')} style={{ flex:1 }} />
+                {nicknameStatus === 'checking' && <span style={{ fontSize:12, color:'var(--text3)' }}>…</span>}
+                {nicknameStatus === 'available' && <span style={{ fontSize:12, color:'#22c55e', fontWeight:700 }}>✓ 사용 가능</span>}
+                {nicknameStatus === 'taken' && <span style={{ fontSize:12, color:'#ef4444', fontWeight:700 }}>✗ 사용 중</span>}
+              </div>
+            </Field>
+
+            <SaveBtn onClick={saveProfile} saving={saving} />
+
+            <div style={{ padding:'20px', borderRadius:12, background:'linear-gradient(135deg, rgba(121,192,255,.06), rgba(210,168,255,.04))', border:'1px solid rgba(121,192,255,.15)' }}>
+              <div style={{ fontSize:14, fontWeight:700, marginBottom:6 }}>프로필 상세 편집</div>
+              <div style={{ fontSize:13, color:'var(--text2)', lineHeight:1.7, marginBottom:14 }}>
+                자기소개 · 소셜 링크 · 기술 스택 등은 <strong>내 프로필</strong> 페이지에서 편집할 수 있습니다.
+              </div>
+              <a href="/profile" style={{
+                display:'inline-flex', alignItems:'center', gap:6, padding:'8px 18px', borderRadius:8, fontSize:13, fontWeight:600,
+                background:'var(--accent)', color:'#fff', textDecoration:'none',
+              }}>내 프로필 편집 →</a>
+            </div>
+          </div>
+        )}
+
+        {tab === 'notifications' && settings && (
+          <NotifSettings data={settings.notifications} onSave={patch => saveSection('notifications', patch)} saving={saving} />
+        )}
+
+        {tab === 'ui' && settings && (
+          <UiSettings data={settings.ui} onSave={patch => saveSection('ui', patch)} saving={saving} theme={theme} setTheme={setTheme} lang={lang} setLang={setLang} t={t} />
+        )}
+
+        {tab === 'editor' && settings && (
+          <EditorSettings data={settings.editor} onSave={patch => saveSection('editor', patch)} saving={saving} />
+        )}
+
+        {tab === 'privacy' && (
+          <div style={{ display:'flex', flexDirection:'column', gap:24 }}>
+            <Field label={t('profileVisibility')}>
+              <SelectRow value={profileVisibility} onChange={setProfileVisibility}
+                options={[[`public`,t('visPublic')],[`followers`,t('visFollowers')],[`private`,t('visPrivate')]]} />
+            </Field>
+            <Field label={t('postVisibility')}>
+              <SelectRow value={postVisibility} onChange={setPostVisibility}
+                options={[[`public`,t('visPublic')],[`followers`,t('visFollowers')],[`private`,t('visPrivate')]]} />
+            </Field>
+            <SaveBtn onClick={saveVisibility} saving={saving} />
+          </div>
+        )}
+
+        {tab === 'account' && (
+          <div style={{ display:'flex', flexDirection:'column', gap:24 }}>
+            <div style={{ padding:'14px 18px', borderRadius:10, background:'rgba(248,81,73,.07)', border:'1px solid rgba(248,81,73,.2)', fontSize:13, color:'var(--text2)' }}>
+              비밀번호는 최소 8자 이상이어야 합니다.
+            </div>
+            <Field label={t('currentPassword')}>
+              <input className="settings-input" type="password" value={pwForm.current}
+                onChange={e => setPwForm(p => ({ ...p, current: e.target.value }))} />
+            </Field>
+            <Field label={t('newPassword')}>
+              <input className="settings-input" type="password" value={pwForm.next}
+                onChange={e => setPwForm(p => ({ ...p, next: e.target.value }))} />
+            </Field>
+            <Field label={t('confirmPassword')}>
+              <input className="settings-input" type="password" value={pwForm.confirm}
+                onChange={e => setPwForm(p => ({ ...p, confirm: e.target.value }))} />
+            </Field>
+            <SaveBtn onClick={changePassword} saving={saving} label={t('changePassword')} />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

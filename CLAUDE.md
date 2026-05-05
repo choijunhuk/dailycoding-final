@@ -38,6 +38,8 @@ Frontend mirror: `dailycoding/src/data/constants.js` re-exports the same values.
 npm run dev       # Vite dev server → http://localhost:5173
 npm run build     # Production build → dist/
 npm run preview   # Serve built dist locally
+npm run lint      # ESLint with --max-warnings 0 (uses eslint-plugin-react for JSX-aware analysis)
+npm run lint:fix  # Auto-fix
 ```
 
 ### Backend (`dailycoding-server/`)
@@ -233,7 +235,7 @@ All page components use **inline `style={{}}`**, which CSS cannot override witho
 - **Admin role** is always verified from DB, never from JWT. JWT `role` claim is informational only.
 - **Admin email verification**: Admins never need email verification. `User.create()` sets `email_verified=1` when `role='admin'`. `requireVerified` middleware auto-passes admins. `ensureAdmin()` in `index.js` patches existing admins to `email_verified=1` on startup.
 - **Subscription updates** must use `User.updateSubscription(id, { stripe_customer_id, subscription_tier, subscription_expires_at })` — NOT `User.update()`. This prevents the generic update allowlist from being misused to self-elevate subscription tier.
-- **`User.onSolve()`** is called only on first-correct submission (`!alreadySolved` check in submissions route). It handles streak, `solved_count`, rating recalc, tier promotion, and reward grants.
+- **`User.onSolve()`** is called only on first-correct submission (`!alreadySolved` check in submissions route). It handles streak, `solved_count`, rating recalc, tier promotion, and reward grants. Applies to **all** problem types (coding, fill-blank, bug-fix) — the special-type path in `routes/submissions.js` calls it alongside `Problem.incrementSolved`.
 - **Rating** is recalculated from scratch using top-100 solved problems on every solve, not incrementally.
 - **Battle results** do not affect rating or streak — `User.onSolve()` is intentionally not called in battle judge.
 - **Tier thresholds & pricing**: All values live in `dailycoding-server/src/shared/constants.js` (and mirrored in `dailycoding/src/data/constants.js`). `LandingPage.jsx`, `PricingPage.jsx`, `User.js`, and `ai.js` all import from there — never hardcode these numbers elsewhere. Stripe `currency: 'krw'`; amounts are in won (not cents).

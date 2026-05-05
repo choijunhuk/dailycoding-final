@@ -46,14 +46,22 @@ const StatCard = memo(function StatCard({ icon, value, label, color, sub, delta 
     <div className="card card-hover" style={{
       background:'var(--bg2)', border:'1px solid var(--border)', borderRadius:12,
       padding:'20px 22px', display:'flex', alignItems:'center', gap:16,
-      transition:'border-color .2s',
+      position:'relative', overflow:'hidden',
+      transition:'border-color .2s, box-shadow .2s',
     }}
-      onMouseEnter={e=>e.currentTarget.style.borderColor='var(--border2)'}
-      onMouseLeave={e=>e.currentTarget.style.borderColor='var(--border)'}
+      onMouseEnter={e=>{e.currentTarget.style.borderColor=`${color}50`;e.currentTarget.style.boxShadow=`0 8px 28px rgba(0,0,0,.3), 0 0 0 1px ${color}20`;}}
+      onMouseLeave={e=>{e.currentTarget.style.borderColor='var(--border)';e.currentTarget.style.boxShadow='';}}
     >
       <div style={{
-        width:48,height:48,borderRadius:14,background:`linear-gradient(135deg, ${color}30, transparent)`,
+        position:'absolute', top:0, left:0, right:0, height:2, borderRadius:'12px 12px 0 0',
+        background:`linear-gradient(90deg, ${color}80, ${color}20)`,
+      }} />
+      <div style={{
+        width:48,height:48,borderRadius:14,
+        background:`linear-gradient(135deg, ${color}25, ${color}08)`,
+        border:`1px solid ${color}20`,
         display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,flexShrink:0,
+        color,
       }}>{icon}</div>
       <div>
         <div style={{
@@ -294,18 +302,22 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
-        <div style={{display:'flex',gap:24,flexWrap:'wrap'}}>
+        <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
           {[
-            {v:t('dashboardStreakValue').replace('{n}', String(user?.streak || 0)), l:t('streak')},
-            {v:solvedList.length,      l:t('solved')},
-            {v:`${accuracy}%`,         l:t('dashboardAccuracy')},
+            {v:t('dashboardStreakValue').replace('{n}', String(user?.streak || 0)), l:t('streak'),          color:'rgba(227,179,65,', icon:'🔥'},
+            {v:solvedList.length,                                                   l:t('solved'),           color:'rgba(86,211,100,', icon:'✓'},
+            {v:`${accuracy}%`,                                                      l:t('dashboardAccuracy'),color:'rgba(121,192,255,', icon:'◎'},
           ].map(s=>(
-            <div key={s.l} style={{textAlign:'center'}}>
+            <div key={s.l} style={{
+              textAlign:'center', padding:'10px 16px', borderRadius:10,
+              background:`${s.color}.08)`, border:`1px solid ${s.color}.2)`,
+              minWidth:72,
+            }}>
               <div style={{
-                fontFamily:'Space Mono,monospace',fontSize:20,fontWeight:700,
-                color:'var(--text)',lineHeight:1,
+                fontFamily:'Space Mono,monospace',fontSize:18,fontWeight:700,
+                color:`${s.color}1)`,lineHeight:1,
               }}>{s.v}</div>
-              <div style={{fontSize:11,color:'var(--text2)',marginTop:4}}>{s.l}</div>
+              <div style={{fontSize:10,color:'var(--text3)',marginTop:4,fontWeight:600,textTransform:'uppercase',letterSpacing:'.5px'}}>{s.l}</div>
             </div>
           ))}
         </div>
@@ -760,24 +772,30 @@ export default function Dashboard() {
 
           {/* 빠른 이동 + 특수 기능 */}
           <div className="card card-hover" style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:12,padding:22}}>
-            <div style={{fontWeight:700,fontSize:14,marginBottom:12,display:'flex',alignItems:'center',gap:8}}><Sparkles size={16} />{t('quickAction')}</div>
+            <div style={{fontWeight:700,fontSize:14,marginBottom:14,display:'flex',alignItems:'center',gap:8}}><Sparkles size={16} />{t('quickAction')}</div>
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
               {[
-                {icon:<BookOpen size={16} />,label:t('problemList'), page:'problems'},
-                {icon:<Sparkles size={16} />,label:'학습 경로', page:'learning'},
-                {icon:<Trophy size={16} />,label:t('joinContest'),  page:'contest'},
-                {icon:<FileText size={16} />,label:t('submissions'),  page:'submissions'},
+                {icon:<BookOpen size={16} />, label:t('problemList'),  page:'problems',    color:'var(--blue)',   rgba:'rgba(121,192,255,'},
+                {icon:<Sparkles size={16} />, label:'학습 경로',        page:'learning',    color:'var(--purple)', rgba:'rgba(210,168,255,'},
+                {icon:<Trophy size={16} />,   label:t('joinContest'),   page:'contest',     color:'var(--yellow)', rgba:'rgba(227,179,65,'},
+                {icon:<FileText size={16} />, label:t('submissions'),   page:'submissions', color:'var(--green)',  rgba:'rgba(86,211,100,'},
               ].map(a=>(
                 <button key={a.label} onClick={()=>navigate('/'+a.page)} style={{
-                  padding:'11px 10px',borderRadius:8,
-                  background:'var(--bg3)',border:'1px solid var(--border)',
-                  color:'var(--text)',cursor:'pointer',fontSize:12,fontWeight:600,
-                  fontFamily:'inherit',display:'flex',alignItems:'center',
-                  gap:6,justifyContent:'center',transition:'all .15s',
+                  padding:'14px 8px', borderRadius:10,
+                  background:'var(--bg3)', border:'1px solid var(--border)',
+                  color:'var(--text)', cursor:'pointer', fontSize:11, fontWeight:600,
+                  fontFamily:'inherit', display:'flex', flexDirection:'column', alignItems:'center',
+                  gap:8, justifyContent:'center', transition:'all .18s',
                 }}
-                  onMouseEnter={e=>{e.currentTarget.style.borderColor='var(--blue)';e.currentTarget.style.color='var(--blue)';}}
-                  onMouseLeave={e=>{e.currentTarget.style.borderColor='var(--border)';e.currentTarget.style.color='var(--text)';}}
-                >{a.icon} {a.label}</button>
+                  onMouseEnter={e=>{e.currentTarget.style.borderColor=a.color;e.currentTarget.style.background=`${a.rgba}.1)`;}}
+                  onMouseLeave={e=>{e.currentTarget.style.borderColor='var(--border)';e.currentTarget.style.background='var(--bg3)';}}
+                >
+                  <span style={{
+                    width:36, height:36, borderRadius:10, display:'flex', alignItems:'center', justifyContent:'center',
+                    background:`${a.rgba}.14)`, color:a.color, flexShrink:0,
+                  }}>{a.icon}</span>
+                  {a.label}
+                </button>
               ))}
             </div>
 

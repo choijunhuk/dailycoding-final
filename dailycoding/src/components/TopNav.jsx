@@ -142,8 +142,15 @@ export default function TopNav() {
         <div onClick={()=>go('/')} style={{
           display:'flex',alignItems:'center',gap:8,cursor:'pointer',
           marginRight:24,flexShrink:0,
-        }}>
-          <Sparkles size={18} color="var(--blue)" />
+          padding:'5px 10px 5px 6px', borderRadius:9,
+          transition:'background .15s',
+        }}
+          onMouseEnter={e=>e.currentTarget.style.background='var(--bg3)'}
+          onMouseLeave={e=>e.currentTarget.style.background='transparent'}
+        >
+          <span style={{ width:26, height:26, borderRadius:7, background:'linear-gradient(135deg, var(--blue), var(--purple))', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+            <Sparkles size={13} color="#fff" />
+          </span>
           <span style={{fontSize:14,fontWeight:800,letterSpacing:-.3}} className="gradient-text">DailyCoding</span>
         </div>
 
@@ -163,13 +170,14 @@ export default function TopNav() {
             return (
               <button key={n.path} onClick={()=>go(n.path)} style={{
                 padding:'5px 13px', borderRadius:7, border:'none', cursor:'pointer',
-                fontSize:13, fontWeight:600, fontFamily:'inherit',
+                fontSize:13, fontWeight: active ? 700 : 600, fontFamily:'inherit',
                 background: active ? 'var(--bg3)' : 'transparent',
                 color: active ? 'var(--text)' : 'var(--text2)',
+                boxShadow: active ? 'inset 0 -2px 0 var(--accent)' : 'none',
                 transition:'all .15s', display:'flex', alignItems:'center', gap:5,
               }}
-                onMouseEnter={e=>{ if(!active) e.currentTarget.style.color='var(--text)'; }}
-                onMouseLeave={e=>{ if(!active) e.currentTarget.style.color='var(--text2)'; }}
+                onMouseEnter={e=>{ if(!active){ e.currentTarget.style.color='var(--text)'; e.currentTarget.style.background='rgba(255,255,255,.04)'; } }}
+                onMouseLeave={e=>{ if(!active){ e.currentTarget.style.color='var(--text2)'; e.currentTarget.style.background='transparent'; } }}
               >
                 <Icon size={15} strokeWidth={2.1} />{t(n.labelKey)}
               </button>
