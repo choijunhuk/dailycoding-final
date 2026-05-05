@@ -733,7 +733,7 @@ export default function Dashboard() {
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
               {[
                 {icon:<BookOpen size={16} />,label:t('problemList'), page:'problems'},
-                {icon:<Bot size={16} />,label:t('ai'),   page:'ai'},
+                {icon:<Sparkles size={16} />,label:'성장 허브', page:'growth'},
                 {icon:<Trophy size={16} />,label:t('joinContest'),  page:'contest'},
                 {icon:<FileText size={16} />,label:t('submissions'),  page:'submissions'},
               ].map(a=>(

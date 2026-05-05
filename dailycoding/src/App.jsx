@@ -44,6 +44,7 @@ const ExamPage = lazy(() => import('./pages/ExamPage'));
 const SheetsPage = lazy(() => import('./pages/SheetsPage'));
 const SheetDetailPage = lazy(() => import('./pages/SheetDetailPage'));
 const LearningPathPage = lazy(() => import('./pages/LearningPathPage'));
+const GrowthHubPage = lazy(() => import('./pages/GrowthHubPage'));
 
 function getInternalRedirectPath(redirect) {
   if (!redirect) return null;
@@ -193,6 +194,7 @@ function AppInner() {
                 <Route path="/sheets/:id"  element={<SheetDetailPage />} />
                 <Route path="/learning"    element={<LearningPathPage />} />
                 <Route path="/learning/:id" element={<LearningPathPage />} />
+                <Route path="/growth"      element={<GrowthHubPage />} />
                 <Route path="/profile"     element={<ProfilePage />} />
                 <Route path="/user/:id"    element={<PublicProfilePage />} />
                 <Route path="/submissions" element={<SubmissionsPage />} />
