@@ -78,6 +78,7 @@ export default function Dashboard() {
   const [promotion, setPromotion] = useState({ active: null, recent: null });
   const [referral, setReferral] = useState(null);
   const [recoveryQueue, setRecoveryQueue] = useState({ count: 0, items: [], summary: '' });
+  const [progression, setProgression] = useState(null);
   const [copiedReferral, setCopiedReferral] = useState(false);
   const loadErrorToastShownRef = useRef(false);
   const { rankingData } = useRankingData();
@@ -182,6 +183,18 @@ export default function Dashboard() {
       })
       .catch(() => {
         if (!cancelled) setRecoveryQueue({ count: 0, items: [], summary: '' });
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    api.get('/rewards/progression')
+      .then(({ data }) => {
+        if (!cancelled) setProgression(data || null);
+      })
+      .catch(() => {
+        if (!cancelled) setProgression(null);
       });
     return () => { cancelled = true; };
   }, []);
@@ -302,7 +315,7 @@ export default function Dashboard() {
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:12,marginBottom:20}}>
         <StatCard icon={<BookOpen size={20} />} value={PROBLEMS.length}    label={t('problems')}    color="var(--blue)" delta={t('dashboardProblemsDelta')} />
         <StatCard icon={<CheckCircle2 size={20} />} value={solvedList.length}  label={t('solved')}  color="var(--green)" delta={solvedList.length > 0 ? `▲ ${Math.min(99, Math.round(solvedList.length / Math.max(PROBLEMS.length, 1) * 100))}%` : null} />
-        <StatCard icon={<TrendingUp size={20} />} value={user?.rating||800}  label={t('rating')}  color="var(--yellow)" delta={(user?.streak||0) > 0 ? `+${(user.streak) * 2} 성장` : null} />
+        <StatCard icon={<TrendingUp size={20} />} value={progression ? `Lv.${progression.level}` : (user?.rating||800)}  label={progression ? '성장 레벨' : t('rating')}  color="var(--yellow)" delta={progression ? `${progression.xp.toLocaleString()} XP` : ((user?.streak||0) > 0 ? `+${(user.streak) * 2} 성장` : null)} />
         <StatCard icon={<Target size={20} />} value={myRank?`#${myRank}`:'−'} label={t('dashboardMyRank')} color="var(--purple)" delta={t('dashboardRealtimeTrack')} />
       </div>
 
@@ -358,6 +371,24 @@ export default function Dashboard() {
                 {t('dashboardPromotionDesc').replace('{wins}', String(promotion.recent.wins)).replace('{from}', promotion.recent.from_tier).replace('{to}', promotion.recent.to_tier)}
               </p>
               <button className="btn btn-primary btn-sm" onClick={() => navigate('/ranking')}>{t('dashboardCheckRanking')}</button>
+            </div>
+          )}
+
+          {progression && (
+            <div className="dashboard-xp-card card card-hover">
+              <div className="dashboard-xp-head">
+                <div>
+                  <div className="dashboard-xp-kicker">개인 성장 보상</div>
+                  <div className="dashboard-xp-title">Lv.{progression.level} · {progression.xp.toLocaleString()} XP</div>
+                </div>
+                <button className="btn btn-ghost btn-sm" onClick={() => navigate('/profile')}>프로필 보상</button>
+              </div>
+              <div className="dashboard-xp-bar">
+                <div style={{ width:`${Math.min(100, Math.max(0, progression.progressPercent || 0))}%` }} />
+              </div>
+              <div className="dashboard-xp-note">
+                미션 보상은 랭킹 점수에 영향을 주지 않고 XP, 배지, 칭호, 프로필 배경으로만 쌓입니다.
+              </div>
             </div>
           )}
 

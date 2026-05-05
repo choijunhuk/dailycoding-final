@@ -102,6 +102,7 @@ async function initDatabase() {
     await runSql(join(__dir, 'migrations', '017_v5_v6_growth_ux.sql'));
     await runSql(join(__dir, 'migrations', '018_remaining_growth_platform.sql'));
     await runSql(join(__dir, 'migrations', '019_prompt_security_perf.sql'));
+    await runSql(join(__dir, 'migrations', '020_xp_progression.sql'));
     logger.info('✅ DB 스키마 초기화 완료');
   } catch (err) {
     logger.warn('⚠️  DB 초기화 스킵:', { message: err.message });
@@ -455,8 +456,8 @@ async function seedGrowthCollections() {
       bg.slug,
       bg.name,
       bg.image_url,
-      1,
-      0,
+      bg.is_default ?? 1,
+      bg.is_premium ?? 0,
     ]);
     const backgroundPlaceholders = PROFILE_BACKGROUND_SEEDS.map(() => '(?,?,?,?,?)').join(',');
     await dbRun(

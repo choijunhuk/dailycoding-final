@@ -8,12 +8,14 @@ const router = Router();
 // GET /api/rewards/my — 내 보상 목록
 router.get('/my', auth, async (req, res) => {
   try {
-    const rewards = await Reward.findByUser(req.user.id);
     const user = await User.findById(req.user.id);
+    const progression = await Reward.getProgression(req.user.id);
+    const rewards = await Reward.findByUser(req.user.id);
     res.json({
       rewards,
       equippedBadge: user?.equipped_badge || null,
       equippedTitle: user?.equipped_title || null,
+      progression,
     });
   } catch (err) {
     console.error('[rewards/my]', err.message);
@@ -25,6 +27,16 @@ router.get('/my', auth, async (req, res) => {
 router.get('/all', auth, async (req, res) => {
   try { res.json(await Reward.findAll()); }
   catch { res.json([]); }
+});
+
+// GET /api/rewards/progression — 랭킹과 분리된 XP 성장 상태
+router.get('/progression', auth, async (req, res) => {
+  try {
+    res.json(await Reward.getProgression(req.user.id));
+  } catch (err) {
+    console.error('[rewards/progression]', err.message);
+    res.status(500).json({ message: '서버 오류' });
+  }
 });
 
 // POST /api/rewards/equip — 보상 장착

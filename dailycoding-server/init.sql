@@ -220,6 +220,15 @@ CREATE TABLE IF NOT EXISTS user_rewards (
   FOREIGN KEY (reward_id) REFERENCES reward_items(id) ON DELETE CASCADE
 );
 
+-- ── 랭킹과 분리된 경험치 진행도 ────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS user_progression (
+  user_id    INT PRIMARY KEY,
+  xp         INT NOT NULL DEFAULT 0,
+  level      INT NOT NULL DEFAULT 1,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
 -- ── 보상 시드 데이터 ───────────────────────────────────────────────────────
 INSERT IGNORE INTO reward_items (code, type, name, icon, description, rarity) VALUES
 -- 티어 달성 뱃지
@@ -246,7 +255,13 @@ INSERT IGNORE INTO reward_items (code, type, name, icon, description, rarity) VA
 -- 풀이 수 보상
 ('badge_solve10',   'badge', '10문제 달성',   '✅', '10문제 풀이',        'common'),
 ('badge_solve50',   'badge', '50문제 달성',   '⭐', '50문제 풀이',        'rare'),
-('badge_solve100',  'badge', '100문제 달성',  '💯', '100문제 풀이',       'epic');
+('badge_solve100',  'badge', '100문제 달성',  '💯', '100문제 풀이',       'epic'),
+-- 경험치 레벨 보상
+('badge_xp_rookie',       'badge', '루틴 시작',     '🌱', '경험치 레벨 2 달성', 'common'),
+('title_routine_builder', 'title', '루틴 빌더',     '🧱', '경험치 레벨 3 달성 칭호', 'common'),
+('badge_xp_climber',      'badge', '꾸준한 등반',   '⛰️', '경험치 레벨 5 달성', 'rare'),
+('title_debug_maker',     'title', '디버그 메이커', '🔎', '경험치 레벨 7 달성 칭호', 'rare'),
+('badge_xp_veteran',      'badge', '성장 베테랑',   '🏅', '경험치 레벨 10 달성', 'epic');
 
 -- ── OAuth 소셜 로그인 지원 컬럼 추가 (기존 DB 마이그레이션용 — 새 DB에선 위 CREATE TABLE에 포함)
 ALTER TABLE users MODIFY COLUMN password VARCHAR(255) NULL;

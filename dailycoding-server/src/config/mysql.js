@@ -68,7 +68,7 @@ const MEM = {
   battle_history: [], daily_missions: [], season_rankings: [],
   user_onboarding: [], promotion_series: [],
   referrals: [], exam_sets: [], exam_attempts: [], build_problems: [],
-  profile_backgrounds: [], user_backgrounds: [], problem_sheets: [], learning_paths: [],
+  profile_backgrounds: [], user_backgrounds: [], user_progression: [], problem_sheets: [], learning_paths: [],
 };
 
 function memNextId(table) {
@@ -176,7 +176,12 @@ async function initMemory() {
   });
 
   PROFILE_BACKGROUND_SEEDS.forEach((bg, i) => {
-    MEM.profile_backgrounds.push({ id: i + 1, ...bg, is_default: 1, is_premium: 0 });
+    MEM.profile_backgrounds.push({
+      id: i + 1,
+      ...bg,
+      is_default: bg.is_default ?? 1,
+      is_premium: bg.is_premium ?? 0,
+    });
   });
 }
 

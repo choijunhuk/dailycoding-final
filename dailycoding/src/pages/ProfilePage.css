@@ -36,9 +36,8 @@
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(180deg, rgba(0,0,0,.06) 0%, rgba(0,0,0,.38) 100%),
-    radial-gradient(circle at 18% 12%, rgba(121,192,255,.18), transparent 32%),
-    radial-gradient(circle at 86% 18%, rgba(227,179,65,.12), transparent 28%);
+    linear-gradient(180deg, rgba(0,0,0,.08) 0%, rgba(0,0,0,.42) 100%),
+    linear-gradient(90deg, rgba(121,192,255,.16), transparent 42%, rgba(227,179,65,.12));
 }
 .profile-header-content {
   position: relative;
@@ -126,6 +125,73 @@
 .profile-meta-info {
   font-size: 12px;
   color: var(--text3);
+}
+
+/* ── Growth XP ── */
+.profile-growth-card {
+  padding: 18px 20px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(121,192,255,.08), var(--bg2) 48%, rgba(86,211,100,.07));
+}
+.profile-growth-main {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-start;
+}
+.profile-growth-kicker {
+  font-size: 11px;
+  color: var(--blue);
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+.profile-growth-title {
+  font-size: 20px;
+  font-weight: 850;
+}
+.profile-growth-copy {
+  margin-top: 5px;
+  color: var(--text2);
+  font-size: 13px;
+  line-height: 1.65;
+}
+.profile-growth-next {
+  min-width: 180px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(0,0,0,.12);
+}
+.profile-growth-next span {
+  display: block;
+  color: var(--text3);
+  font-size: 11px;
+  margin-bottom: 4px;
+}
+.profile-growth-next strong {
+  color: var(--text);
+  font-size: 13px;
+}
+.profile-growth-bar {
+  height: 8px;
+  margin-top: 16px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--bg3);
+}
+.profile-growth-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--blue), var(--green));
+  transition: width .5s ease;
+}
+.profile-growth-meta {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  color: var(--text3);
+  font-size: 11px;
+  font-family: 'Space Mono', monospace;
 }
 
 .profile-header-stats {
@@ -668,6 +734,15 @@
 
   .profile-tier-progress-container {
     margin: 16px auto 0;
+  }
+
+  .profile-growth-main {
+    flex-direction: column;
+  }
+
+  .profile-growth-next {
+    width: 100%;
+    min-width: 0;
   }
 
   .profile-grid {

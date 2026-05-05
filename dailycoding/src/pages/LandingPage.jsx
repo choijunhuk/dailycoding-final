@@ -7,8 +7,8 @@ import { PLAN_META } from '../data/pricingPlans.js'
 
 const TESTIMONIALS = [
   { name: '김개발', tier: 'gold', text: '매일 한 문제씩 풀다 보니 실력이 눈에 띄게 늘었어요.', company: '카카오 인턴' },
-  { name: '이코딩', tier: 'platinum', text: 'AI 코드 리뷰가 정말 유용합니다. 제 코드의 문제점을 바로 알려줘요.', company: '스타트업 재직중' },
-  { name: '박알고', tier: 'silver', text: '배틀 모드가 너무 재미있어요. 경쟁하면서 실력이 늘어요.', company: '대학원생' },
+  { name: '이코딩', tier: 'platinum', text: '오답을 다시 풀어야 할 순서가 보여서 복습이 덜 밀립니다.', company: '스타트업 재직중' },
+  { name: '박알고', tier: 'silver', text: '배틀보다 평소 루틴 기록이 더 자극돼요. 꾸준히 들어오게 됩니다.', company: '대학원생' },
 ]
 
 const TIERS = [
@@ -33,8 +33,8 @@ const STATS = [
 
 const STEPS = [
   { id: 1, title: '회원가입', desc: '30초 안에 가입하고 바로 문제 풀이를 시작합니다.' },
-  { id: 2, title: '매일 문제 풀기', desc: '난이도별 문제와 필터로 오늘의 한 문제를 선택합니다.' },
-  { id: 3, title: 'AI 리뷰로 성장', desc: '코드 리뷰, 배틀, 제출 기록으로 성장 흐름을 확인합니다.' },
+  { id: 2, title: '오늘의 루틴 실행', desc: '추천 문제, 오답 복구, 일일 미션을 한 화면에서 처리합니다.' },
+  { id: 3, title: 'XP와 프로필 보상', desc: '랭킹과 분리된 경험치로 배지, 칭호, 프로필 배경을 해금합니다.' },
 ]
 
 const DIFFERENTIATORS = [
@@ -58,9 +58,15 @@ const DIFFERENTIATORS = [
   },
   {
     icon: Bot,
-    title: '시도 이후에 더 유용한 AI 코치',
-    desc: '힌트, 코드 리뷰, 오답 코치를 제출 기록과 연결해 막힌 지점을 구체적으로 복기하게 합니다.',
-    tag: 'AI coach',
+    title: '필요할 때만 쓰는 제출 코치',
+    desc: '힌트와 코드 리뷰는 제출 기록 옆에서 보조 도구로 작동합니다. 중심은 풀이 기록과 복습 루틴입니다.',
+    tag: 'Coach',
+  },
+  {
+    icon: Star,
+    title: '랭킹을 건드리지 않는 XP 보상',
+    desc: '일일 미션은 권위가 걸린 랭킹 점수가 아니라 배지, 칭호, 프로필 배경을 여는 개인 성장 보상으로 쌓입니다.',
+    tag: 'Rewards',
   },
 ]
 
@@ -180,15 +186,15 @@ export default function LandingPage({ onLogin, onSignup, onPricing }) {
           <div className="animate-fade-in-up">
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '8px 14px', borderRadius: 999, background: 'rgba(121,192,255,.1)', border: '1px solid rgba(121,192,255,.2)', color: 'var(--blue)', fontSize: 12, fontWeight: 700, marginBottom: 20 }}>
               <Star size={14} />
-              매일 문제 · AI 리뷰 · 실시간 배틀
+              문제 풀이 · 오답 복구 · 프로필 성장
             </div>
-            <h1 style={{ fontSize: 'clamp(42px, 8vw, 72px)', lineHeight: 1.03, fontWeight: 900, letterSpacing: '-0.05em', marginBottom: 18 }}>
-              <span className="gradient-text">코딩 실력을</span><br />
-              레벨업하세요
+            <h1 style={{ fontSize: 'clamp(42px, 8vw, 72px)', lineHeight: 1.03, fontWeight: 900, letterSpacing: 0, marginBottom: 18 }}>
+              <span className="gradient-text">매일 푸는</span><br />
+              코딩 루틴
             </h1>
             <p style={{ fontSize: 18, color: 'var(--text2)', lineHeight: 1.75, maxWidth: 640, marginBottom: 28 }}>
-              매일 문제 · AI 리뷰 · 실시간 배틀로 성장하는 개발자들의 플랫폼.
-              혼자 푸는 연습에서 끝나지 않고, 리뷰와 경쟁, 기록까지 한 흐름으로 연결합니다.
+              DailyCoding은 오늘 풀 문제, 다시 잡을 오답, 쌓이는 XP를 한 흐름으로 보여줍니다.
+              경쟁 점수는 공정하게 두고, 꾸준함은 배지와 칭호, 프로필 배경으로 남깁니다.
             </p>
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 24 }}>
               <button className="btn btn-primary pulse-cta" onClick={onSignup} style={{ padding: '14px 22px', fontSize: 15 }}>

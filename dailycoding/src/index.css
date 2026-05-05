@@ -237,9 +237,9 @@ nav {
 .glow-gold { box-shadow: 0 0 20px rgba(255,215,0,.25); }
 .glow-diamond { box-shadow: 0 0 20px rgba(185,242,255,.25); }
 .hero-gradient-surface {
-  background: linear-gradient(135deg, var(--bg) 0%, #0d2137 50%, var(--bg) 100%);
-  background-size: 200% 200%;
-  animation: heroGradientShift 8s ease infinite;
+  background:
+    linear-gradient(180deg, rgba(121,192,255,.08), transparent 34%),
+    linear-gradient(135deg, var(--bg) 0%, #101820 50%, var(--bg) 100%);
 }
 .pulse-cta {
   animation: slowPulse 2.2s ease-in-out infinite;

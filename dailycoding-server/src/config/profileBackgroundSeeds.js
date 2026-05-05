@@ -21,4 +21,6 @@ export const PROFILE_BACKGROUND_SEEDS = [
   { slug: 'photo-2', name: '배경 2', image_url: '/backgrounds/background2.avif' },
   { slug: 'photo-3', name: '배경 3', image_url: '/backgrounds/background3.avif' },
   { slug: 'photo-4', name: '배경 4', image_url: '/backgrounds/background4.jpg' },
+  { slug: 'focus-grid', name: '포커스 그리드', image_url: 'gradient:linear-gradient(135deg,#0b1220 0%,#10263d 48%,#162018 100%)', is_default: 0 },
+  { slug: 'night-judge', name: '나이트 저지', image_url: 'gradient:linear-gradient(135deg,#080b10 0%,#172033 42%,#1f1a12 100%)', is_default: 0 },
 ];

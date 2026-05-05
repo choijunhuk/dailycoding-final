@@ -1,4 +1,5 @@
 import { insert, query, queryOne, run } from '../config/mysql.js';
+import { Reward } from '../models/Reward.js';
 
 export const MISSION_TEMPLATES = [
   { type: 'solve_1', label: '오늘 문제 1개 풀기', rewardValue: 10 },
@@ -39,9 +40,9 @@ export async function ensureDailyMissions(userId) {
 
   for (const mission of toCreate) {
     await insert(
-      `INSERT IGNORE INTO daily_missions (user_id, mission_date, mission_type, reward_value)
-       VALUES (?, ?, ?, ?)`,
-      [userId, today, mission.type, mission.rewardValue]
+      `INSERT IGNORE INTO daily_missions (user_id, mission_date, mission_type, reward_type, reward_value)
+       VALUES (?, ?, ?, ?, ?)`,
+      [userId, today, mission.type, 'xp', mission.rewardValue]
     );
   }
 
@@ -65,11 +66,13 @@ export async function completeMission(userId, missionType) {
     'UPDATE daily_missions SET is_completed = 1, completed_at = ? WHERE id = ?',
     [toSqlDateTime(), mission.id]
   );
-  await run('UPDATE users SET rating = rating + ? WHERE id = ?', [mission.reward_value, userId]);
+  const progression = await Reward.addXp(userId, mission.reward_value);
 
   return {
     missionType,
+    rewardType: 'xp',
     rewardValue: mission.reward_value,
+    progression,
   };
 }
 
@@ -136,7 +139,7 @@ export function serializeMission(row) {
     type: row.mission_type,
     label: getMissionLabel(row.mission_type),
     isCompleted: Boolean(row.is_completed),
-    rewardType: row.reward_type,
+    rewardType: 'xp',
     rewardValue: row.reward_value,
     completedAt: row.completed_at,
   };

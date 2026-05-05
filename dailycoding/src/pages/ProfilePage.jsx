@@ -67,6 +67,7 @@ export default function ProfilePage() {
   const [rewards,       setRewards]       = useState([]);
   const [equippedBadge, setEquippedBadge] = useState(user?.equippedBadge || null);
   const [equippedTitle, setEquippedTitle] = useState(user?.equippedTitle || null);
+  const [progression, setProgression] = useState(null);
   const [followStats,   setFollowStats]   = useState({ followers:0, following:0 });
   const [bio,           setBio]           = useState(user?.bio || '');
   const [pwCurrent,     setPwCurrent]     = useState('');
@@ -113,13 +114,14 @@ export default function ProfilePage() {
       setRewards(r.data.rewards || []);
       setEquippedBadge(r.data.equippedBadge);
       setEquippedTitle(r.data.equippedTitle);
+      setProgression(r.data.progression || null);
+      return api.get('/auth/profile/backgrounds').then(bg => setBackgrounds(bg.data || []));
     }).catch((err) => {
       if (err?.response?.status !== 401) showLoadErrorToast(err?.response?.data?.message || '보상 정보를 불러오지 못했습니다.');
     });
     api.get('/auth/top100').then(r => setTop100(r.data || [])).catch((err) => {
       if (err?.response?.status !== 401) showLoadErrorToast(err?.response?.data?.message || '랭킹 통계를 불러오지 못했습니다.');
     });
-    api.get('/auth/profile/backgrounds').then(r => setBackgrounds(r.data || [])).catch(() => {});
     if (user?.id) {
       api.get(`/follows/${user.id}/stats`).then(r => setFollowStats(r.data)).catch((err) => {
         if (err?.response?.status !== 401) showLoadErrorToast(err?.response?.data?.message || '팔로우 통계를 불러오지 못했습니다.');
@@ -190,6 +192,11 @@ export default function ProfilePage() {
   const ratingProgress = nextThres
     ? Math.min(Math.max(((user?.rating || 0) - curThres) / (nextThres - curThres) * 100, 0), 100)
     : 100;
+  const nextProgressReward = progression?.nextReward
+    ? progression.nextReward.kind === 'background'
+      ? `Lv.${progression.nextReward.level} 프로필 배경`
+      : `Lv.${progression.nextReward.level} 보상`
+    : '모든 성장 보상 해금';
 
   const langStats = submissions.reduce((acc, s) => { acc[s.lang] = (acc[s.lang]||0)+1; return acc; }, {});
   const topLang   = Object.entries(langStats).sort((a,b)=>b[1]-a[1]);
@@ -407,6 +414,31 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
+
+      {progression && (
+        <div className="profile-growth-card card">
+          <div className="profile-growth-main">
+            <div>
+              <div className="profile-growth-kicker">성장 경험치</div>
+              <div className="profile-growth-title">Lv.{progression.level} · {progression.xp.toLocaleString()} XP</div>
+              <div className="profile-growth-copy">
+                일일 미션 보상은 랭킹 점수가 아니라 XP로만 쌓입니다. 배지, 칭호, 프로필 배경처럼 개인 프로필을 꾸미는 보상만 해금됩니다.
+              </div>
+            </div>
+            <div className="profile-growth-next">
+              <span>다음 해금</span>
+              <strong>{nextProgressReward}</strong>
+            </div>
+          </div>
+          <div className="profile-growth-bar">
+            <div className="profile-growth-fill" style={{ width:`${Math.min(100, Math.max(0, progression.progressPercent || 0))}%` }} />
+          </div>
+          <div className="profile-growth-meta">
+            <span>{progression.currentLevelXp.toLocaleString()} XP</span>
+            <span>{progression.nextLevelXp.toLocaleString()} XP</span>
+          </div>
+        </div>
+      )}
 
       {/* ── 탭 네비게이션 ── */}
       <div className="profile-tabs" style={{ marginBottom:16 }}>
