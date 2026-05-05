@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
 import { useLang } from '../context/LangContext';
@@ -178,9 +178,7 @@ export default function AiPage() {
           </div>
           {quotaNotice && (
             <div style={{marginTop:14,padding:'12px 14px',borderRadius:10,background:'rgba(227,179,65,.08)',border:'1px solid rgba(227,179,65,.2)',fontSize:13,lineHeight:1.7}}>
-              {quotaNotice}{' '}
-              <Link to="/pricing" style={{color:'var(--blue)',fontWeight:700,textDecoration:'none'}}>{t('upgradeLink')}</Link>
-              {t('upgradeUnlimitedSuffix')}
+              {quotaNotice}
             </div>
           )}
         </div>
@@ -294,7 +292,7 @@ export default function AiPage() {
           {hintRemaining !== null && (
             <div style={{fontSize:12,color: hintRemaining===0?'var(--red)':'var(--text3)',marginTop:6}}>
               {hintRemaining === 0
-                ? <>{t('hintExceeded')} <a href="/pricing" style={{color:'var(--blue)',textDecoration:'none'}}>{t('hintUpgradeLink')}</a>{t('hintUpgradeSuffix')}</>
+                ? t('hintExceeded')
                 : t('hintRemainingCount').replace('{n}', hintRemaining)
               }
             </div>

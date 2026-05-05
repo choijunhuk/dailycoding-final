@@ -309,7 +309,7 @@ export default function JudgePage() {
       setBottomTab('review');
     } catch (err) {
       if (err.response?.data?.code === 'QUOTA_EXCEEDED') {
-        setAiQuotaNotice('오늘 AI 힌트를 모두 사용했습니다.');
+        setAiQuotaNotice('오늘 AI 사용 가능 횟수를 모두 소진했습니다.');
         setBottomTab('review');
       } else {
         toast?.show('AI 리뷰를 불러올 수 없습니다.', 'error');

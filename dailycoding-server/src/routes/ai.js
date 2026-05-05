@@ -26,7 +26,7 @@ const checkAiQuota = async (req, res, next) => {
   const current = await redis.get(key);
   if (current && parseInt(current) >= AI_DAILY_QUOTA) {
     return res.status(429).json({ 
-      message: `일일 AI 힌트 할당량(${AI_DAILY_QUOTA}회)을 모두 사용하셨습니다. Pro 플랜으로 업그레이드하고 무제한으로 이용하세요!`,
+      message: `오늘 AI 사용 가능 횟수 ${AI_DAILY_QUOTA}회를 모두 소진했습니다.`,
       code: 'QUOTA_EXCEEDED'
     });
   }
@@ -127,7 +127,7 @@ router.post('/chat', auth, requireVerified, checkAiQuota, async (req, res) => {
 위 질문에 대해 한국어로 명확하고 교육적인 답변을 3문장 이내의 JSON으로 반환하세요.
 반환형식: {"text": "답변 내용"}`;
 
-  const aiResult = await askAIWithMeta(req.user.id, prompt, { text: '알고리즘 공부 화이팅입니다!' }, 250);
+  const aiResult = await askAIWithMeta(req.user.id, prompt, { text: 'AI 사용 가능 횟수가 모두 소진되었습니다.' }, 250);
   const result = aiResult.data;
   
   if (aiResult.source === 'ai') {
