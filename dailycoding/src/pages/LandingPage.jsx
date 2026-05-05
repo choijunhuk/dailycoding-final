@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowRight, PlayCircle, Moon, Sun, Sparkles, Star } from 'lucide-react'
+import { ArrowRight, PlayCircle, Moon, Sun, Sparkles, Star, Target, Swords, Bot, RotateCcw } from 'lucide-react'
 import { useTheme } from '../context/ThemeContext.jsx'
 import './LandingPage.css'
 import { TIER_THRESHOLDS } from '../data/constants.js'
@@ -35,6 +35,33 @@ const STEPS = [
   { id: 1, title: '회원가입', desc: '30초 안에 가입하고 바로 문제 풀이를 시작합니다.' },
   { id: 2, title: '매일 문제 풀기', desc: '난이도별 문제와 필터로 오늘의 한 문제를 선택합니다.' },
   { id: 3, title: 'AI 리뷰로 성장', desc: '코드 리뷰, 배틀, 제출 기록으로 성장 흐름을 확인합니다.' },
+]
+
+const DIFFERENTIATORS = [
+  {
+    icon: Target,
+    title: '오늘 할 일이 보이는 학습 루틴',
+    desc: '문제 목록을 던져주는 데서 끝나지 않고, 대시보드에서 추천 문제와 미션, 주간 챌린지를 바로 이어줍니다.',
+    tag: 'Daily loop',
+  },
+  {
+    icon: RotateCcw,
+    title: '오답을 다시 잡는 복구 큐',
+    desc: '최근 실패 제출을 원인별로 정리해 재도전과 AI 오답 코치로 연결합니다.',
+    tag: 'Recovery',
+  },
+  {
+    icon: Swords,
+    title: '혼자 푸는 연습을 배틀로 확장',
+    desc: '실시간 1:1 배틀과 랭킹을 통해 짧은 압박 상황에서도 풀이 속도와 정확도를 점검합니다.',
+    tag: 'Battle',
+  },
+  {
+    icon: Bot,
+    title: '시도 이후에 더 유용한 AI 코치',
+    desc: '힌트, 코드 리뷰, 오답 코치를 제출 기록과 연결해 막힌 지점을 구체적으로 복기하게 합니다.',
+    tag: 'AI coach',
+  },
 ]
 
 const CODE_LINES = [
@@ -226,6 +253,35 @@ export default function LandingPage({ onLogin, onSignup, onPricing }) {
               <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 4 }}>{item.label}</div>
             </div>
           ))}
+        </div>
+      </section>
+
+      <section style={{ maxWidth: 1120, margin: '0 auto', padding: '72px 24px 16px' }}>
+        <div style={{ marginBottom: 34 }}>
+          <div style={{ fontSize: 12, color: 'var(--blue)', fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 10 }}>Why DailyCoding</div>
+          <h2 style={{ fontSize: 'clamp(28px, 5vw, 42px)', fontWeight: 900, marginBottom: 10 }}>문제만 많은 사이트가 아니라, 다시 풀게 만드는 플랫폼</h2>
+          <p style={{ maxWidth: 720, color: 'var(--text2)', lineHeight: 1.7 }}>
+            Codeforces식 대회 문화, solved.ac식 티어 정보, HackerRank식 AI 평가와 다르게 DailyCoding은 매일의 루틴, 오답 복구, AI 코치, 배틀을 한 화면에서 이어주는 데 집중합니다.
+          </p>
+        </div>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(230px, 1fr))', gap:16 }}>
+          {DIFFERENTIATORS.map((item, index) => {
+            const Icon = item.icon
+            return (
+              <div key={item.title} className={`card card-hover animate-fade-in-up animate-delay-${Math.min(index + 1, 3)}`} style={{ padding:'22px 20px', borderRadius:8 }}>
+                <div style={{ display:'flex', justifyContent:'space-between', gap:12, alignItems:'center', marginBottom:16 }}>
+                  <div style={{ width:42, height:42, borderRadius:12, display:'grid', placeItems:'center', background:'rgba(121,192,255,.1)', color:'var(--blue)' }}>
+                    <Icon size={20} />
+                  </div>
+                  <span style={{ padding:'4px 8px', borderRadius:999, background:'var(--bg3)', color:'var(--text3)', fontSize:11, fontWeight:800 }}>
+                    {item.tag}
+                  </span>
+                </div>
+                <div style={{ fontSize:17, fontWeight:900, marginBottom:8 }}>{item.title}</div>
+                <div style={{ color:'var(--text2)', lineHeight:1.7, fontSize:14 }}>{item.desc}</div>
+              </div>
+            )
+          })}
         </div>
       </section>
 

@@ -311,6 +311,25 @@ router.get('/stats', auth, async (req, res) => {
   } catch { res.json({ total:0, correct:0, wrong:0, langStats:[], weaknessStats:[] }); }
 });
 
+// GET /api/submissions/recovery
+router.get('/recovery', auth, async (req, res) => {
+  try {
+    const recoveryQueue = await Submission.getRecoveryQueue(req.user.id, {
+      limit: req.query.limit,
+    });
+    res.json({
+      count: recoveryQueue.length,
+      items: recoveryQueue,
+      summary: recoveryQueue.length > 0
+        ? '최근 실패한 문제를 먼저 복구하면 같은 시간 대비 실력 상승 효율이 높습니다.'
+        : '미해결 오답이 없습니다. 새로운 문제나 배틀로 난이도를 올려보세요.',
+    });
+  } catch (err) {
+    console.error('[submissions/recovery]', err);
+    return internalError(res, err?.message || '오답 복구 큐를 불러오지 못했습니다.');
+  }
+});
+
 // GET /api/submissions/judge-status
 router.get('/judge-status', auth, async (req, res) => {
   try {

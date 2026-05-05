@@ -27,7 +27,7 @@ export default function SubmissionsPage() {
   const RESULT_FILTERS = [['all',t('allOption')],['correct',t('submissionsCorrect')],['wrong',t('submissionsWrongShort')],['timeout',t('submissionsTimeoutShort')],['error',t('submissionsErrorShort')],['compile',t('submissionsCompileShort')]];
   const [scope, setScope] = useState(location.state?.scope || 'me');
   const [query, setQuery] = useState('');
-  const [resultF, setResultF] = useState('all');
+  const [resultF, setResultF] = useState(location.state?.result || 'all');
   const [langF, setLangF] = useState('all');
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -39,6 +39,7 @@ export default function SubmissionsPage() {
   const [coachLoading, setCoachLoading] = useState({});
   const [compareIds, setCompareIds] = useState([]);
   const [compareOpen, setCompareOpen] = useState(false);
+  const [handledHighlightId, setHandledHighlightId] = useState(null);
   const highlightId = location.state?.highlightId || null;
 
   useEffect(() => {
@@ -120,7 +121,7 @@ export default function SubmissionsPage() {
     setCompareIds((prev) => prev.length >= 2 ? [prev[1], row.id] : [...prev, row.id]);
   };
 
-  const loadCoach = async (row) => {
+  const loadCoach = useCallback(async (row) => {
     if (!row?.isMine) return;
     if (coachById[row.id] || coachLoading[row.id]) return;
     setCoachLoading((prev) => ({ ...prev, [row.id]: true }));
@@ -132,7 +133,19 @@ export default function SubmissionsPage() {
     } finally {
       setCoachLoading((prev) => ({ ...prev, [row.id]: false }));
     }
-  };
+  }, [coachById, coachLoading, toast]);
+
+  useEffect(() => {
+    if (!highlightId || handledHighlightId === highlightId || rows.length === 0) return;
+    const target = rows.find((row) => row.id === highlightId);
+    if (!target) return;
+    setExp(target.id);
+    ensureCodeLoaded(target);
+    if (location.state?.autoCoach && ['wrong', 'timeout', 'error', 'compile'].includes(target.result)) {
+      loadCoach(target);
+    }
+    setHandledHighlightId(highlightId);
+  }, [ensureCodeLoaded, handledHighlightId, highlightId, loadCoach, location.state?.autoCoach, rows]);
 
   const compareRows = compareIds.map((id) => rows.find((row) => row.id === id)).filter(Boolean);
 

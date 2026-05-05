@@ -77,6 +77,7 @@ export default function Dashboard() {
   const [followFeed, setFollowFeed] = useState([]);
   const [promotion, setPromotion] = useState({ active: null, recent: null });
   const [referral, setReferral] = useState(null);
+  const [recoveryQueue, setRecoveryQueue] = useState({ count: 0, items: [], summary: '' });
   const [copiedReferral, setCopiedReferral] = useState(false);
   const loadErrorToastShownRef = useRef(false);
   const { rankingData } = useRankingData();
@@ -169,6 +170,18 @@ export default function Dashboard() {
       })
       .catch(() => {
         if (!cancelled) setReferral(null);
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    api.get('/submissions/recovery', { params: { limit: 3 } })
+      .then(({ data }) => {
+        if (!cancelled) setRecoveryQueue(data || { count: 0, items: [], summary: '' });
+      })
+      .catch(() => {
+        if (!cancelled) setRecoveryQueue({ count: 0, items: [], summary: '' });
       });
     return () => { cancelled = true; };
   }, []);
@@ -399,6 +412,95 @@ export default function Dashboard() {
               )}
             </div>
           )}
+
+          <div className="card card-hover" style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:12,padding:22}}>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:12,marginBottom:14}}>
+              <div>
+                <div style={{fontWeight:800,fontSize:14,display:'flex',alignItems:'center',gap:8}}>
+                  <Target size={16} />오답 복구 큐
+                </div>
+                <div style={{fontSize:12,color:'var(--text3)',marginTop:4,lineHeight:1.5}}>
+                  {recoveryQueue.summary || '틀린 문제를 다시 잡아 실전 약점을 줄입니다.'}
+                </div>
+              </div>
+              <span style={{
+                padding:'4px 9px',borderRadius:999,
+                background:recoveryQueue.count > 0 ? 'rgba(248,81,73,.1)' : 'rgba(86,211,100,.1)',
+                color:recoveryQueue.count > 0 ? 'var(--red)' : 'var(--green)',
+                fontSize:11,fontWeight:800,whiteSpace:'nowrap',
+              }}>
+                {recoveryQueue.count > 0 ? `${recoveryQueue.count}개 대기` : '정리됨'}
+              </span>
+            </div>
+            {recoveryQueue.items?.length > 0 ? (
+              <div style={{display:'flex',flexDirection:'column',gap:10}}>
+                {recoveryQueue.items.slice(0,3).map((item) => (
+                  <div key={item.submissionId} style={{
+                    padding:'12px 14px',borderRadius:10,
+                    background:'var(--bg3)',border:'1px solid var(--border)',
+                  }}>
+                    <div style={{display:'flex',justifyContent:'space-between',gap:10,alignItems:'flex-start'}}>
+                      <div style={{minWidth:0}}>
+                        <button
+                          onClick={() => navigate(`/problems/${item.problemId}`)}
+                          style={{
+                            background:'none',border:'none',padding:0,color:'var(--text)',
+                            fontSize:13,fontWeight:800,fontFamily:'inherit',cursor:'pointer',
+                            textAlign:'left',
+                          }}
+                        >
+                          {item.problemTitle}
+                        </button>
+                        <div style={{fontSize:11,color:'var(--text3)',marginTop:4}}>
+                          {item.cause} · {TIERS[item.tier]?.label || item.tier} · {item.lang}
+                        </div>
+                      </div>
+                      <span style={{
+                        color:item.priority === 'high' ? 'var(--red)' : 'var(--orange)',
+                        fontSize:11,fontWeight:800,whiteSpace:'nowrap',
+                      }}>
+                        {item.priority === 'high' ? '우선 복구' : '점검'}
+                      </span>
+                    </div>
+                    <div style={{fontSize:12,color:'var(--text2)',lineHeight:1.6,marginTop:8}}>
+                      {item.action}
+                    </div>
+                    {item.tags?.length > 0 && (
+                      <div style={{display:'flex',gap:6,flexWrap:'wrap',marginTop:8}}>
+                        {item.tags.map((tagName) => (
+                          <span key={tagName} style={{
+                            padding:'2px 7px',borderRadius:999,
+                            background:'rgba(121,192,255,.08)',
+                            color:'var(--blue)',fontSize:10,fontWeight:700,
+                          }}>
+                            {tagName}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <div style={{display:'flex',gap:8,marginTop:10,flexWrap:'wrap'}}>
+                      <button
+                        className="btn btn-primary btn-sm"
+                        onClick={() => navigate(`/problems/${item.problemId}`)}
+                      >
+                        재도전
+                      </button>
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => navigate('/submissions', { state: { scope: 'me', result: item.result, highlightId: item.submissionId, autoCoach: true } })}
+                      >
+                        AI 코치 보기
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{padding:'14px 0',fontSize:13,color:'var(--text3)',lineHeight:1.7}}>
+                지금은 미해결 오답이 없습니다. 추천 문제나 배틀로 새로운 약점을 찾아보세요.
+              </div>
+            )}
+          </div>
 
           {/* 잔디 */}
           <div className="card card-hover" style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:12,padding:22}}>

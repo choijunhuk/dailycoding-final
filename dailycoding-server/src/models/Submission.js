@@ -223,6 +223,96 @@ export const Submission = {
     return (rows||[]).map(r => ({ lang: r.lang, cnt: Number(r.cnt) }));
   },
 
+  getRecoveryAdvice(result, detail = '') {
+    const text = String(detail || '').toLowerCase();
+    if (result === 'timeout') {
+      return {
+        cause: '시간 초과',
+        action: '반복 횟수와 시간 복잡도를 먼저 줄여보세요.',
+        priority: 'high',
+      };
+    }
+    if (result === 'compile') {
+      return {
+        cause: '컴파일 오류',
+        action: '언어 선택, import, 함수명, 입출력 형식을 확인하세요.',
+        priority: 'medium',
+      };
+    }
+    if (result === 'error' || text.includes('runtime')) {
+      return {
+        cause: '런타임 오류',
+        action: '빈 입력, 인덱스 범위, 0 나누기 같은 예외 케이스를 재현하세요.',
+        priority: 'medium',
+      };
+    }
+    return {
+      cause: '오답',
+      action: '예제를 손으로 추적하고 최소/최대 경계 케이스를 추가하세요.',
+      priority: 'high',
+    };
+  },
+
+  async getRecoveryQueue(userId, { limit = 5 } = {}) {
+    const cap = Math.min(Math.max(1, Number(limit) || 5), 12);
+    const rows = await query(
+      `SELECT s.id, s.problem_id, s.lang, s.result, s.detail, s.submitted_at,
+              p.title AS problem_title, p.tier, p.difficulty,
+              GROUP_CONCAT(DISTINCT pt.tag ORDER BY pt.tag SEPARATOR ',') AS tags
+       FROM submissions s
+       JOIN (
+         SELECT problem_id, MAX(submitted_at) AS last_failed_at
+         FROM submissions
+         WHERE user_id = ? AND result IN ('wrong', 'timeout', 'error', 'compile')
+         GROUP BY problem_id
+       ) latest ON latest.problem_id = s.problem_id AND latest.last_failed_at = s.submitted_at
+       JOIN problems p ON p.id = s.problem_id
+       LEFT JOIN problem_tags pt ON pt.problem_id = p.id
+       WHERE s.user_id = ?
+         AND s.result IN ('wrong', 'timeout', 'error', 'compile')
+         AND NOT EXISTS (
+           SELECT 1
+           FROM submissions solved
+           WHERE solved.user_id = s.user_id
+             AND solved.problem_id = s.problem_id
+             AND solved.result = 'correct'
+             AND solved.submitted_at >= s.submitted_at
+           LIMIT 1
+         )
+       GROUP BY s.id, s.problem_id, s.lang, s.result, s.detail, s.submitted_at, p.title, p.tier, p.difficulty
+       ORDER BY
+         CASE s.result
+           WHEN 'timeout' THEN 1
+           WHEN 'wrong' THEN 2
+           WHEN 'compile' THEN 3
+           ELSE 4
+         END,
+         s.submitted_at DESC
+       LIMIT ${cap}`,
+      [userId, userId]
+    );
+
+    return (rows || []).map((row) => {
+      const advice = this.getRecoveryAdvice(row.result, row.detail);
+      return {
+        submissionId: row.id,
+        problemId: row.problem_id,
+        problemTitle: row.problem_title || `문제 #${row.problem_id}`,
+        tier: row.tier || 'unranked',
+        difficulty: row.difficulty ?? null,
+        lang: row.lang,
+        result: row.result,
+        cause: advice.cause,
+        action: advice.action,
+        priority: advice.priority,
+        tags: String(row.tags || '').split(',').map((tag) => tag.trim()).filter(Boolean).slice(0, 4),
+        detail: row.detail || '',
+        submittedAt: row.submitted_at,
+        date: new Date(row.submitted_at).toLocaleString('ko-KR'),
+      };
+    });
+  },
+
   async findFeed(viewerId, { scope = 'me', q = '', result = 'all', lang = 'all', limit = 100, userId } = {}) {
     const cap = Math.min(Math.max(1, Number(limit) || 100), 200);
     const targetUserId = userId ? Number(userId) : null;
