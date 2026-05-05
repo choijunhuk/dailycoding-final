@@ -19,6 +19,7 @@ const LANGUAGE_TRACKS = [
   {
     id: 'python',
     icon: '🐍',
+    logo: '/tech/python.png',
     label: 'Python',
     color: { bg: 'rgba(255,212,59,.08)', border: 'rgba(255,212,59,.3)', text: '#d4a900', pill: 'rgba(255,212,59,.15)' },
     desc: '파이썬으로 알고리즘의 기초를 배워보세요. 문법이 간결해 초보자에게 가장 추천하는 언어입니다.',
@@ -104,6 +105,7 @@ const LANGUAGE_TRACKS = [
   {
     id: 'javascript',
     icon: '🟨',
+    logo: '/tech/javascript.webp',
     label: 'JavaScript',
     color: { bg: 'rgba(247,223,30,.08)', border: 'rgba(247,223,30,.3)', text: '#c9a800', pill: 'rgba(247,223,30,.15)' },
     desc: '웹의 언어 자바스크립트로 알고리즘 실력과 웹 개발 역량을 동시에 키워보세요.',
@@ -185,6 +187,7 @@ const LANGUAGE_TRACKS = [
   {
     id: 'java',
     icon: '☕',
+    logo: '/tech/java.webp',
     label: 'Java',
     color: { bg: 'rgba(234,91,32,.08)', border: 'rgba(234,91,32,.3)', text: '#ea5b20', pill: 'rgba(234,91,32,.15)' },
     desc: '객체지향 프로그래밍의 정석 Java로 탄탄한 기초를 쌓으세요. 취업 코딩테스트 1위 언어입니다.',
@@ -263,6 +266,7 @@ const LANGUAGE_TRACKS = [
   {
     id: 'c',
     icon: '🔵',
+    logo: '/tech/c.png',
     label: 'C언어',
     color: { bg: 'rgba(88,166,255,.08)', border: 'rgba(88,166,255,.3)', text: '#58a6ff', pill: 'rgba(88,166,255,.15)' },
     desc: '컴퓨터 과학의 뿌리 C언어로 메모리 구조와 포인터까지 깊이 이해하세요.',
@@ -342,6 +346,7 @@ const LANGUAGE_TRACKS = [
   {
     id: 'cpp',
     icon: '⚙️',
+    logo: '/tech/cpp.png',
     label: 'C++',
     color: { bg: 'rgba(86,211,100,.08)', border: 'rgba(86,211,100,.3)', text: '#56d364', pill: 'rgba(86,211,100,.15)' },
     desc: 'STL과 고성능 알고리즘의 강자 C++로 코딩 대회와 실전 개발까지 대비하세요.',
@@ -703,7 +708,10 @@ export default function LearningPathPage() {
                   cursor: 'pointer', transition: 'all .15s', fontFamily: 'inherit',
                 }}
               >
-                <span>{t.icon}</span>
+                {t.logo
+                  ? <img src={t.logo} width={16} height={16} alt={t.label} style={{ objectFit: 'contain', flexShrink: 0 }} />
+                  : <span>{t.icon}</span>
+                }
                 <span>{t.label}</span>
               </button>
             );
@@ -747,7 +755,10 @@ export default function LearningPathPage() {
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: 24, flexShrink: 0,
         }}>
-          {track.icon}
+          {track.logo
+            ? <img src={track.logo} width={28} height={28} alt={track.label} style={{ objectFit: 'contain' }} />
+            : <span>{track.icon}</span>
+          }
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--text)', marginBottom: 4 }}>

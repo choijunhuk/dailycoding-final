@@ -30,7 +30,22 @@ export default function ExamListPage() {
   return (
     <div style={{ padding: '28px 24px 48px', maxWidth: 1100, margin: '0 auto' }}>
       <h1 style={{ fontSize: 28, fontWeight: 800, marginBottom: 8 }}>{t('exams')}</h1>
-      <p style={{ color: 'var(--text2)', marginBottom: 20 }}>{t('examListDesc')}</p>
+      <p style={{ color: 'var(--text2)', marginBottom: 16 }}>{t('examListDesc')}</p>
+
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))', gap:10, marginBottom:24 }}>
+        {[
+          { icon:'⏱️', title:'시간 배분 전략', desc:'문제당 평균 시간을 미리 계산해 풀이 순서를 정하세요.' },
+          { icon:'📋', title:'풀이 먼저 설계', desc:'코드 작성 전 입출력 예제로 로직을 검증하세요.' },
+          { icon:'🔁', title:'엣지 케이스 확인', desc:'빈 배열, 최댓값, 음수 등 경계값을 항상 테스트하세요.' },
+          { icon:'🏆', title:'실전 연습 필수', desc:'타이머를 켜고 실전과 동일한 환경에서 반복 연습하세요.' },
+        ].map(tip => (
+          <div key={tip.title} style={{ padding:'14px 16px', background:'var(--bg2)', border:'1px solid var(--border)', borderRadius:10 }}>
+            <div style={{ fontSize:22, marginBottom:6 }}>{tip.icon}</div>
+            <div style={{ fontWeight:700, fontSize:13, marginBottom:4 }}>{tip.title}</div>
+            <div style={{ fontSize:12, color:'var(--text2)', lineHeight:1.6 }}>{tip.desc}</div>
+          </div>
+        ))}
+      </div>
 
       <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:20 }}>
         {COMPANIES.map((item) => (

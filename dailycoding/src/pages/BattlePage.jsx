@@ -751,6 +751,20 @@ export default function BattlePage() {
                 ) : (
                   <>
                     <div className="bp-section-title">내 배틀 히스토리</div>
+                    {historyRows.length > 0 && (
+                      <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:8, marginBottom:14 }}>
+                        {[
+                          ['승', historyRows.filter(r=>r.result==='win').length, 'var(--green)'],
+                          ['패', historyRows.filter(r=>r.result==='lose').length, 'var(--red)'],
+                          ['무', historyRows.filter(r=>r.result==='draw').length, 'var(--yellow)'],
+                        ].map(([label, count, color]) => (
+                          <div key={label} style={{ padding:'10px', background:'var(--bg3)', border:'1px solid var(--border)', borderRadius:8, textAlign:'center' }}>
+                            <div style={{ color, fontSize:20, fontWeight:900 }}>{count}</div>
+                            <div style={{ color:'var(--text3)', fontSize:11 }}>{label}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                     {historyLoading ? (
                       <div className="bp-empty-msg">히스토리를 불러오는 중입니다.</div>
                     ) : historyRows.length === 0 ? (

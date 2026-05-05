@@ -65,7 +65,6 @@ const NAV = [
   { path:'/exams',       labelKey:'exams',       Icon: Trophy },
   { path:'/sheets',      labelKey:'sheets',      Icon: BookOpen },
   { path:'/learning',    labelKey:'learning',    Icon: Sparkles },
-  { path:'/growth',      labelKey:'growthHub',   Icon: Sparkles },
   { path:'/pricing',     labelKey:'subscribe',   Icon: CreditCard },
   { path:'/ai',          labelKey:'ai',          Icon: Bot },
   { path:'/submissions', labelKey:'submissions', Icon: FileText },
