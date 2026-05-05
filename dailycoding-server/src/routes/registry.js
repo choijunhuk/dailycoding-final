@@ -59,7 +59,7 @@ export function registerRoutes(app) {
   app.use('/api/referral', generalLimiter, referralRouter);
   app.use('/api/exams', generalLimiter, examsRouter);
   app.use('/api', generalLimiter, sheetsRouter);
-  app.use('/api', generalLimiter, growthRouter);
+  app.use('/api/growth-hub', generalLimiter, growthRouter);
 
   app.get('/api/stats', async (req, res) => {
     try {

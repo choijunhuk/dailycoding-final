@@ -176,7 +176,7 @@ async function getGrowthShareCard(userId) {
   };
 }
 
-router.get('/growth-hub', async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const [weeklyPlan, battleAnalysis, shareCard, recoveryQueue] = await Promise.all([
       getWeeklyPlan(req.user.id),
