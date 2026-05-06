@@ -43,6 +43,8 @@ const SOCIAL_ICON_META = {
   tistory:   { label:'Tistory',   color:'#ff5a00',      icon:<img src="/social/tistory.png"  width="14" height="14" alt="Tistory" style={{ objectFit:'contain' }} /> },
 };
 
+const countFilledProfileLinks = (links = {}) => Object.values(links || {}).filter(Boolean).length;
+
 export default function ProfilePage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -197,6 +199,35 @@ export default function ProfilePage() {
       ? `Lv.${progression.nextReward.level} 프로필 배경`
       : `Lv.${progression.nextReward.level} 보상`
     : '모든 성장 보상 해금';
+  const rewardByCode = new Map(rewards.map((reward) => [reward.code, reward]));
+  const equippedBadgeMeta = equippedBadge ? rewardByCode.get(equippedBadge) : null;
+  const equippedTitleMeta = equippedTitle ? rewardByCode.get(equippedTitle) : null;
+  const isSettingsTab = mainTab === 'settings';
+  const savedSocialLinks = user?.socialLinks || {};
+  const savedTechStack = user?.techStack || [];
+  const headerDisplayName = isSettingsTab
+    ? (displayName || user?.displayName || user?.username)
+    : (user?.displayName || user?.username);
+  const headerBio = isSettingsTab ? bio : user?.bio;
+  const headerTechStack = isSettingsTab ? techStack : savedTechStack;
+  const headerSocialLinks = isSettingsTab ? socialLinks : savedSocialLinks;
+  const profileDraftChanged = isSettingsTab && (
+    (displayName || '') !== (user?.displayName || '') ||
+    (bio || '') !== (user?.bio || '') ||
+    JSON.stringify(socialLinks || {}) !== JSON.stringify(savedSocialLinks || {}) ||
+    JSON.stringify(techStack || []) !== JSON.stringify(savedTechStack || [])
+  );
+  const profileCompletenessItems = [
+    { label:'소개', done:Boolean((bio || '').trim()) },
+    { label:'아바타', done:Boolean(avatarUrlCustom || avatarEmoji || avatarColor) },
+    { label:'배경', done:Boolean(equippedBackground) },
+    { label:'기술', done:techStack.length > 0 },
+    { label:'링크', done:countFilledProfileLinks(socialLinks) > 0 },
+    { label:'보상', done:Boolean(equippedBadge || equippedTitle) },
+  ];
+  const profileCompleteness = Math.round(
+    profileCompletenessItems.filter((item) => item.done).length / profileCompletenessItems.length * 100
+  );
 
   const langStats = submissions.reduce((acc, s) => { acc[s.lang] = (acc[s.lang]||0)+1; return acc; }, {});
   const topLang   = Object.entries(langStats).sort((a,b)=>b[1]-a[1]);
@@ -304,12 +335,24 @@ export default function ProfilePage() {
     <div className="profile-page">
 
       {/* ── 배너 헤더 ── */}
-      <div className="profile-header-card">
+      <div className={`profile-header-card ${isSettingsTab ? 'settings-active' : ''}`}>
         {/* 배너 배경 */}
         <div className="profile-header-banner" style={{ background: profileBannerBackground }}/>
 
         {/* 프로필 콘텐츠 */}
         <div className="profile-header-content">
+          <div className="profile-header-mode-row">
+            <span className={`profile-mode-pill ${isSettingsTab ? 'editing' : ''}`}>
+              {isSettingsTab ? '편집 미리보기' : '공개 프로필'}
+            </span>
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={() => setMainTab(isSettingsTab ? 'solved' : 'settings')}
+            >
+              {isSettingsTab ? '프로필 보기' : '프로필 설정'}
+            </button>
+          </div>
+
           {/* 아바타 */}
           <div className="profile-header-avatar" style={{
             border: `3px solid ${tc}`, background: avatarColor || 'var(--bg3)',
@@ -324,11 +367,11 @@ export default function ProfilePage() {
           <div className="profile-header-info">
             <div className="profile-header-name-row">
               {equippedBadge && (
-                <span className="profile-equipped-badge" title={rewards.find(r=>r.code===equippedBadge)?.name}>
-                  {rewards.find(r=>r.code===equippedBadge)?.icon}
+                <span className="profile-equipped-badge" title={equippedBadgeMeta?.name}>
+                  {equippedBadgeMeta?.icon}
                 </span>
               )}
-              <span className="profile-username">{user?.username}</span>
+              <span className="profile-username">{headerDisplayName}</span>
               <span className="profile-tier-badge" style={{
                 background:`${tc}20`, color:tc, border:`1px solid ${tc}50`,
               }}>{PROFILE_TIER_LABELS[user?.tier || 'unranked']}</span>
@@ -341,15 +384,16 @@ export default function ProfilePage() {
               )}
               {equippedTitle && (
                 <span className="profile-title-badge">
-                  {rewards.find(r=>r.code===equippedTitle)?.icon} {rewards.find(r=>r.code===equippedTitle)?.name}
+                  {equippedTitleMeta?.icon} {equippedTitleMeta?.name}
                 </span>
               )}
+              {profileDraftChanged && <span className="profile-unsaved-pill">저장 전</span>}
             </div>
-            {user?.bio && <div className="profile-bio">{user.bio}</div>}
-            <div className="profile-meta-info">가입일 {user?.joinDate} · {user?.email}</div>
-            {techStack.length > 0 && (
+            {headerBio && <div className="profile-bio">{headerBio}</div>}
+            <div className="profile-meta-info">@{user?.username} · 가입일 {user?.joinDate} · {user?.email}</div>
+            {headerTechStack.length > 0 && (
               <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginTop:8 }}>
-                {techStack.slice(0, 10).map(tech => (
+                {headerTechStack.slice(0, 10).map(tech => (
                   <span key={tech} style={{ display:'flex', alignItems:'center', gap:4, fontSize:11, padding:'3px 8px', borderRadius:20, background:'var(--bg3)', border:'1px solid var(--border)', color:'var(--text2)' }}>
                     {TECH_LOGO_MAP[tech] && <img src={TECH_LOGO_MAP[tech]} width={12} height={12} alt="" style={{ objectFit:'contain', flexShrink:0 }}/>}
                     {tech}
@@ -357,9 +401,9 @@ export default function ProfilePage() {
                 ))}
               </div>
             )}
-            {Object.entries(socialLinks).some(([, v]) => v) && (
+            {Object.entries(headerSocialLinks).some(([, v]) => v) && (
               <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginTop:6 }}>
-                {Object.entries(socialLinks).filter(([, url]) => url).map(([key, url]) => {
+                {Object.entries(headerSocialLinks).filter(([, url]) => url).map(([key, url]) => {
                   const meta = SOCIAL_ICON_META[key];
                   if (!meta) return null;
                   const href = url.startsWith('http') ? url : `https://${url}`;
@@ -776,6 +820,69 @@ export default function ProfilePage() {
       ══════════════════════════════════════ */}
       {mainTab==='settings' && (
         <div className="fade-up profile-settings-layout">
+          <div className="profile-settings-hero">
+            <div>
+              <div className="profile-settings-kicker">프로필 설정</div>
+              <h2>{headerDisplayName}님의 프로필</h2>
+            </div>
+            <div className="profile-completion-card">
+              <div className="profile-completion-head">
+                <span>완성도</span>
+                <strong>{profileCompleteness}%</strong>
+              </div>
+              <div className="profile-completion-bar">
+                <div style={{ width:`${profileCompleteness}%` }} />
+              </div>
+              <div className="profile-completion-list">
+                {profileCompletenessItems.map((item) => (
+                  <span key={item.label} className={item.done ? 'done' : ''}>{item.label}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="profile-settings-preview-grid">
+            <div className="profile-live-preview">
+              <div className="profile-live-banner" style={{ background: profileBannerBackground }} />
+              <div className="profile-live-body">
+                <div className="profile-live-avatar" style={{ background: avatarColor || 'var(--bg3)', borderColor: tc }}>
+                  {avatarUrlCustom
+                    ? <img src={avatarUrlCustom} alt="avatar preview" />
+                    : (avatarEmoji || user?.username?.slice(0,2).toUpperCase())}
+                </div>
+                <div className="profile-live-info">
+                  <div className="profile-live-name-row">
+                    {equippedBadgeMeta && <span>{equippedBadgeMeta.icon}</span>}
+                    <strong>{headerDisplayName}</strong>
+                    <span className="profile-live-tier" style={{ color:tc, borderColor:`${tc}55`, background:`${tc}16` }}>
+                      {PROFILE_TIER_LABELS[user?.tier || 'unranked']}
+                    </span>
+                  </div>
+                  <p>{headerBio || '자기소개를 입력하면 프로필 상단에 표시됩니다.'}</p>
+                  {equippedTitleMeta && <div className="profile-live-title">{equippedTitleMeta.icon} {equippedTitleMeta.name}</div>}
+                  <div className="profile-live-chips">
+                    {headerTechStack.slice(0, 5).map((tech) => <span key={tech}>{tech}</span>)}
+                    {countFilledProfileLinks(headerSocialLinks) > 0 && <span>링크 {countFilledProfileLinks(headerSocialLinks)}개</span>}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="profile-settings-notes">
+              <div>
+                <span>공개 상태</span>
+                <strong>{submissionsPublic ? '제출 기록 공개' : '제출 기록 비공개'}</strong>
+              </div>
+              <div>
+                <span>기본 언어</span>
+                <strong>{JUDGE_LANGUAGE_OPTIONS.find((option) => option.value === defaultLanguage)?.label || defaultLanguage}</strong>
+              </div>
+              <div>
+                <span>변경사항</span>
+                <strong>{profileDraftChanged ? '저장 필요' : '저장됨'}</strong>
+              </div>
+            </div>
+          </div>
 
           {/* 프로필 정보 */}
           <div className="card">
