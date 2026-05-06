@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext.jsx'
 import { useLang } from '../context/LangContext.jsx'
 import api from '../api.js'
-import { Filter, Grid, List, Search, Share2, Star, X } from 'lucide-react'
+import { Bookmark, CheckCircle2, Filter, Grid, List, Search, Share2, Star, Target, X } from 'lucide-react'
 import {
   FALLBACK_TAGS,
   getStoredView,
@@ -249,6 +249,9 @@ export default function ProblemsPage() {
   const safePage = Math.min(effectiveList.page || page, totalPages)
   const solvedCount = Object.keys(solved).length
   const unsolvedCount = Math.max(0, PROBLEMS.length - solvedCount)
+  const bookmarkedCount = Object.keys(bookmarks).filter(id => bookmarks[id]).length
+  const completionPct = PROBLEMS.length ? Math.round(solvedCount / PROBLEMS.length * 100) : 0
+  const nextProblem = recommendedProblems[0] || sortProblems(PROBLEMS.filter(problem => !solved[problem.id]), sort)[0] || null
   const activeFilterCount = [search, problemType !== 'all', tier !== 'all', tag !== 'all', status !== 'all', sort !== 'id'].filter(Boolean).length
   const activeChips = [
     search ? { key: 'search', label: `${t('chipSearch')}${search}` } : null,
@@ -427,6 +430,48 @@ export default function ProblemsPage() {
                   }}
                 >{icon}</button>
               ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="problems-quality-strip">
+          <div className="problems-quality-card primary">
+            <div className="quality-card-icon"><CheckCircle2 size={18} /></div>
+            <div className="quality-card-body">
+              <div className="quality-card-label">학습 진행률</div>
+              <div className="quality-card-value">{completionPct}%</div>
+              <div className="quality-progress"><div style={{ width:`${completionPct}%` }} /></div>
+            </div>
+          </div>
+
+          <div className="problems-quality-card action">
+            <div className="quality-card-icon"><Target size={18} /></div>
+            <div className="quality-card-body">
+              <div className="quality-card-label">다음 문제</div>
+              <div className="quality-card-title">{nextProblem?.title || '대기 중인 문제가 없습니다'}</div>
+              {nextProblem && (
+                <button onClick={() => go(nextProblem)} className="quality-inline-action">풀기</button>
+              )}
+            </div>
+          </div>
+
+          <button
+            className="problems-quality-card clickable"
+            onClick={() => updateFilter('status', 'bookmarked')}
+          >
+            <div className="quality-card-icon"><Bookmark size={18} /></div>
+            <div className="quality-card-body">
+              <div className="quality-card-label">북마크 큐</div>
+              <div className="quality-card-value">{bookmarkedCount}</div>
+            </div>
+          </button>
+
+          <div className="problems-quality-card">
+            <div className="quality-card-icon"><Filter size={18} /></div>
+            <div className="quality-card-body">
+              <div className="quality-card-label">현재 결과</div>
+              <div className="quality-card-value">{effectiveList.total || 0}</div>
+              <div className="quality-card-sub">{activeFilterCount > 0 ? `${activeFilterCount}개 필터` : '전체 보기'}</div>
             </div>
           </div>
         </div>
@@ -740,10 +785,21 @@ export default function ProblemsPage() {
         )}
 
         {!loading && paginated.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text3)' }}>
-            <div style={{ fontSize: 40, marginBottom: 12 }}>🔍</div>
-            <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6 }}>{t('noResults')}</div>
-            <div style={{ fontSize: 13 }}>{t('noResultsHint')}</div>
+          <div className="problems-empty-state">
+            <div className="problems-empty-icon"><Search size={24} /></div>
+            <div className="problems-empty-title">{t('noResults')}</div>
+            <div className="problems-empty-sub">{t('noResultsHint')}</div>
+            {activeChips.length > 0 && (
+              <div className="problems-empty-chips">
+                {activeChips.map((chip) => <span key={chip.key}>{chip.label}</span>)}
+              </div>
+            )}
+            <div className="problems-empty-actions">
+              <button onClick={clearFilters} className="btn btn-primary btn-sm">필터 초기화</button>
+              <button onClick={handleRandomPick} disabled={randomLoading} className="btn btn-ghost btn-sm">
+                {randomLoading ? t('randomPicking') : t('randomPick')}
+              </button>
+            </div>
           </div>
         )}
 
