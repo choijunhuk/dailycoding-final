@@ -56,7 +56,31 @@ function normalizeProblemListRows(rows = []) {
   })).map(normalizeProblem);
 }
 
+export async function invalidateProblemCaches(problemId, { includeLists = true, userId = null } = {}) {
+  const id = Number(problemId);
+  if (!id || Number.isNaN(id)) return;
+
+  const tasks = [redis.del(`problems:${id}`)];
+  if (includeLists) tasks.push(redis.clearPrefix('problems:list:'));
+
+  if (userId) {
+    tasks.push(
+      redis.del(`problem:detail:v3:user:${id}:${userId}`),
+      redis.del(`problem:detail:v3:admin:${id}:${userId}`)
+    );
+  } else {
+    tasks.push(
+      redis.clearPrefix(`problem:detail:${id}:`),
+      redis.clearPrefix(`problem:detail:v3:user:${id}:`),
+      redis.clearPrefix(`problem:detail:v3:admin:${id}:`)
+    );
+  }
+
+  await Promise.all(tasks);
+}
+
 export const Problem = {
+  invalidateCaches: invalidateProblemCaches,
 
   async findAll({ tier, tag, search, sort = 'id', userId, isAdmin, problemType, preferredLanguage } = {}) {
     const tierKey = Array.isArray(tier) ? tier.join(',') : (tier || '');
@@ -415,13 +439,13 @@ export const Problem = {
   },
 
   async incrementSolved(id) {
-    await run('UPDATE problems SET solved_count=solved_count+1, submit_count=submit_count+1 WHERE id=?', [id]);
-    await redis.del(`problems:${id}`);
+    await run('UPDATE problems SET solved_count=solved_count+1 WHERE id=?', [id]);
+    await invalidateProblemCaches(id);
   },
 
   async incrementSubmit(id) {
     await run('UPDATE problems SET submit_count=submit_count+1 WHERE id=?', [id]);
-    await redis.del(`problems:${id}`);
+    await invalidateProblemCaches(id);
   },
 
   async getAllTags() {

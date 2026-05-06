@@ -41,7 +41,7 @@ function normalizeNotification(item) {
 }
 
 export function AppProvider({ children }) {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [solved,        setSolved]        = useState({});
   const [bookmarks,     setBookmarks]     = useState({});
   const [grassData,     setGrassData]     = useState([]);
@@ -159,7 +159,11 @@ export function AppProvider({ children }) {
           p.id === sub.problemId ? { ...p, isSolved: true } : p
         ));
         invalidateRankingData();
-        if (user?.id) await loadGrass(user.id);
+        await Promise.allSettled([
+          user?.id ? loadGrass(user.id) : Promise.resolve(),
+          loadProblems(),
+          refreshUser(),
+        ]);
       }
       await loadNotifications();
       return sub;
@@ -168,7 +172,7 @@ export function AppProvider({ children }) {
       console.error('[addSubmission] 제출 실패:', err.message);
       throw err; // 호출부(JudgePage)에서 에러 메시지 표시
     }
-  }, [loadGrass, loadNotifications, user?.id]);
+  }, [loadGrass, loadNotifications, loadProblems, refreshUser, user?.id]);
 
   // ── 북마크 토글 ─────────────────────────────────────────────
   const toggleBookmark = useCallback(async (id) => {

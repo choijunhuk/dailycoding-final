@@ -616,8 +616,10 @@ router.delete('/:id', auth, adminOnly, async (req, res) => {
 router.post('/:id/bookmark', auth, requireVerified, async (req, res) => {
   try {
     const User = await getUserModel();
+    const Problem = await getProblemModel();
     const problemId = Number(req.params.id);
     const bookmarked = await User.toggleBookmark(req.user.id, problemId);
+    await Problem.invalidateCaches(problemId, { userId: req.user.id });
     const countRow = await queryOne('SELECT COUNT(*) AS cnt FROM bookmarks WHERE problem_id = ?', [problemId]);
     res.json({ bookmarked, count: Number(countRow?.cnt || 0) });
   } catch (err) { return internalError(res); }

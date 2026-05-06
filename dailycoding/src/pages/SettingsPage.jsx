@@ -28,7 +28,7 @@ const TAB_ICONS = {
 
 
 export default function SettingsPage() {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const toast = useToast();
   const { theme, setTheme } = useTheme();
   const { lang, setLang, t } = useLang();
@@ -82,6 +82,7 @@ export default function SettingsPage() {
     try {
       if (nickname && nickname !== user?.nickname && nicknameStatus === 'available') {
         await api.patch('/auth/nickname', { nickname });
+        await refreshUser();
       }
       toast?.show(t('profileSaved'), 'success');
     } catch (e) {
@@ -94,8 +95,10 @@ export default function SettingsPage() {
   async function saveSection(section, patch) {
     setSaving(true);
     try {
-      await api.patch('/auth/settings', { section, settings: patch });
-      setSettings(prev => ({ ...prev, [section]: { ...prev[section], ...patch } }));
+      const { data } = await api.patch('/auth/settings', { section, settings: patch });
+      const nextSettings = data?.settings || { ...(settings || {}), [section]: { ...(settings?.[section] || {}), ...patch } };
+      setSettings(nextSettings);
+      await refreshUser();
       toast?.show(t('saveSuccess'), 'success');
     } catch {
       toast?.show(t('saveFailed'), 'error');
@@ -108,6 +111,7 @@ export default function SettingsPage() {
     setSaving(true);
     try {
       await api.patch('/auth/visibility', { profile_visibility: profileVisibility, post_visibility: postVisibility });
+      await refreshUser();
       toast?.show(t('visibilitySaved'), 'success');
     } catch {
       toast?.show(t('saveFailed'), 'error');

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import api, { AUTH_EXPIRED_EVENT, clearSessionMarker, markSessionActive } from '../api.js';
 
 const AuthContext = createContext(null);
@@ -75,10 +75,19 @@ export function AuthProvider({ children }) {
     api.post('/auth/logout').catch(() => {});
   };
 
+  const refreshUser = useCallback(async () => {
+    const res = await api.get('/auth/me');
+    markSessionActive();
+    setUser(res.data);
+    setError('');
+    return res.data;
+  }, []);
+
   const updateUser = async (patch) => {
     try {
       const res = await api.patch('/auth/me', patch);
       setUser(res.data);
+      refreshUser().catch(() => {});
       return res.data;
     } catch (err) {
       // 서버가 거부한 경우 optimistic update 적용 금지 — 클라이언트 상태 유지
@@ -87,9 +96,9 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const applyUser = (nextUser) => {
+  const applyUser = useCallback((nextUser) => {
     if (nextUser) setUser(nextUser);
-  };
+  }, []);
 
   const isAdmin = user?.role === 'admin';
 
@@ -115,7 +124,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider value={{
-      user, isAdmin, login, register, logout, error, setError, updateUser, applyUser,
+      user, isAdmin, login, register, logout, error, setError, updateUser, refreshUser, applyUser,
     }}>
       {children}
     </AuthContext.Provider>
