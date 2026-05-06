@@ -5,6 +5,7 @@ import api from '../api';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { useLang } from '../context/LangContext.jsx';
 import { FONT_OPTIONS, applyAppFontPreference } from '../utils/fontPreferences.js';
+import ProfileAvatar from '../components/ProfileAvatar.jsx';
 import { Bell, Code2, Lock, Monitor, Shield, User } from 'lucide-react';
 
 const TABS = [
@@ -148,9 +149,7 @@ export default function SettingsPage() {
       {/* ── Left sidebar ── */}
       <aside style={{ background:'var(--bg2)', border:'1px solid var(--border)', borderRadius:14, overflow:'hidden', position:'sticky', top:80 }}>
         <div style={{ padding:'20px 16px 16px', borderBottom:'1px solid var(--border)', background:'linear-gradient(135deg, rgba(121,192,255,.04), rgba(210,168,255,.04))' }}>
-          <div style={{ width:44, height:44, borderRadius:12, background:'linear-gradient(135deg, var(--accent), #d2a8ff)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, marginBottom:10 }}>
-            {(user?.nickname || user?.username || '?')[0].toUpperCase()}
-          </div>
+          <ProfileAvatar profile={user} size={44} fontSize={18} style={{ marginBottom:10 }} />
           <div style={{ fontSize:15, fontWeight:700, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
             {user?.nickname || user?.username || '사용자'}
           </div>

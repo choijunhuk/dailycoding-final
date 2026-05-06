@@ -1,4 +1,4 @@
-import { memo, useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
@@ -7,6 +7,7 @@ import { useSubscriptionStatus } from '../hooks/useSubscriptionStatus.js';
 import { useTheme } from '../context/ThemeContext';
 import { useLang } from '../context/LangContext.jsx';
 import { PLAN_META } from '../data/pricingPlans.js';
+import ProfileAvatar from './ProfileAvatar.jsx';
 import ServerStatus from './ServerStatus.jsx';
 import {
   BarChart2,
@@ -36,48 +37,6 @@ const TIER_COLOR = {
   gold:'#ffd700', platinum:'#00e5cc', emerald:'#00d18f', diamond:'#b9f2ff',
   master:'#9b59b6', grandmaster:'#e74c3c', challenger:'#f1c40f',
 };
-
-const Avatar = memo(function Avatar({ user, size = 28 }) {
-  const fallbackColors = ['#79c0ff','#56d364','#e3b341','#f78166','#bc8cff'];
-  const baseColor = user?.avatarColor || fallbackColors[(user?.username?.charCodeAt(0) || 0) % fallbackColors.length];
-  const initials = (user?.username || 'user').slice(0, 2).toUpperCase();
-
-  if (user?.avatarUrlCustom) {
-    return (
-      <img
-        src={user.avatarUrlCustom}
-        alt={user?.username || 'user'}
-        loading="lazy"
-        width={size}
-        height={size}
-        style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--border)', background: baseColor, flexShrink: 0 }}
-      />
-    );
-  }
-
-  return (
-    <span
-      aria-label={user?.username || 'user'}
-      style={{
-        width: size,
-        height: size,
-        borderRadius: '50%',
-        border: '2px solid var(--border)',
-        background: `linear-gradient(135deg, ${baseColor}, var(--bg3))`,
-        color: 'var(--text)',
-        display: 'grid',
-        placeItems: 'center',
-        fontSize: user?.avatarEmoji ? Math.round(size * 0.5) : Math.max(10, Math.round(size * 0.32)),
-        fontWeight: 800,
-        lineHeight: 1,
-        flexShrink: 0,
-        overflow: 'hidden',
-      }}
-    >
-      {user?.avatarEmoji || initials}
-    </span>
-  );
-});
 
 const NAV = [
   { path:'/problems',    labelKey:'problems',    Icon: BookOpen },
@@ -347,7 +306,7 @@ export default function TopNav() {
               padding:'0 12px 0 8px',
               display:'flex',alignItems:'center',gap:8,
             }}>
-              <Avatar user={user} size={22} />
+              <ProfileAvatar profile={user} size={22} border="2px solid var(--border)" />
               <span style={{fontSize:12,fontWeight:600,color:tc}}>{user?.username}</span>
               {subTier === 'pro' && (
                 <span style={{

@@ -9,6 +9,7 @@ import { useSubscriptionStatus } from '../hooks/useSubscriptionStatus.js';
 import { useSubscriptionCheckout } from '../hooks/useSubscriptionCheckout.js';
 import { JUDGE_LANGUAGE_OPTIONS } from '../data/judgeLanguages.js';
 import { TIER_POINTS, TIER_ORDER } from '../data/constants.js';
+import ProfileAvatar from '../components/ProfileAvatar.jsx';
 import { buildYearHeatmap, formatDuration, PROFILE_TIER_LABELS, PROFILE_TIER_THRESHOLDS } from './profilePageUtils.js';
 import { buildPaymentFeedback, formatCurrentSubscriptionLabel, getProfileUpgradePlans } from './profileSubscriptionUtils.js';
 import { DonutChart, TierBadge, YearHeatmap } from './profilePageWidgets.jsx';
@@ -358,14 +359,12 @@ export default function ProfilePage() {
           </div>
 
           {/* 아바타 */}
-          <div className="profile-header-avatar" style={{
-            border: `3px solid ${tc}`, background: avatarColor || 'var(--bg3)',
-            boxShadow: `0 0 0 4px var(--bg2), 0 6px 28px ${tc}55`,
-          }}>
-            {avatarUrlCustom
-              ? <img src={avatarUrlCustom} alt="avatar" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
-              : (avatarEmoji || user?.username?.slice(0,2).toUpperCase())}
-          </div>
+          <ProfileAvatar
+            profile={{ ...user, avatarUrlCustom, avatarColor, avatarEmoji }}
+            className="profile-header-avatar"
+            border={`3px solid ${tc}`}
+            style={{ boxShadow: `0 0 0 4px var(--bg2), 0 6px 28px ${tc}55` }}
+          />
 
           {/* 정보 */}
           <div className="profile-header-info">
@@ -849,11 +848,11 @@ export default function ProfilePage() {
             <div className="profile-live-preview">
               <div className="profile-live-banner" style={{ background: profileBannerBackground }} />
               <div className="profile-live-body">
-                <div className="profile-live-avatar" style={{ background: avatarColor || 'var(--bg3)', borderColor: tc }}>
-                  {avatarUrlCustom
-                    ? <img src={avatarUrlCustom} alt="avatar preview" />
-                    : (avatarEmoji || user?.username?.slice(0,2).toUpperCase())}
-                </div>
+                <ProfileAvatar
+                  profile={{ ...user, avatarUrlCustom, avatarColor, avatarEmoji }}
+                  className="profile-live-avatar"
+                  border={`3px solid ${tc}`}
+                />
                 <div className="profile-live-info">
                   <div className="profile-live-name-row">
                     {equippedBadgeMeta && <span>{equippedBadgeMeta.icon}</span>}
@@ -978,11 +977,11 @@ export default function ProfilePage() {
           <div className="card">
             <div className="pp-title">🎨 아바타 꾸미기</div>
             <div style={{ display:'flex', gap:16, alignItems:'center', marginBottom:16, flexWrap:'wrap' }}>
-              <div style={{ width:80, height:80, borderRadius:'50%', overflow:'hidden', background:'var(--bg3)', border:'1px solid var(--border)', display:'grid', placeItems:'center', fontSize:36 }}>
-                {avatarUrlCustom
-                  ? <img src={avatarUrlCustom} alt="avatar" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
-                  : (avatarEmoji || user?.username?.slice(0,2).toUpperCase())}
-              </div>
+              <ProfileAvatar
+                profile={{ ...user, avatarUrlCustom, avatarColor, avatarEmoji }}
+                size={80}
+                fontSize={36}
+              />
               <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
                 <label className="btn btn-ghost btn-sm" style={{ cursor:'pointer' }}>
                   📷 이미지 업로드

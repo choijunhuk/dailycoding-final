@@ -4,6 +4,7 @@ import api from '../api.js'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext.jsx'
 import { useLang } from '../context/LangContext.jsx'
+import ProfileAvatar from '../components/ProfileAvatar.jsx'
 
 const TIER_COLORS = {
   unranked: 'var(--text3)',
@@ -49,27 +50,7 @@ function formatDate(value, locale) {
 }
 
 function Avatar({ profile, size = 92 }) {
-  if (profile?.avatar_url_custom) {
-    return <img src={profile.avatar_url_custom} alt={profile.username} style={{ width: size, height: size, borderRadius: 28, objectFit: 'cover', border: '1px solid var(--border)' }} />
-  }
-  return (
-    <div style={{
-      width: size,
-      height: size,
-      borderRadius: 28,
-      background: `linear-gradient(135deg, ${profile?.avatar_color || 'var(--blue)'}, var(--bg3))`,
-      color: 'var(--bg)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontSize: profile?.avatar_emoji ? Math.round(size * 0.42) : Math.round(size * 0.3),
-      fontWeight: 900,
-      border: '1px solid var(--border)',
-      flexShrink: 0,
-    }}>
-      {profile?.avatar_emoji || (profile?.username || '?').slice(0, 2).toUpperCase()}
-    </div>
-  )
+  return <ProfileAvatar profile={profile} size={size} fontSize={profile?.avatar_emoji ? Math.round(size * 0.42) : Math.round(size * 0.3)} />
 }
 
 function DonutChart({ counts, centerLabel }) {
