@@ -38,21 +38,44 @@ const TIER_COLOR = {
 };
 
 const Avatar = memo(function Avatar({ user, size = 28 }) {
-  const colors = ['#79c0ff','#56d364','#e3b341','#f78166','#bc8cff'];
-  const color = colors[(user?.username?.charCodeAt(0) || 0) % colors.length];
-  const fallbackSrc = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(user?.username || 'user')}`;
+  const fallbackColors = ['#79c0ff','#56d364','#e3b341','#f78166','#bc8cff'];
+  const baseColor = user?.avatarColor || fallbackColors[(user?.username?.charCodeAt(0) || 0) % fallbackColors.length];
+  const initials = (user?.username || 'user').slice(0, 2).toUpperCase();
+
+  if (user?.avatarUrlCustom) {
+    return (
+      <img
+        src={user.avatarUrlCustom}
+        alt={user?.username || 'user'}
+        loading="lazy"
+        width={size}
+        height={size}
+        style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--border)', background: baseColor, flexShrink: 0 }}
+      />
+    );
+  }
+
   return (
-    <img
-      src={user?.avatarUrlCustom || user?.avatar_url || fallbackSrc}
-      alt={user?.username || 'user'}
-      loading="lazy"
-      width={size}
-      height={size}
-      style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--border)', background: color, flexShrink: 0 }}
-      onError={(e) => {
-        if (e.currentTarget.src !== fallbackSrc) e.currentTarget.src = fallbackSrc
+    <span
+      aria-label={user?.username || 'user'}
+      style={{
+        width: size,
+        height: size,
+        borderRadius: '50%',
+        border: '2px solid var(--border)',
+        background: `linear-gradient(135deg, ${baseColor}, var(--bg3))`,
+        color: 'var(--text)',
+        display: 'grid',
+        placeItems: 'center',
+        fontSize: user?.avatarEmoji ? Math.round(size * 0.5) : Math.max(10, Math.round(size * 0.32)),
+        fontWeight: 800,
+        lineHeight: 1,
+        flexShrink: 0,
+        overflow: 'hidden',
       }}
-    />
+    >
+      {user?.avatarEmoji || initials}
+    </span>
   );
 });
 

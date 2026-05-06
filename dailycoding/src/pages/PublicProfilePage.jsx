@@ -49,8 +49,8 @@ function formatDate(value, locale) {
 }
 
 function Avatar({ profile, size = 92 }) {
-  if (profile?.avatar_url) {
-    return <img src={profile.avatar_url} alt={profile.username} style={{ width: size, height: size, borderRadius: 28, objectFit: 'cover', border: '1px solid var(--border)' }} />
+  if (profile?.avatar_url_custom) {
+    return <img src={profile.avatar_url_custom} alt={profile.username} style={{ width: size, height: size, borderRadius: 28, objectFit: 'cover', border: '1px solid var(--border)' }} />
   }
   return (
     <div style={{

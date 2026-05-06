@@ -48,7 +48,7 @@ const countFilledProfileLinks = (links = {}) => Object.values(links || {}).filte
 export default function ProfilePage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, applyUser } = useAuth();
   const toast = useToast();
   const { solved, submissions, problems: appProblems } = useApp();
   const {
@@ -152,8 +152,10 @@ export default function ProfilePage() {
 
   useEffect(() => {
     setAvatarUrlCustom(user?.avatarUrlCustom || null);
+    setAvatarColor(user?.avatarColor || null);
+    setAvatarEmoji(user?.avatarEmoji || null);
     setEquippedBackground(user?.equippedBackground || null);
-  }, [user?.avatarUrlCustom, user?.equippedBackground]);
+  }, [user?.avatarUrlCustom, user?.avatarColor, user?.avatarEmoji, user?.equippedBackground]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -283,9 +285,10 @@ export default function ProfilePage() {
     const current = type === 'badge' ? equippedBadge : equippedTitle;
     const newCode = current === code ? null : code;
     try {
-      await api.post('/rewards/equip', { type, code: newCode });
+      const { data } = await api.post('/rewards/equip', { type, code: newCode });
       if (type === 'badge') setEquippedBadge(newCode);
       else setEquippedTitle(newCode);
+      applyUser(data?.user);
       toast?.show(newCode ? '✅ 장착됨' : '장착 해제됨', 'success');
     } catch (err) {
       toast?.show('❌ ' + (err.response?.data?.message || '실패'), 'error');
@@ -310,12 +313,13 @@ export default function ProfilePage() {
     setProfileInfoSaving(true);
     try {
       const filteredLinks = Object.fromEntries(Object.entries(socialLinks).filter(([, v]) => v));
-      await api.patch('/auth/profile/extended', {
+      const { data } = await api.patch('/auth/profile/extended', {
         display_name: displayName,
         bio,
         social_links: filteredLinks,
         tech_stack: techStack,
       });
+      applyUser(data);
       toast?.show('✅ 프로필 정보가 저장됐습니다.', 'success');
     } catch (err) {
       toast?.show(err.response?.data?.message || '저장 실패', 'error');
@@ -997,6 +1001,7 @@ export default function ProfilePage() {
                           headers: { 'Content-Type': 'multipart/form-data' },
                         })
                         setAvatarUrlCustom(data.avatarUrl)
+                        applyUser(data.user)
                         toast?.show('아바타가 업로드되었습니다.', 'success')
                       } catch (err) {
                         toast?.show(err.response?.data?.message || '아바타 업로드 실패', 'error')
@@ -1013,8 +1018,9 @@ export default function ProfilePage() {
                   <button
                     onClick={async () => {
                       try {
-                        await api.patch('/auth/profile/background', { backgroundSlug: null })
+                        const { data } = await api.patch('/auth/profile/background', { backgroundSlug: null })
                         setEquippedBackground(null)
+                        applyUser(data)
                         toast?.show('배경이 초기화되었습니다.', 'success')
                       } catch (err) {
                         toast?.show(err.response?.data?.message || '배경 초기화 실패', 'error')
@@ -1034,8 +1040,9 @@ export default function ProfilePage() {
                     <button
                       onClick={async () => {
                         try {
-                          await api.patch('/auth/profile/background', { backgroundSlug: bg.slug })
+                          const { data } = await api.patch('/auth/profile/background', { backgroundSlug: bg.slug })
                           setEquippedBackground(bg.slug)
+                          applyUser(data)
                           toast?.show('배경이 적용되었습니다.', 'success')
                         } catch (err) {
                           toast?.show(err.response?.data?.message || '배경 적용 실패', 'error')
@@ -1060,9 +1067,9 @@ export default function ProfilePage() {
               <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
                 {['#cd7f32','#c0c0c0','#ffd700','#00e5cc','#b9f2ff','#79c0ff','#56d364','#f78166','#bc8cff','#e3b341','#ff7b72','#ffffff'].map(c=>(
                   <button key={c} onClick={async()=>{
-                    setAvatarColor(c);
                     try {
-                      await api.patch('/auth/me',{avatar_color:c});
+                      const updated = await updateUser({avatar_color:c});
+                      setAvatarColor(updated?.avatarColor || null);
                     } catch {
                       toast?.show('아바타 색상 저장 실패', 'error');
                     }
@@ -1073,9 +1080,9 @@ export default function ProfilePage() {
                   }} onMouseEnter={e=>e.currentTarget.style.transform='scale(1.2)'} onMouseLeave={e=>e.currentTarget.style.transform='scale(1)'}/>
                 ))}
                 <button onClick={async()=>{
-                  setAvatarColor(null);
                   try {
-                    await api.patch('/auth/me',{avatar_color:null});
+                    const updated = await updateUser({avatar_color:null});
+                    setAvatarColor(updated?.avatarColor || null);
                   } catch {
                     toast?.show('아바타 색상 초기화 실패', 'error');
                   }
@@ -1090,9 +1097,9 @@ export default function ProfilePage() {
               <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
                 {['🦊','🐼','🦁','🐯','🐸','🦄','🐉','🦋','🐙','🦀','🐬','⭐','🔥','💎','🎯','🚀'].map(e=>(
                   <button key={e} onClick={async()=>{
-                    setAvatarEmoji(e);
                     try {
-                      await api.patch('/auth/me',{avatar_emoji:e});
+                      const updated = await updateUser({avatar_emoji:e});
+                      setAvatarEmoji(updated?.avatarEmoji || null);
                     } catch {
                       toast?.show('아바타 이모지 저장 실패', 'error');
                     }
@@ -1103,9 +1110,9 @@ export default function ProfilePage() {
                   }}>{e}</button>
                 ))}
                 <button onClick={async()=>{
-                  setAvatarEmoji(null);
                   try {
-                    await api.patch('/auth/me',{avatar_emoji:null});
+                    const updated = await updateUser({avatar_emoji:null});
+                    setAvatarEmoji(updated?.avatarEmoji || null);
                   } catch {
                     toast?.show('아바타 이모지 초기화 실패', 'error');
                   }

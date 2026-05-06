@@ -192,6 +192,7 @@ router.get('/profile/:id', auth, async (req, res) => {
       solvedCount: user.solved_count ?? 0,
       bio: user.bio,
       avatar_url: user.avatar_url,
+      avatar_url_custom: user.avatar_url_custom,
       avatar_color: user.avatar_color,
       avatar_emoji: user.avatar_emoji,
       equippedBadge: user.equipped_badge ?? null,

@@ -79,11 +79,16 @@ export function AuthProvider({ children }) {
     try {
       const res = await api.patch('/auth/me', patch);
       setUser(res.data);
+      return res.data;
     } catch (err) {
       // 서버가 거부한 경우 optimistic update 적용 금지 — 클라이언트 상태 유지
       console.error('[updateUser] 업데이트 실패:', err.response?.data?.message || err.message);
       throw err; // 호출부에서 에러 핸들링 가능하도록
     }
+  };
+
+  const applyUser = (nextUser) => {
+    if (nextUser) setUser(nextUser);
   };
 
   const isAdmin = user?.role === 'admin';
@@ -110,7 +115,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider value={{
-      user, isAdmin, login, register, logout, error, setError, updateUser,
+      user, isAdmin, login, register, logout, error, setError, updateUser, applyUser,
     }}>
       {children}
     </AuthContext.Provider>
