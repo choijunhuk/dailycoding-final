@@ -13,6 +13,7 @@ import {
   BarChart2,
   BookOpen,
   Bot,
+  ChevronDown,
   CreditCard,
   FileText,
   Menu,
@@ -38,18 +39,42 @@ const TIER_COLOR = {
   master:'#9b59b6', grandmaster:'#e74c3c', challenger:'#f1c40f',
 };
 
-const NAV = [
-  { path:'/problems',    labelKey:'problems',    Icon: BookOpen },
-  { path:'/contest',     labelKey:'contest',     Icon: Trophy },
-  { path:'/battle',      labelKey:'battle',      Icon: Swords },
-  { path:'/ranking',     labelKey:'ranking',     Icon: BarChart2 },
-  { path:'/community',   labelKey:'community',   Icon: MessageSquare },
-  { path:'/exams',       labelKey:'exams',       Icon: Trophy },
-  { path:'/sheets',      labelKey:'sheets',      Icon: BookOpen },
-  { path:'/learning',    labelKey:'learning',    Icon: Sparkles },
-  { path:'/pricing',     labelKey:'subscribe',   Icon: CreditCard },
-  { path:'/ai',          labelKey:'ai',          Icon: Bot },
-  { path:'/submissions', labelKey:'submissions', Icon: FileText },
+const NAV_GROUPS = [
+  {
+    key: 'problems', labelKey: 'problems', Icon: BookOpen,
+    matchPaths: ['/problems', '/sheets', '/submissions'],
+    items: [
+      { path: '/problems',    labelKey: 'problems',    Icon: BookOpen },
+      { path: '/sheets',      labelKey: 'sheets',      Icon: BookOpen },
+      { path: '/submissions', labelKey: 'submissions', Icon: FileText },
+    ],
+  },
+  {
+    key: 'contest', labelKey: 'contest', Icon: Trophy,
+    matchPaths: ['/contest', '/exams'],
+    items: [
+      { path: '/contest', labelKey: 'contest', Icon: Trophy },
+      { path: '/exams',   labelKey: 'exams',   Icon: Trophy },
+    ],
+  },
+  { key: 'battle',  labelKey: 'battle',  Icon: Swords,        path: '/battle' },
+  { key: 'ranking', labelKey: 'ranking', Icon: BarChart2,     path: '/ranking' },
+  {
+    key: 'community', labelKey: 'community', Icon: MessageSquare,
+    matchPaths: ['/community', '/reviews'],
+    items: [
+      { path: '/community', labelKey: 'community', Icon: MessageSquare },
+      { path: '/reviews',   labelKey: 'reviews',   Icon: Users },
+    ],
+  },
+  {
+    key: 'learning', labelKey: 'learning', Icon: Sparkles,
+    matchPaths: ['/learning', '/ai'],
+    items: [
+      { path: '/learning', labelKey: 'learning', Icon: Sparkles },
+      { path: '/ai',       labelKey: 'ai',       Icon: Bot },
+    ],
+  },
 ];
 
 export default function TopNav() {
@@ -59,9 +84,10 @@ export default function TopNav() {
   const { unreadCount, notifications, markRead, loadNotifications } = useApp();
   const { tier: subTier } = useSubscriptionStatus(user?.id);
   const [aiQuota, setAiQuota] = useState(null);
-  const [showNotif,  setShowNotif]  = useState(false);
-  const [showUser,   setShowUser]   = useState(false);
-  const [showMobile, setShowMobile] = useState(false);
+  const [showNotif,    setShowNotif]    = useState(false);
+  const [showUser,     setShowUser]     = useState(false);
+  const [showMobile,   setShowMobile]   = useState(false);
+  const [hoveredGroup, setHoveredGroup] = useState(null);
   const { lang, toggleLang, t } = useLang();
   
   useEffect(() => {
@@ -143,26 +169,71 @@ export default function TopNav() {
 
         {/* 데스크탑 네비 */}
         <div className="topnav-desktop-nav" style={{display:'flex',alignItems:'center',gap:2,flex:1}}>
-          {NAV.map(n=>{
-            const active =
-              currentPath === n.path ||
-              (n.path === '/problems' && currentPath.startsWith('/problems')) ||
-              (n.path === '/community' && currentPath.startsWith('/community'));
-            const Icon = n.Icon;
+          {NAV_GROUPS.map(group => {
+            const isDropdown = !!group.items;
+            const active = isDropdown
+              ? group.matchPaths.some(p => currentPath === p || currentPath.startsWith(p + '/'))
+              : currentPath === group.path || currentPath.startsWith(group.path + '/');
+            const Icon = group.Icon;
+            const btnStyle = {
+              padding:'5px 13px', borderRadius:7, border:'none', cursor:'pointer',
+              fontSize:13, fontWeight: active ? 700 : 600, fontFamily:'inherit',
+              background: active ? 'var(--bg3)' : 'transparent',
+              color: active ? 'var(--text)' : 'var(--text2)',
+              boxShadow: active ? 'inset 0 -2px 0 var(--accent)' : 'none',
+              transition:'all .15s', display:'flex', alignItems:'center', gap:5,
+            };
+
+            if (!isDropdown) {
+              return (
+                <button key={group.key} onClick={() => go(group.path)} style={btnStyle}
+                  onMouseEnter={e=>{ if(!active){ e.currentTarget.style.color='var(--text)'; e.currentTarget.style.background='rgba(255,255,255,.04)'; }}}
+                  onMouseLeave={e=>{ if(!active){ e.currentTarget.style.color='var(--text2)'; e.currentTarget.style.background='transparent'; }}}
+                >
+                  <Icon size={15} strokeWidth={2.1} />{t(group.labelKey)}
+                </button>
+              );
+            }
+
             return (
-              <button key={n.path} onClick={()=>go(n.path)} style={{
-                padding:'5px 13px', borderRadius:7, border:'none', cursor:'pointer',
-                fontSize:13, fontWeight: active ? 700 : 600, fontFamily:'inherit',
-                background: active ? 'var(--bg3)' : 'transparent',
-                color: active ? 'var(--text)' : 'var(--text2)',
-                boxShadow: active ? 'inset 0 -2px 0 var(--accent)' : 'none',
-                transition:'all .15s', display:'flex', alignItems:'center', gap:5,
-              }}
-                onMouseEnter={e=>{ if(!active){ e.currentTarget.style.color='var(--text)'; e.currentTarget.style.background='rgba(255,255,255,.04)'; } }}
-                onMouseLeave={e=>{ if(!active){ e.currentTarget.style.color='var(--text2)'; e.currentTarget.style.background='transparent'; } }}
+              <div key={group.key} style={{ position:'relative' }}
+                onMouseEnter={() => setHoveredGroup(group.key)}
+                onMouseLeave={() => setHoveredGroup(null)}
               >
-                <Icon size={15} strokeWidth={2.1} />{t(n.labelKey)}
-              </button>
+                <button style={btnStyle}>
+                  <Icon size={15} strokeWidth={2.1} />{t(group.labelKey)}
+                  <ChevronDown size={11} strokeWidth={2.5} style={{ opacity:.6, marginLeft:-2, transition:'transform .15s', transform: hoveredGroup === group.key ? 'rotate(180deg)' : 'none' }} />
+                </button>
+                {hoveredGroup === group.key && (
+                  <div style={{
+                    position:'absolute', top:'calc(100% + 4px)', left:0,
+                    minWidth:140, background:'var(--bg2)',
+                    border:'1px solid var(--border)', borderRadius:10,
+                    boxShadow:'0 8px 24px rgba(0,0,0,.35)', overflow:'hidden', zIndex:200,
+                  }}>
+                    {group.items.map(item => {
+                      const itemActive = currentPath === item.path || currentPath.startsWith(item.path + '/');
+                      return (
+                        <button key={item.path} onClick={() => go(item.path)} style={{
+                          width:'100%', padding:'9px 14px', border:'none',
+                          background: itemActive ? 'var(--bg3)' : 'transparent',
+                          color: itemActive ? 'var(--text)' : 'var(--text2)',
+                          fontWeight: itemActive ? 700 : 500,
+                          cursor:'pointer', fontSize:13, fontFamily:'inherit',
+                          textAlign:'left', display:'flex', alignItems:'center', gap:8,
+                          transition:'background .1s',
+                          borderLeft: itemActive ? '2px solid var(--accent)' : '2px solid transparent',
+                        }}
+                          onMouseEnter={e=>{ if(!itemActive){ e.currentTarget.style.background='var(--bg3)'; e.currentTarget.style.color='var(--text)'; }}}
+                          onMouseLeave={e=>{ if(!itemActive){ e.currentTarget.style.background='transparent'; e.currentTarget.style.color='var(--text2)'; }}}
+                        >
+                          <item.Icon size={14} strokeWidth={2} />{t(item.labelKey)}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             );
           })}
           {isAdmin&&(
@@ -174,14 +245,14 @@ export default function TopNav() {
               transition:'all .15s',display:'flex',alignItems:'center',gap:5,
             }}><Shield size={14} />{t('admin')}</button>
           )}
-          {subTier === 'team' && (
+          {user && (
             <button onClick={()=>go('/team')} style={{
               padding:'5px 13px',borderRadius:7,border:'none',cursor:'pointer',
               fontSize:13,fontWeight:600,fontFamily:'inherit',
               background:currentPath==='/team'?'rgba(255,215,0,.1)':'transparent',
               color:currentPath==='/team'?'#ffd700':'var(--text3)',
               transition:'all .15s',display:'flex',alignItems:'center',gap:5,
-            }}><Users size={14} />{t('team')}</button>
+            }}><Users size={14} />{subTier === 'team' ? t('team') : '소속'}</button>
           )}
         </div>
 
@@ -345,7 +416,7 @@ export default function TopNav() {
                   {labelKey:'submissions', Icon: FileText, path:'/submissions'},
                   {labelKey:'pricing',   Icon: CreditCard, path:'/pricing'},
                   {labelKey:'ai',        Icon: Bot, path:'/ai'},
-                  ...(subTier === 'team' ? [{labelKey:'team', Icon: Users, path:'/team'}] : []),
+                  ...(user ? [{labelKey:'team', Icon: Users, path:'/team'}] : []),
                 ].map(item=>(
                   <button key={item.labelKey} onClick={()=>go(item.path)} style={{
                     width:'100%',padding:'10px 16px',border:'none',
@@ -377,14 +448,28 @@ export default function TopNav() {
       {/* 모바일 드롭다운 메뉴 */}
       {showMobile && <div className="topnav-overlay" onClick={() => setShowMobile(false)} />}
       <div className={`topnav-mobile-menu${showMobile?' open':''}`} style={{position:'absolute',top:54,left:0,right:0}}>
-        {NAV.map(n=>(
-          <button key={n.path} className={`topnav-mobile-btn${currentPath===n.path||currentPath.startsWith(n.path+'/') ?' active':''}`} onClick={()=>go(n.path)}>
-            <n.Icon size={16} />{t(n.labelKey)}
-          </button>
-        ))}
+        {NAV_GROUPS.map(group => {
+          if (group.items) {
+            return group.items.map(item => (
+              <button key={item.path} className={`topnav-mobile-btn${currentPath===item.path||currentPath.startsWith(item.path+'/') ?' active':''}`} onClick={()=>go(item.path)}>
+                <item.Icon size={16} />{t(item.labelKey)}
+              </button>
+            ));
+          }
+          return (
+            <button key={group.key} className={`topnav-mobile-btn${currentPath===group.path||currentPath.startsWith(group.path+'/') ?' active':''}`} onClick={()=>go(group.path)}>
+              <group.Icon size={16} />{t(group.labelKey)}
+            </button>
+          );
+        })}
         {isAdmin&&(
           <button className={`topnav-mobile-btn${currentPath==='/admin'?' active':''}`} onClick={()=>go('/admin')}>
             <Shield size={16} />{t('admin')}
+          </button>
+        )}
+        {user && (
+          <button className={`topnav-mobile-btn${currentPath==='/team'?' active':''}`} onClick={()=>go('/team')}>
+            <Users size={16} />{subTier === 'team' ? t('team') : '소속'}
           </button>
         )}
         <div style={{borderTop:'1px solid var(--border)',marginTop:4,paddingTop:4}}>

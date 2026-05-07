@@ -1,182 +1,324 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Check, LogOut, Pencil, RefreshCw, ShieldCheck, ShieldOff, Trash2, UserPlus, Users, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { useSubscriptionStatus } from '../hooks/useSubscriptionStatus';
 import api from '../api';
 import { useToast } from '../context/ToastContext';
 import { useLang } from '../context/LangContext.jsx';
-import { PLAN_META } from '../data/pricingPlans.js';
+
+function fmtDate(value) {
+  if (!value) return '-';
+  const time = new Date(value);
+  if (Number.isNaN(time.getTime())) return '-';
+  return time.toLocaleDateString();
+}
+
+function StatCard({ label, value, caption }) {
+  return (
+    <div style={{ padding:18, borderRadius:12, background:'var(--bg2)', border:'1px solid var(--border)' }}>
+      <div style={{ fontSize:11, color:'var(--text3)', fontWeight:900, textTransform:'uppercase', marginBottom:6 }}>{label}</div>
+      <div style={{ fontSize:26, fontWeight:900, color:'var(--text)' }}>{value}</div>
+      {caption && <div style={{ fontSize:12, color:'var(--text2)', marginTop:4 }}>{caption}</div>}
+    </div>
+  );
+}
 
 export default function TeamDashboard() {
-  const navigate = useNavigate();
   const { user } = useAuth();
-  const { tier } = useSubscriptionStatus(user?.id);
   const toast = useToast();
   const { t } = useLang();
   const [loading, setLoading] = useState(true);
   const [team, setTeam] = useState(null);
   const [teamName, setTeamName] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [newName, setNewName] = useState('');
+  const nameInputRef = useRef(null);
 
-  const isTeam = tier === 'team';
+  const members = team?.members || [];
+  const myMembership = members.find((member) => member.id === user?.id);
+  const isTeamAdmin = myMembership?.role === 'admin';
+  const isOwner = team && Number(team.ownerId || team.owner_id) === Number(user?.id);
+  const adminCount = useMemo(() => members.filter((member) => member.role === 'admin').length, [members]);
 
-  useEffect(() => {
-    if (isTeam) {
-      api.get('/teams/my').then(res => {
-        setTeam(res.data);
-        setLoading(false);
-      }).catch(() => setLoading(false));
-    } else {
+  const loadTeam = async () => {
+    setLoading(true);
+    try {
+      const { data } = await api.get('/teams/my');
+      setTeam(data || null);
+    } catch (err) {
+      toast.show(err.response?.data?.message || '소속 정보를 불러오지 못했습니다.', 'error');
+    } finally {
       setLoading(false);
     }
-  }, [isTeam]);
+  };
+
+  useEffect(() => {
+    loadTeam();
+  }, []);
 
   const handleCreateTeam = async () => {
-    if (!teamName.trim()) return;
+    if (!teamName.trim() || busy) return;
+    setBusy(true);
     try {
       const { data } = await api.post('/teams/create', { name: teamName });
-      setTeam({ id: data.id, name: teamName, members: [{ ...user, role: 'admin', joined_at: new Date() }] });
-      toast.show(t('teamCreated'), 'success');
+      setTeam(data.team || { id: data.id, name: teamName, members: [{ ...user, role: 'admin', joined_at: new Date() }] });
+      setTeamName('');
+      toast.show(data.message || t('teamCreated'), 'success');
     } catch (err) {
       toast.show(err.response?.data?.message || t('teamCreateFailed'), 'error');
+    } finally {
+      setBusy(false);
     }
   };
 
   const generateInviteLink = async () => {
+    if (busy) return;
+    setBusy(true);
     try {
       const { data } = await api.post('/teams/invite');
       const link = `${window.location.origin}/join/team/${data.token}`;
-      navigator.clipboard.writeText(link);
+      await navigator.clipboard.writeText(link);
       toast.show(t('teamInviteCopied'), 'success');
     } catch (err) {
       toast.show(err.response?.data?.message || t('teamInviteFailed'), 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const updateMemberRole = async (memberId, role) => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const { data } = await api.post(`/teams/members/${memberId}/role`, { role });
+      setTeam(data.team);
+      toast.show(data.message || '역할을 변경했습니다.', 'success');
+    } catch (err) {
+      toast.show(err.response?.data?.message || '역할 변경 실패', 'error');
+    } finally {
+      setBusy(false);
     }
   };
 
   const handleRemoveMember = async (memberId) => {
-    if (!window.confirm(t('teamRemoveConfirm'))) return;
+    if (!window.confirm(t('teamRemoveConfirm')) || busy) return;
+    setBusy(true);
     try {
-      await api.delete(`/teams/members/${memberId}`);
-      setTeam(prev => ({ ...prev, members: prev.members.filter(m => m.id !== memberId) }));
-      toast.show(t('teamMemberRemoved'), 'success');
+      const { data } = await api.delete(`/teams/members/${memberId}`);
+      setTeam(data.team);
+      toast.show(data.message || t('teamMemberRemoved'), 'success');
     } catch (err) {
       toast.show(err.response?.data?.message || t('teamMemberRemoveFailed'), 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleLeave = async () => {
+    if (!window.confirm('소속에서 탈퇴하시겠습니까?') || busy) return;
+    setBusy(true);
+    try {
+      await api.delete('/teams/leave');
+      setTeam(null);
+      toast.show('소속에서 탈퇴했습니다.', 'success');
+    } catch (err) {
+      toast.show(err.response?.data?.message || '탈퇴 실패', 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleRename = async () => {
+    if (!newName.trim() || busy) return;
+    setBusy(true);
+    try {
+      const { data } = await api.patch('/teams/name', { name: newName });
+      setTeam(data.team);
+      setEditingName(false);
+      toast.show(data.message || '이름이 변경되었습니다.', 'success');
+    } catch (err) {
+      toast.show(err.response?.data?.message || '이름 변경 실패', 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleDissolve = async () => {
+    if (!window.confirm(`"${team.name}" 소속을 정말 해산하시겠습니까? 모든 멤버가 소속에서 제거됩니다.`) || busy) return;
+    setBusy(true);
+    try {
+      await api.delete('/teams');
+      setTeam(null);
+      toast.show('소속이 해산되었습니다.', 'success');
+    } catch (err) {
+      toast.show(err.response?.data?.message || '해산 실패', 'error');
+    } finally {
+      setBusy(false);
     }
   };
 
   if (loading) return <div style={{ padding: 40, textAlign: 'center' }}>{t('loading')}</div>;
 
-  if (!isTeam) {
-    return (
-      <div style={{ padding: '64px 28px', maxWidth: 900, margin: '0 auto' }}>
-        <div style={{ display:'grid', gridTemplateColumns:'minmax(0, 1.1fr) minmax(280px, .9fr)', gap:20, alignItems:'stretch' }}>
-          <div style={{ padding:28, borderRadius:24, background:'linear-gradient(145deg, rgba(242,204,96,.14), rgba(13,17,23,.95))', border:'1px solid rgba(242,204,96,.2)' }}>
-            <div style={{ fontSize:12, color:'#f2cc60', fontWeight:900, letterSpacing:'.08em', textTransform:'uppercase', marginBottom:10 }}>Team Plan</div>
-            <h2 style={{ marginBottom: 12, fontSize: 32, lineHeight: 1.1 }}>{t('teamPlanOnlyTitle')}</h2>
-            <p style={{ color: 'var(--text2)', marginBottom: 18, lineHeight: 1.7 }}>{t('teamPlanOnlyDesc')}</p>
-            <div style={{ display:'flex', flexWrap:'wrap', gap:10 }}>
-              {['팀 대시보드', '초대 링크', '커스텀 대회', '팀 운영 가시성'].map((item) => (
-                <span key={item} style={{ padding:'6px 10px', borderRadius:999, background:'rgba(255,255,255,.06)', border:'1px solid rgba(242,204,96,.18)', fontSize:12, color:'var(--text2)' }}>{item}</span>
-              ))}
-            </div>
-          </div>
-          <div style={{ padding:24, borderRadius:24, background:'var(--bg2)', border:'1px solid var(--border)', display:'grid', gap:12, alignContent:'start' }}>
-            <div style={{ fontSize:14, color:'var(--text3)', fontWeight:700 }}>현재 팀 플랜 가격</div>
-            <div style={{ fontSize:34, fontWeight:900, color:'#f2cc60' }}>${PLAN_META.team.monthlyPrice}<span style={{ fontSize:14, color:'var(--text3)', marginLeft:6 }}>/월</span></div>
-            <div style={{ fontSize:15, color:'var(--text2)' }}>${PLAN_META.team.annualPrice}/년으로 운영 단가를 더 낮출 수 있습니다.</div>
-            <button
-              onClick={() => navigate('/pricing')}
-              style={{ padding: '12px 18px', background: '#f2cc60', color: '#0d1117', borderRadius: 12, fontWeight: 900, border: 'none', cursor: 'pointer' }}
-            >
-              {t('viewPricing')}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   if (!team) {
     return (
-      <div style={{ padding: '80px 28px', maxWidth: 480, margin: '0 auto', textAlign: 'center' }}>
-        <div style={{ fontSize: 48, marginBottom: 24 }}>👥</div>
-        <h2 style={{ marginBottom: 12 }}>{t('teamCreateTitle')}</h2>
-        <p style={{ color: 'var(--text3)', marginBottom: 32 }}>{t('teamCreateDesc')}</p>
-        <input 
-          placeholder={t('teamNamePlaceholder')}
-          value={teamName}
-          onChange={e => setTeamName(e.target.value)}
-          style={{ width: '100%', padding: '12px 16px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 10, marginBottom: 16, color: 'var(--text)' }}
-        />
-        <button 
-          onClick={handleCreateTeam}
-          style={{ width: '100%', padding: '14px', background: 'var(--blue)', color: '#0d1117', border: 'none', borderRadius: 10, fontWeight: 800, cursor: 'pointer' }}
-        >{t('teamCreateBtn')}</button>
+      <div style={{ padding:'64px 28px', maxWidth:760, margin:'0 auto' }}>
+        <div style={{ padding:28, borderRadius:16, background:'var(--bg2)', border:'1px solid var(--border)', display:'grid', gap:18 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:14 }}>
+            <div style={{ width:48, height:48, borderRadius:12, background:'rgba(121,192,255,.12)', color:'var(--blue)', display:'grid', placeItems:'center' }}>
+              <Users size={24} />
+            </div>
+            <div>
+              <h1 style={{ margin:0, fontSize:26, fontWeight:900 }}>무료 소속 만들기</h1>
+              <p style={{ margin:'4px 0 0', color:'var(--text2)', fontSize:13 }}>학교, 회사, 스터디 이름으로 소속을 만들고 멤버 풀이 활동을 함께 점검하세요.</p>
+            </div>
+          </div>
+          <div style={{ display:'grid', gridTemplateColumns:'minmax(0, 1fr) auto', gap:10 }}>
+            <input
+              placeholder={t('teamNamePlaceholder')}
+              value={teamName}
+              onChange={e => setTeamName(e.target.value)}
+              maxLength={100}
+            />
+            <button className="btn btn-primary" onClick={handleCreateTeam} disabled={busy || !teamName.trim()}>
+              {t('teamCreateBtn')}
+            </button>
+          </div>
+          <div style={{ color:'var(--text3)', fontSize:12, lineHeight:1.7 }}>
+            무료 버전에서는 한 계정당 하나의 소속에 가입할 수 있습니다. 생성자는 자동으로 관리자가 됩니다.
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div style={{ padding: '40px 28px', maxWidth: 1000, margin: '0 auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 32 }}>
+    <div style={{ padding:'40px 28px', maxWidth:1180, margin:'0 auto' }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:16, marginBottom:24 }}>
         <div>
-          <h1 style={{ fontSize: 28, fontWeight: 800, marginBottom: 8 }}>{team.name}</h1>
-          <p style={{ color: 'var(--text2)' }}>{t('teamManageDesc')}</p>
+          <div style={{ color:'var(--blue)', fontSize:12, fontWeight:900, textTransform:'uppercase', marginBottom:6 }}>Affiliation</div>
+          {editingName ? (
+            <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
+              <input
+                ref={nameInputRef}
+                value={newName}
+                onChange={e => setNewName(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') handleRename(); if (e.key === 'Escape') setEditingName(false); }}
+                maxLength={100}
+                style={{ fontSize:22, fontWeight:900, background:'var(--bg3)', border:'1px solid var(--border)', borderRadius:8, padding:'4px 10px', color:'var(--text)', width:260 }}
+                autoFocus
+              />
+              <button className="btn btn-primary btn-sm" onClick={handleRename} disabled={busy || !newName.trim()}><Check size={13} /></button>
+              <button className="btn btn-ghost btn-sm" onClick={() => setEditingName(false)}><X size={13} /></button>
+            </div>
+          ) : (
+            <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
+              <h1 style={{ fontSize:28, fontWeight:900, margin:0 }}>{team.name}</h1>
+              {isTeamAdmin && (
+                <button className="btn btn-ghost btn-sm" style={{ padding:'4px 8px' }} onClick={() => { setNewName(team.name); setEditingName(true); }} title="이름 변경">
+                  <Pencil size={13} />
+                </button>
+              )}
+            </div>
+          )}
+          <p style={{ color:'var(--text2)', margin:0 }}>{t('teamManageDesc')}</p>
         </div>
-        <button 
-          onClick={generateInviteLink}
-          style={{ padding: '10px 20px', background: 'var(--bg3)', border: '1px solid var(--blue)40', color: 'var(--blue)', borderRadius: 10, fontWeight: 700, cursor: 'pointer' }}
-        >{t('teamInviteBtn')}</button>
+        <div style={{ display:'flex', gap:8, flexWrap:'wrap', justifyContent:'flex-end' }}>
+          <button className="btn btn-ghost btn-sm" onClick={loadTeam} disabled={busy}>
+            <RefreshCw size={14} /> 새로고침
+          </button>
+          {isTeamAdmin && (
+            <button className="btn btn-primary btn-sm" onClick={generateInviteLink} disabled={busy}>
+              <UserPlus size={14} /> {t('teamInviteBtn')}
+            </button>
+          )}
+          {myMembership && !isOwner && (
+            <button className="btn btn-ghost btn-sm" style={{ color:'var(--red)' }} onClick={handleLeave} disabled={busy}>
+              <LogOut size={14} /> 탈퇴
+            </button>
+          )}
+          {isOwner && (
+            <button className="btn btn-ghost btn-sm" style={{ color:'var(--red)' }} onClick={handleDissolve} disabled={busy}>
+              <Trash2 size={14} /> 소속 해산
+            </button>
+          )}
+        </div>
       </div>
 
-        <div style={{ background: 'var(--bg2)', padding: 24, borderRadius: 16, border: '1px solid var(--border)' }}>
-          <h3 style={{ marginBottom: 16 }}>{t('teamStatsBeta')}</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-              <span style={{ color: 'var(--text2)' }}>{t('teamActiveMembers')}</span>
-              <span style={{ fontWeight: 700 }}>1 / 10</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-              <span style={{ color: 'var(--text2)' }}>{t('teamWeeklySolved')}</span>
-              <span style={{ fontWeight: 700 }}>{t('teamWeeklySolvedCount').replace('{n}', '0')}</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-              <span style={{ color: 'var(--text2)' }}>{t('teamAvgRating')}</span>
-              <span style={{ fontWeight: 700 }}>{t('teamRatingPoints').replace('{n}', String(user.rating || 0))}</span>
-            </div>
-          </div>
-        </div>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(150px, 1fr))', gap:12, marginBottom:22 }}>
+        <StatCard label="멤버" value={team.stats?.memberCount ?? members.length} caption={`${team.stats?.activeMembers ?? 0}명 최근 활동`} />
+        <StatCard label={t('teamWeeklySolved')} value={team.stats?.weeklySolved ?? 0} caption="최근 7일 정답 제출" />
+        <StatCard label={t('teamAvgRating')} value={team.stats?.avgRating ?? 0} caption="소속 평균 레이팅" />
+        <StatCard label="관리자" value={adminCount} caption={isTeamAdmin ? '관리 권한 있음' : '조회 권한'} />
+      </div>
 
-      <div style={{ marginTop: 40, background: 'var(--bg2)', borderRadius: 16, border: '1px solid var(--border)', overflow: 'hidden' }}>
-        <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--border)', fontWeight: 700 }}>{t('teamMemberList')}</div>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-          <thead style={{ background: 'var(--bg3)', color: 'var(--text3)', textAlign: 'left' }}>
-            <tr>
-              <th style={{ padding: '12px 24px' }}>{t('teamUserCol')}</th>
-              <th style={{ padding: '12px 24px' }}>{t('teamRoleCol')}</th>
-              <th style={{ padding: '12px 24px' }}>{t('teamJoinedAtCol')}</th>
-              <th style={{ padding: '12px 24px' }}>{t('teamStatusCol')}</th>
-              <th style={{ padding: '12px 24px', textAlign: 'right' }}>{t('teamActionCol')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {(team.members || []).map(m => (
-              <tr key={m.id}>
-                <td style={{ padding: '16px 24px', fontWeight: 600 }}>{m.username} {m.id === user.id && `(${t('teamYou')})`}</td>
-                <td style={{ padding: '16px 24px', textTransform: 'capitalize' }}>{m.role}</td>
-                <td style={{ padding: '16px 24px', color: 'var(--text3)' }}>{new Date(m.joined_at).toLocaleDateString()}</td>
-                <td style={{ padding: '16px 24px' }}><span style={{ color: 'var(--green)' }}>{t('teamActiveStatus')}</span></td>
-                <td style={{ padding: '16px 24px', textAlign: 'right' }}>
-                  {m.role !== 'admin' && team.owner_id === user.id && (
-                    <button 
-                      onClick={() => handleRemoveMember(m.id)}
-                      style={{ padding: '6px 12px', background: 'transparent', border: '1px solid var(--red)', color: 'var(--red)', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontWeight: 600 }}
-                    >{t('teamRemoveBtn')}</button>
-                  )}
-                </td>
+      <div style={{ background:'var(--bg2)', border:'1px solid var(--border)', borderRadius:14, overflow:'hidden' }}>
+        <div style={{ padding:'16px 20px', borderBottom:'1px solid var(--border)', display:'flex', justifyContent:'space-between', gap:12 }}>
+          <strong>{t('teamMemberList')}</strong>
+          <span style={{ color:'var(--text3)', fontSize:12 }}>멤버별 풀이 활동 점검</span>
+        </div>
+        <div style={{ overflowX:'auto' }}>
+          <table style={{ width:'100%', borderCollapse:'collapse', fontSize:13, minWidth:820 }}>
+            <thead style={{ background:'var(--bg3)', color:'var(--text3)', textAlign:'left' }}>
+              <tr>
+                <th style={{ padding:'12px 16px' }}>{t('teamUserCol')}</th>
+                <th style={{ padding:'12px 16px' }}>{t('teamRoleCol')}</th>
+                <th style={{ padding:'12px 16px' }}>제출</th>
+                <th style={{ padding:'12px 16px' }}>정답</th>
+                <th style={{ padding:'12px 16px' }}>7일 정답</th>
+                <th style={{ padding:'12px 16px' }}>최근 제출</th>
+                <th style={{ padding:'12px 16px' }}>{t('teamJoinedAtCol')}</th>
+                <th style={{ padding:'12px 16px', textAlign:'right' }}>{t('teamActionCol')}</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {members.map((member) => {
+                const isSelf = member.id === user?.id;
+                const isOnlyAdmin = member.role === 'admin' && adminCount <= 1;
+                return (
+                  <tr key={member.id} style={{ borderTop:'1px solid var(--border)' }}>
+                    <td style={{ padding:'14px 16px', fontWeight:700 }}>
+                      {member.username} {isSelf && <span style={{ color:'var(--blue)', fontSize:11 }}>({t('teamYou')})</span>}
+                      <div style={{ color:'var(--text3)', fontSize:11, fontWeight:500 }}>{member.email}</div>
+                    </td>
+                    <td style={{ padding:'14px 16px' }}>
+                      <span style={{
+                        display:'inline-flex', alignItems:'center', gap:5, padding:'4px 8px', borderRadius:999,
+                        color: member.role === 'admin' ? 'var(--yellow)' : 'var(--text2)',
+                        border:'1px solid var(--border)', background:'var(--bg)',
+                      }}>
+                        {member.role === 'admin' ? <ShieldCheck size={13} /> : <Users size={13} />}
+                        {member.role}
+                      </span>
+                    </td>
+                    <td style={{ padding:'14px 16px' }}>{member.activity?.submissions ?? 0}</td>
+                    <td style={{ padding:'14px 16px', color:'var(--green)', fontWeight:800 }}>{member.activity?.correct ?? 0}</td>
+                    <td style={{ padding:'14px 16px', color:'var(--blue)', fontWeight:800 }}>{member.activity?.weeklySolved ?? 0}</td>
+                    <td style={{ padding:'14px 16px', color:'var(--text3)' }}>{fmtDate(member.activity?.lastSubmittedAt)}</td>
+                    <td style={{ padding:'14px 16px', color:'var(--text3)' }}>{fmtDate(member.joinedAt || member.joined_at)}</td>
+                    <td style={{ padding:'14px 16px', textAlign:'right' }}>
+                      {isTeamAdmin && !isSelf && (
+                        <div style={{ display:'flex', justifyContent:'flex-end', gap:6 }}>
+                          {member.role === 'admin' ? (
+                            <button className="btn btn-ghost btn-sm" onClick={() => updateMemberRole(member.id, 'member')} disabled={busy || isOnlyAdmin}>
+                              <ShieldOff size={13} /> 해제
+                            </button>
+                          ) : (
+                            <button className="btn btn-ghost btn-sm" onClick={() => updateMemberRole(member.id, 'admin')} disabled={busy}>
+                              <ShieldCheck size={13} /> 관리자
+                            </button>
+                          )}
+                          <button className="btn btn-ghost btn-sm" onClick={() => handleRemoveMember(member.id)} disabled={busy}>
+                            <Trash2 size={13} /> {t('teamRemoveBtn')}
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
