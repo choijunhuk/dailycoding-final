@@ -253,13 +253,14 @@ async function getProblemById(problemId) {
 }
 
 async function findProblemIds(count = 1, { bannedTags = [] } = {}) {
+  const limit = Math.max(count * 5, 30);
   const rows = await query(
     `SELECT id FROM problems
      WHERE COALESCE(visibility, 'global') = 'global'
        AND COALESCE(problem_type, 'coding') = 'coding'
      ORDER BY RAND()
-     LIMIT ?`,
-    [Math.max(count * 5, 30)]
+     LIMIT ${limit}`,
+    []
   );
 
   const result = [];

@@ -199,7 +199,7 @@ const LANG_CONFIG = {
     compile: ['gcc', '-std=c99', '-O2', '-o', 'main', 'main.c'],
   },
   java: {
-    image:   'openjdk:21-slim',
+    image:   'eclipse-temurin:21-jdk-alpine',
     file:    'Main.java',
     cmd:     ['java', 'Main'],
     compile: ['javac', 'Main.java'],
@@ -259,7 +259,7 @@ function shellQuote(value) {
 }
 
 function withInputRedirect(cmd, inputPath = '/code/input.txt') {
-  return ['sh', '-lc', `${cmd.map(shellQuote).join(' ')} < ${shellQuote(inputPath)}`];
+  return ['sh', '-c', `${cmd.map(shellQuote).join(' ')} < ${shellQuote(inputPath)}`];
 }
 
 async function readContainerLogs(container) {
@@ -333,6 +333,8 @@ async function runInContainer({ image, cmd, binds, timeoutMs, memoryLimit = 128 
       Env: [
         'PYTHONDONTWRITEBYTECODE=1',
         'PYTHONUNBUFFERED=1',
+        'HOME=/tmp',
+        'NODE_PATH=',
       ],
       AttachStdin: false,
       AttachStdout: true,
