@@ -7,10 +7,10 @@
  *   - npm install dockerode
  *
  * 사용 이미지 (처음 실행 시 자동 pull):
- *   - python:3.12-alpine  (Python)
- *   - node:20-alpine       (JavaScript)
- *   - gcc:13-alpine        (C / C++)
- *   - openjdk:21-alpine    (Java)
+ *   - python:3.12-alpine          (Python)
+ *   - node:20-alpine               (JavaScript)
+ *   - gcc:13                       (C / C++)
+ *   - eclipse-temurin:21-jdk-alpine (Java)
  */
 
 import Docker from 'dockerode';
