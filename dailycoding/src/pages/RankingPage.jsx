@@ -52,22 +52,6 @@ const MEDALS = ['🥇','🥈','🥉'];
 
 // ─── sub-components ──────────────────────────────────────────────────────────
 
-function Avatar({ name, tier, size = 38, radius = '50%' }) {
-  const tm = TIER_META[tier] || TIER_META.unranked;
-  return (
-    <div style={{
-      width: size, height: size, borderRadius: radius,
-      background: `radial-gradient(circle at 30% 30%, ${tm.color}40, ${tm.bg})`,
-      border: `2px solid ${tm.color}80`,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontSize: Math.round(size * 0.29), fontWeight: 800, color: tm.color,
-      flexShrink: 0, letterSpacing: 0.5,
-      boxShadow: `0 0 8px ${tm.color}30`,
-    }}>
-      {(name || '??').slice(0, 2).toUpperCase()}
-    </div>
-  );
-}
 
 function TierBadge({ tier }) {
   const tm = TIER_META[tier] || TIER_META.unranked;
@@ -297,7 +281,7 @@ export default function RankingPage() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 20 }}>
             {/* left: avatar + name */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-              <Avatar name={myData.name} tier={myData.tier} size={56} radius={14} />
+              <ProfileAvatar profile={myData} size={56} radius={14} border={`2px solid ${TIER_META[myData.tier]?.color || 'var(--border)'}60`} />
               <div>
                 <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 2, textTransform: 'uppercase', letterSpacing: 1 }}>{t('rankingMyCurrentRank')}</div>
                 <div style={{ fontWeight: 800, fontSize: 18, marginBottom: 2 }}>
