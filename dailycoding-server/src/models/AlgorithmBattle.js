@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { insert, query, queryOne, run } from '../config/mysql.js';
+import { insert, isConnected, query, queryOne, run } from '../config/mysql.js';
 import { nowMySQL, toMySQL } from '../config/dateutil.js';
 
 const ROOM_PREFIX = 'algo_';
@@ -76,6 +76,7 @@ const BATTLE_ITEMS = {
 
 const BATTLE_EMOTES = ['gg', 'nice', 'oops', 'focus', 'taunt'];
 const BANNABLE_TAGS = ['정렬', '수학', '문자열', '그래프', '탐색', 'DP', '구현'];
+const PROBLEM_TIERS = ['bronze', 'silver', 'gold', 'platinum', 'diamond'];
 
 function parseJson(value, fallback) {
   if (value == null || value === '') return fallback;
@@ -223,6 +224,62 @@ function hasBannedTag(tags = [], bannedTags = []) {
   return (tags || []).some((t) => banned.has(String(t).toLowerCase()));
 }
 
+function tierIndex(tier) {
+  const idx = PROBLEM_TIERS.indexOf(String(tier || '').toLowerCase());
+  return idx === -1 ? 0 : idx;
+}
+
+function problemTierFromRating(rating = 0) {
+  const value = Number(rating) || 0;
+  if (value >= 10000) return 'diamond';
+  if (value >= 6000) return 'platinum';
+  if (value >= 2800) return 'gold';
+  if (value >= 1000) return 'silver';
+  return 'bronze';
+}
+
+function uniqueTiers(startIdx, endIdx) {
+  const start = Math.max(0, Math.min(PROBLEM_TIERS.length - 1, startIdx));
+  const end = Math.max(start, Math.min(PROBLEM_TIERS.length - 1, endIdx));
+  return PROBLEM_TIERS.slice(start, end + 1);
+}
+
+export function resolveBattleProblemRange(profiles = [], room = {}) {
+  const normalized = (profiles || []).filter(Boolean);
+  if (normalized.length === 0) {
+    return { tiers: ['bronze'], minDifficulty: 1, maxDifficulty: 3 };
+  }
+
+  const effectiveRatings = normalized.map((profile) => {
+    const algorithmRating = Number(profile.rating ?? 800) || 0;
+    const battleScore = Number(profile.battleScore || 0) || 0;
+    return Math.max(0, algorithmRating + battleScore * 20);
+  });
+  const avgRating = effectiveRatings.reduce((sum, rating) => sum + rating, 0) / effectiveRatings.length;
+  const avgTier = problemTierFromRating(avgRating);
+  const centerIdx = tierIndex(avgTier);
+  const minRating = Math.min(...effectiveRatings);
+  const maxRating = Math.max(...effectiveRatings);
+  const spread = maxRating - minRating;
+
+  let below = centerIdx <= 1 ? 0 : 1;
+  let above = centerIdx === 0 ? 0 : 1;
+  if (avgRating >= 6000) below += 1;
+  if (avgRating >= 10000) above += 1;
+  if (spread >= 2500) {
+    below += 1;
+    above += 1;
+  }
+  if (room.mode === 'territory' || Number(room.durationSec || 0) >= 600) {
+    above += centerIdx === 0 ? 0 : 1;
+  }
+
+  const tiers = uniqueTiers(centerIdx - below, centerIdx + above);
+  const minDifficulty = Math.max(1, Math.min(9, centerIdx * 2 + 1));
+  const maxDifficulty = Math.max(minDifficulty, Math.min(9, centerIdx * 2 + 3 + (above > 1 ? 1 : 0)));
+  return { tiers, minDifficulty, maxDifficulty };
+}
+
 function inferProblemEffect(problem) {
   const tags = [...(problem?.tags || []), problem?.title || ''].map((t) => String(t).toLowerCase()).join(' ');
   if (/그래프|graph|bfs|dfs|탐색|search|maze|path/.test(tags)) {
@@ -263,10 +320,10 @@ async function getProblemById(problemId) {
   return Problem.findById(Number(problemId));
 }
 
-async function findProblemIds(count = 1, { bannedTags = [] } = {}) {
-  const limit = Math.max(count * 5, 30);
+async function findProblemIds(count = 1, { bannedTags = [], tiers = PROBLEM_TIERS, minDifficulty = 1, maxDifficulty = 9 } = {}) {
+  const limit = Math.max(count * 20, 200);
   const rows = await query(
-    `SELECT id FROM problems
+    `SELECT id, tier, difficulty FROM problems
      WHERE COALESCE(visibility, 'global') = 'global'
        AND COALESCE(problem_type, 'coding') = 'coding'
      ORDER BY RAND()
@@ -280,6 +337,9 @@ async function findProblemIds(count = 1, { bannedTags = [] } = {}) {
   for (const row of rows || []) {
     if (result.length >= count) break;
     if (usedIds.has(Number(row.id))) continue;
+    if (tiers.length > 0 && !tiers.includes(String(row.tier || '').toLowerCase())) continue;
+    const difficulty = Number(row.difficulty || 1);
+    if (difficulty < minDifficulty || difficulty > maxDifficulty) continue;
     if (bannedTags.length > 0) {
       const tagRows = await query('SELECT tag FROM problem_tags WHERE problem_id = ?', [row.id]);
       const tags = (tagRows || []).map((t) => t.tag);
@@ -290,10 +350,24 @@ async function findProblemIds(count = 1, { bannedTags = [] } = {}) {
   }
 
   // fallback if DB doesn't have enough problems
-  const fallback = result[0] || 900001;
+  const fallback = result[0] || rows.find((row) => !tiers.length || tiers.includes(String(row.tier || '').toLowerCase()))?.id || 900001;
   while (result.length < count) result.push(fallback);
 
   return result;
+}
+
+async function getBattleProfile(userId) {
+  const user = await getUserById(userId);
+  const battle = await queryOne(
+    'SELECT COALESCE(SUM(battle_score_delta), 0) AS battleScore FROM battle_results WHERE user_id = ?',
+    [userId]
+  );
+  return {
+    userId: Number(userId),
+    tier: user?.tier || 'bronze',
+    rating: Number(user?.rating ?? 800) || 0,
+    battleScore: Number(battle?.battleScore ?? battle?.battle_score ?? 0) || 0,
+  };
 }
 
 export const AlgorithmBattle = {
@@ -311,6 +385,17 @@ export const AlgorithmBattle = {
   },
 
   async expireStaleWaitingRooms({ now = Date.now() } = {}) {
+    if (isConnected()) {
+      const result = await run(
+        `UPDATE battle_rooms
+         SET status = 'finished', ended_at = NOW()
+         WHERE status = 'waiting'
+           AND created_at < DATE_SUB(NOW(), INTERVAL 5 MINUTE)`,
+        []
+      );
+      return Number(result?.affectedRows || 0);
+    }
+
     const rows = await query('SELECT * FROM battle_rooms WHERE status = ?', ['waiting']);
     let expiredCount = 0;
 
@@ -342,20 +427,15 @@ export const AlgorithmBattle = {
   } = {}) {
     const normalizedMode = normalizeMode(mode);
     const modeConfig = getBattleModeConfig(normalizedMode);
-    const problemCount = BATTLE_MODES[normalizedMode]?.problemCount || 1;
 
     let resolvedProblemId = null;
     let problemIdsJson = null;
 
-    if (normalizedMode === 'territory') {
-      const ids = await findProblemIds(problemCount, { bannedTags });
-      problemIdsJson = JSON.stringify(ids);
-      resolvedProblemId = ids[0] || null;
-    } else if (problemId) {
+    if (problemId) {
       resolvedProblemId = Number(problemId);
-    } else {
-      const ids = await findProblemIds(1, { bannedTags });
-      resolvedProblemId = ids[0] || null;
+      if (normalizedMode === 'territory') {
+        problemIdsJson = JSON.stringify([resolvedProblemId]);
+      }
     }
 
     const id = ROOM_PREFIX + crypto.randomBytes(5).toString('hex');
@@ -363,21 +443,37 @@ export const AlgorithmBattle = {
     const inviteCodeVal = isPrivate ? crypto.randomBytes(3).toString('hex').toUpperCase() : null;
     const lobbyExpiresAt = toMySQL(new Date(Date.now() + LOBBY_TIMEOUT_MS));
 
-    await insert(
-      `INSERT INTO battle_rooms
-         (id, mode, problem_id, problem_ids, territory_claims, status, max_players, duration_sec,
-          created_by, created_at, is_private, invite_code, preferred_language, lobby_expires_at)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-      [
-        id, normalizedMode, resolvedProblemId, problemIdsJson, '{}', 'waiting',
-        clampInt(maxPlayers ?? modeConfig.maxPlayers, modeConfig.maxPlayers, 2, MAX_PLAYERS),
-        clampInt(durationSec ?? modeConfig.durationSec, modeConfig.durationSec, 60, 1200),
-        creatorId || null, now, isPrivate ? 1 : 0, inviteCodeVal,
-        preferredLanguage || null, lobbyExpiresAt,
-      ]
-    );
+    const roomParams = [
+      id, normalizedMode, resolvedProblemId, problemIdsJson, '{}', 'waiting',
+      clampInt(maxPlayers ?? modeConfig.maxPlayers, modeConfig.maxPlayers, 2, MAX_PLAYERS),
+      clampInt(durationSec ?? modeConfig.durationSec, modeConfig.durationSec, 60, 1200),
+      creatorId || null, isPrivate ? 1 : 0, inviteCodeVal, preferredLanguage || null,
+    ];
+    if (isConnected()) {
+      await insert(
+        `INSERT INTO battle_rooms
+           (id, mode, problem_id, problem_ids, territory_claims, status, max_players, duration_sec,
+            created_by, created_at, is_private, invite_code, preferred_language, lobby_expires_at)
+         VALUES (?,?,?,?,?,?,?,?,?,NOW(),?,?,?,DATE_ADD(NOW(), INTERVAL 5 MINUTE))`,
+        roomParams
+      );
+    } else {
+      await insert(
+        `INSERT INTO battle_rooms
+           (id, mode, problem_id, problem_ids, territory_claims, status, max_players, duration_sec,
+            created_by, created_at, is_private, invite_code, preferred_language, lobby_expires_at)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        [
+          id, normalizedMode, resolvedProblemId, problemIdsJson, '{}', 'waiting',
+          clampInt(maxPlayers ?? modeConfig.maxPlayers, modeConfig.maxPlayers, 2, MAX_PLAYERS),
+          clampInt(durationSec ?? modeConfig.durationSec, modeConfig.durationSec, 60, 1200),
+          creatorId || null, now, isPrivate ? 1 : 0, inviteCodeVal,
+          preferredLanguage || null, lobbyExpiresAt,
+        ]
+      );
+    }
     if (creatorId) await this.joinRoom(id, creatorId);
-    await this.recordEvent(id, creatorId || null, 'room.config', { mode: normalizedMode, bannedTags });
+    await this.recordEvent(id, creatorId || null, 'room.config', { mode: normalizedMode, bannedTags, deferredProblemSelection: !problemId });
     return this.getRoomState(id);
   },
 
@@ -536,9 +632,49 @@ export const AlgorithmBattle = {
     return this.getRoomState(roomId);
   },
 
+  async ensureRoomProblems(roomId, room = null) {
+    const currentRoom = room || await this.getRoom(roomId);
+    if (!currentRoom) return null;
+    const problemCount = BATTLE_MODES[currentRoom.mode]?.problemCount || 1;
+    const hasSelectedProblem = currentRoom.mode === 'territory'
+      ? Array.isArray(currentRoom.problemIds) && currentRoom.problemIds.length >= problemCount
+      : Boolean(currentRoom.problemId);
+    if (hasSelectedProblem) return currentRoom;
+
+    const participants = await this.getParticipants(roomId);
+    const profiles = await Promise.all(participants.map((player) => getBattleProfile(player.userId)));
+    const events = await this.getEvents(roomId);
+    const configEvent = [...(events || [])].reverse().find((event) => event.type === 'room.config');
+    const bannedTags = Array.isArray(configEvent?.payload?.bannedTags) ? configEvent.payload.bannedTags : [];
+    const range = resolveBattleProblemRange(profiles, currentRoom);
+    const ids = await findProblemIds(problemCount, { ...range, bannedTags });
+    const primaryProblemId = ids[0] || null;
+    const problemIdsJson = currentRoom.mode === 'territory' ? JSON.stringify(ids) : null;
+
+    await run(
+      'UPDATE battle_rooms SET problem_id = ?, problem_ids = ? WHERE id = ?',
+      [primaryProblemId, problemIdsJson, roomId]
+    );
+    await this.recordEvent(roomId, null, 'room.problem_selected', {
+      problemIds: ids,
+      tiers: range.tiers,
+      minDifficulty: range.minDifficulty,
+      maxDifficulty: range.maxDifficulty,
+    });
+
+    return this.getRoom(roomId);
+  },
+
   async startRoom(roomId) {
     const room = await this.getRoom(roomId);
     if (!room || room.status !== 'waiting') return room;
+    const participants = await this.getParticipants(roomId);
+    if (participants.length < 2) {
+      const err = new Error('상대가 들어온 뒤 시작할 수 있습니다.');
+      err.status = 400;
+      throw err;
+    }
+    await this.ensureRoomProblems(roomId, room);
     await run('UPDATE battle_rooms SET status = ?, started_at = ? WHERE id = ?', ['playing', nowMySQL(), roomId]);
     await this.recordEvent(roomId, null, 'room.started', {});
     return this.getRoom(roomId);
@@ -833,6 +969,17 @@ export const AlgorithmBattle = {
 
     // Lobby timeout
     if (state.room.status === 'waiting' && state.room.lobbyExpiresAt) {
+      if (isConnected()) {
+        await run(
+          `UPDATE battle_rooms
+           SET status = 'finished', ended_at = NOW()
+           WHERE id = ?
+             AND status = 'waiting'
+             AND created_at < DATE_SUB(NOW(), INTERVAL 5 MINUTE)`,
+          [roomId]
+        );
+        return this.getRoomState(roomId);
+      }
       if (Date.now() > new Date(state.room.lobbyExpiresAt).getTime()) {
         await run('UPDATE battle_rooms SET status = ?, ended_at = ? WHERE id = ?', ['finished', nowMySQL(), roomId]);
         return this.getRoomState(roomId);

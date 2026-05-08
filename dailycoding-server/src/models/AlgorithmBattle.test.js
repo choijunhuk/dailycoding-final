@@ -6,7 +6,7 @@ process.env.REDIS_URL = 'redis://invalid:6379';
 process.env.JWT_SECRET = 'test_secret';
 
 import { insert, query, run, waitForDB } from '../config/mysql.js';
-import { AlgorithmBattle, calculateBattleScore } from './AlgorithmBattle.js';
+import { AlgorithmBattle, calculateBattleScore, resolveBattleProblemRange } from './AlgorithmBattle.js';
 
 test('battle score rewards correctness and fast execution', () => {
   const fast = calculateBattleScore({ isCorrect: true, executionTimeMs: 100, memoryMb: 16, elapsedSec: 5 });
@@ -39,6 +39,8 @@ test('algorithm battle lifecycle creates, joins, starts, submits, and finishes',
   });
   assert.equal(created.room.status, 'waiting');
   assert.equal(created.participants.length, 1);
+  assert.equal(created.room.problemId, problemId);
+  assert.ok(created.problem);
   assert.equal(created.config.key, 'duel-effects');
   assert.deepEqual(created.config.bannedTags, ['그래프']);
 
@@ -48,6 +50,8 @@ test('algorithm battle lifecycle creates, joins, starts, submits, and finishes',
   await AlgorithmBattle.markReady(created.room.id, userA);
   const started = await AlgorithmBattle.markReady(created.room.id, userB);
   assert.equal(started.room.status, 'playing');
+  assert.ok(started.room.problemId);
+  assert.ok(started.problem);
 
   const activity = await AlgorithmBattle.recordActivity(created.room.id, userA, { activity: '코드 작성 중' });
   assert.equal(activity.event.type, 'player.activity');
@@ -124,6 +128,40 @@ test('algorithm battle keeps a newly created room waiting in the lobby', async (
   assert.equal(listed?.participants.length, 1);
 });
 
+test('algorithm battle starts with bronze-range problems for low-rated players', async () => {
+  await waitForDB();
+  const userA = await insert('INSERT INTO users (email, username, role, tier, rating) VALUES (?,?,?,?,?)', ['battle-iron-a@test.com', 'BattleIronA', 'user', 'iron', 100]);
+  const userB = await insert('INSERT INTO users (email, username, role, tier, rating) VALUES (?,?,?,?,?)', ['battle-iron-b@test.com', 'BattleIronB', 'user', 'iron', 120]);
+
+  const created = await AlgorithmBattle.createRoom({ creatorId: userA, mode: 'sort-speed', maxPlayers: 2 });
+  assert.equal(created.room.status, 'waiting');
+  assert.equal(created.room.problemId, null);
+
+  await AlgorithmBattle.joinRoom(created.room.id, userB);
+  await AlgorithmBattle.markReady(created.room.id, userA);
+  const started = await AlgorithmBattle.markReady(created.room.id, userB);
+
+  assert.equal(started.room.status, 'playing');
+  assert.equal(started.problem.tier, 'bronze');
+  assert.ok(Number(started.problem.difficulty || 1) <= 3);
+});
+
+test('battle problem range widens for stronger ratings and longer modes', () => {
+  const low = resolveBattleProblemRange([
+    { rating: 100, battleScore: 0 },
+    { rating: 120, battleScore: 0 },
+  ], { mode: 'sort-speed', durationSec: 300 });
+  assert.deepEqual(low.tiers, ['bronze']);
+
+  const advanced = resolveBattleProblemRange([
+    { rating: 6500, battleScore: 20 },
+    { rating: 7200, battleScore: 25 },
+  ], { mode: 'territory', durationSec: 600 });
+  assert.ok(advanced.tiers.includes('gold'));
+  assert.ok(advanced.tiers.includes('platinum'));
+  assert.ok(advanced.tiers.includes('diamond'));
+});
+
 test('algorithm battle does not award wins for abandoned single-player rooms', async () => {
   await waitForDB();
   const userA = await insert('INSERT INTO users (email, username, role) VALUES (?,?,?)', ['battle-solo-a@test.com', 'BattleSoloA', 'user']);
@@ -165,12 +203,14 @@ test('algorithm battle exposes mode metadata and blocks items in classic mode', 
 test('algorithm battle prevents non-participant submissions', async () => {
   await waitForDB();
   const userA = await insert('INSERT INTO users (email, username, role) VALUES (?,?,?)', ['battle-c@test.com', 'BattleC', 'user']);
+  const userB = await insert('INSERT INTO users (email, username, role) VALUES (?,?,?)', ['battle-d@test.com', 'BattleD', 'user']);
   const intruder = await insert('INSERT INTO users (email, username, role) VALUES (?,?,?)', ['battle-x@test.com', 'BattleX', 'user']);
   const problemId = await insert(
     'INSERT INTO problems (title, problem_type, description, visibility) VALUES (?,?,?,?)',
     ['Sort Battle Guard', 'coding', 'Sort numbers', 'global']
   );
   const created = await AlgorithmBattle.createRoom({ creatorId: userA, problemId, maxPlayers: 2 });
+  await AlgorithmBattle.joinRoom(created.room.id, userB);
   await AlgorithmBattle.startRoom(created.room.id);
 
   await assert.rejects(
