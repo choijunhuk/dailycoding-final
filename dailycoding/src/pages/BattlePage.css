@@ -812,6 +812,7 @@
   font-family: 'Space Mono', monospace;
   font-size: 13px;
   line-height: 1.6;
+  tab-size: 2;
   resize: vertical;
   outline: none;
   box-sizing: border-box;
