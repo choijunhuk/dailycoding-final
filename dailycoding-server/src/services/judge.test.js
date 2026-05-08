@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { spawnSync } from 'child_process';
 
 import {
   buildJudgeRuntime,
@@ -15,6 +16,13 @@ import {
   judgeCodeNative,
   runCodeNative,
 } from './judge.js';
+
+function commandAvailable(command) {
+  return spawnSync('sh', ['-c', `command -v ${command} >/dev/null 2>&1`], {
+    env: { PATH: '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin' },
+    stdio: 'ignore',
+  }).status === 0;
+}
 
 test('getConfiguredJudgeMode normalizes supported values and defaults to auto', () => {
   assert.equal(getConfiguredJudgeMode({ JUDGE_MODE: 'native' }), 'native');
@@ -131,32 +139,42 @@ test('judgeCodeNative runs Python standard library imports with stdin', async ()
   assert.equal(result.result, 'correct', result.detail);
 });
 
-test('judgeCodeNative accepts one-line pair input across supported languages', async () => {
+test('judgeCodeNative accepts one-line pair input across installed native languages', async () => {
   const cases = [{ input: '1 2\n', output: '3' }];
   const submissions = [
     {
       lang: 'python',
+      commands: ['python3'],
       code: 'a, b = map(int, input().split())\nprint(a + b)',
     },
     {
       lang: 'javascript',
+      commands: ['node'],
       code: 'const fs = require("fs");\nconst [a, b] = fs.readFileSync(0, "utf8").trim().split(/\\s+/).map(Number);\nconsole.log(a + b);',
     },
     {
       lang: 'cpp',
+      commands: ['g++'],
       code: '#include <bits/stdc++.h>\nusing namespace std;\nint main(){ int a, b; cin >> a >> b; cout << a + b << "\\n"; return 0; }',
     },
     {
       lang: 'c',
+      commands: ['gcc'],
       code: '#include <stdio.h>\nint main(){ int a, b; if (scanf("%d %d", &a, &b) != 2) return 1; printf("%d\\n", a + b); return 0; }',
     },
     {
       lang: 'java',
+      commands: ['java', 'javac'],
       code: 'import java.util.*;\npublic class Main { public static void main(String[] args) { Scanner sc = new Scanner(System.in); int a = sc.nextInt(); int b = sc.nextInt(); System.out.println(a + b); } }',
     },
   ];
+  const installedSubmissions = submissions.filter((submission) =>
+    submission.commands.every(commandAvailable)
+  );
 
-  for (const submission of submissions) {
+  assert.ok(installedSubmissions.length > 0, 'No native judge runtimes are installed');
+
+  for (const submission of installedSubmissions) {
     const result = await judgeCodeNative({
       lang: submission.lang,
       code: submission.code,
