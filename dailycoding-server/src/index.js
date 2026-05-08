@@ -419,6 +419,56 @@ async function seedSpecialProblems() {
       hint: 'fib(0)=0, fib(1)=1의 올바른 기저 조건을 생각해보세요.',
       config: { buggyCode: "#include <iostream>\nusing namespace std;\nint fib(int n) {\n  if (n <= 1) return 1;  // 버그: fib(0)=0이어야 함\n  return fib(n-1) + fib(n-2);\n}\nint main() {\n  cout << fib(10) << endl;  // 55이어야 하지만 89 출력\n  return 0;\n}", keywords: ['return n', 'if (n <= 1) return n'], explanation: 'fib(0)=0, fib(1)=1이어야 합니다. return n으로 바꾸면 n=0일 때 0, n=1일 때 1을 반환합니다.', hint: 'if (n <= 1) return n;으로 수정하세요.' } },
 
+    // ── 트러블슈팅 / 성능 개선 / 리팩터링 예제 (96001–96003) ──────────────
+    { id: 96001, title: '트러블슈팅: NameError 디버깅', difficulty: 2, lang: 'python', type: 'troubleshooting',
+      desc: 'Python 스크립트가 실행 시 NameError로 종료됩니다. 원인을 찾아 수정하세요.',
+      hint: '변수 이름 오타를 확인하세요.',
+      config: {},
+      troubleshootingConfig: {
+        scenarioTitle: 'NameError 디버깅',
+        scenarioDescription: '사용자 이름을 입력받아 인사말을 출력하는 간단한 스크립트입니다. 실행하면 NameError가 발생하며 종료됩니다. 코드를 분석하고 버그를 수정해 정상 동작하게 만드세요.',
+        initialFiles: JSON.stringify([{ path: 'main.py', content: 'name = input()\nprint(f"Hello, {nane}!")  # NameError: name \'nane\' is not defined', editable: true }]),
+        visibleTests: JSON.stringify([{ name: '기본 출력 테스트', command: ['python3', 'main.py'], input: 'World', expectedOutput: 'Hello, World!', timeoutMs: 3000 }]),
+        hiddenTests: JSON.stringify([{ name: '다른 입력 테스트', command: ['python3', 'main.py'], input: 'DailyCoding', expectedOutput: 'Hello, DailyCoding!', timeoutMs: 3000 }]),
+        scoringRules: JSON.stringify({ correctness: 70, performance: 10, readability: 20 }),
+        evaluationMode: 'command',
+      },
+    },
+    { id: 96002, title: '성능 개선: O(n²) 중복 제거', difficulty: 3, lang: 'python', type: 'performance-fix',
+      desc: '리스트에서 중복을 제거하는 함수가 너무 느립니다. O(n) 이하로 최적화하세요.',
+      hint: 'set()을 활용하면 O(n)으로 중복을 제거할 수 있습니다.',
+      config: {},
+      troubleshootingConfig: {
+        scenarioTitle: 'O(n²) → O(n) 중복 제거 최적화',
+        scenarioDescription: '1,000개 원소 리스트에서 중복을 제거하는 함수가 대규모 입력에서 타임아웃이 발생합니다. 현재 구현은 O(n²)이며 목표는 200ms 이내입니다. 기능은 동일하게 유지하면서 성능을 개선하세요.',
+        initialFiles: JSON.stringify([{ path: 'main.py', content: 'def remove_duplicates(arr):\n    result = []\n    for x in arr:\n        if x not in result:  # O(n) 검색 → 전체 O(n²)\n            result.append(x)\n    return result\n\ndata = list(range(500)) * 2\nprint(len(remove_duplicates(data)))', editable: true }]),
+        visibleTests: JSON.stringify([{ name: '결과 검증', command: ['python3', 'main.py'], input: '', expectedOutput: '500', timeoutMs: 2000 }]),
+        hiddenTests: JSON.stringify([{ name: '대용량 성능 테스트', command: ['python3', '-c', "import time, subprocess; s=time.time(); r=subprocess.run(['python3','main.py'],capture_output=True); print('PASS' if float(time.time()-s)<0.2 else 'SLOW')"], input: '', expectedOutput: 'PASS', timeoutMs: 5000 }]),
+        baselineTimeMs: 800,
+        targetResponseTimeMs: 200,
+        scoringRules: JSON.stringify({ correctness: 50, performance: 40, readability: 10 }),
+        evaluationMode: 'command',
+      },
+    },
+    { id: 96003, title: '리팩터링: 중복 조건문 개선', difficulty: 2, lang: 'python', type: 'refactor-fix',
+      desc: '학점을 판별하는 코드에 중복 조건문이 과도하게 사용되었습니다. 동작을 유지하면서 코드를 깔끔하게 개선하세요.',
+      hint: 'elif 체인이나 딕셔너리 매핑으로 조건을 단순화하세요.',
+      config: {},
+      troubleshootingConfig: {
+        scenarioTitle: '중복 조건문 리팩터링',
+        scenarioDescription: '점수를 입력받아 학점(A/B/C/D/F)을 출력하는 코드입니다. 동작은 올바르지만 중복 if 조건이 과도하게 반복됩니다. 기능을 그대로 유지하면서 코드를 간결하게 리팩터링하세요. 조건 5개를 elif 또는 딕셔너리로 줄이는 것이 목표입니다.',
+        initialFiles: JSON.stringify([{ path: 'main.py', content: 'score = int(input())\nif score >= 90:\n    grade = "A"\nif score >= 80 and score < 90:\n    grade = "B"\nif score >= 70 and score < 80:\n    grade = "C"\nif score >= 60 and score < 70:\n    grade = "D"\nif score < 60:\n    grade = "F"\nprint(grade)', editable: true }]),
+        visibleTests: JSON.stringify([{ name: '학점 출력 검증', command: ['python3', 'main.py'], input: '85', expectedOutput: 'B', timeoutMs: 3000 }]),
+        hiddenTests: JSON.stringify([
+          { name: 'A 등급', command: ['python3', 'main.py'], input: '95', expectedOutput: 'A', timeoutMs: 3000 },
+          { name: 'F 등급', command: ['python3', 'main.py'], input: '45', expectedOutput: 'F', timeoutMs: 3000 },
+        ]),
+        forbiddenPatterns: JSON.stringify(['if score >= 90 and', 'if score >= 80 and score']),
+        scoringRules: JSON.stringify({ correctness: 50, performance: 10, readability: 40 }),
+        evaluationMode: 'command',
+      },
+    },
+
     // ── Java 버그 찾기 (95001–95002) ──────────────────────────────────
     { id: 95001, title: 'Java 버그: 배열 출력 주소값 오류', difficulty: 2, lang: 'java', type: 'bug-fix',
       desc: '정렬된 배열을 출력하는 코드가 의미없는 값을 출력합니다.',
@@ -440,6 +490,24 @@ async function seedSpecialProblems() {
         [p.id, p.title, 'bronze', p.difficulty, p.desc, '없음', '정해진 출력', p.hint, '', now, 'global', p.type, p.lang, JSON.stringify(p.config)]
       );
       if (result.affectedRows > 0) inserted++;
+
+      if (p.troubleshootingConfig) {
+        const tc = p.troubleshootingConfig;
+        await pool.execute(
+          `INSERT IGNORE INTO troubleshooting_problem_configs
+             (problem_id, scenario_title, scenario_description, initial_files, visible_tests, hidden_tests,
+              performance_limit_ms, baseline_time_ms, target_response_time_ms, allowed_files,
+              forbidden_patterns, scoring_rules, evaluation_mode)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+          [
+            p.id, tc.scenarioTitle, tc.scenarioDescription || '',
+            tc.initialFiles, tc.visibleTests || '[]', tc.hiddenTests || '[]',
+            tc.performanceLimitMs || null, tc.baselineTimeMs || null, tc.targetResponseTimeMs || null,
+            tc.allowedFiles || null, tc.forbiddenPatterns || null,
+            tc.scoringRules || null, tc.evaluationMode || 'command',
+          ]
+        );
+      }
     }
     logger.info(`✅ 특수 문제 시드 완료 (총 ${problems.length}개, 신규 ${inserted}개)`);
   } catch (err) {

@@ -70,7 +70,7 @@ export default function AdminPage() {
   const [users,        setUsers]        = useState([]);
   const [userSearch,   setUserSearch]   = useState('');
   const [aiPanel,      setAiPanel]      = useState(false);
-  const [aiForm,       setAiForm]       = useState({ tier:'silver', tags:[], difficulty:'4', topic:'' });
+  const [aiForm,       setAiForm]       = useState({ tier:'silver', tags:[], difficulty:'4', topic:'', problemType:'coding' });
   const [aiGenerating, setAiGenerating] = useState(false);
   const [aiPreview,    setAiPreview]    = useState(null);
   const [pwModal,      setPwModal]      = useState(null); // { uid, name }
@@ -232,14 +232,33 @@ export default function AdminPage() {
   const handleAiGenerate = async () => {
     setAiGenerating(true); setAiPreview(null);
     try {
-      const res = await api.post('/ai/generate-problem', { tier:aiForm.tier, tags:aiForm.tags, difficulty:aiForm.difficulty, topic:aiForm.topic });
-      setAiPreview(res.data);
+      const res = await api.post('/ai/generate-problem', { tier:aiForm.tier, tags:aiForm.tags, difficulty:aiForm.difficulty, topic:aiForm.topic, problemType:aiForm.problemType });
+      const d = res.data;
+      setAiPreview(d);
+      const pt = aiForm.problemType;
+      const isTrouble = TROUBLESHOOTING_TYPES.has(pt);
+      let specialConfig = createEmptySpecialConfig();
+      if (pt === 'fill-blank') {
+        specialConfig = { ...specialConfig, codeTemplate: d.codeTemplate || '', blanksText: Array.isArray(d.blanks) ? d.blanks.join('\n') : '', hint: d.hint || '' };
+      } else if (pt === 'bug-fix') {
+        specialConfig = { ...specialConfig, buggyCode: d.buggyCode || '', keywordsText: Array.isArray(d.keywords) ? d.keywords.join('\n') : '', explanation: d.explanation || '', hint: d.hint || '' };
+      } else if (isTrouble) {
+        specialConfig = {
+          ...specialConfig,
+          scenarioTitle: d.scenarioTitle || '',
+          scenarioDescription: d.scenarioDescription || '',
+          initialFiles: Array.isArray(d.initialFiles) ? d.initialFiles : [{ path: 'main.py', content: '', editable: true }],
+          visibleTests: Array.isArray(d.visibleTests) ? d.visibleTests : [],
+          baselineTimeMs: d.baselineTimeMs || '',
+          targetResponseTimeMs: d.targetResponseTimeMs || '',
+        };
+      }
       setForm({
-        title:res.data.title||'', tier:aiForm.tier, problemType:'coding', preferredLanguage:'python', tags:aiForm.tags,
-        timeLimit:String(res.data.timeLimit||2), memLimit:String(res.data.memLimit||256), difficulty:aiForm.difficulty,
-        desc:res.data.desc||'', inputDesc:res.data.inputDesc||'', outputDesc:res.data.outputDesc||'',
-        examples:res.data.examples?.length?res.data.examples:[{input:'',output:''}], testcases:makeEmptyCases(),
-        hint:res.data.hint||'', solution:res.data.solution||'', specialConfig: createEmptySpecialConfig(),
+        title:d.title||'', tier:aiForm.tier, problemType:pt, preferredLanguage:'python', tags:aiForm.tags,
+        timeLimit:String(d.timeLimit||2), memLimit:String(d.memLimit||256), difficulty:aiForm.difficulty,
+        desc:d.desc||'', inputDesc:d.inputDesc||'', outputDesc:d.outputDesc||'',
+        examples:d.examples?.length?d.examples:[{input:'',output:''}], testcases:makeEmptyCases(),
+        hint:d.hint||'', solution:d.solution||'', specialConfig,
       });
     } catch { addNotification('❌ AI 생성 실패. 다시 시도해주세요.'); toast?.show('❌ AI 생성 실패', 'error'); }
     setAiGenerating(false);
@@ -982,9 +1001,10 @@ export default function AdminPage() {
         <div className="card ai-gen-panel fade-up">
           <div className="ai-gen-title">🤖 Gemini AI로 문제 자동 생성</div>
           <div className="cf-row">
+            <div className="form-group" style={{flex:1}}><label>문제 유형</label><select value={aiForm.problemType} onChange={e=>setAiForm(p=>({...p,problemType:e.target.value}))}>{PROBLEM_TYPE_OPTIONS.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</select></div>
             <div className="form-group" style={{flex:1}}><label>티어</label><select value={aiForm.tier} onChange={e=>setAiForm(p=>({...p,tier:e.target.value}))}>{TIER_OPTIONS.map(t=><option key={t} value={t}>{t}</option>)}</select></div>
             <div className="form-group" style={{flex:1}}><label>난이도</label><input type="number" min="1" max="10" value={aiForm.difficulty} onChange={e=>setAiForm(p=>({...p,difficulty:e.target.value}))} /></div>
-            <div className="form-group" style={{flex:2}}><label>주제/키워드</label><input placeholder="예: 피보나치, 소수, 최단경로..." value={aiForm.topic} onChange={e=>setAiForm(p=>({...p,topic:e.target.value}))} /></div>
+            <div className="form-group" style={{flex:2}}><label>주제/키워드</label><input placeholder="예: 피보나치, NameError, 중복 제거..." value={aiForm.topic} onChange={e=>setAiForm(p=>({...p,topic:e.target.value}))} /></div>
           </div>
           <div className="form-group">
             <label>알고리즘 태그</label>

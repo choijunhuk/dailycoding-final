@@ -761,15 +761,25 @@ export default function BattlePage() {
                       <div className="bp-empty-msg">현재 진행 중인 배틀이 없습니다.</div>
                     ) : (
                       <div className="bp-battle-list">
-                        {activeBattles.map(b => (
-                          <div key={b.id} className="bp-battle-item">
-                            <div className="bp-battle-info">
-                              <span className="bp-battle-tag">{b.isTeamBattle ? 'Team' : '1v1'}</span>
-                              <span>{Object.values(b.players).map(p => p.username).join(' vs ')}</span>
+                        {activeBattles.map(b => {
+                          const elapsed = b.startTime ? Math.floor((Date.now() - b.startTime) / 1000) : 0;
+                          const remaining = Math.max(0, (b.duration || BATTLE_SEC) - elapsed);
+                          const showTimer = b.battleMode !== 'race' && b.startTime;
+                          return (
+                            <div key={b.id} className="bp-battle-item">
+                              <div className="bp-battle-info">
+                                <span className="bp-battle-tag">{b.isTeamBattle ? 'Team' : '1v1'}</span>
+                                <span>{Object.values(b.players).map(p => p.username).join(' vs ')}</span>
+                                {showTimer && (
+                                  <span className="mono" style={{ fontSize: 11, color: remaining < 60 ? 'var(--red)' : remaining < 300 ? 'var(--yellow)' : 'var(--text3)', marginLeft: 4 }}>
+                                    ⏱ {fmtTime(remaining)}
+                                  </span>
+                                )}
+                              </div>
+                              <button className="bp-btn-small" onClick={() => spectateBattle(b.id)}>관전하기</button>
                             </div>
-                            <button className="bp-btn-small" onClick={() => spectateBattle(b.id)}>관전하기</button>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </>

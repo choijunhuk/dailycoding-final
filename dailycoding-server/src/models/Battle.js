@@ -249,6 +249,9 @@ export const Battle = {
           status: room.status,
           players: room.players,
           isTeamBattle: room.isTeamBattle,
+          battleMode: room.battleMode || 'timer',
+          startTime: room.startTime || null,
+          duration: room.duration || 1800,
         });
       }
     }

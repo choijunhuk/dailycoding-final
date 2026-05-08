@@ -379,40 +379,42 @@ ${code.slice(0, 1000)}
 
 // ── 문제 생성 (admin 전용) ────────────────────────────────────────────────
 router.post('/generate-problem', auth, adminOnly, async (req, res) => {
-  const { tier = 'bronze', tags = [], difficulty = 50, topic = '' } = req.body;
+  const { tier = 'bronze', tags = [], difficulty = 50, topic = '', problemType = 'coding' } = req.body;
+  const tagsStr = Array.isArray(tags) ? tags.join(', ') : tags;
+  const context = `티어: ${tier}  태그: ${tagsStr || '자유'}  난이도: ${difficulty}/100  주제: ${topic || '자유'}`;
 
-  const fallback = {
-    title: `${tier} 레벨 알고리즘 문제`,
-    desc: '두 수 A와 B가 주어졌을 때, A+B를 출력하시오.',
-    inputDesc: '첫째 줄에 A와 B가 주어진다. (1 ≤ A, B ≤ 1000)',
-    outputDesc: 'A+B를 출력한다.',
-    examples: [{ input: '1 2', output: '3' }, { input: '10 20', output: '30' }],
-    hint: '두 수를 더하면 됩니다.',
-    solution: 'a, b = map(int, input().split())\nprint(a + b)',
-    timeLimit: 2,
-    memLimit: 256,
+  const PROMPTS = {
+    coding: {
+      prompt: `${context}\n${tier} 난이도의 알고리즘 코딩 문제를 JSON으로 작성하세요 (한국어).\n필수 필드:\n{\n  "title": "문제 제목",\n  "desc": "문제 설명 (2-4문장)",\n  "inputDesc": "입력 설명",\n  "outputDesc": "출력 설명",\n  "examples": [{"input": "입력1", "output": "출력1"}, {"input": "입력2", "output": "출력2"}],\n  "hint": "힌트",\n  "solution": "Python 모범 답안 코드",\n  "timeLimit": 1~5,\n  "memLimit": 128~512\n}`,
+      fallback: { title: `${tier} 알고리즘 문제`, desc: '두 수 A와 B가 주어졌을 때, A+B를 출력하시오.', inputDesc: '첫째 줄에 A와 B가 주어진다.', outputDesc: 'A+B를 출력한다.', examples: [{ input: '1 2', output: '3' }], hint: '두 수를 더하면 됩니다.', solution: 'a, b = map(int, input().split())\nprint(a + b)', timeLimit: 2, memLimit: 256 },
+    },
+    'fill-blank': {
+      prompt: `${context}\n빈칸 채우기 문제를 JSON으로 작성하세요 (한국어). 코드에서 핵심 키워드 2~4개를 ___N___ 형태로 비워두세요.\n필수 필드:\n{\n  "title": "문제 제목",\n  "desc": "코드 설명 (1-2문장)",\n  "codeTemplate": "___1___ 형태로 빈칸이 있는 전체 코드",\n  "blanks": ["정답1", "정답2"],\n  "hint": "힌트"\n}`,
+      fallback: { title: '빈칸 채우기: 두 수의 합', desc: '두 수를 입력받아 합을 출력하는 코드의 빈칸을 채우세요.', codeTemplate: 'a, b = ___1___(int, input().split())\n___2___(a + b)', blanks: ['map', 'print'], hint: '정수 변환 함수와 출력 함수를 채우세요.' },
+    },
+    'bug-fix': {
+      prompt: `${context}\n버그가 있는 코드 문제를 JSON으로 작성하세요 (한국어). 실제로 실행하면 잘못된 결과가 나오는 버그를 심으세요.\n필수 필드:\n{\n  "title": "문제 제목",\n  "desc": "코드 설명 및 버그 증상 (2-3문장)",\n  "buggyCode": "버그가 있는 전체 코드 (주석으로 버그 표시)",\n  "keywords": ["수정해야 할 키워드1", "키워드2"],\n  "explanation": "버그 원인과 수정 방법 설명",\n  "hint": "힌트"\n}`,
+      fallback: { title: '버그 찾기: 최댓값 오류', desc: '최댓값을 구하는 코드에 버그가 있습니다.', buggyCode: 'def find_max(arr):\n    max_val = 0  # 버그: 음수 배열에서 잘못 동작\n    for x in arr:\n        if x > max_val:\n            max_val = x\n    return max_val\nprint(find_max([-3, -1, -4]))', keywords: ['arr[0]', '-float(\'inf\')'], explanation: 'max_val을 0으로 초기화하면 모두 음수일 때 0이 반환됩니다.', hint: 'max_val 초기값을 바꾸세요.' },
+    },
+    troubleshooting: {
+      prompt: `${context}\n트러블슈팅 문제를 JSON으로 작성하세요 (한국어). 버그가 있는 Python 스크립트를 디버깅하는 시나리오입니다.\n필수 필드:\n{\n  "title": "문제 제목",\n  "desc": "문제 설명 (2-3문장)",\n  "scenarioTitle": "시나리오 제목",\n  "scenarioDescription": "시나리오 상황 설명 (3-5문장)",\n  "initialFiles": [{"path": "main.py", "content": "버그 있는 코드", "editable": true}],\n  "visibleTests": [{"name": "기본 테스트", "command": ["python3", "main.py"], "input": "", "expectedOutput": "기대 출력", "timeoutMs": 3000}],\n  "hint": "디버깅 힌트"\n}`,
+      fallback: { title: '트러블슈팅: NameError 디버깅', desc: 'Python 스크립트가 NameError로 실행에 실패합니다. 버그를 찾아 수정하세요.', scenarioTitle: 'NameError 디버깅', scenarioDescription: '사용자 입력을 처리하는 스크립트가 실행 시 NameError가 발생합니다.', initialFiles: [{ path: 'main.py', content: 'name = input()\nprint(f"Hello, {nane}!")  # 버그: 오타', editable: true }], visibleTests: [{ name: '기본 출력 테스트', command: ['python3', 'main.py'], input: 'World', expectedOutput: 'Hello, World!', timeoutMs: 3000 }], hint: '변수명 오타를 확인하세요.' },
+    },
+    'performance-fix': {
+      prompt: `${context}\n성능 개선 문제를 JSON으로 작성하세요 (한국어). O(n²) 이상의 느린 Python 코드를 더 빠르게 최적화하는 문제입니다.\n필수 필드:\n{\n  "title": "문제 제목",\n  "desc": "문제 설명 (2-3문장)",\n  "scenarioTitle": "시나리오 제목",\n  "scenarioDescription": "성능 문제 설명 (3-5문장)",\n  "initialFiles": [{"path": "main.py", "content": "느린 코드", "editable": true}],\n  "visibleTests": [{"name": "성능 테스트", "command": ["python3", "main.py"], "input": "", "expectedOutput": "기대 출력", "timeoutMs": 2000}],\n  "baselineTimeMs": 현재_예상_실행시간ms,\n  "targetResponseTimeMs": 목표_실행시간ms,\n  "hint": "최적화 힌트"\n}`,
+      fallback: { title: '성능 개선: 중복 제거 O(n²) → O(n)', desc: '중복 원소를 제거하는 코드가 너무 느립니다. O(n) 또는 O(n log n)으로 개선하세요.', scenarioTitle: '중복 제거 성능 문제', scenarioDescription: '리스트에서 중복을 제거하는 함수가 큰 입력에서 타임아웃이 발생합니다.', initialFiles: [{ path: 'main.py', content: 'def remove_duplicates(arr):\n    result = []\n    for x in arr:\n        if x not in result:  # O(n) 검색 → 전체 O(n²)\n            result.append(x)\n    return result\n\ndata = list(range(1000)) * 2\nprint(len(remove_duplicates(data)))', editable: true }], visibleTests: [{ name: '결과 검증', command: ['python3', 'main.py'], input: '', expectedOutput: '1000', timeoutMs: 2000 }], baselineTimeMs: 500, targetResponseTimeMs: 50, hint: 'set()을 활용하면 O(n)으로 중복을 제거할 수 있습니다.' },
+    },
+    'refactor-fix': {
+      prompt: `${context}\n리팩터링 문제를 JSON으로 작성하세요 (한국어). 동작은 하지만 중복/복잡한 Python 코드를 깔끔하게 개선하는 문제입니다.\n필수 필드:\n{\n  "title": "문제 제목",\n  "desc": "문제 설명 (2-3문장)",\n  "scenarioTitle": "시나리오 제목",\n  "scenarioDescription": "리팩터링 필요성 설명 (3-5문장)",\n  "initialFiles": [{"path": "main.py", "content": "지저분한 코드", "editable": true}],\n  "visibleTests": [{"name": "기능 검증", "command": ["python3", "main.py"], "input": "", "expectedOutput": "기대 출력", "timeoutMs": 3000}],\n  "hint": "리팩터링 힌트"\n}`,
+      fallback: { title: '리팩터링: 중복 조건문 개선', desc: '동일한 조건 검사가 중복되는 코드를 리팩터링하세요. 기능은 그대로 유지해야 합니다.', scenarioTitle: '중복 조건문 리팩터링', scenarioDescription: '각 학점을 판단하는 코드에 중복 로직이 너무 많습니다. 딕셔너리나 함수로 개선하세요.', initialFiles: [{ path: 'main.py', content: 'score = 85\nif score >= 90:\n    grade = "A"\nif score >= 80 and score < 90:\n    grade = "B"\nif score >= 70 and score < 80:\n    grade = "C"\nif score >= 60 and score < 70:\n    grade = "D"\nif score < 60:\n    grade = "F"\nprint(grade)', editable: true }], visibleTests: [{ name: '학점 출력 검증', command: ['python3', 'main.py'], input: '', expectedOutput: 'B', timeoutMs: 3000 }], hint: 'elif 체인이나 딕셔너리 매핑으로 조건을 단순화하세요.' },
+    },
   };
 
-  const tagsStr = Array.isArray(tags) ? tags.join(', ') : tags;
-
-  const prompt = `${tier} 난이도의 코딩 문제를 JSON으로 작성하세요 (한국어).
-태그: ${tagsStr || '자유'}  난이도 점수: ${difficulty}/100  주제: ${topic || '알고리즘'}
-필수 필드:
-{
-  "title": "문제 제목",
-  "desc": "문제 설명 (2-4문장)",
-  "inputDesc": "입력 설명",
-  "outputDesc": "출력 설명",
-  "examples": [{"input": "입력1", "output": "출력1"}, {"input": "입력2", "output": "출력2"}],
-  "hint": "힌트",
-  "solution": "Python 모범 답안 코드",
-  "timeLimit": 1~5,
-  "memLimit": 128~512
-}`;
+  const { prompt, fallback } = PROMPTS[problemType] || PROMPTS.coding;
 
   try {
-    const result = await askAI(req.user.id, prompt, fallback, 800);
-    res.json(result);
+    const result = await askAI(req.user.id, prompt, fallback, 1000);
+    res.json({ ...result, problemType });
   } catch (err) {
     console.error('[ai/generate-problem]', err.message);
     res.status(500).json({ message: '문제 생성 실패' });
