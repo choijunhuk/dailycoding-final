@@ -25,6 +25,9 @@ function normalizeMember(row, user = null, activity = null) {
     role: row.role || 'member',
     joined_at: row.joined_at,
     joinedAt: row.joined_at,
+    avatar_url_custom: user?.avatar_url_custom ?? null,
+    avatar_emoji: user?.avatar_emoji ?? null,
+    avatar_color: user?.avatar_color ?? null,
     activity: activity || {
       submissions: 0,
       correct: 0,

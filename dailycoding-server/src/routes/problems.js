@@ -7,10 +7,12 @@ import { askAI } from '../services/ai.js';
 import redis from '../config/redis.js';
 import { MIN_HIDDEN_TESTCASES } from '../shared/problemCatalog.js';
 import { errorResponse, internalError } from '../middleware/errorHandler.js';
+import { TroubleshootingProblem } from '../models/TroubleshootingProblem.js';
+import { evaluateTroubleshootingSubmission } from '../services/troubleshootingEvaluation.js';
 
 const router = Router();
 const ALLOWED_TIERS = new Set(['bronze', 'silver', 'gold', 'platinum', 'diamond']);
-const ALLOWED_PROBLEM_TYPES = new Set(['coding', 'fill-blank', 'bug-fix']);
+const ALLOWED_PROBLEM_TYPES = new Set(['coding', 'fill-blank', 'bug-fix', 'troubleshooting', 'performance-fix', 'refactor-fix']);
 const ALLOWED_SORTS = new Set(['id', 'newest', 'difficulty', '-difficulty', 'solved']);
 const ALLOWED_STATUS = new Set(['all', 'solved', 'unsolved', 'bookmarked']);
 const DEFAULT_LIMIT = 10;
@@ -89,6 +91,17 @@ export function normalizeProblemMutationPayload(body = {}) {
           ...(typeof rawConfig.hint === 'string' && rawConfig.hint.trim() ? { hint: rawConfig.hint.trim() } : {}),
           ...(typeof rawConfig.explanation === 'string' && rawConfig.explanation.trim() ? { explanation: rawConfig.explanation.trim() } : {}),
         },
+      },
+    };
+  }
+
+  if (TroubleshootingProblem.isTroubleshootingType(problemType)) {
+    return {
+      payload: {
+        ...body,
+        problemType,
+        specialConfig: null,
+        testcases: [],
       },
     };
   }
@@ -185,6 +198,11 @@ async function getProblemModel() {
 async function getUserModel() {
   const { User } = await import('../models/User.js');
   return User;
+}
+
+async function getSubmissionModel() {
+  const { Submission } = await import('../models/Submission.js');
+  return Submission;
 }
 
 async function getDifficultyStats(problemId, userId = null) {
@@ -551,6 +569,129 @@ router.get('/bookmarks', auth, requireVerified, async (req, res) => {
     res.json({ bookmarks: ids, problems, total: ids.length, limit, offset });
   } catch (err) {
     return internalError(res);
+  }
+});
+
+// GET /api/problems/:id/troubleshooting
+router.get('/:id/troubleshooting', auth, async (req, res) => {
+  try {
+    const problemId = Number(req.params.id);
+    const Problem = await getProblemModel();
+    const User = await getUserModel();
+    const [problem, requester] = await Promise.all([
+      Problem.findById(problemId, req.user.id),
+      User.findById(req.user.id),
+    ]);
+    if (!problem) return errorResponse(res, 404, 'NOT_FOUND', '문제를 찾을 수 없습니다.');
+    if (!TroubleshootingProblem.isTroubleshootingType(problem.problemType)) {
+      return errorResponse(res, 400, 'VALIDATION_ERROR', '트러블슈팅 문제 유형이 아닙니다.');
+    }
+
+    const isAdmin = requester?.role === 'admin';
+    const config = await TroubleshootingProblem.findConfig(problemId, { includeHidden: isAdmin });
+    if (!config) return errorResponse(res, 404, 'NOT_FOUND', '트러블슈팅 설정이 없습니다.');
+    const submissions = await TroubleshootingProblem.listSubmissions(req.user.id, problemId, { limit: 10 });
+    return res.json({ ...config, problemType: problem.problemType, submissions });
+  } catch (err) {
+    console.error('[troubleshooting/get]', err);
+    return internalError(res);
+  }
+});
+
+// POST /api/problems/:id/troubleshooting/run
+router.post('/:id/troubleshooting/run', auth, requireVerified, async (req, res) => {
+  try {
+    const problemId = Number(req.params.id);
+    const Problem = await getProblemModel();
+    const problem = await Problem.findById(problemId, req.user.id);
+    if (!problem) return errorResponse(res, 404, 'NOT_FOUND', '문제를 찾을 수 없습니다.');
+    if (!TroubleshootingProblem.isTroubleshootingType(problem.problemType)) {
+      return errorResponse(res, 400, 'VALIDATION_ERROR', '트러블슈팅 문제 유형이 아닙니다.');
+    }
+    const config = await TroubleshootingProblem.findConfig(problemId, { includeHidden: false });
+    if (!config) return errorResponse(res, 404, 'NOT_FOUND', '트러블슈팅 설정이 없습니다.');
+
+    const evaluation = await evaluateTroubleshootingSubmission({
+      config,
+      submittedFiles: req.body?.files || req.body?.submittedFiles || [],
+      includeHidden: false,
+    });
+    return res.json({ ...evaluation, mode: 'run' });
+  } catch (err) {
+    console.error('[troubleshooting/run]', err);
+    return internalError(res, err?.message || '실행 실패');
+  }
+});
+
+// POST /api/problems/:id/troubleshooting/submit
+router.post('/:id/troubleshooting/submit', auth, requireVerified, async (req, res) => {
+  try {
+    const problemId = Number(req.params.id);
+    const Problem = await getProblemModel();
+    const User = await getUserModel();
+    const Submission = await getSubmissionModel();
+    const problem = await Problem.findById(problemId, req.user.id);
+    if (!problem) return errorResponse(res, 404, 'NOT_FOUND', '문제를 찾을 수 없습니다.');
+    if (!TroubleshootingProblem.isTroubleshootingType(problem.problemType)) {
+      return errorResponse(res, 400, 'VALIDATION_ERROR', '트러블슈팅 문제 유형이 아닙니다.');
+    }
+
+    const config = await TroubleshootingProblem.findConfig(problemId, { includeHidden: true });
+    if (!config) return errorResponse(res, 404, 'NOT_FOUND', '트러블슈팅 설정이 없습니다.');
+
+    const submittedFiles = req.body?.files || req.body?.submittedFiles || [];
+    const alreadySolved = await TroubleshootingProblem.findCorrectSubmission(req.user.id, problemId);
+    const evaluation = await evaluateTroubleshootingSubmission({
+      config,
+      submittedFiles,
+      includeHidden: true,
+    });
+
+    const submission = await Submission.create({
+      userId: req.user.id,
+      problemId,
+      lang: problem.problemType,
+      code: JSON.stringify(submittedFiles || []),
+      result: evaluation.result,
+      timeMs: evaluation.executionTimeMs,
+      memoryMb: evaluation.memoryUsedMb,
+      detail: evaluation.feedback,
+    });
+
+    const troubleshootingSubmission = await TroubleshootingProblem.createSubmission({
+      userId: req.user.id,
+      problemId,
+      submissionId: submission.id,
+      submittedFiles,
+      evaluation,
+    });
+
+    await Problem.incrementSubmit(problemId);
+    if (evaluation.result === 'correct' && !alreadySolved) {
+      await Promise.all([
+        Problem.incrementSolved(problemId),
+        User.onSolve(req.user.id, problem),
+        Notification.create(req.user.id, `🛠 "${problem.title}" 트러블슈팅 성공!`, 'submissions'),
+        redis.clearPrefix('ranking:'),
+      ]);
+    }
+
+    return res.json({
+      ...evaluation,
+      id: submission.id,
+      troubleshootingSubmissionId: troubleshootingSubmission.id,
+      problemId,
+      problemTitle: problem.title,
+      lang: problem.problemType,
+      time: evaluation.executionTimeMs == null ? '-' : `${evaluation.executionTimeMs}ms`,
+      mem: evaluation.memoryUsedMb == null ? '-' : `${evaluation.memoryUsedMb}MB`,
+      codeLength: Buffer.byteLength(JSON.stringify(submittedFiles || []), 'utf8'),
+      detail: evaluation.feedback,
+      date: new Date(submission.submitted_at).toLocaleString('ko-KR'),
+    });
+  } catch (err) {
+    console.error('[troubleshooting/submit]', err);
+    return internalError(res, err?.message || '제출 실패');
   }
 });
 

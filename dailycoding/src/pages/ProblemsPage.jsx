@@ -29,8 +29,9 @@ export default function ProblemsPage() {
   const { t } = useLang()
   const PROBLEMS = appProblems.length > 0 ? appProblems : DEFAULT_PROBLEMS
 
+  const normalizeProblemTypeFilter = (type) => type === 'algorithm' ? 'coding' : type
   const getTypeLabel = (type) => {
-    const map = { coding: t('typeLabelCoding'), 'fill-blank': t('typeLabelFillBlank'), 'bug-fix': t('typeLabelBugFix') }
+    const map = { algorithm: '알고리즘', coding: t('typeLabelCoding'), 'fill-blank': t('typeLabelFillBlank'), 'bug-fix': t('typeLabelBugFix'), troubleshooting: '트러블슈팅', 'performance-fix': '성능 개선', 'refactor-fix': '리팩터링' }
     return map[type] || type
   }
   const getTypeShort = (type) => {
@@ -40,6 +41,7 @@ export default function ProblemsPage() {
 
   const search = (searchParams.get('search') || '').trim()
   const problemType = searchParams.get('problemType') || 'all'
+  const apiProblemType = normalizeProblemTypeFilter(problemType)
   const tier = searchParams.get('tier') || 'all'
   const tag = searchParams.get('tag') || 'all'
   const status = VALID_STATUS.has(searchParams.get('status')) ? searchParams.get('status') : 'all'
@@ -121,7 +123,7 @@ export default function ProblemsPage() {
         page,
         limit: perPage,
         sort,
-        ...(problemType !== 'all' ? { problemType } : {}),
+        ...(apiProblemType !== 'all' ? { problemType: apiProblemType } : {}),
         ...(tier !== 'all' ? { tier } : {}),
         ...(tag !== 'all' ? { tag } : {}),
         ...(status !== 'all' ? { status } : {}),
@@ -162,7 +164,7 @@ export default function ProblemsPage() {
       })
 
     return () => controller.abort()
-  }, [page, perPage, search, sort, status, tag, tier, problemType, updateQuery])
+  }, [page, perPage, search, sort, status, tag, tier, apiProblemType, updateQuery])
 
   useEffect(() => {
     if (!search) {
@@ -190,7 +192,7 @@ export default function ProblemsPage() {
   }, [search])
 
   useEffect(() => {
-    if (!recommended || search || problemType !== 'all' || tier !== 'all' || tag !== 'all' || status !== 'all') {
+    if (!recommended || search || apiProblemType !== 'all' || tier !== 'all' || tag !== 'all' || status !== 'all') {
       setRecommendedProblems([])
       return
     }
@@ -203,7 +205,7 @@ export default function ProblemsPage() {
         if (!ignore) setRecommendedProblems([])
       })
     return () => { ignore = true }
-  }, [recommended, search, problemType, tier, tag, status])
+  }, [recommended, search, apiProblemType, tier, tag, status])
 
   const fallbackList = useMemo(() => {
     let list = [...PROBLEMS]
@@ -211,7 +213,7 @@ export default function ProblemsPage() {
       const lowered = search.toLowerCase()
       list = list.filter(problem => (problem.title || '').toLowerCase().includes(lowered) || String(problem.id) === search)
     }
-    if (problemType !== 'all') list = list.filter(problem => (problem.problemType || 'coding') === problemType)
+    if (apiProblemType !== 'all') list = list.filter(problem => (problem.problemType || 'coding') === apiProblemType)
     if (tier !== 'all') list = list.filter(problem => problem.tier === tier)
     if (tag !== 'all') list = list.filter(problem => problem.tags?.includes(tag))
     if (status === 'solved') list = list.filter(problem => solved[problem.id])
@@ -233,7 +235,7 @@ export default function ProblemsPage() {
       hasPrev: safePage > 1,
       hasNext: safePage < totalPages,
     }
-  }, [PROBLEMS, bookmarks, page, perPage, search, solved, sort, status, tag, tier, problemType])
+  }, [PROBLEMS, bookmarks, page, perPage, search, solved, sort, status, tag, tier, apiProblemType])
 
   const effectiveList = requestError ? fallbackList : serverList
 
@@ -330,7 +332,7 @@ export default function ProblemsPage() {
     } finally {
       setRandomLoading(false)
     }
-  }, [go, tag, tier, problemType, toast])
+  }, [go, tag, tier, toast])
 
   const changePage = useCallback((nextPage) => {
     updateQuery({ page: Math.min(Math.max(1, nextPage), totalPages) }, { replace: false })
@@ -480,11 +482,15 @@ export default function ProblemsPage() {
         <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
           {[
             { key: 'all', label: t('allTypes'), icon: '📋' },
-            { key: 'coding', label: '코딩 문제', icon: '💻' },
+            { key: 'algorithm', label: '알고리즘', icon: '💻', type: 'coding' },
             { key: 'fill-blank', label: '빈칸 채우기', icon: '✏️' },
             { key: 'bug-fix', label: '틀린부분 찾기', icon: '🐛' },
-          ].map(({ key, label, icon }) => {
-            const count = key === 'all' ? PROBLEMS.length : PROBLEMS.filter(p => (p.problemType || 'coding') === key).length;
+            { key: 'troubleshooting', label: '트러블슈팅', icon: '🛠️' },
+            { key: 'performance-fix', label: '성능 개선', icon: '⚡' },
+            { key: 'refactor-fix', label: '리팩터링', icon: '♻️' },
+          ].map(({ key, label, icon, type }) => {
+            const countType = type || key;
+            const count = key === 'all' ? PROBLEMS.length : PROBLEMS.filter(p => (p.problemType || 'coding') === countType).length;
             const isActive = problemType === key;
             return (
               <button key={key} onClick={() => updateFilter('problemType', key)} style={{
@@ -757,44 +763,34 @@ export default function ProblemsPage() {
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px' }}>
         {requestError && (
-          <div style={{
-            marginBottom: 14,
-            padding: '12px 14px',
-            borderRadius: 12,
-            border: '1px solid rgba(255,166,87,.2)',
-            background: 'rgba(255,166,87,.1)',
-            color: 'var(--orange)',
-            fontSize: 12,
-            lineHeight: 1.6,
-          }}>{requestError}</div>
+          <div className="warning-msg" style={{ marginBottom: 14 }}>
+            <span>⚠</span> {requestError}
+          </div>
         )}
 
         {loading && !requestError && (
-          <div style={{
-            background: 'var(--bg2)',
-            border: '1px solid var(--border)',
-            borderRadius: 12,
-            padding: '48px 18px',
-            textAlign: 'center',
-            color: 'var(--text3)',
-          }}>
-            <div style={{ fontSize: 36, marginBottom: 10 }}>⏳</div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text2)' }}>{t('loadingProblems')}</div>
-            <div style={{ fontSize: 12, marginTop: 6 }}>{t('filterLoadingDesc')}</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {Array(7).fill(0).map((_, i) => (
+              <div key={i} className="skeleton skeleton-row" style={{ opacity: 1 - i * 0.08 }} />
+            ))}
           </div>
         )}
 
         {!loading && paginated.length === 0 && (
-          <div className="problems-empty-state">
-            <div className="problems-empty-icon"><Search size={24} /></div>
-            <div className="problems-empty-title">{t('noResults')}</div>
-            <div className="problems-empty-sub">{t('noResultsHint')}</div>
+          <div className="empty-state">
+            <span className="empty-state-icon"><Search size={36} /></span>
+            <div>{t('noResults') || '조건에 맞는 문제가 없습니다'}</div>
             {activeChips.length > 0 && (
-              <div className="problems-empty-chips">
-                {activeChips.map((chip) => <span key={chip.key}>{chip.label}</span>)}
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'center' }}>
+                {activeChips.map((chip) => (
+                  <span key={chip.key} style={{
+                    fontSize: 12, padding: '3px 10px', borderRadius: 999,
+                    background: 'var(--bg2)', border: '1px solid var(--border)', color: 'var(--text2)',
+                  }}>{chip.label}</span>
+                ))}
               </div>
             )}
-            <div className="problems-empty-actions">
+            <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
               <button onClick={clearFilters} className="btn btn-primary btn-sm">필터 초기화</button>
               <button onClick={handleRandomPick} disabled={randomLoading} className="btn btn-ghost btn-sm">
                 {randomLoading ? t('randomPicking') : t('randomPick')}

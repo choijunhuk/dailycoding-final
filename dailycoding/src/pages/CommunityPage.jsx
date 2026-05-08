@@ -119,13 +119,12 @@ function Modal({ open, onClose, title, children, wide = false }) {
     >
       <div
         onClick={(event) => event.stopPropagation()}
+        className="card"
         style={{
           width: '100%',
           maxWidth: wide ? 980 : 720,
           maxHeight: 'calc(100vh - 32px)',
           overflowY: 'auto',
-          background: 'var(--bg2)',
-          border: '1px solid var(--border)',
           borderRadius: 18,
           boxShadow: '0 24px 60px rgba(0,0,0,.35)',
         }}
@@ -451,15 +450,15 @@ export default function CommunityPage() {
     return (
       <div style={{ maxWidth: 980, margin: '0 auto', padding: '28px 20px 44px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 18 }}>
-          <button onClick={closePost} style={{ border: '1px solid var(--border)', background: 'var(--bg2)', color: 'var(--text)', borderRadius: 12, padding: '10px 14px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 800 }}>
+          <button onClick={closePost} className="btn btn-ghost">
             ← 목록으로
           </button>
-          <button onClick={() => openComposer('create')} style={{ border: 'none', background: BOARD_META[activeBoard].tone, color: 'var(--bg)', padding: '10px 16px', borderRadius: 12, fontFamily: 'inherit', fontSize: 13, fontWeight: 800, cursor: 'pointer' }}>
+          <button onClick={() => openComposer('create')} className="btn" style={{ background: BOARD_META[activeBoard].tone, color: 'var(--bg)' }}>
             새 글 작성
           </button>
         </div>
 
-        <article style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 22, padding: 22, boxShadow: '0 18px 48px rgba(0,0,0,.18)' }}>
+        <article className="card" style={{ padding: 22, boxShadow: '0 18px 48px rgba(0,0,0,.18)' }}>
           {detailLoading || !selectedPost ? (
             <div style={{ padding: '56px 0', textAlign: 'center', color: 'var(--text3)' }}>게시글을 불러오는 중입니다.</div>
           ) : (
@@ -529,7 +528,7 @@ export default function CommunityPage() {
                     const canDelete = reply.user_id === user?.id || isMyPost
                     const canAccept = activeBoard === 'qna' && isMyPost && reply.user_id !== user?.id && !reply.is_accepted
                     return (
-                      <div key={reply.id} style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 16, padding: 16 }}>
+                      <div key={reply.id} className="card" style={{ padding: 16 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                             {makeAvatar(reply.nickname || reply.username || '?', 'var(--green)', 34)}
@@ -581,7 +580,7 @@ export default function CommunityPage() {
   return (
     <div style={{ maxWidth: 1220, margin: '0 auto', padding: '28px 20px 40px' }}>
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr)', gap: 24 }}>
-        <div style={{ background: 'linear-gradient(135deg, var(--bg2), var(--bg3))', border: '1px solid var(--border)', borderRadius: 24, padding: '24px 22px' }}>
+        <div className="card" style={{ background: 'linear-gradient(135deg, var(--bg2), var(--bg3))', padding: '24px 22px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
             <div>
               <div style={{ fontSize: 28, fontWeight: 900, color: 'var(--text)', letterSpacing: -0.6 }}>커뮤니티</div>
@@ -613,7 +612,7 @@ export default function CommunityPage() {
 
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr)', gap: 24, alignItems: 'start' }}>
           <div style={{ minWidth: 0 }}>
-            <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 20, padding: 18, marginBottom: 18 }}>
+            <div className="card" style={{ padding: 18, marginBottom: 18 }}>
               <SectionTitle
                 title={`${BOARD_META[activeBoard].label} 게시판`}
                 desc={`${postsState.total.toLocaleString()}개의 글이 검색 조건과 일치합니다.`}
@@ -673,7 +672,7 @@ export default function CommunityPage() {
               </div>
             </div>
 
-            <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 20, overflow: 'hidden' }}>
+            <div className="card" style={{ overflow: 'hidden' }}>
               {loading ? (
                 <div style={{ padding: '46px 20px', textAlign: 'center', color: 'var(--text3)' }}>게시글을 불러오는 중입니다.</div>
               ) : normalizedPosts.length === 0 ? (
@@ -761,7 +760,7 @@ export default function CommunityPage() {
           </div>
 
           <aside style={{ display: 'grid', gap: 18 }}>
-            <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 20, padding: 18 }}>
+            <div className="card" style={{ padding: 18 }}>
               <SectionTitle title="인기 게시물" desc="최근 24시간 기준 좋아요 상위 글" />
               <div style={{ display: 'grid', gap: 12 }}>
                 {popularPosts.length === 0 ? (
@@ -784,7 +783,7 @@ export default function CommunityPage() {
               </div>
             </div>
 
-            <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 20, padding: 18 }}>
+            <div className="card" style={{ padding: 18 }}>
               <SectionTitle title="운영 메모" desc="현재 구현 범위" />
               <div style={{ display: 'grid', gap: 10, fontSize: 12, color: 'var(--text2)', lineHeight: 1.6 }}>
                 <div>• 익명 글은 작성자 본인을 제외하고 익명으로 표시됩니다.</div>

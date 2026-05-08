@@ -253,16 +253,16 @@ export default function SubmissionsPage() {
       </div>
 
       {loading ? (
-        <div style={{ textAlign:'center', padding:'56px 0', color:'var(--text3)' }}>{t('loading')}</div>
-      ) : error ? (
-        <div style={{ textAlign:'center', padding:'56px 0', color:'var(--text3)' }}>
-          <div style={{ fontSize:40, marginBottom:12 }}>⚠️</div>
-          <div style={{ fontSize:15, fontWeight:600, color:'var(--text)' }}>{t('submissionsLoadFailedTitle')}</div>
-          <div style={{ fontSize:13, marginTop:6 }}>{error}</div>
+        <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+          {Array(8).fill(0).map((_, i) => (
+            <div key={i} className="skeleton skeleton-row" />
+          ))}
         </div>
+      ) : error ? (
+        <div className="error-msg"><span>⚠</span> {error}</div>
       ) : rows.length === 0 ? (
-        <div style={{ textAlign:'center', padding:'60px 0', color:'var(--text3)' }}>
-          <div style={{ fontSize:40, marginBottom:12 }}>📭</div>
+        <div className="empty-state">
+          <div className="empty-state-icon">📭</div>
           <div style={{ fontSize:15, fontWeight:600 }}>{t('submissionsEmpty')}</div>
         </div>
       ) : (

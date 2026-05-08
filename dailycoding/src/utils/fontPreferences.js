@@ -41,3 +41,24 @@ export function applyAppFontPreference(fontId) {
   localStorage.setItem('dc_app_font', option.id);
   return option;
 }
+
+export function normalizeAppFontSize(value) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return 14;
+  return Math.min(18, Math.max(12, Math.round(parsed)));
+}
+
+export function applyAppFontSizePreference(fontSize) {
+  const normalized = normalizeAppFontSize(fontSize);
+  document.documentElement.style.setProperty('--app-font-size', `${normalized}px`);
+  if (document.body?.style) document.body.style.fontSize = `${normalized}px`;
+  localStorage.setItem('dc_app_font_size', String(normalized));
+  return normalized;
+}
+
+export function applyAppTypographyPreference({ fontFamily = 'noto', fontSize = 14 } = {}) {
+  return {
+    font: applyAppFontPreference(fontFamily),
+    fontSize: applyAppFontSizePreference(fontSize),
+  };
+}

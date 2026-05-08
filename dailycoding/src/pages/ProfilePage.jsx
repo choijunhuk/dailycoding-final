@@ -95,6 +95,7 @@ export default function ProfilePage() {
     totalSolveTime: 0,
     solveTimeByTier: {},
   });
+  const [learningActivity, setLearningActivity] = useState(null);
   const [weaknessStats, setWeaknessStats] = useState([]);
   const loadErrorToastShownRef = useRef(false);
 
@@ -134,6 +135,9 @@ export default function ProfilePage() {
       });
       api.get('/submissions/stats').then(r => setWeaknessStats(r.data?.weaknessStats || [])).catch(() => {
         setWeaknessStats([]);
+      });
+      api.get(`/auth/profile/${user.id}`).then(r => setLearningActivity(r.data?.learningActivity || null)).catch(() => {
+        setLearningActivity(null);
       });
     }
     const params = new URLSearchParams(location.search);
@@ -397,7 +401,7 @@ export default function ProfilePage() {
             {headerTechStack.length > 0 && (
               <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginTop:8 }}>
                 {headerTechStack.slice(0, 10).map(tech => (
-                  <span key={tech} style={{ display:'flex', alignItems:'center', gap:4, fontSize:11, padding:'3px 8px', borderRadius:20, background:'var(--bg3)', border:'1px solid var(--border)', color:'var(--text2)' }}>
+                  <span key={tech} className="badge" style={{ display:'flex', alignItems:'center', gap:4, fontSize:11 }}>
                     {TECH_LOGO_MAP[tech] && <img src={TECH_LOGO_MAP[tech]} width={12} height={12} alt="" style={{ objectFit:'contain', flexShrink:0 }}/>}
                     {tech}
                   </span>
@@ -486,6 +490,21 @@ export default function ProfilePage() {
           </div>
         </div>
       )}
+
+      <div className="profile-learning-activity card">
+        {[
+          { label:'푼 문제 수', value: learningActivity?.solvedProblems ?? solvedProblemsMain.length, color:'var(--green)' },
+          { label:'트러블슈팅 해결', value: learningActivity?.troubleshootingSolved ?? 0, color:'var(--orange)' },
+          { label:'배틀 승률', value: `${learningActivity?.battleWinRate ?? 0}%`, color:'var(--red)' },
+          { label:'리뷰 승인', value: learningActivity?.reviewAcceptedCount ?? 0, color:'var(--blue)' },
+          { label:'협업 점수', value: learningActivity?.collaborationScore ?? 0, color:'var(--purple)' },
+        ].map((item) => (
+          <div key={item.label} className="profile-learning-stat">
+            <div style={{ color:item.color }}>{item.value}</div>
+            <span>{item.label}</span>
+          </div>
+        ))}
+      </div>
 
       {/* ── 탭 네비게이션 ── */}
       <div className="profile-tabs" style={{ marginBottom:16 }}>
@@ -639,8 +658,8 @@ export default function ProfilePage() {
           </div>
 
           {/* 언어별 제출 */}
-          <div className="card">
-            <div style={{ fontWeight:700, fontSize:14, marginBottom:14 }}>언어별 제출</div>
+          <div className="card card-pad">
+            <div className="section-header-title" style={{ marginBottom:14 }}>언어별 제출</div>
             {topLang.length===0
               ? <div style={{ color:'var(--text3)', fontSize:13 }}>제출 기록이 없어요.</div>
               : topLang.map(([lang,cnt],i)=>{
@@ -669,8 +688,8 @@ export default function ProfilePage() {
           </div>
 
           {/* 이번 주 리포트 */}
-          <div className="card">
-            <div style={{ fontWeight:700, fontSize:14, marginBottom:14 }}>이번 주 리포트</div>
+          <div className="card card-pad">
+            <div className="section-header-title" style={{ marginBottom:14 }}>이번 주 리포트</div>
             {(()=>{
               const now=new Date();
               const weekAgo=new Date(now-7*24*60*60*1000);
@@ -711,21 +730,24 @@ export default function ProfilePage() {
             })()}
           </div>
 
-          <div className="card">
-            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:12, marginBottom:12 }}>
-              <div style={{ fontWeight:700, fontSize:14 }}>취약 유형 분석</div>
+          <div className="card card-pad">
+            <div className="section-header" style={{ marginBottom:12 }}>
+              <div className="section-header-title">취약 유형 분석</div>
               <span style={{ fontSize:11, color:'var(--text3)' }}>오답률 높은 태그 기준</span>
             </div>
             {weaknessStats.length === 0 ? (
-              <div style={{ color:'var(--text3)', fontSize:13, lineHeight:1.7 }}>
-                같은 유형 제출이 2회 이상 쌓이면 취약 태그가 자동으로 표시됩니다.
+              <div className="empty-state" style={{ padding:'24px 0' }}>
+                <div className="empty-state-icon">📊</div>
+                <div style={{ fontSize:13, color:'var(--text3)', lineHeight:1.7 }}>
+                  같은 유형 제출이 2회 이상 쌓이면 취약 태그가 자동으로 표시됩니다.
+                </div>
               </div>
             ) : (
               <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
                 {weaknessStats.slice(0, 5).map((item) => {
                   const color = item.priority === 'high' ? 'var(--red)' : item.priority === 'medium' ? 'var(--yellow)' : 'var(--blue)';
                   return (
-                    <div key={item.label} style={{ padding:'11px 12px', border:'1px solid var(--border)', borderRadius:10, background:'var(--bg3)' }}>
+                    <div key={item.label} className="card card-pad-sm" style={{ background:'var(--bg3)' }}>
                       <div style={{ display:'flex', justifyContent:'space-between', gap:10, marginBottom:6 }}>
                         <span style={{ fontSize:13, fontWeight:800, color }}>{item.label}</span>
                         <span style={{ fontSize:12, color:'var(--text2)' }}>
@@ -743,15 +765,15 @@ export default function ProfilePage() {
             )}
           </div>
 
-          <div className="card">
-            <div style={{ fontWeight:700, fontSize:14, marginBottom:12 }}>풀이 시간 통계</div>
+          <div className="card card-pad">
+            <div className="section-header-title" style={{ marginBottom:12 }}>풀이 시간 통계</div>
             <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(140px, 1fr))', gap:10, marginBottom:14 }}>
               {[
                 { label:'평균 풀이 시간', value: formatDuration(solveStats.avgSolveTime) },
                 { label:'총 풀이 시간', value: formatDuration(solveStats.totalSolveTime) },
                 { label:'최단 기록', value: solveStats.fastestSolve ? `${solveStats.fastestSolve.problemTitle} · ${formatDuration(solveStats.fastestSolve.timeSec)}` : '기록 없음' },
               ].map((item) => (
-                <div key={item.label} style={{ padding:'12px 14px', border:'1px solid var(--border)', borderRadius:10, background:'var(--bg3)' }}>
+                <div key={item.label} className="card card-pad-sm">
                   <div style={{ fontSize:11, color:'var(--text3)', marginBottom:6 }}>{item.label}</div>
                   <div style={{ fontSize:13, fontWeight:700, color:'var(--text)' }}>{item.value}</div>
                 </div>
@@ -760,7 +782,7 @@ export default function ProfilePage() {
             {Object.keys(solveStats.solveTimeByTier || {}).length > 0 && (
               <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
                 {Object.entries(solveStats.solveTimeByTier).map(([tierName, stat]) => (
-                  <div key={tierName} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 12px', border:'1px solid var(--border)', borderRadius:10 }}>
+                  <div key={tierName} className="list-item-hover" style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 12px', border:'1px solid var(--border)', borderRadius:10 }}>
                     <span style={{ fontSize:12, fontWeight:700, textTransform:'capitalize' }}>{tierName}</span>
                     <span style={{ fontSize:12, color:'var(--text2)' }}>
                       평균 {formatDuration(stat.avgSec)} · {stat.count}문제
@@ -772,12 +794,15 @@ export default function ProfilePage() {
           </div>
 
           {/* 최근 활동 */}
-          <div className="card">
-            <div style={{ fontWeight:700, fontSize:14, marginBottom:12 }}>최근 활동</div>
+          <div className="card card-pad">
+            <div className="section-header-title" style={{ marginBottom:12 }}>최근 활동</div>
             {submissions.length===0
-              ? <div style={{ color:'var(--text3)', fontSize:13 }}>제출 기록이 없어요.</div>
+              ? <div className="empty-state" style={{ padding:'24px 0' }}>
+                  <div className="empty-state-icon">📋</div>
+                  <div style={{ fontSize:13, color:'var(--text3)' }}>제출 기록이 없어요.</div>
+                </div>
               : submissions.slice(0,8).map(s=>(
-                <div key={s.id} style={{ display:'flex', alignItems:'center', gap:12, padding:'9px 0', borderBottom:'1px solid var(--border)' }}>
+                <div key={s.id} className="list-item-hover" style={{ display:'flex', alignItems:'center', gap:12, padding:'9px 0', borderBottom:'1px solid var(--border)' }}>
                   <span style={{ flex:1, fontSize:13, fontWeight:500 }}>{s.problemTitle}</span>
                   <span style={{ fontSize:12, fontWeight:700, color:s.result==='correct'?'var(--green)':s.result==='wrong'?'var(--red)':'var(--yellow)' }}>
                     {s.result==='correct'?'✓ 정답':s.result==='wrong'?'✗ 오답':'시간초과'}
@@ -795,8 +820,8 @@ export default function ProfilePage() {
       ══════════════════════════════════════ */}
       {mainTab==='streak' && (
         <div className="fade-up" style={{ display:'flex', flexDirection:'column', gap:16 }}>
-          <div className="card">
-            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
+          <div className="card card-pad">
+            <div className="section-header" style={{ marginBottom:16 }}>
               <div>
                 <div style={{ fontSize:22, fontWeight:800 }}>현재 {user?.streak||0}일</div>
                 <div style={{ fontSize:13, color:'var(--text3)', marginTop:2 }}>연속 풀이 스트릭</div>
@@ -950,8 +975,8 @@ export default function ProfilePage() {
                 </select>
               </div>
 
-              <div style={{ padding:'12px 14px', border:'1px solid var(--border)', borderRadius:10, background:'var(--bg3)' }}>
-                <div style={{ fontSize:13, fontWeight:700, marginBottom:6 }}>제출 기록 공개</div>
+              <div className="card card-pad-sm">
+                <div className="section-header-title" style={{ marginBottom:6 }}>제출 기록 공개</div>
                 <div style={{ fontSize:12, color:'var(--text2)', lineHeight:1.6, marginBottom:10 }}>
                   켜면 다른 사용자가 제출 목록에서 내 제출 기록을 볼 수 있습니다. 코드는 항상 본인만 열람할 수 있습니다.
                 </div>
@@ -1130,7 +1155,7 @@ export default function ProfilePage() {
               {/* 현재 장착 */}
               <div style={{ display:'flex', gap:10, marginBottom:16, flexWrap:'wrap' }}>
                 {[{type:'badge',current:equippedBadge,label:'장착 뱃지'},{type:'title',current:equippedTitle,label:'장착 칭호'}].map(item=>(
-                  <div key={item.type} style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 14px', background:'var(--bg3)', borderRadius:10, flex:1, minWidth:180 }}>
+                  <div key={item.type} className="card card-pad-sm" style={{ display:'flex', alignItems:'center', gap:10, flex:1, minWidth:180 }}>
                     <span style={{ fontSize:20 }}>{item.current ? rewards.find(r=>r.code===item.current)?.icon : (item.type==='badge'?'⬜':'📛')}</span>
                     <div>
                       <div style={{ fontSize:11, color:'var(--text3)', marginBottom:2 }}>{item.label}</div>

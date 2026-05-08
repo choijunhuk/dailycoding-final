@@ -3,9 +3,13 @@ export const VALID_SORTS = new Set(['id', 'newest', 'difficulty', '-difficulty',
 export const VALID_STATUS = new Set(['all', 'solved', 'unsolved', 'bookmarked']);
 export const VALID_VIEWS = new Set(['table', 'card']);
 export const PROBLEM_TYPE_META = {
+  algorithm: { label: '알고리즘', short: '알고리즘', color: 'var(--blue)', bg: 'rgba(88,166,255,.12)' },
   coding: { label: '일반 풀이', short: '코딩', color: 'var(--blue)', bg: 'rgba(88,166,255,.12)' },
   'fill-blank': { label: '빈칸 채우기', short: '빈칸', color: 'var(--green)', bg: 'rgba(63,185,80,.12)' },
   'bug-fix': { label: '틀린부분 찾기', short: '버그', color: 'var(--yellow)', bg: 'rgba(227,179,65,.12)' },
+  troubleshooting: { label: '트러블슈팅', short: '트러블', color: 'var(--orange)', bg: 'rgba(255,166,87,.12)' },
+  'performance-fix': { label: '성능 개선', short: '성능', color: 'var(--red)', bg: 'rgba(248,81,73,.12)' },
+  'refactor-fix': { label: '리팩터링', short: '리팩터', color: 'var(--purple)', bg: 'rgba(188,140,255,.12)' },
 };
 export const VIEW_PAGE_SIZE = { table: 10, card: 9 };
 

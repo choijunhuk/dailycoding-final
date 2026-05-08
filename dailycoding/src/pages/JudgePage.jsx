@@ -22,6 +22,23 @@ import {
 } from './judgePageUtils.js';
 import './JudgePage.css';
 
+const TROUBLESHOOTING_TYPES = new Set(['troubleshooting', 'performance-fix', 'refactor-fix']);
+
+function isTroubleshootingType(problemType) {
+  return TROUBLESHOOTING_TYPES.has(problemType || '');
+}
+
+function inferMonacoLanguage(filePath = '') {
+  if (filePath.endsWith('.js') || filePath.endsWith('.mjs') || filePath.endsWith('.cjs')) return 'javascript';
+  if (filePath.endsWith('.ts')) return 'typescript';
+  if (filePath.endsWith('.py')) return 'python';
+  if (filePath.endsWith('.json')) return 'json';
+  if (filePath.endsWith('.md')) return 'markdown';
+  if (filePath.endsWith('.css')) return 'css';
+  if (filePath.endsWith('.html')) return 'html';
+  return 'plaintext';
+}
+
 const fmtTimer = (s) => {
   const m = Math.floor(s / 60);
   const ss = s % 60;
@@ -90,7 +107,7 @@ export default function JudgePage() {
     compile: { label: t('compileError'),        color: RESULT_INFO_COLORS.compile },
     judging: { label: '채점 중...',             color: RESULT_INFO_COLORS.judging },
   };
-  const { solved, submissions, addSubmission, problems: appProblems, bookmarks, toggleBookmark } = useApp();
+  const { solved, submissions, addSubmission, problems: appProblems, bookmarks, toggleBookmark, loadProblems, loadSubmissions } = useApp();
   const toast = useToast();
   const allProblems    = appProblems.length > 0 ? appProblems : PROBLEMS;
   const initProblem    = location.state?.problem || allProblems.find(p => String(p.id) === id) || null;
@@ -134,6 +151,11 @@ export default function JudgePage() {
   const [judgeStatusError, setJudgeStatusError] = useState('');
   const [fillBlankAnswers, setFillBlankAnswers] = useState([])
   const [bugFixAnswer, setBugFixAnswer] = useState('')
+  const [troubleshootingConfig, setTroubleshootingConfig] = useState(null)
+  const [troubleshootingFiles, setTroubleshootingFiles] = useState([])
+  const [activeTroubleshootingPath, setActiveTroubleshootingPath] = useState('')
+  const [troubleshootingError, setTroubleshootingError] = useState('')
+  const [troubleshootingResult, setTroubleshootingResult] = useState(null)
   const [isSavingNote, setIsSavingNote] = useState(false);
   const [wrongNote, setWrongNote] = useState('');
   const [editorial, setEditorial] = useState(null)
@@ -164,8 +186,10 @@ export default function JudgePage() {
   // isSpecialProblem must be declared BEFORE any useEffect that references it
   const problemType = problem?.problemType || 'coding'
   const isBuildProblem = problemType === 'build'
-  const isSpecialProblem = problemType !== 'coding' && !isBuildProblem
+  const isTroubleshootingProblem = isTroubleshootingType(problemType)
+  const isSpecialProblem = problemType !== 'coding' && !isBuildProblem && !isTroubleshootingProblem
   const specialConfig = useMemo(() => parseSpecialConfig(problem?.specialConfig), [problem?.specialConfig])
+  const activeTroubleshootingFile = troubleshootingFiles.find((file) => file.path === activeTroubleshootingPath) || troubleshootingFiles[0] || null
 
   const loadProblem = async (probId) => {
     if (!probId) return;
@@ -218,6 +242,37 @@ export default function JudgePage() {
     })
   }, [problem?.id, solved[problem?.id], isAdmin])
 
+  useEffect(() => {
+    if (!problem?.id || !isTroubleshootingProblem) {
+      setTroubleshootingConfig(null)
+      setTroubleshootingFiles([])
+      setActiveTroubleshootingPath('')
+      setTroubleshootingError('')
+      setTroubleshootingResult(null)
+      return
+    }
+
+    let cancelled = false
+    setTroubleshootingError('')
+    api.get(`/problems/${problem.id}/troubleshooting`)
+      .then((res) => {
+        if (cancelled) return
+        const config = res.data || {}
+        const files = Array.isArray(config.initialFiles) ? config.initialFiles : []
+        setTroubleshootingConfig(config)
+        setTroubleshootingFiles(files)
+        setActiveTroubleshootingPath(files[0]?.path || '')
+      })
+      .catch((err) => {
+        if (cancelled) return
+        setTroubleshootingConfig(null)
+        setTroubleshootingFiles([])
+        setActiveTroubleshootingPath('')
+        setTroubleshootingError(err.response?.data?.message || '트러블슈팅 설정을 불러오지 못했습니다.')
+      })
+    return () => { cancelled = true }
+  }, [problem?.id, isTroubleshootingProblem])
+
   // 코드 자동저장
   useEffect(() => {
     if (code && problem?.id) {
@@ -239,6 +294,7 @@ export default function JudgePage() {
     setSolutions([]); setWrongNote('');
     setFillBlankAnswers([])
     setBugFixAnswer('')
+    setTroubleshootingResult(null)
     // 오답노트 로드
     const savedNote = localStorage.getItem(`dc_note_${problem?.id}`);
     if (savedNote) setWrongNote(savedNote);
@@ -299,7 +355,7 @@ export default function JudgePage() {
   }
 
   const getReview = async () => {
-    if (isSpecialProblem) return;
+    if (isSpecialProblem || isTroubleshootingProblem) return;
     if (!code.trim()) return;
     setReviewLoading(true);
     setAiQuotaNotice('');
@@ -446,7 +502,66 @@ export default function JudgePage() {
     toast?.show(`코드 패턴을 보고 ${getJudgeLanguageOption(submitLang)?.label || submitLang}로 ${actionLabel}합니다.`, 'info')
   }
 
+  const updateTroubleshootingFile = (path, content) => {
+    setTroubleshootingFiles((prev) => prev.map((file) => file.path === path ? { ...file, content } : file))
+  }
+
+  const resetTroubleshootingFiles = () => {
+    const files = Array.isArray(troubleshootingConfig?.initialFiles) ? troubleshootingConfig.initialFiles : []
+    setTroubleshootingFiles(files)
+    setActiveTroubleshootingPath(files[0]?.path || '')
+    setTroubleshootingResult(null)
+    toast?.show('트러블슈팅 파일을 초기 상태로 되돌렸습니다.', 'info')
+  }
+
+  const runTroubleshooting = async ({ submit = false } = {}) => {
+    if (!problem?.id || !troubleshootingConfig) return
+    setIsJudging(true)
+    setLeftTab('submissions')
+    setTroubleshootingResult(null)
+    setResult({ status: 'judging' })
+    try {
+      const endpoint = submit
+        ? `/problems/${problem.id}/troubleshooting/submit`
+        : `/problems/${problem.id}/troubleshooting/run`
+      const { data } = await api.post(endpoint, {
+        files: troubleshootingFiles.map((file) => ({ path: file.path, content: file.content })),
+      })
+      setTroubleshootingResult(data)
+      setResult({
+        status: data.result,
+        time: data.executionTimeMs == null ? '-' : `${data.executionTimeMs}ms`,
+        mem: data.memoryUsedMb == null ? '-' : `${data.memoryUsedMb}MB`,
+        detail: data.feedback,
+        codeLength: data.codeLength || new TextEncoder().encode(JSON.stringify(troubleshootingFiles)).length,
+        totalScore: data.totalScore,
+        correctnessScore: data.correctnessScore,
+        performanceScore: data.performanceScore,
+        readabilityScore: data.readabilityScore,
+      })
+      if (submit) {
+        await Promise.allSettled([loadSubmissions?.(), loadProblems?.()])
+      }
+      if (data.result === 'correct') {
+        if (submit) confetti({ particleCount: 120, spread: 80, origin: { y: 0.7 } })
+        toast?.show(submit ? '트러블슈팅 제출 성공' : 'visible test 통과', 'success')
+      } else {
+        toast?.show(submit ? '트러블슈팅 조건을 아직 만족하지 못했습니다.' : 'visible test 실패', 'warning')
+      }
+    } catch (err) {
+      const msg = err.response?.data?.message || (submit ? '트러블슈팅 제출 실패' : '트러블슈팅 실행 실패')
+      setResult({ status: 'error', detail: msg })
+      toast?.show(msg, 'error')
+    } finally {
+      setIsJudging(false)
+    }
+  }
+
   const runCode = async ({ input } = {}) => {
+    if (isTroubleshootingProblem) {
+      await runTroubleshooting({ submit: false })
+      return
+    }
     if (isSpecialProblem) {
       toast?.show('특수 문제 유형은 실행 기능을 지원하지 않습니다. 바로 제출해 주세요.', 'info')
       return
@@ -525,6 +640,10 @@ export default function JudgePage() {
   };
 
   const submitCode = async () => {
+    if (isTroubleshootingProblem) {
+      await runTroubleshooting({ submit: true })
+      return
+    }
     if (isSpecialProblem) {
       const solveTimeSec = timerComponentRef.current?.getSec?.() || null
       setIsJudging(true); setTestResults([]); setResult({ status: 'judging' });
@@ -729,7 +848,7 @@ export default function JudgePage() {
               </div>
 
               <section><h4>문제</h4><p style={{ whiteSpace: 'pre-line' }}>{problem.desc}</p></section>
-              {!isSpecialProblem && !isBuildProblem && (
+              {!isSpecialProblem && !isBuildProblem && !isTroubleshootingProblem && (
                 <>
                   <section><h4>입력</h4><p style={{ whiteSpace: 'pre-line' }}>{problem.inputDesc}</p></section>
                   <section><h4>출력</h4><p style={{ whiteSpace: 'pre-line' }}>{problem.outputDesc}</p></section>
@@ -783,6 +902,39 @@ export default function JudgePage() {
                   <h4>버그 코드 {problem?.preferredLanguage && <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text2)', marginLeft: 6 }}>({problem.preferredLanguage})</span>}</h4>
                   <pre className="io-box mono">{specialConfig?.buggyCode || '버그 코드 정보가 없습니다.'}</pre>
                   {specialConfig?.hint && <p style={{ marginTop: 8, color: 'var(--text2)' }}>💡 힌트: {specialConfig.hint}</p>}
+                </section>
+              )}
+
+              {isTroubleshootingProblem && (
+                <section>
+                  <h4>트러블슈팅 시나리오</h4>
+                  {troubleshootingError ? (
+                    <div className="hint-box" style={{ borderColor:'rgba(248,81,73,.25)', color:'var(--red)' }}>{troubleshootingError}</div>
+                  ) : (
+                    <>
+                      <div className="hint-box">
+                        <strong style={{ color:'var(--text)' }}>{troubleshootingConfig?.scenarioTitle || problem.title}</strong>
+                        <p style={{ marginTop:8, whiteSpace:'pre-line' }}>
+                          {troubleshootingConfig?.scenarioDescription || problem.desc}
+                        </p>
+                      </div>
+                      <div className="stat-rows" style={{ marginTop:12 }}>
+                        {[
+                          ['목표 응답 시간', troubleshootingConfig?.targetResponseTimeMs ? `${troubleshootingConfig.targetResponseTimeMs}ms` : '-'],
+                          ['성능 제한', troubleshootingConfig?.performanceLimitMs ? `${troubleshootingConfig.performanceLimitMs}ms` : '-'],
+                          ['메모리 제한', troubleshootingConfig?.memoryLimitMb ? `${troubleshootingConfig.memoryLimitMb}MB` : '-'],
+                          ['Visible / Hidden 테스트', `${troubleshootingConfig?.visibleTests?.length || 0} / ${troubleshootingConfig?.hiddenTestCount || 0}`],
+                        ].map(([k, v]) => (
+                          <div key={k} className="stat-row"><span>{k}</span><span className="mono" style={{ color:'var(--blue)' }}>{v}</span></div>
+                        ))}
+                      </div>
+                      {Array.isArray(troubleshootingConfig?.forbiddenPatterns) && troubleshootingConfig.forbiddenPatterns.length > 0 && (
+                        <div style={{ marginTop:12, fontSize:12, color:'var(--text3)' }}>
+                          금지 패턴: {troubleshootingConfig.forbiddenPatterns.join(', ')}
+                        </div>
+                      )}
+                    </>
+                  )}
                 </section>
               )}
 
@@ -1055,6 +1207,14 @@ export default function JudgePage() {
                           fontSize:11, color: result.status === 'correct' ? 'var(--green)' : 'var(--text2)',
                           fontFamily:'Space Mono, monospace', whiteSpace:'pre-wrap', maxHeight:100, overflow:'auto' }}>{result.detail}</pre>
                       )}
+                      {result.totalScore != null && (
+                        <div className="troubleshooting-inline-score">
+                          <span>총점 <strong>{result.totalScore}</strong>/100</span>
+                          <span>테스트 {result.correctnessScore}/50</span>
+                          <span>성능 {result.performanceScore}/30</span>
+                          <span>가독성 {result.readabilityScore}/20</span>
+                        </div>
+                      )}
                       {result.status && result.status !== 'correct' && result.status !== 'judging' && (
                         <div style={{ marginTop:10, padding:'10px 12px', background:'rgba(248,81,73,.04)', border:'1px solid rgba(248,81,73,.15)', borderRadius:8 }}>
                           <div style={{ fontSize:12, fontWeight:700, color:'var(--red)', marginBottom:6 }}>📝 오답노트</div>
@@ -1103,11 +1263,16 @@ export default function JudgePage() {
       {/* ── RIGHT: 코드 에디터 ── */}
       <div className="judge-right">
         <div className="editor-toolbar">
-          {!isSpecialProblem && (
+          {!isSpecialProblem && !isTroubleshootingProblem && (
             <select className="lang-select mono" value={lang} onChange={e => setLang(e.target.value)}>
               {availableLangOptions.length === 0 && <option value={lang}>채점 불가</option>}
               {availableLangOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
+          )}
+          {isTroubleshootingProblem && (
+            <span className="lang-select mono" style={{ display:'inline-flex', alignItems:'center' }}>
+              트러블슈팅 모드
+            </span>
           )}
           {isSpecialProblem && (
             <span className="lang-select mono" style={{ display:'inline-flex', alignItems:'center' }}>
@@ -1125,20 +1290,21 @@ export default function JudgePage() {
           {/* ★ 코드 도구 */}
           <div style={{ display:'flex', gap:4, marginRight:8 }}>
             <button className="btn btn-ghost btn-sm" onClick={() => {
-              navigator.clipboard.writeText(code);
+              navigator.clipboard.writeText(isTroubleshootingProblem ? (activeTroubleshootingFile?.content || '') : code);
               toast?.show('📋 코드가 클립보드에 복사되었습니다.', 'info');
             }} title="코드 복사"><Copy size={14} /> 복사</button>
-            {!isSpecialProblem && <button className="btn btn-ghost btn-sm" onClick={saveSnippet} title="현재 코드를 스니펫으로 저장"><FileCode2 size={14} /> Save Snippet</button>}
-            {!isSpecialProblem && <button className="btn btn-ghost btn-sm" onClick={clearSnippet} title="저장된 스니펫 삭제"><Trash2 size={14} /> 삭제</button>}
+            {!isSpecialProblem && !isTroubleshootingProblem && <button className="btn btn-ghost btn-sm" onClick={saveSnippet} title="현재 코드를 스니펫으로 저장"><FileCode2 size={14} /> Save Snippet</button>}
+            {!isSpecialProblem && !isTroubleshootingProblem && <button className="btn btn-ghost btn-sm" onClick={clearSnippet} title="저장된 스니펫 삭제"><Trash2 size={14} /> 삭제</button>}
             <button className="btn btn-ghost btn-sm" onClick={() => {
               if (window.confirm('현재 코드를 초기화하시겠습니까?')) {
-                setCode(DEFAULT_CODE[lang] || '');
+                if (isTroubleshootingProblem) resetTroubleshootingFiles();
+                else setCode(DEFAULT_CODE[lang] || '');
                 toast?.show('↺ 코드가 초기화되었습니다.', 'info');
               }
             }} title="코드 초기화"><RotateCcw size={14} /> 초기화</button>
           </div>
           {/* ★ 코드 템플릿 */}
-          {!isSpecialProblem && (
+          {!isSpecialProblem && !isTroubleshootingProblem && (
           <div style={{position:'relative'}}>
             <button className="btn btn-ghost btn-sm" onClick={()=>setShowTpl(p=>!p)} title="코드 템플릿"><FileCode2 size={14} /> 템플릿</button>
             {showTpl && (
@@ -1160,8 +1326,8 @@ export default function JudgePage() {
             )}
           </div>
           )}
-          {!isSpecialProblem && <button className="btn btn-ghost btn-sm" onClick={() => runCode()} disabled={isJudging} title="예제 실행"><Play size={14} /> 예제 실행</button>}
-          {!isSpecialProblem && <button className="btn btn-ghost btn-sm" onClick={getReview} disabled={reviewLoading || !code.trim()} title="AI 코드 리뷰">
+          {!isSpecialProblem && <button className="btn btn-ghost btn-sm" onClick={() => runCode()} disabled={isJudging || (isTroubleshootingProblem && !troubleshootingConfig)} title={isTroubleshootingProblem ? 'Visible 테스트 실행' : '예제 실행'}><Play size={14} /> {isTroubleshootingProblem ? '테스트 실행' : '예제 실행'}</button>}
+          {!isSpecialProblem && !isTroubleshootingProblem && <button className="btn btn-ghost btn-sm" onClick={getReview} disabled={reviewLoading || !code.trim()} title="AI 코드 리뷰">
             {reviewLoading ? <span className="spinner"/> : '🔍 리뷰'}
           </button>}
           <button className="btn btn-success btn-sm" onClick={submitCode} disabled={isJudging} title="제출 (Ctrl+Enter)">
@@ -1198,7 +1364,70 @@ export default function JudgePage() {
 
 
         <div className="editor-wrap">
-          {isSpecialProblem ? (
+          {isTroubleshootingProblem ? (
+            <div className="troubleshooting-workspace">
+              <aside className="troubleshooting-files">
+                <div className="troubleshooting-panel-title">FILES</div>
+                {troubleshootingFiles.length === 0 ? (
+                  <div className="troubleshooting-empty">파일이 없습니다.</div>
+                ) : troubleshootingFiles.map((file) => (
+                  <button
+                    key={file.path}
+                    className={`troubleshooting-file-btn ${file.path === activeTroubleshootingPath ? 'active' : ''}`}
+                    onClick={() => setActiveTroubleshootingPath(file.path)}
+                  >
+                    <span className="mono">{file.path}</span>
+                    {file.editable === false && <span className="readonly-badge">read only</span>}
+                  </button>
+                ))}
+              </aside>
+              <div className="troubleshooting-editor">
+                {activeTroubleshootingFile ? (
+                  <Suspense fallback={<div className="troubleshooting-empty">에디터 로딩 중...</div>}>
+                    <Editor
+                      height="100%"
+                      language={inferMonacoLanguage(activeTroubleshootingFile.path)}
+                      theme={isDark ? "vs-dark" : "vs"}
+                      value={activeTroubleshootingFile.content}
+                      onChange={(v) => updateTroubleshootingFile(activeTroubleshootingFile.path, v || '')}
+                      options={{
+                        readOnly: activeTroubleshootingFile.editable === false,
+                        fontSize: editorSettings.font_size || 14,
+                        minimap: { enabled: !!editorSettings.minimap },
+                        scrollBeyondLastLine: false,
+                        tabSize: editorSettings.tab_size || 2,
+                        fontFamily: editorSettings.font_family || "'Space Mono', 'Fira Code', Consolas, monospace",
+                        lineNumbers: editorSettings.line_numbers !== false ? 'on' : 'off',
+                        wordWrap: editorSettings.word_wrap === true ? 'on' : 'off'
+                      }}
+                    />
+                  </Suspense>
+                ) : (
+                  <div className="troubleshooting-empty">선택된 파일이 없습니다.</div>
+                )}
+              </div>
+              <aside className="troubleshooting-side">
+                <div className="troubleshooting-panel-title">SCENARIO</div>
+                <h3>{troubleshootingConfig?.scenarioTitle || problem.title}</h3>
+                <p>{troubleshootingConfig?.scenarioDescription || problem.desc}</p>
+                <div className="troubleshooting-metrics">
+                  <div><span>Target</span><strong>{troubleshootingConfig?.targetResponseTimeMs ? `${troubleshootingConfig.targetResponseTimeMs}ms` : '-'}</strong></div>
+                  <div><span>Limit</span><strong>{troubleshootingConfig?.performanceLimitMs ? `${troubleshootingConfig.performanceLimitMs}ms` : '-'}</strong></div>
+                  <div><span>Tests</span><strong>{troubleshootingConfig ? `${troubleshootingConfig.visibleTests?.length || 0}+${troubleshootingConfig.hiddenTestCount || 0}` : '-'}</strong></div>
+                </div>
+                {troubleshootingResult && (
+                  <div className="troubleshooting-score-card">
+                    <div className="score-total">{troubleshootingResult.totalScore ?? 0}</div>
+                    <div className="score-lines">
+                      <span>Correctness {troubleshootingResult.correctnessScore ?? 0}/50</span>
+                      <span>Performance {troubleshootingResult.performanceScore ?? 0}/30</span>
+                      <span>Readability {troubleshootingResult.readabilityScore ?? 0}/20</span>
+                    </div>
+                  </div>
+                )}
+              </aside>
+            </div>
+          ) : isSpecialProblem ? (
             <div style={{ height:'100%', padding:16, overflowY:'auto', background:'var(--bg2)' }}>
               {problemType === 'fill-blank' && (
                 <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
@@ -1259,7 +1488,44 @@ export default function JudgePage() {
         </div>
 
         {/* Bottom panel */}
-        {!isSpecialProblem && <div className={`result-panel ${bottomTab === 'review' ? 'expanded' : ''}`}>
+        {isTroubleshootingProblem && (
+          <div className="result-panel troubleshooting-result-panel">
+            <div className="result-tabs">
+              <button className="rtab active">실행 결과</button>
+            </div>
+            <div className="result-body">
+              {!troubleshootingResult ? (
+                <div style={{ color:'var(--text3)', fontSize:12 }}>
+                  Visible 테스트 실행 또는 제출 후 점수와 피드백이 표시됩니다.
+                </div>
+              ) : (
+                <div className="troubleshooting-result-grid">
+                  <div className="troubleshooting-result-summary">
+                    <strong style={{ color: RESULT_INFO[troubleshootingResult.result]?.color || 'var(--text)' }}>
+                      {RESULT_INFO[troubleshootingResult.result]?.label || troubleshootingResult.result}
+                    </strong>
+                    <span>총점 {troubleshootingResult.totalScore ?? 0}/100</span>
+                    <span>{troubleshootingResult.testPassCount ?? 0}/{troubleshootingResult.totalTestCount ?? 0} tests</span>
+                    <span>{troubleshootingResult.executionTimeMs ?? '-'}ms</span>
+                  </div>
+                  <pre className="troubleshooting-feedback">{troubleshootingResult.feedback || '피드백 없음'}</pre>
+                  {Array.isArray(troubleshootingResult.tests) && troubleshootingResult.tests.length > 0 && (
+                    <div className="troubleshooting-test-list">
+                      {troubleshootingResult.tests.map((test, index) => (
+                        <div key={`${test.name}-${index}`} className={`troubleshooting-test ${test.passed ? 'pass' : 'fail'}`}>
+                          <span>{test.passed ? '✓' : '✗'} {test.name}</span>
+                          <span>{test.executionTimeMs}ms</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {!isSpecialProblem && !isTroubleshootingProblem && <div className={`result-panel ${bottomTab === 'review' ? 'expanded' : ''}`}>
           <div className="result-tabs">
             <button className={`rtab ${bottomTab === 'custom' ? 'active' : ''}`} onClick={() => setBottomTab('custom')}>커스텀 입력</button>
             <button className={`rtab ${bottomTab === 'review' ? 'active' : ''}`} onClick={() => setBottomTab('review')}>🔍 AI 코드 리뷰</button>

@@ -19,7 +19,7 @@ import { LangProvider } from './context/LangContext.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 import OnboardingModal from './components/OnboardingModal.jsx';
 import api from './api.js';
-import { applyAppFontPreference } from './utils/fontPreferences.js';
+import { applyAppTypographyPreference } from './utils/fontPreferences.js';
 import './index.css';
 
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -32,6 +32,7 @@ const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const SubmissionsPage = lazy(() => import('./pages/SubmissionsPage'));
 const AdminPage = lazy(() => import('./pages/AdminPage'));
 const BattlePage = lazy(() => import('./pages/BattlePage'));
+const AlgorithmBattlePage = lazy(() => import('./pages/AlgorithmBattlePage'));
 const ReviewsPage = lazy(() => import('./pages/ReviewsPage'));
 const PricingPage = lazy(() => import('./pages/PricingPage'));
 const TeamDashboard = lazy(() => import('./pages/TeamDashboard'));
@@ -84,7 +85,10 @@ function AppInner() {
   const [onboardingOpen, setOnboardingOpen] = useState(false);
 
   useEffect(() => {
-    applyAppFontPreference(localStorage.getItem('dc_app_font') || 'noto');
+    applyAppTypographyPreference({
+      fontFamily: localStorage.getItem('dc_app_font') || 'noto',
+      fontSize: localStorage.getItem('dc_app_font_size') || 14,
+    });
   }, []);
 
   useEffect(() => {
@@ -92,7 +96,13 @@ function AppInner() {
     let ignore = false;
     api.get('/auth/settings')
       .then((res) => {
-        if (!ignore) applyAppFontPreference(res.data?.settings?.ui?.fontFamily || 'noto');
+        if (!ignore) {
+          const ui = res.data?.settings?.ui || {};
+          applyAppTypographyPreference({
+            fontFamily: ui.fontFamily || 'noto',
+            fontSize: ui.fontSize || ui.code_font_size || 14,
+          });
+        }
       })
       .catch(() => {});
     return () => { ignore = true; };
@@ -200,7 +210,8 @@ function AppInner() {
                 <Route path="/submissions" element={<SubmissionsPage />} />
                 <Route path="/reviews"     element={<ReviewsPage />} />
                 <Route path="/reviews/:id" element={<ReviewsPage />} />
-                <Route path="/battle"      element={<BattlePage />} />
+                <Route path="/battle"      element={<AlgorithmBattlePage />} />
+                <Route path="/battle/:roomId" element={<AlgorithmBattlePage />} />
                 <Route path="/battles/history" element={<BattlePage />} />
                 <Route path="/battle/watch/:roomId" element={<BattlePage />} />
                 <Route path="/share/:slug" element={<SharedSubmissionPage />} />

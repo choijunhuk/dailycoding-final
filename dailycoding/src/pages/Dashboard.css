@@ -46,10 +46,84 @@
   line-height: 1.6;
 }
 
+.dashboard-learning-modes {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.dashboard-learning-card {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  text-align: left;
+  min-height: 132px;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--mode-color) 10%, transparent), var(--bg2));
+  color: var(--text);
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color .16s ease, transform .16s ease, box-shadow .16s ease;
+}
+
+.dashboard-learning-card:hover {
+  border-color: color-mix(in srgb, var(--mode-color) 55%, var(--border));
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px rgba(0,0,0,.22);
+}
+
+.dashboard-learning-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  color: var(--mode-color);
+  background: color-mix(in srgb, var(--mode-color) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--mode-color) 28%, transparent);
+}
+
+.dashboard-learning-body {
+  min-width: 0;
+}
+
+.dashboard-learning-body strong,
+.dashboard-learning-body small,
+.dashboard-learning-stat {
+  display: block;
+}
+
+.dashboard-learning-body strong {
+  font-size: 14px;
+  line-height: 1.35;
+  margin-bottom: 6px;
+}
+
+.dashboard-learning-body small {
+  color: var(--text2);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.dashboard-learning-stat {
+  grid-column: 2;
+  color: var(--mode-color);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
 /* 메인 2컬럼 그리드: 태블릿 이하에서 단일 컬럼 */
 @media (max-width: 900px) {
   .dashboard-main-grid {
     grid-template-columns: 1fr !important;
+  }
+  .dashboard-learning-modes {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -74,5 +148,8 @@
   }
   .dashboard-welcome {
     padding: 12px 14px !important;
+  }
+  .dashboard-learning-modes {
+    grid-template-columns: 1fr;
   }
 }

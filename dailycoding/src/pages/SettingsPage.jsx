@@ -4,7 +4,7 @@ import { useToast } from '../context/ToastContext';
 import api from '../api';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { useLang } from '../context/LangContext.jsx';
-import { FONT_OPTIONS, applyAppFontPreference } from '../utils/fontPreferences.js';
+import { FONT_OPTIONS, applyAppTypographyPreference, normalizeAppFontSize } from '../utils/fontPreferences.js';
 import ProfileAvatar from '../components/ProfileAvatar.jsx';
 import { Bell, Code2, Lock, Monitor, Shield, User } from 'lucide-react';
 
@@ -151,7 +151,7 @@ export default function SettingsPage() {
     <div className="settings-layout" style={{ maxWidth:1100, margin:'0 auto', padding:'32px 24px', display:'grid', gridTemplateColumns:'220px 1fr', gap:24, alignItems:'start' }}>
 
       {/* ── Left sidebar ── */}
-      <aside style={{ background:'var(--bg2)', border:'1px solid var(--border)', borderRadius:14, overflow:'hidden', position:'sticky', top:80 }}>
+      <aside className="card" style={{ overflow:'hidden', position:'sticky', top:80 }}>
         <div style={{ padding:'20px 16px 16px', borderBottom:'1px solid var(--border)', background:'linear-gradient(135deg, rgba(121,192,255,.04), rgba(210,168,255,.04))' }}>
           <ProfileAvatar profile={user} size={44} fontSize={18} style={{ marginBottom:10 }} />
           <div style={{ fontSize:15, fontWeight:700, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
@@ -186,10 +186,10 @@ export default function SettingsPage() {
       </aside>
 
       {/* ── Right content panel ── */}
-      <div style={{ background:'var(--bg2)', border:'1px solid var(--border)', borderRadius:14, padding:'32px', minWidth:0 }}>
+      <div className="card" style={{ padding:'32px', minWidth:0 }}>
         <div style={{ marginBottom:28, paddingBottom:20, borderBottom:'1px solid var(--border)', display:'flex', alignItems:'center', gap:12 }}>
           <span style={{ color:'var(--accent)', display:'flex' }}>{TAB_ICONS[tab]}</span>
-          <h2 style={{ fontWeight:800, fontSize:20, margin:0 }}>{activeTabLabel}</h2>
+          <h2 className="section-header-title" style={{ fontSize:20, margin:0 }}>{activeTabLabel}</h2>
         </div>
 
         {tab === 'profile' && (
@@ -247,7 +247,7 @@ export default function SettingsPage() {
 
         {tab === 'account' && (
           <div style={{ display:'flex', flexDirection:'column', gap:24 }}>
-            <div style={{ padding:'14px 18px', borderRadius:10, background:'rgba(248,81,73,.07)', border:'1px solid rgba(248,81,73,.2)', fontSize:13, color:'var(--text2)' }}>
+            <div className="error-msg">
               비밀번호는 최소 8자 이상이어야 합니다.
             </div>
             <Field label={t('currentPassword')}>
@@ -283,8 +283,7 @@ function SaveBtn({ onClick, saving, label }) {
   const { t } = useLang();
   return (
     <button onClick={onClick} disabled={saving}
-      style={{ alignSelf:'flex-start', padding:'10px 24px', background:'var(--accent)', color:'#fff',
-        border:'none', borderRadius:8, fontWeight:600, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}>
+      className="btn btn-primary" style={{ alignSelf:'flex-start' }}>
       {saving ? t('saving') : (label ?? t('save'))}
     </button>
   );
@@ -341,15 +340,22 @@ function NotifSettings({ data, onSave, saving }) {
 function UiSettings({ data, onSave, saving, theme, setTheme, lang, setLang, t }) {
   const [s, setS] = useState(data || {});
   const selectedFont = s.fontFamily || 'noto';
+  const selectedFontSize = normalizeAppFontSize(s.fontSize || s.code_font_size || 14);
 
   function updateFont(fontId) {
-    applyAppFontPreference(fontId);
+    applyAppTypographyPreference({ fontFamily: fontId, fontSize: selectedFontSize });
     setS(p => ({ ...p, fontFamily: fontId }));
   }
 
+  function updateFontSize(fontSize) {
+    const normalized = normalizeAppFontSize(fontSize);
+    applyAppTypographyPreference({ fontFamily: selectedFont, fontSize: normalized });
+    setS(p => ({ ...p, fontSize: normalized, code_font_size: normalized }));
+  }
+
   function saveUiSettings() {
-    applyAppFontPreference(selectedFont);
-    onSave(s);
+    applyAppTypographyPreference({ fontFamily: selectedFont, fontSize: selectedFontSize });
+    onSave({ ...s, fontSize: selectedFontSize, code_font_size: selectedFontSize });
   }
 
   return (
@@ -408,6 +414,24 @@ function UiSettings({ data, onSave, saving, theme, setTheme, lang, setLang, t })
         </div>
         <div style={{ fontSize:12, color:'var(--text3)', marginBottom:6 }}>{t('appFontDesc')}</div>
       </Field>
+      <Field label={t('appFontSize')}>
+        <div style={{ display:'grid', gap:10, marginBottom:12 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+            <input
+              type="range"
+              min={12}
+              max={18}
+              value={selectedFontSize}
+              onChange={e => updateFontSize(e.target.value)}
+              style={{ maxWidth:240 }}
+            />
+            <span style={{ fontSize:14, fontWeight:800, color:'var(--blue)', minWidth:44 }}>{selectedFontSize}px</span>
+          </div>
+          <div style={{ padding:'14px 16px', borderRadius:12, background:'var(--bg2)', border:'1px solid var(--border)', fontSize:'var(--app-font-size)', lineHeight:1.6 }}>
+            전체 UI 글자 크기 미리보기입니다. 저장하면 다음 접속 때도 유지됩니다.
+          </div>
+        </div>
+      </Field>
       <ToggleRow label={t('animations')} desc={t('animationsDesc')} checked={s.animations ?? true} onChange={v => setS(p => ({ ...p, animations: v }))} />
       <ToggleRow label={t('compactMode')} desc={t('compactModeDesc')} checked={s.compactMode ?? false} onChange={v => setS(p => ({ ...p, compactMode: v }))} />
       <ToggleRow label={t('autoCollapseSidebar')} checked={s.autoCollapseSidebar ?? false} onChange={v => setS(p => ({ ...p, autoCollapseSidebar: v }))} />
@@ -418,28 +442,39 @@ function UiSettings({ data, onSave, saving, theme, setTheme, lang, setLang, t })
 
 function EditorSettings({ data, onSave, saving }) {
   const { t } = useLang();
-  const [s, setS] = useState(data || {});
+  const [s, setS] = useState({
+    ...(data || {}),
+    font_size: data?.font_size ?? data?.fontSize ?? 14,
+    tab_size: data?.tab_size ?? data?.tabSize ?? 2,
+    line_numbers: data?.line_numbers ?? data?.lineNumbers ?? true,
+  });
+  const saveEditorSettings = () => onSave({
+    ...s,
+    font_size: Number(s.font_size || 14),
+    tab_size: Number(s.tab_size || 2),
+    line_numbers: s.line_numbers !== false,
+  });
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
       <ToggleRow label={t('autoSave')} desc={t('autoSaveDesc')} checked={s.autoSave ?? true} onChange={v => setS(p => ({ ...p, autoSave: v }))} />
       <ToggleRow label={t('minimap')} desc={t('minimapDesc')} checked={s.minimap ?? false} onChange={v => setS(p => ({ ...p, minimap: v }))} />
-      <ToggleRow label={t('lineNumbers')} checked={s.lineNumbers ?? true} onChange={v => setS(p => ({ ...p, lineNumbers: v }))} />
+      <ToggleRow label={t('lineNumbers')} checked={s.line_numbers ?? true} onChange={v => setS(p => ({ ...p, line_numbers: v }))} />
       <Field label={t('fontSize')}>
         <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-          <input type="range" min={11} max={20} value={s.fontSize ?? 14}
-            onChange={e => setS(p => ({ ...p, fontSize: Number(e.target.value) }))} style={{ width:180 }} />
-          <span style={{ fontSize:14 }}>{s.fontSize ?? 14}px</span>
+          <input type="range" min={11} max={20} value={s.font_size ?? 14}
+            onChange={e => setS(p => ({ ...p, font_size: Number(e.target.value) }))} style={{ width:180 }} />
+          <span style={{ fontSize:14 }}>{s.font_size ?? 14}px</span>
         </div>
       </Field>
       <Field label={t('tabSize')}>
-        <SelectRow value={String(s.tabSize ?? 2)} onChange={v => setS(p => ({ ...p, tabSize: Number(v) }))}
+        <SelectRow value={String(s.tab_size ?? 2)} onChange={v => setS(p => ({ ...p, tab_size: Number(v) }))}
           options={[['2','2 spaces'],['4','4 spaces'],['8','8 spaces']]} />
       </Field>
       <Field label={t('editorTheme')}>
         <SelectRow value={s.theme ?? 'vs-dark'} onChange={v => setS(p => ({ ...p, theme: v }))}
           options={[['vs-dark','Dark'],['vs','Light'],['hc-black','High Contrast']]} />
       </Field>
-      <SaveBtn onClick={() => onSave(s)} saving={saving} />
+      <SaveBtn onClick={saveEditorSettings} saving={saving} />
     </div>
   );
 }

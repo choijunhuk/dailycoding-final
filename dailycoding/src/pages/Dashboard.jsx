@@ -7,7 +7,8 @@ import { useToast } from '../context/ToastContext.jsx';
 import { PROBLEMS as DEFAULT_PROBLEMS, TIERS } from '../data/problems';
 import api from '../api.js';
 import { useRankingData } from '../hooks/useRankingData.js';
-import { BarChart3, BookOpen, Bot, CheckCircle2, FileText, Flame, Sparkles, Swords, Target, TrendingUp, Trophy } from 'lucide-react';
+import { BarChart3, BookOpen, Bot, CheckCircle2, FileText, Flame, MessageSquare, Sparkles, Swords, Target, TrendingUp, Trophy } from 'lucide-react';
+import ProfileAvatar from '../components/ProfileAvatar';
 import { TIER_THRESHOLDS } from '../data/constants.js';
 import { useLang } from '../context/LangContext.jsx';
 
@@ -25,7 +26,7 @@ const TIER_META = {
   challenger:  { label:'챌린저',        color:'#f1c40f', next:'MAX',          threshold:99999,                        bg:'rgba(241,196,15,.08)'  },
 };
 
-const StatCard = memo(function StatCard({ icon, value, label, color, sub, delta }) {
+const StatCard = memo(function StatCard({ icon, value, label, color, sub, delta, onClick }) {
   const [displayed, setDisplayed] = useState(0);
   const ref = useRef(false);
   useEffect(() => {
@@ -43,19 +44,17 @@ const StatCard = memo(function StatCard({ icon, value, label, color, sub, delta 
   }, [value]);
 
   return (
-    <div className="card card-hover" style={{
-      background:'var(--bg2)', border:'1px solid var(--border)', borderRadius:12,
-      padding:'20px 22px', display:'flex', alignItems:'center', gap:16,
+    <div className="card card-pad card-hover" style={{
+      display:'flex', alignItems:'center', gap:16,
       position:'relative', overflow:'hidden',
       transition:'border-color .2s, box-shadow .2s',
+      cursor: onClick ? 'pointer' : 'default',
     }}
+      onClick={onClick}
       onMouseEnter={e=>{e.currentTarget.style.borderColor=`${color}50`;e.currentTarget.style.boxShadow=`0 8px 28px rgba(0,0,0,.3), 0 0 0 1px ${color}20`;}}
       onMouseLeave={e=>{e.currentTarget.style.borderColor='var(--border)';e.currentTarget.style.boxShadow='';}}
     >
-      <div style={{
-        position:'absolute', top:0, left:0, right:0, height:2, borderRadius:'12px 12px 0 0',
-        background:`linear-gradient(90deg, ${color}80, ${color}20)`,
-      }} />
+      <div className="stat-card-accent" style={{background:`linear-gradient(90deg, ${color}80, ${color}20)`}} />
       <div style={{
         width:48,height:48,borderRadius:14,
         background:`linear-gradient(135deg, ${color}25, ${color}08)`,
@@ -94,9 +93,42 @@ export default function Dashboard() {
   const recentRank = rankingData.slice(0, 5);
   const myRank = rankingData.find(u => u.id === user?.id)?.rank || null;
   const locale = lang === 'ko' ? 'ko-KR' : 'en-US';
-
   const tierMeta   = TIER_META[user?.tier] || TIER_META.bronze;
   const solvedList = PROBLEMS.filter(p => solved[p.id]);
+  const learningModes = [
+    {
+      title: '기본 알고리즘 문제 풀이',
+      desc: '티어별 알고리즘 문제를 풀고 레이팅을 올립니다.',
+      icon: <BookOpen size={20} />,
+      color: 'var(--blue)',
+      to: '/problems?problemType=algorithm',
+      stat: `${solvedList.length} solved`,
+    },
+    {
+      title: '실무형 트러블슈팅',
+      desc: '버그 코드베이스를 고치고 성능 목표를 달성합니다.',
+      icon: <FileText size={20} />,
+      color: 'var(--orange)',
+      to: '/problems?problemType=troubleshooting',
+      stat: 'scenario fix',
+    },
+    {
+      title: '실시간 알고리즘 배틀',
+      desc: '같은 문제를 동시에 풀고 실행 결과로 승패를 겨룹니다.',
+      icon: <Swords size={20} />,
+      color: 'var(--red)',
+      to: '/battle',
+      stat: 'realtime',
+    },
+    {
+      title: '협업 코드 리뷰',
+      desc: '다른 유저의 코드를 리뷰하고 개선 제안으로 점수를 얻습니다.',
+      icon: <MessageSquare size={20} />,
+      color: 'var(--green)',
+      to: '/reviews',
+      stat: 'collab',
+    },
+  ];
   const recentSolved = solvedList.slice(-5).reverse();
   const unsolved   = PROBLEMS.filter(p => !solved[p.id]);
   const todayProb  = unsolved[0] || PROBLEMS[0];
@@ -221,7 +253,7 @@ export default function Dashboard() {
         <StatCard icon={<BarChart3 size={20} />} value={PROBLEMS.reduce((s,p)=>s+(p.submissions||p.submit_count||0),0)} label={t('submissionCount')} color="var(--orange)" />
       </div>
       <div className="admin-dash-grid" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16}}>
-        <div style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:12,padding:22}}>
+        <div className="card card-pad">
           <div style={{fontWeight:700,fontSize:14,marginBottom:16}}>🏅 {t('dashboardRecentRanking')}</div>
           {recentRank.map((r,i)=>(
             <div key={r.id} style={{display:'flex',alignItems:'center',gap:12,padding:'8px 0',
@@ -232,7 +264,7 @@ export default function Dashboard() {
             </div>
           ))}
         </div>
-        <div style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:12,padding:22}}>
+        <div className="card card-pad">
           <div style={{fontWeight:700,fontSize:14,marginBottom:16}}>⚡ {t('quickAction')}</div>
           {[
             {label:t('dashboardCreateProblem'),   icon:<BookOpen size={15} />, page:'admin',    color:'var(--blue)'  },
@@ -240,16 +272,9 @@ export default function Dashboard() {
             {label:t('dashboardManageContest'),     icon:<Trophy size={15} />, page:'contest',  color:'var(--yellow)'},
             {label:t('dashboardGenerateAiProblem'),  icon:<Bot size={15} />, page:'admin',    color:'var(--purple)'},
           ].map(a=>(
-            <button key={a.label} onClick={()=>navigate('/'+a.page)} style={{
-              width:'100%',display:'flex',alignItems:'center',gap:10,
-              padding:'10px 14px',marginBottom:8,borderRadius:8,
-              background:'var(--bg3)',border:'1px solid var(--border)',
-              color:'var(--text)',cursor:'pointer',fontFamily:'inherit',fontSize:13,
-              textAlign:'left',transition:'all .15s',
-            }}
-              onMouseEnter={e=>{e.currentTarget.style.borderColor=a.color;e.currentTarget.style.color=a.color;}}
-              onMouseLeave={e=>{e.currentTarget.style.borderColor='var(--border)';e.currentTarget.style.color='var(--text)';}}
-            >{a.icon} {a.label}</button>
+            <button key={a.label} onClick={()=>navigate('/'+a.page)} className="action-list-btn" style={{'--action-accent':a.color}}>
+              {a.icon} {a.label}
+            </button>
           ))}
         </div>
       </div>
@@ -302,22 +327,23 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
+        <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:8}}>
+          <ProfileAvatar
+            profile={user}
+            size={72}
+            style={{cursor:'pointer',flexShrink:0}}
+            onClick={() => navigate('/profile')}
+          />
+        </div>
         <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
           {[
             {v:t('dashboardStreakValue').replace('{n}', String(user?.streak || 0)), l:t('streak'),          color:'rgba(227,179,65,', icon:'🔥'},
             {v:solvedList.length,                                                   l:t('solved'),           color:'rgba(86,211,100,', icon:'✓'},
             {v:`${accuracy}%`,                                                      l:t('dashboardAccuracy'),color:'rgba(121,192,255,', icon:'◎'},
           ].map(s=>(
-            <div key={s.l} style={{
-              textAlign:'center', padding:'10px 16px', borderRadius:10,
-              background:`${s.color}.08)`, border:`1px solid ${s.color}.2)`,
-              minWidth:72,
-            }}>
-              <div style={{
-                fontFamily:'Space Mono,monospace',fontSize:18,fontWeight:700,
-                color:`${s.color}1)`,lineHeight:1,
-              }}>{s.v}</div>
-              <div style={{fontSize:10,color:'var(--text3)',marginTop:4,fontWeight:600,textTransform:'uppercase',letterSpacing:'.5px'}}>{s.l}</div>
+            <div key={s.l} className="stat-mini" style={{background:`${s.color}.08)`, border:`1px solid ${s.color}.2)`}}>
+              <div className="stat-mini-value" style={{color:`${s.color}1)`}}>{s.v}</div>
+              <div className="stat-mini-label">{s.l}</div>
             </div>
           ))}
         </div>
@@ -325,10 +351,23 @@ export default function Dashboard() {
 
       {/* 통계 카드 */}
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:12,marginBottom:20}}>
-        <StatCard icon={<BookOpen size={20} />} value={PROBLEMS.length}    label={t('problems')}    color="var(--blue)" delta={t('dashboardProblemsDelta')} />
-        <StatCard icon={<CheckCircle2 size={20} />} value={solvedList.length}  label={t('solved')}  color="var(--green)" delta={solvedList.length > 0 ? `▲ ${Math.min(99, Math.round(solvedList.length / Math.max(PROBLEMS.length, 1) * 100))}%` : null} />
-        <StatCard icon={<TrendingUp size={20} />} value={progression ? `Lv.${progression.level}` : (user?.rating||800)}  label={progression ? '성장 레벨' : t('rating')}  color="var(--yellow)" delta={progression ? `${progression.xp.toLocaleString()} XP` : ((user?.streak||0) > 0 ? `+${(user.streak) * 2} 성장` : null)} />
-        <StatCard icon={<Target size={20} />} value={myRank?`#${myRank}`:'−'} label={t('dashboardMyRank')} color="var(--purple)" delta={t('dashboardRealtimeTrack')} />
+        <StatCard icon={<BookOpen size={20} />} value={PROBLEMS.length}    label={t('problems')}    color="var(--blue)" delta={t('dashboardProblemsDelta')} onClick={() => navigate('/problems')} />
+        <StatCard icon={<CheckCircle2 size={20} />} value={solvedList.length}  label={t('solved')}  color="var(--green)" delta={solvedList.length > 0 ? `▲ ${Math.min(99, Math.round(solvedList.length / Math.max(PROBLEMS.length, 1) * 100))}%` : null} onClick={() => navigate('/submissions')} />
+        <StatCard icon={<TrendingUp size={20} />} value={progression ? `Lv.${progression.level}` : (user?.rating||800)}  label={progression ? '성장 레벨' : t('rating')}  color="var(--yellow)" delta={progression ? `${progression.xp.toLocaleString()} XP` : ((user?.streak||0) > 0 ? `+${(user.streak) * 2} 성장` : null)} onClick={() => navigate('/profile')} />
+        <StatCard icon={<Target size={20} />} value={myRank?`#${myRank}`:'−'} label={t('dashboardMyRank')} color="var(--purple)" delta={t('dashboardRealtimeTrack')} onClick={() => navigate('/ranking')} />
+      </div>
+
+      <div className="dashboard-learning-modes">
+        {learningModes.map((mode) => (
+          <button key={mode.title} className="dashboard-learning-card" onClick={() => navigate(mode.to)} style={{ '--mode-color': mode.color }}>
+            <span className="dashboard-learning-icon">{mode.icon}</span>
+            <span className="dashboard-learning-body">
+              <strong>{mode.title}</strong>
+              <small>{mode.desc}</small>
+            </span>
+            <span className="dashboard-learning-stat">{mode.stat}</span>
+          </button>
+        ))}
       </div>
 
       <div style={{display:'grid',gridTemplateColumns:'minmax(0,1fr) 360px',gap:16}} className="dashboard-main-grid">
@@ -406,7 +445,7 @@ export default function Dashboard() {
 
 
           {referral && (
-            <div style={{ border:'1px solid var(--border)', borderRadius:12, padding:20, marginBottom:4, background:'var(--bg2)' }}>
+            <div className="card card-pad" style={{marginBottom:4}}>
               <h3>👥 {t('dashboardReferralTitle')}</h3>
               <p style={{ color:'var(--text2)', fontSize:14 }}>
                 {t('dashboardReferralDescPrefix')} <strong style={{ color:'var(--blue)' }}>{t('dashboardReferralReward')}</strong> {t('dashboardReferralDescSuffix')}
@@ -456,7 +495,7 @@ export default function Dashboard() {
             </div>
           )}
 
-          <div className="card card-hover" style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:12,padding:22}}>
+          <div className="card card-pad card-hover">
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:12,marginBottom:14}}>
               <div>
                 <div style={{fontWeight:800,fontSize:14,display:'flex',alignItems:'center',gap:8}}>
@@ -546,7 +585,7 @@ export default function Dashboard() {
           </div>
 
           {/* 잔디 */}
-          <div className="card card-hover" style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:12,padding:22}}>
+          <div className="card card-pad card-hover">
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
               <div style={{fontWeight:700,fontSize:14,display:'flex',alignItems:'center',gap:8}}><Flame size={16} />{t('dashboardStreakCalendar')}</div>
               <span style={{fontSize:12,color:'var(--green)',fontFamily:'Space Mono,monospace'}}>
@@ -576,10 +615,7 @@ export default function Dashboard() {
 
           {/* 오늘의 문제 */}
           {todayProb && (
-            <div className="card-hover pulse-cta" style={{
-              background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:12,
-              padding:22,cursor:'pointer',transition:'border-color .2s',
-            }}
+            <div className="card card-pad card-hover pulse-cta" style={{cursor:'pointer',transition:'border-color .2s'}}
               onMouseEnter={e=>e.currentTarget.style.borderColor='var(--blue)'}
               onMouseLeave={e=>e.currentTarget.style.borderColor='var(--border)'}
               onClick={()=>navigate('/problems/'+todayProb.id, { state: { problem: todayProb } })}
@@ -614,7 +650,7 @@ export default function Dashboard() {
           )}
 
           {/* 티어별 진행률 */}
-          <div className="card card-hover" style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:12,padding:22}}>
+          <div className="card card-pad card-hover">
             <div style={{fontWeight:700,fontSize:14,marginBottom:16,display:'flex',alignItems:'center',gap:8}}><BarChart3 size={16} />{t('dashboardTierConquest')}</div>
             {Object.entries(TIERS).map(([k,v])=>{
               const cnt = PROBLEMS.filter(p=>p.tier===k&&solved[p.id]).length;
@@ -644,7 +680,7 @@ export default function Dashboard() {
         {/* 오른쪽 */}
         <div style={{display:'flex',flexDirection:'column',gap:16}}>
           {/* 랭킹 TOP5 */}
-          <div className="card card-hover" style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:12,padding:22}}>
+          <div className="card card-pad card-hover">
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
               <div style={{fontWeight:700,fontSize:14,display:'flex',alignItems:'center',gap:8}}><Trophy size={16} />실시간 랭킹</div>
               <button onClick={()=>navigate('/ranking')} style={{
@@ -652,7 +688,7 @@ export default function Dashboard() {
               }}>{t('dashboardViewAll')}</button>
             </div>
             {recentRank.length === 0 && (
-              <div style={{textAlign:'center',padding:'20px 0',color:'var(--text3)',fontSize:13}}>
+              <div className="empty-state" style={{padding:'20px 0'}}>
                 {t('dashboardRankingLoading')}
               </div>
             )}
@@ -660,24 +696,28 @@ export default function Dashboard() {
               const isMe = r.id === user?.id;
               const medals = ['🥇','🥈','🥉'];
               return (
-                <div key={r.id} style={{
-                  display:'flex',alignItems:'center',gap:10,
-                  padding:'10px 12px',borderRadius:8,marginBottom:4,
-                  background: isMe ? 'rgba(121,192,255,.06)' : 'transparent',
-                  border: isMe ? '1px solid rgba(121,192,255,.15)' : '1px solid transparent',
-                  transition:'background .15s',
-                }}>
+                <div key={r.id}
+                  onClick={() => navigate(isMe ? '/profile' : `/user/${r.id}`)}
+                  style={{
+                    display:'flex',alignItems:'center',gap:10,
+                    padding:'10px 12px',borderRadius:8,marginBottom:4,
+                    background: isMe ? 'rgba(121,192,255,.06)' : 'transparent',
+                    border: isMe ? '1px solid rgba(121,192,255,.15)' : '1px solid transparent',
+                    transition:'background .15s',
+                    cursor:'pointer',
+                  }}
+                  onMouseEnter={e=>{if(!isMe)e.currentTarget.style.background='var(--bg3)';}}
+                  onMouseLeave={e=>{e.currentTarget.style.background=isMe?'rgba(121,192,255,.06)':'transparent';}}
+                >
                   <span style={{fontSize:i<3?16:12,width:22,textAlign:'center',
                     color:i>=3?'var(--text3)':'inherit',fontFamily:'Space Mono,monospace',fontWeight:700}}>
                     {i<3 ? medals[i] : `${i+1}`}
                   </span>
-                  <div style={{
-                    width:28,height:28,borderRadius:'50%',
-                    background:`${TIER_META[r.tier]?.color||'#888'}20`,
-                    border:`1.5px solid ${TIER_META[r.tier]?.color||'#888'}50`,
-                    display:'flex',alignItems:'center',justifyContent:'center',
-                    fontSize:10,fontWeight:700,color:TIER_META[r.tier]?.color,flexShrink:0,
-                  }}>{(r.name||r.username||'?').slice(0,2).toUpperCase()}</div>
+                  <ProfileAvatar
+                    profile={r}
+                    size={28}
+                    border={`1.5px solid ${TIER_META[r.tier]?.color||'#888'}50`}
+                  />
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{
                       fontSize:13,fontWeight:600,
@@ -696,7 +736,7 @@ export default function Dashboard() {
           </div>
 
           {/* 최근 푼 문제 */}
-          <div className="card card-hover" style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:12,padding:22}}>
+          <div className="card card-pad card-hover">
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:14}}>
               <div style={{fontWeight:700,fontSize:14,display:'flex',alignItems:'center',gap:8}}><CheckCircle2 size={16} />{t('dashboardRecentSubmissionFeed')}</div>
               <button onClick={()=>navigate('/submissions')} style={{fontSize:12,color:'var(--blue)',background:'none',border:'none',cursor:'pointer'}}>{t('showMore')}</button>
@@ -731,7 +771,7 @@ export default function Dashboard() {
           </div>
 
           {followFeed.length > 0 && (
-            <div className="card card-hover" style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:12,padding:22}}>
+            <div className="card card-pad card-hover">
               <div style={{fontWeight:700,fontSize:14,marginBottom:14,display:'flex',alignItems:'center',gap:8}}>
                 <Sparkles size={16} />{t('dashboardFollowActivity')}
               </div>
@@ -771,7 +811,7 @@ export default function Dashboard() {
           )}
 
           {/* 빠른 이동 + 특수 기능 */}
-          <div className="card card-hover" style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:12,padding:22}}>
+          <div className="card card-pad card-hover">
             <div style={{fontWeight:700,fontSize:14,marginBottom:14,display:'flex',alignItems:'center',gap:8}}><Sparkles size={16} />{t('quickAction')}</div>
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
               {[
@@ -842,8 +882,7 @@ export default function Dashboard() {
             const pct = Math.round(stageSolved / total * 100);
             const isComplete = pct >= 100;
             return (
-              <div key={stage.step} style={{
-                background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:12,
+              <div key={stage.step} className="card" style={{
                 padding:'16px 18px',transition:'all .2s',cursor:'pointer',
                 borderLeft:`3px solid ${isComplete ? 'var(--green)' : stage.color}`,
                 opacity: stageSolved > 0 || stage.step <= 2 ? 1 : 0.6,

@@ -692,7 +692,7 @@ export default function ContestPage() {
       {deleteConfirmId && (
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.7)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center'}}
           onClick={e=>e.target===e.currentTarget&&setDeleteConfirmId(null)}>
-          <div style={{background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:14,padding:28,minWidth:320}}>
+          <div className="card card-pad-lg" style={{minWidth:320}}>
             <h3 style={{marginBottom:8}}>⚠️ 대회 삭제</h3>
             <p style={{fontSize:13,color:'var(--text2)',marginBottom:20}}>이 대회를 삭제하시겠습니까? 되돌릴 수 없습니다.</p>
             <div style={{display:'flex',gap:10,justifyContent:'flex-end'}}>

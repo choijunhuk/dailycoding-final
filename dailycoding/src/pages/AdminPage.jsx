@@ -13,9 +13,13 @@ const PROBLEM_TYPE_OPTIONS = [
   { value: 'coding', label: '일반 풀이' },
   { value: 'fill-blank', label: '빈칸 채우기' },
   { value: 'bug-fix', label: '틀린부분 찾기' },
+  { value: 'troubleshooting', label: '트러블슈팅' },
+  { value: 'performance-fix', label: '성능 개선' },
+  { value: 'refactor-fix', label: '리팩터링' },
 ];
 const TAG_OPTIONS  = ['수학','다이나믹 프로그래밍','그래프 이론','문자열','구현','소수','BFS','DFS','입출력','탐욕','정렬','이분 탐색','트리','스택/큐'];
 const TIER_COLORS  = { bronze:'#cd7f32', silver:'#c0c0c0', gold:'#ffd700', platinum:'#00e5cc', diamond:'#b9f2ff' };
+const TROUBLESHOOTING_TYPES = new Set(['troubleshooting', 'performance-fix', 'refactor-fix']);
 const makeEmptyCases = (count = 10) => Array.from({ length: count }, () => ({ input:'', output:'' }));
 const createEmptySpecialConfig = () => ({
   codeTemplate: '',
@@ -23,6 +27,24 @@ const createEmptySpecialConfig = () => ({
   buggyCode: '',
   keywordsText: '',
   explanation: '',
+  scenarioTitle: '',
+  scenarioDescription: '',
+  initialFiles: [
+    { path: 'server.js', content: 'console.log("slow")\n', editable: true },
+    { path: 'test.js', content: 'require("./server")\n', editable: false },
+  ],
+  visibleTests: [
+    { name: 'visible test', commandText: 'node test.js', expectedOutput: '' },
+  ],
+  hiddenTests: [],
+  performanceLimitMs: '1000',
+  memoryLimitMb: '256',
+  targetResponseTimeMs: '500',
+  baselineTimeMs: '3000',
+  allowedFilesText: 'server.js',
+  forbiddenPatternsText: 'eval\\(',
+  scoringRulesText: '{\n  "correctness": 50,\n  "performance": 30,\n  "readability": 20\n}',
+  evaluationMode: 'command',
 });
 const createEmptyForm = () => ({
   title:'', tier:'silver', problemType:'coding', preferredLanguage:'python', tags:[],
@@ -128,6 +150,85 @@ export default function AdminPage() {
     return null;
   };
 
+  const isTroubleshootingForm = TROUBLESHOOTING_TYPES.has(form.problemType);
+  const updateTroubleshootingFile = (index, patch) => {
+    setForm((prev) => {
+      const files = [...(prev.specialConfig.initialFiles || [])];
+      files[index] = { ...files[index], ...patch };
+      return { ...prev, specialConfig: { ...prev.specialConfig, initialFiles: files } };
+    });
+  };
+  const addTroubleshootingFile = () => setForm((prev) => ({
+    ...prev,
+    specialConfig: {
+      ...prev.specialConfig,
+      initialFiles: [...(prev.specialConfig.initialFiles || []), { path: 'new-file.js', content: '', editable: true }],
+    },
+  }));
+  const removeTroubleshootingFile = (index) => setForm((prev) => ({
+    ...prev,
+    specialConfig: {
+      ...prev.specialConfig,
+      initialFiles: (prev.specialConfig.initialFiles || []).filter((_, i) => i !== index),
+    },
+  }));
+  const updateTroubleshootingTest = (field, index, patch) => {
+    setForm((prev) => {
+      const tests = [...(prev.specialConfig[field] || [])];
+      tests[index] = { ...tests[index], ...patch };
+      return { ...prev, specialConfig: { ...prev.specialConfig, [field]: tests } };
+    });
+  };
+  const addTroubleshootingTest = (field) => setForm((prev) => ({
+    ...prev,
+    specialConfig: {
+      ...prev.specialConfig,
+      [field]: [...(prev.specialConfig[field] || []), { name: 'test', commandText: 'node test.js', expectedOutput: '' }],
+    },
+  }));
+  const removeTroubleshootingTest = (field, index) => setForm((prev) => ({
+    ...prev,
+    specialConfig: {
+      ...prev.specialConfig,
+      [field]: (prev.specialConfig[field] || []).filter((_, i) => i !== index),
+    },
+  }));
+  const buildTroubleshootingPayload = () => {
+    let scoringRules = null;
+    try {
+      scoringRules = JSON.parse(form.specialConfig.scoringRulesText || '{}');
+    } catch {
+      scoringRules = { correctness: 50, performance: 30, readability: 20 };
+    }
+    const normalizeTests = (tests = []) => tests
+      .filter((test) => test.name || test.commandText || test.expectedOutput)
+      .map((test) => ({
+        name: test.name || 'test',
+        command: String(test.commandText || '').trim().split(/\s+/).filter(Boolean),
+        expectedOutput: test.expectedOutput || '',
+        timeoutMs: test.timeoutMs ? Number(test.timeoutMs) : undefined,
+      }));
+    return {
+      scenarioTitle: form.specialConfig.scenarioTitle || form.title,
+      scenarioDescription: form.specialConfig.scenarioDescription || form.desc,
+      initialFiles: (form.specialConfig.initialFiles || []).filter((file) => file.path).map((file) => ({
+        path: file.path,
+        content: file.content || '',
+        editable: file.editable !== false,
+      })),
+      visibleTests: normalizeTests(form.specialConfig.visibleTests),
+      hiddenTests: normalizeTests(form.specialConfig.hiddenTests),
+      performanceLimitMs: form.specialConfig.performanceLimitMs ? Number(form.specialConfig.performanceLimitMs) : null,
+      memoryLimitMb: form.specialConfig.memoryLimitMb ? Number(form.specialConfig.memoryLimitMb) : null,
+      targetResponseTimeMs: form.specialConfig.targetResponseTimeMs ? Number(form.specialConfig.targetResponseTimeMs) : null,
+      baselineTimeMs: form.specialConfig.baselineTimeMs ? Number(form.specialConfig.baselineTimeMs) : null,
+      allowedFiles: parseCsv(form.specialConfig.allowedFilesText),
+      forbiddenPatterns: parseCsv(form.specialConfig.forbiddenPatternsText),
+      scoringRules,
+      evaluationMode: form.specialConfig.evaluationMode || 'command',
+    };
+  };
+
   const handleAiGenerate = async () => {
     setAiGenerating(true); setAiPreview(null);
     try {
@@ -167,6 +268,21 @@ export default function AdminPage() {
         return;
       }
     }
+    if (isTroubleshootingForm) {
+      const scenario = buildTroubleshootingPayload();
+      if (!scenario.scenarioTitle.trim()) {
+        toast?.show('시나리오 제목을 입력해주세요.', 'warning');
+        return;
+      }
+      if (!scenario.initialFiles.length) {
+        toast?.show('트러블슈팅 파일을 하나 이상 추가해주세요.', 'warning');
+        return;
+      }
+      if (!scenario.visibleTests.length && !scenario.hiddenTests.length) {
+        toast?.show('visible 또는 hidden test를 하나 이상 입력해주세요.', 'warning');
+        return;
+      }
+    }
     setSaving(true);
     const payload = {
       title:form.title, tier:form.tier, problemType: form.problemType, preferredLanguage: form.preferredLanguage || null, tags:form.tags,
@@ -179,16 +295,22 @@ export default function AdminPage() {
       specialConfig,
     };
     try {
+      let savedProblem;
       if (editTarget !== null) {
         const res = await api.put(`/problems/${editTarget}`, payload);
+        savedProblem = res.data;
         setProblems(p=>p.map(pr=>pr.id===editTarget?res.data:pr));
         toast?.show(`✏️ "${form.title}" 수정됐습니다.`, 'info');
         loadProblems();
       } else {
         const res = await api.post('/problems', payload);
+        savedProblem = res.data;
         setProblems(p=>[res.data,...p]);
         toast?.show(`🆕 "${form.title}" 문제가 등록됐습니다!`, 'success');
         loadProblems();
+      }
+      if (isTroubleshootingForm && savedProblem?.id) {
+        await api.post(`/admin/problems/${savedProblem.id}/troubleshooting`, buildTroubleshootingPayload());
       }
       setView('list'); setEditTarget(null); setForm(createEmptyForm()); setAiPreview(null); setAiPanel(false);
     } catch (err) { toast?.show('❌ 저장 실패: '+(err.response?.data?.message||''), 'error'); }
@@ -208,6 +330,7 @@ export default function AdminPage() {
         testcases:d.testcases?.length?d.testcases:makeEmptyCases(),
         hint:d.hint||'', solution:d.solution||'',
         specialConfig: {
+          ...createEmptySpecialConfig(),
           codeTemplate: d.specialConfig?.codeTemplate || '',
           blanksText: Array.isArray(d.specialConfig?.blanks) ? d.specialConfig.blanks.join(', ') : '',
           buggyCode: d.specialConfig?.buggyCode || '',
@@ -216,6 +339,40 @@ export default function AdminPage() {
         },
       });
       setEditTarget(d.id); setView('create'); setAiPanel(false); setAiPreview(null);
+      if (TROUBLESHOOTING_TYPES.has(d.problemType || '')) {
+        api.get(`/problems/${d.id}/troubleshooting`).then((troubleRes) => {
+          const cfg = troubleRes.data || {};
+          setForm((prev) => ({
+            ...prev,
+            specialConfig: {
+              ...prev.specialConfig,
+              scenarioTitle: cfg.scenarioTitle || '',
+              scenarioDescription: cfg.scenarioDescription || '',
+              initialFiles: Array.isArray(cfg.initialFiles) && cfg.initialFiles.length ? cfg.initialFiles : createEmptySpecialConfig().initialFiles,
+              visibleTests: Array.isArray(cfg.visibleTests) ? cfg.visibleTests.map((test) => ({
+                name: test.name || '',
+                commandText: Array.isArray(test.command) ? test.command.join(' ') : test.command || '',
+                expectedOutput: test.expectedOutput || '',
+                timeoutMs: test.timeoutMs || '',
+              })) : [],
+              hiddenTests: Array.isArray(cfg.hiddenTests) ? cfg.hiddenTests.map((test) => ({
+                name: test.name || '',
+                commandText: Array.isArray(test.command) ? test.command.join(' ') : test.command || '',
+                expectedOutput: test.expectedOutput || '',
+                timeoutMs: test.timeoutMs || '',
+              })) : [],
+              performanceLimitMs: cfg.performanceLimitMs || '',
+              memoryLimitMb: cfg.memoryLimitMb || '',
+              targetResponseTimeMs: cfg.targetResponseTimeMs || '',
+              baselineTimeMs: cfg.baselineTimeMs || '',
+              allowedFilesText: Array.isArray(cfg.allowedFiles) ? cfg.allowedFiles.join(', ') : '',
+              forbiddenPatternsText: Array.isArray(cfg.forbiddenPatterns) ? cfg.forbiddenPatterns.join(', ') : '',
+              scoringRulesText: JSON.stringify(cfg.scoringRules || { correctness: 50, performance: 30, readability: 20 }, null, 2),
+              evaluationMode: cfg.evaluationMode || 'command',
+            },
+          }));
+        }).catch(() => {});
+      }
     }).catch(() => {
       // fallback
       setForm({
@@ -563,6 +720,63 @@ export default function AdminPage() {
             })}
           </div>
           <div className="card admin-stat-card" style={{gridColumn:'span 2', textAlign:'left'}}>
+            <div className="asc-label" style={{marginBottom:12}}>문제 타입별 개수</div>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(130px,1fr))',gap:10}}>
+              {Object.entries(adminStats?.problemTypeCounts || {}).map(([type, count]) => (
+                <div key={type} style={{padding:'10px 12px',borderRadius:12,background:'var(--bg3)',border:'1px solid var(--border)'}}>
+                  <div style={{fontSize:11,color:'var(--text3)',marginBottom:5}}>{type === 'coding' ? 'algorithm' : type}</div>
+                  <div className="mono" style={{fontSize:22,fontWeight:800,color:'var(--blue)'}}>{count}</div>
+                </div>
+              ))}
+              {Object.keys(adminStats?.problemTypeCounts || {}).length === 0 && <div style={{fontSize:12,color:'var(--text3)'}}>문제 타입 데이터가 없습니다.</div>}
+            </div>
+          </div>
+          <div className="card admin-stat-card" style={{textAlign:'left'}}>
+            <div className="asc-label" style={{marginBottom:12}}>배틀 진행 현황</div>
+            {[
+              ['waiting', '대기'],
+              ['playing', '진행'],
+              ['finished', '종료'],
+            ].map(([key, label]) => (
+              <div key={key} style={{display:'flex',justifyContent:'space-between',padding:'8px 0',borderBottom:'1px solid var(--border)'}}>
+                <span style={{fontSize:12,color:'var(--text2)'}}>{label}</span>
+                <strong className="mono">{adminStats?.battleStatus?.[key] || 0}</strong>
+              </div>
+            ))}
+            <div style={{fontSize:12,color:'var(--text3)',marginTop:10}}>
+              총 {adminStats?.battleStatus?.total || 0}개 방
+            </div>
+          </div>
+          <div className="card admin-stat-card" style={{textAlign:'left'}}>
+            <div className="asc-label" style={{marginBottom:12}}>성능 문제 평균 해결 시간</div>
+            <div className="asc-value mono" style={{color:'var(--orange)'}}>
+              {adminStats?.performanceFixAverageSolveTimeMs ? `${adminStats.performanceFixAverageSolveTimeMs}ms` : '—'}
+            </div>
+            <div style={{fontSize:12,color:'var(--text3)',marginTop:8}}>
+              performance-fix 정답 제출의 실행 시간 평균입니다.
+            </div>
+          </div>
+          <div className="card admin-stat-card" style={{gridColumn:'span 2', textAlign:'left'}}>
+            <div className="asc-label" style={{marginBottom:12}}>최근 제출</div>
+            {(adminStats?.recentSubmissions || []).slice(0, 6).map((item) => (
+              <div key={item.id} style={{display:'flex',justifyContent:'space-between',gap:10,padding:'8px 0',borderBottom:'1px solid var(--border)',fontSize:12}}>
+                <span>{item.username} · {item.problemTitle}</span>
+                <span style={{color:item.result === 'correct' ? 'var(--green)' : 'var(--text3)'}}>{item.result}</span>
+              </div>
+            ))}
+            {(adminStats?.recentSubmissions || []).length === 0 && <div style={{fontSize:12,color:'var(--text3)'}}>최근 제출이 없습니다.</div>}
+          </div>
+          <div className="card admin-stat-card" style={{gridColumn:'span 2', textAlign:'left'}}>
+            <div className="asc-label" style={{marginBottom:12}}>최근 리뷰</div>
+            {(adminStats?.recentReviews || []).slice(0, 6).map((item) => (
+              <div key={item.id} style={{display:'flex',justifyContent:'space-between',gap:10,padding:'8px 0',borderBottom:'1px solid var(--border)',fontSize:12}}>
+                <span>{item.reviewerUsername} → {item.authorUsername} · {item.problemTitle}</span>
+                <span style={{color:item.status === 'approved' || item.status === 'merged' ? 'var(--green)' : 'var(--text3)'}}>{item.status}</span>
+              </div>
+            ))}
+            {(adminStats?.recentReviews || []).length === 0 && <div style={{fontSize:12,color:'var(--text3)'}}>최근 리뷰가 없습니다.</div>}
+          </div>
+          <div className="card admin-stat-card" style={{gridColumn:'span 2', textAlign:'left'}}>
             <div className="asc-label" style={{marginBottom:12}}>AI 운영 상태</div>
             {!aiStatus && <div style={{fontSize:12,color:'var(--text3)'}}>AI 상태를 불러오지 못했습니다.</div>}
             {aiStatus && (
@@ -854,15 +1068,107 @@ export default function AdminPage() {
             </>
           )}
 
+          {isTroubleshootingForm && (
+            <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+              <div className="cf-row">
+                <div className="form-group" style={{ flex:1 }}>
+                  <label>시나리오 제목</label>
+                  <input value={form.specialConfig.scenarioTitle} onChange={e=>sf('scenarioTitle', e.target.value)} placeholder="예: 느린 API 응답 시간 개선" />
+                </div>
+                <div className="form-group" style={{ flex:1 }}>
+                  <label>평가 모드</label>
+                  <select value={form.specialConfig.evaluationMode} onChange={e=>sf('evaluationMode', e.target.value)}>
+                    <option value="command">command</option>
+                  </select>
+                </div>
+              </div>
+              <div className="form-group">
+                <label>문제 상황 설명</label>
+                <textarea rows={4} value={form.specialConfig.scenarioDescription} onChange={e=>sf('scenarioDescription', e.target.value)} placeholder="장애 상황, 목표, 제약 조건을 작성하세요." style={{ resize:'vertical' }} />
+              </div>
+
+              <div>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
+                  <div className="cf-section-title" style={{ margin:0 }}>파일 목록</div>
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={addTroubleshootingFile}>파일 추가</button>
+                </div>
+                {(form.specialConfig.initialFiles || []).map((file, index) => (
+                  <div key={`${file.path}-${index}`} style={{ border:'1px solid var(--border)', borderRadius:10, padding:12, marginBottom:10, background:'var(--bg3)' }}>
+                    <div className="cf-row">
+                      <div className="form-group" style={{ flex:2 }}>
+                        <label>경로</label>
+                        <input value={file.path} onChange={e=>updateTroubleshootingFile(index, { path:e.target.value })} placeholder="server.js" />
+                      </div>
+                      <label style={{ display:'flex', alignItems:'center', gap:8, fontSize:12, color:'var(--text2)', marginTop:22 }}>
+                        <input type="checkbox" checked={file.editable !== false} onChange={e=>updateTroubleshootingFile(index, { editable:e.target.checked })} />
+                        유저 수정 가능
+                      </label>
+                      <button type="button" className="btn btn-ghost btn-sm" onClick={()=>removeTroubleshootingFile(index)} style={{ alignSelf:'flex-end' }}>삭제</button>
+                    </div>
+                    <textarea className="mono" rows={8} value={file.content} onChange={e=>updateTroubleshootingFile(index, { content:e.target.value })} placeholder="파일 내용" style={{ resize:'vertical' }} />
+                  </div>
+                ))}
+              </div>
+
+              {[
+                ['visibleTests', 'Visible 테스트'],
+                ['hiddenTests', 'Hidden 테스트'],
+              ].map(([field, label]) => (
+                <div key={field}>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
+                    <div className="cf-section-title" style={{ margin:0 }}>{label}</div>
+                    <button type="button" className="btn btn-ghost btn-sm" onClick={()=>addTroubleshootingTest(field)}>테스트 추가</button>
+                  </div>
+                  {(form.specialConfig[field] || []).map((test, index) => (
+                    <div key={`${field}-${index}`} className="cf-row" style={{ alignItems:'flex-end', marginBottom:8 }}>
+                      <div className="form-group" style={{ flex:1 }}>
+                        <label>이름</label>
+                        <input value={test.name || ''} onChange={e=>updateTroubleshootingTest(field, index, { name:e.target.value })} />
+                      </div>
+                      <div className="form-group" style={{ flex:2 }}>
+                        <label>명령</label>
+                        <input className="mono" value={test.commandText || ''} onChange={e=>updateTroubleshootingTest(field, index, { commandText:e.target.value })} placeholder="node test.js" />
+                      </div>
+                      <div className="form-group" style={{ flex:2 }}>
+                        <label>기대 출력</label>
+                        <input className="mono" value={test.expectedOutput || ''} onChange={e=>updateTroubleshootingTest(field, index, { expectedOutput:e.target.value })} />
+                      </div>
+                      <div className="form-group" style={{ flex:1 }}>
+                        <label>timeout ms</label>
+                        <input type="number" value={test.timeoutMs || ''} onChange={e=>updateTroubleshootingTest(field, index, { timeoutMs:e.target.value })} />
+                      </div>
+                      <button type="button" className="btn btn-ghost btn-sm" onClick={()=>removeTroubleshootingTest(field, index)}>삭제</button>
+                    </div>
+                  ))}
+                </div>
+              ))}
+
+              <div className="cf-row">
+                <div className="form-group" style={{ flex:1 }}><label>baselineTimeMs</label><input type="number" value={form.specialConfig.baselineTimeMs} onChange={e=>sf('baselineTimeMs', e.target.value)} /></div>
+                <div className="form-group" style={{ flex:1 }}><label>targetResponseTimeMs</label><input type="number" value={form.specialConfig.targetResponseTimeMs} onChange={e=>sf('targetResponseTimeMs', e.target.value)} /></div>
+                <div className="form-group" style={{ flex:1 }}><label>performanceLimitMs</label><input type="number" value={form.specialConfig.performanceLimitMs} onChange={e=>sf('performanceLimitMs', e.target.value)} /></div>
+                <div className="form-group" style={{ flex:1 }}><label>memoryLimitMb</label><input type="number" value={form.specialConfig.memoryLimitMb} onChange={e=>sf('memoryLimitMb', e.target.value)} /></div>
+              </div>
+              <div className="cf-row">
+                <div className="form-group" style={{ flex:1 }}><label>수정 허용 파일</label><textarea rows={2} value={form.specialConfig.allowedFilesText} onChange={e=>sf('allowedFilesText', e.target.value)} placeholder="server.js, db.js" style={{ resize:'vertical' }} /></div>
+                <div className="form-group" style={{ flex:1 }}><label>금지 패턴</label><textarea rows={2} value={form.specialConfig.forbiddenPatternsText} onChange={e=>sf('forbiddenPatternsText', e.target.value)} placeholder="eval\\(, child_process" style={{ resize:'vertical' }} /></div>
+              </div>
+              <div className="form-group">
+                <label>scoring_rules JSON</label>
+                <textarea className="mono" rows={5} value={form.specialConfig.scoringRulesText} onChange={e=>sf('scoringRulesText', e.target.value)} style={{ resize:'vertical' }} />
+              </div>
+            </div>
+          )}
+
           {/* ★ 예제 테스트케이스 (유저에게 보임) */}
-          {renderCaseEditor('예제 테스트케이스', '📋', form.examples, 'examples', 'var(--blue)')}
+          {!isTroubleshootingForm && renderCaseEditor('예제 테스트케이스', '📋', form.examples, 'examples', 'var(--blue)')}
 
           {/* ★ 히든 테스트케이스 (채점용 + 공개 표시) */}
           {form.problemType === 'coding' && <div style={{borderTop:'2px dashed var(--border)',paddingTop:16,marginTop:8}}>
             <div style={{fontSize:12,color:'var(--orange)',fontWeight:700,marginBottom:4}}>🔒 일반 코딩 문제는 히든 테스트케이스가 최소 {MIN_HIDDEN_TESTCASES}개 필요합니다.</div>
             {renderCaseEditor('히든 테스트케이스 (채점용)', '🔒', form.testcases, 'testcases', 'var(--orange)')}
           </div>}
-          {form.problemType !== 'coding' && (
+          {form.problemType !== 'coding' && !isTroubleshootingForm && (
             <div style={{marginTop:12,padding:'12px 14px',borderRadius:10,background:'var(--bg3)',border:'1px solid var(--border)',fontSize:12,color:'var(--text2)',lineHeight:1.6}}>
               {form.problemType === 'fill-blank'
                 ? '빈칸 채우기 문제는 코드 템플릿 + 정답 목록으로 채점합니다. 히든 테스트케이스는 저장하지 않습니다.'

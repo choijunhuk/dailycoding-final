@@ -182,6 +182,7 @@ const STRINGS = {
     autoCollapseSidebar: '사이드바 자동 접기',
     appFont: '앱 글씨체',
     appFontDesc: '저장하면 전체 화면 글씨체에 적용됩니다.',
+    appFontSize: '전체 글자 크기',
     // ── Settings — editor ─────────────────────────
     autoSave: '자동 저장',
     autoSaveDesc: '30초마다 코드 자동 저장',
@@ -1036,6 +1037,7 @@ const STRINGS = {
     autoCollapseSidebar: 'Auto-collapse Sidebar',
     appFont: 'App Font',
     appFontDesc: 'Saved font applies across the whole app.',
+    appFontSize: 'Global Font Size',
     // ── Settings — editor ─────────────────────────
     autoSave: 'Auto Save',
     autoSaveDesc: 'Save code every 30s',

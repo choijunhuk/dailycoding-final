@@ -1,6 +1,11 @@
 import { Server } from 'socket.io';
 import jwt from 'jsonwebtoken';
 import { SECRET } from '../middleware/auth.js';
+import { AlgorithmBattle } from '../models/AlgorithmBattle.js';
+import { User } from '../models/User.js';
+import { Problem } from '../models/Problem.js';
+import { getCachedJudgeRuntime } from './judgeRuntimeCache.js';
+import { executeSubmissionFlow } from './submissionExecution.js';
 
 // Use logger if available, fall back to console
 let logger;
@@ -59,8 +64,40 @@ export function initSocketServer(httpServer, allowedOrigins) {
 
     // ── Battle events ────────────────────────────────────────────
 
+    socket.on('battle:create', async (payload = {}, ack) => {
+      try {
+        const state = await AlgorithmBattle.createRoom({
+          creatorId: socket.data.userId,
+          mode: payload.mode || 'sort-speed',
+          problemId: payload.problemId || null,
+          maxPlayers: payload.maxPlayers || 2,
+          durationSec: payload.durationSec || 180,
+          bannedTags: payload.bannedTags || [],
+        });
+        socket.join(`battle:${state.room.id}`);
+        io.to(`battle:${state.room.id}`).emit('battle:room:update', state);
+        if (typeof ack === 'function') ack({ ok: true, state });
+      } catch (err) {
+        if (typeof ack === 'function') ack({ ok: false, message: err.message });
+      }
+    });
+
     // Join battle room as player
-    socket.on('battle:join', ({ battleId, teamId }) => {
+    socket.on('battle:join', async (payload = {}, ack) => {
+      const roomId = payload.roomId || (String(payload.battleId || '').startsWith('algo_') ? payload.battleId : null);
+      if (roomId) {
+        try {
+          const state = await AlgorithmBattle.joinRoom(roomId, socket.data.userId);
+          socket.join(`battle:${roomId}`);
+          io.to(`battle:${roomId}`).emit('battle:room:update', state);
+          if (typeof ack === 'function') ack({ ok: true, state });
+        } catch (err) {
+          if (typeof ack === 'function') ack({ ok: false, message: err.message });
+        }
+        return;
+      }
+
+      const { battleId, teamId } = payload;
       const room = `battle:${battleId}`;
       socket.join(room);
       socket.teamId = teamId;
@@ -74,6 +111,143 @@ export function initSocketServer(httpServer, allowedOrigins) {
       });
       // Notify the room that this player is online
       socket.to(room).emit('battle:opponent_online', { userId: socket.data.userId, teamId });
+    });
+
+    socket.on('battle:ready', async ({ roomId } = {}, ack) => {
+      try {
+        const before = await AlgorithmBattle.getRoom(roomId);
+        const state = await AlgorithmBattle.markReady(roomId, socket.data.userId);
+        socket.join(`battle:${roomId}`);
+        io.to(`battle:${roomId}`).emit('battle:room:update', state);
+        if (before?.status === 'waiting' && state?.room?.status === 'playing') {
+          io.to(`battle:${roomId}`).emit('battle:countdown', { seconds: 3 });
+          io.to(`battle:${roomId}`).emit('battle:started', state);
+        }
+        if (typeof ack === 'function') ack({ ok: true, state });
+      } catch (err) {
+        if (typeof ack === 'function') ack({ ok: false, message: err.message });
+      }
+    });
+
+    socket.on('battle:submit', async ({ roomId, code, language } = {}, ack) => {
+      try {
+        const stateBefore = await AlgorithmBattle.ensureNotExpired(roomId);
+        if (!stateBefore) throw new Error('방을 찾을 수 없습니다.');
+        if (!stateBefore.participants.some((player) => player.userId === socket.data.userId)) {
+          throw new Error('방 참가자만 제출할 수 있습니다.');
+        }
+        if (stateBefore.room.status !== 'playing') throw new Error('진행 중인 배틀이 아닙니다.');
+        const problem = await Problem.findById(stateBefore.room.problemId);
+        if (!problem) throw new Error('배틀 문제를 찾을 수 없습니다.');
+        const judgeRuntime = await getCachedJudgeRuntime({ logOnRefresh: true });
+        if (judgeRuntime.mode === 'unavailable') throw new Error('현재 서버에서 채점 런타임을 사용할 수 없습니다.');
+        const requester = await User.findById(socket.data.userId);
+        const { execution, displayLang, normalizedLang } = await executeSubmissionFlow({
+          problem,
+          problemId: Number(problem.id),
+          userId: socket.data.userId,
+          rawLang: language,
+          code,
+          judgeRuntime,
+          persist: false,
+          includeHiddenCases: true,
+          userTier: requester?.subscription_tier || 'free',
+        });
+        const timeMs = execution.time ? parseInt(execution.time, 10) : null;
+        const memoryMb = execution.mem && /^\d+/.test(execution.mem) ? parseInt(execution.mem, 10) : null;
+        const state = await AlgorithmBattle.recordSubmission({
+          roomId,
+          userId: socket.data.userId,
+          code,
+          language: displayLang || normalizedLang || language,
+          judgeResult: {
+            result: execution.result,
+            timeMs,
+            memoryMb,
+            detail: execution.detail,
+          },
+        });
+        io.to(`battle:${roomId}`).emit('battle:submission:result', {
+          userId: socket.data.userId,
+          result: execution.result,
+          timeMs,
+          memoryMb,
+          detail: execution.detail,
+        });
+        const recentEvents = [...(state.events || [])].reverse();
+        const attackEvent = recentEvents.find((event) => event.type === 'player.attack' && event.userId === socket.data.userId);
+        const effectEvent = recentEvents.find((event) => event.type === 'problem.effect' && event.userId === socket.data.userId);
+        if (attackEvent) {
+          io.to(`battle:${roomId}`).emit('battle:player:attack', attackEvent);
+        }
+        if (effectEvent) {
+          io.to(`battle:${roomId}`).emit('battle:effect', effectEvent);
+        }
+        io.to(`battle:${roomId}`).emit('battle:room:update', state);
+        if (state.room.status === 'finished') io.to(`battle:${roomId}`).emit('battle:finished', state);
+        if (typeof ack === 'function') ack({ ok: true, state, result: execution.result });
+      } catch (err) {
+        if (typeof ack === 'function') ack({ ok: false, message: err.message });
+      }
+    });
+
+    socket.on('battle:activity', async ({ roomId, activity, message } = {}, ack) => {
+      try {
+        const { event, state } = await AlgorithmBattle.recordActivity(roomId, socket.data.userId, { activity, message });
+        socket.join(`battle:${roomId}`);
+        io.to(`battle:${roomId}`).emit('battle:activity', event);
+        io.to(`battle:${roomId}`).emit('battle:room:update', state);
+        if (typeof ack === 'function') ack({ ok: true, event, state });
+      } catch (err) {
+        if (typeof ack === 'function') ack({ ok: false, message: err.message });
+      }
+    });
+
+    socket.on('battle:chat', async ({ roomId, message } = {}, ack) => {
+      try {
+        const { event, state } = await AlgorithmBattle.recordChat(roomId, socket.data.userId, { message });
+        socket.join(`battle:${roomId}`);
+        io.to(`battle:${roomId}`).emit('battle:chat', event);
+        io.to(`battle:${roomId}`).emit('battle:room:update', state);
+        if (typeof ack === 'function') ack({ ok: true, event, state });
+      } catch (err) {
+        if (typeof ack === 'function') ack({ ok: false, message: err.message });
+      }
+    });
+
+    socket.on('battle:emote', async ({ roomId, emote } = {}, ack) => {
+      try {
+        const { event, state } = await AlgorithmBattle.recordEmote(roomId, socket.data.userId, { emote });
+        socket.join(`battle:${roomId}`);
+        io.to(`battle:${roomId}`).emit('battle:emote', event);
+        io.to(`battle:${roomId}`).emit('battle:room:update', state);
+        if (typeof ack === 'function') ack({ ok: true, event, state });
+      } catch (err) {
+        if (typeof ack === 'function') ack({ ok: false, message: err.message });
+      }
+    });
+
+    socket.on('battle:item', async ({ roomId, itemType } = {}, ack) => {
+      try {
+        const { event, state } = await AlgorithmBattle.useItem(roomId, socket.data.userId, { itemType });
+        socket.join(`battle:${roomId}`);
+        io.to(`battle:${roomId}`).emit('battle:item:used', event);
+        io.to(`battle:${roomId}`).emit('battle:room:update', state);
+        if (typeof ack === 'function') ack({ ok: true, event, state });
+      } catch (err) {
+        if (typeof ack === 'function') ack({ ok: false, message: err.message });
+      }
+    });
+
+    socket.on('battle:leave', async ({ roomId } = {}, ack) => {
+      try {
+        const state = await AlgorithmBattle.leaveRoom(roomId, socket.data.userId);
+        socket.leave(`battle:${roomId}`);
+        if (state?.room?.id) io.to(`battle:${roomId}`).emit('battle:room:update', state);
+        if (typeof ack === 'function') ack({ ok: true, state });
+      } catch (err) {
+        if (typeof ack === 'function') ack({ ok: false, message: err.message });
+      }
     });
 
     // Join battle room as spectator
@@ -112,7 +286,20 @@ export function initSocketServer(httpServer, allowedOrigins) {
     });
 
     // Typing indicator
-    socket.on('battle:typing', ({ battleId, isTyping }) => {
+    socket.on('battle:typing', async ({ battleId, roomId, isTyping }) => {
+      const algorithmRoomId = roomId || (String(battleId || '').startsWith('algo_') ? battleId : null);
+      if (algorithmRoomId) {
+        try {
+          const { event, state } = await AlgorithmBattle.recordActivity(algorithmRoomId, socket.data.userId, {
+            activity: isTyping ? '코드 작성 중' : '생각 중',
+          });
+          socket.to(`battle:${algorithmRoomId}`).emit('battle:activity', event);
+          io.to(`battle:${algorithmRoomId}`).emit('battle:room:update', state);
+        } catch {
+          // best-effort realtime presence
+        }
+        return;
+      }
       socket.to(`battle:${battleId}`).emit('battle:opponent_typing', {
         userId: socket.data.userId,
         teamId: socket.teamId,

@@ -107,7 +107,7 @@ export const User = {
     }
 
     return query(
-      `SELECT id, username, tier, rating, solved_count, avatar_url, equipped_badge, equipped_title
+      `SELECT id, username, tier, rating, solved_count, avatar_url, avatar_url_custom, avatar_emoji, avatar_color, equipped_badge, equipped_title
        FROM users
        ${where}
        ORDER BY ${orderBy}
@@ -416,6 +416,7 @@ export const User = {
         show_solved_badge: true,
         code_font_size:    14,
         fontFamily:        'noto',
+        fontSize:          14,
       },
       editor: {
         font_size:         14,

@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Check, Copy, Link as LinkIcon, LogOut, Pencil, RefreshCw, ShieldCheck, ShieldOff, Trash2, UserPlus, Users, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import api from '../api';
 import { useToast } from '../context/ToastContext';
 import { useLang } from '../context/LangContext.jsx';
+import ProfileAvatar from '../components/ProfileAvatar';
 
 function fmtDate(value) {
   if (!value) return '-';
@@ -24,6 +26,7 @@ function StatCard({ label, value, caption }) {
 
 export default function TeamDashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const toast = useToast();
   const { t } = useLang();
   const [loading, setLoading] = useState(true);
@@ -402,9 +405,20 @@ export default function TeamDashboard() {
                 const isOnlyAdmin = member.role === 'admin' && adminCount <= 1;
                 return (
                   <tr key={member.id} style={{ borderTop:'1px solid var(--border)' }}>
-                    <td style={{ padding:'14px 16px', fontWeight:700 }}>
-                      {member.username} {isSelf && <span style={{ color:'var(--blue)', fontSize:11 }}>({t('teamYou')})</span>}
-                      <div style={{ color:'var(--text3)', fontSize:11, fontWeight:500 }}>{member.email}</div>
+                    <td style={{ padding:'14px 16px' }}>
+                      <div
+                        style={{ display:'flex', alignItems:'center', gap:10, cursor:'pointer' }}
+                        onClick={() => navigate(isSelf ? '/profile' : `/user/${member.id}`)}
+                      >
+                        <ProfileAvatar profile={member} size={34} />
+                        <div>
+                          <div style={{ fontWeight:700, display:'flex', alignItems:'center', gap:6 }}>
+                            {member.username}
+                            {isSelf && <span style={{ color:'var(--blue)', fontSize:11 }}>({t('teamYou')})</span>}
+                          </div>
+                          <div style={{ color:'var(--text3)', fontSize:11, fontWeight:500 }}>{member.email}</div>
+                        </div>
+                      </div>
                     </td>
                     <td style={{ padding:'14px 16px' }}>
                       <span style={{

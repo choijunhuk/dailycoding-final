@@ -103,6 +103,8 @@ async function initDatabase() {
     await runSql(join(__dir, 'migrations', '018_remaining_growth_platform.sql'));
     await runSql(join(__dir, 'migrations', '019_prompt_security_perf.sql'));
     await runSql(join(__dir, 'migrations', '020_xp_progression.sql'));
+    await runSql(join(__dir, 'migrations', '021_troubleshooting_problems.sql'));
+    await runSql(join(__dir, 'migrations', '022_algorithm_battles.sql'));
     await runSql(join(__dir, 'migrations', '023_collaboration_reviews.sql'));
     logger.info('✅ DB 스키마 초기화 완료');
   } catch (err) {

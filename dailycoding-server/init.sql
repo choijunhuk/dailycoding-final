@@ -48,7 +48,7 @@ CREATE TABLE IF NOT EXISTS problem_notes (
 CREATE TABLE IF NOT EXISTS problems (
   id           INT AUTO_INCREMENT PRIMARY KEY,
   title        VARCHAR(200) NOT NULL,
-  problem_type ENUM('coding','fill-blank','bug-fix') NOT NULL DEFAULT 'coding',
+  problem_type ENUM('coding','fill-blank','bug-fix','troubleshooting','performance-fix','refactor-fix') NOT NULL DEFAULT 'coding',
   preferred_language VARCHAR(20) DEFAULT NULL,
   special_config JSON DEFAULT NULL,
   tier         ENUM('unranked','iron','bronze','silver','gold','platinum','emerald','diamond','master','grandmaster','challenger') DEFAULT 'bronze',
@@ -110,6 +110,208 @@ CREATE TABLE IF NOT EXISTS submissions (
   submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id)    REFERENCES users(id)    ON DELETE CASCADE,
   FOREIGN KEY (problem_id) REFERENCES problems(id) ON DELETE CASCADE
+);
+
+-- ── 오픈소스 협업형 코드 리뷰 ───────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS code_reviews (
+  id              INT AUTO_INCREMENT PRIMARY KEY,
+  problem_id      INT NOT NULL,
+  submission_id   INT NOT NULL,
+  author_id       INT NOT NULL,
+  reviewer_id     INT NOT NULL,
+  status          ENUM('open','approved','rejected','merged') NOT NULL DEFAULT 'open',
+  score_awarded   TINYINT(1) NOT NULL DEFAULT 0,
+  created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at      DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (problem_id) REFERENCES problems(id) ON DELETE CASCADE,
+  FOREIGN KEY (submission_id) REFERENCES submissions(id) ON DELETE CASCADE,
+  FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (reviewer_id) REFERENCES users(id) ON DELETE CASCADE,
+  INDEX idx_code_reviews_reviewer_status (reviewer_id, status, created_at),
+  INDEX idx_code_reviews_author_status (author_id, status, created_at),
+  INDEX idx_code_reviews_submission (submission_id, reviewer_id, status)
+);
+
+CREATE TABLE IF NOT EXISTS code_review_comments (
+  id          INT AUTO_INCREMENT PRIMARY KEY,
+  review_id   INT NOT NULL,
+  user_id     INT NOT NULL,
+  content     TEXT NOT NULL,
+  created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (review_id) REFERENCES code_reviews(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  INDEX idx_review_comments_review_created (review_id, created_at)
+);
+
+CREATE TABLE IF NOT EXISTS code_suggestions (
+  id             INT AUTO_INCREMENT PRIMARY KEY,
+  review_id      INT NOT NULL,
+  user_id        INT NOT NULL,
+  file_path      VARCHAR(255) NOT NULL DEFAULT 'solution',
+  original_code  LONGTEXT,
+  suggested_code LONGTEXT NOT NULL,
+  reason         TEXT,
+  status         ENUM('pending','approved','rejected','merged') NOT NULL DEFAULT 'pending',
+  created_at     DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at     DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (review_id) REFERENCES code_reviews(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  INDEX idx_code_suggestions_review_status (review_id, status)
+);
+
+CREATE TABLE IF NOT EXISTS test_suggestions (
+  id              INT AUTO_INCREMENT PRIMARY KEY,
+  review_id       INT NOT NULL,
+  user_id         INT NOT NULL,
+  input_data      TEXT NOT NULL,
+  expected_output TEXT NOT NULL,
+  reason          TEXT,
+  status          ENUM('pending','approved','rejected','merged') NOT NULL DEFAULT 'pending',
+  created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at      DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (review_id) REFERENCES code_reviews(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  INDEX idx_test_suggestions_review_status (review_id, status)
+);
+
+CREATE TABLE IF NOT EXISTS collaboration_scores (
+  id               INT AUTO_INCREMENT PRIMARY KEY,
+  user_id          INT NOT NULL,
+  review_score     INT NOT NULL DEFAULT 0,
+  suggestion_score INT NOT NULL DEFAULT 0,
+  accepted_count   INT NOT NULL DEFAULT 0,
+  total_count      INT NOT NULL DEFAULT 0,
+  rejected_count   INT NOT NULL DEFAULT 0,
+  updated_at       DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_collaboration_scores_user (user_id),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- ── 시나리오 기반 트러블슈팅 문제 설정 ─────────────────────────────────
+CREATE TABLE IF NOT EXISTS troubleshooting_problem_configs (
+  problem_id              INT PRIMARY KEY,
+  scenario_title          VARCHAR(200) NOT NULL,
+  scenario_description    TEXT,
+  initial_files           JSON NOT NULL,
+  visible_tests           JSON DEFAULT NULL,
+  hidden_tests            JSON DEFAULT NULL,
+  performance_limit_ms    INT DEFAULT NULL,
+  memory_limit_mb         INT DEFAULT NULL,
+  target_response_time_ms INT DEFAULT NULL,
+  baseline_time_ms        INT DEFAULT NULL,
+  allowed_files           JSON DEFAULT NULL,
+  forbidden_patterns      JSON DEFAULT NULL,
+  scoring_rules           JSON DEFAULT NULL,
+  evaluation_mode         VARCHAR(50) NOT NULL DEFAULT 'command',
+  created_at              DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at              DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (problem_id) REFERENCES problems(id) ON DELETE CASCADE
+);
+
+-- ── 시나리오 기반 트러블슈팅 제출 ─────────────────────────────────────
+CREATE TABLE IF NOT EXISTS troubleshooting_submissions (
+  id                 INT AUTO_INCREMENT PRIMARY KEY,
+  submission_id      INT DEFAULT NULL,
+  user_id            INT NOT NULL,
+  problem_id         INT NOT NULL,
+  submitted_files    JSON NOT NULL,
+  result             ENUM('correct','wrong','timeout','error','compile','judging') DEFAULT 'judging',
+  total_score        INT DEFAULT 0,
+  correctness_score  INT DEFAULT 0,
+  performance_score  INT DEFAULT 0,
+  readability_score  INT DEFAULT 0,
+  test_pass_count    INT DEFAULT 0,
+  total_test_count   INT DEFAULT 0,
+  execution_time_ms  INT DEFAULT NULL,
+  memory_used_mb     FLOAT DEFAULT NULL,
+  changed_files_count INT DEFAULT 0,
+  improvement_rate   FLOAT DEFAULT NULL,
+  feedback           TEXT,
+  detail_json        JSON DEFAULT NULL,
+  submitted_at       DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (problem_id) REFERENCES problems(id) ON DELETE CASCADE,
+  FOREIGN KEY (submission_id) REFERENCES submissions(id) ON DELETE SET NULL,
+  INDEX idx_troubleshooting_sub_user_problem (user_id, problem_id, submitted_at)
+);
+
+-- ── 실시간 알고리즘 배틀 방 ─────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS battle_rooms (
+  id           VARCHAR(40) PRIMARY KEY,
+  mode         VARCHAR(40) NOT NULL DEFAULT 'sort-speed',
+  problem_id   INT DEFAULT NULL,
+  status       ENUM('waiting','playing','finished') NOT NULL DEFAULT 'waiting',
+  max_players  INT NOT NULL DEFAULT 2,
+  duration_sec INT NOT NULL DEFAULT 180,
+  started_at   DATETIME DEFAULT NULL,
+  ended_at     DATETIME DEFAULT NULL,
+  created_by   INT DEFAULT NULL,
+  created_at   DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (problem_id) REFERENCES problems(id) ON DELETE SET NULL,
+  FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+  INDEX idx_battle_rooms_status_created (status, created_at)
+);
+
+-- ── 실시간 알고리즘 배틀 참가자 ────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS battle_participants (
+  room_id        VARCHAR(40) NOT NULL,
+  user_id        INT NOT NULL,
+  character_hp   INT NOT NULL DEFAULT 100,
+  attack_power   INT NOT NULL DEFAULT 10,
+  speed          INT NOT NULL DEFAULT 10,
+  score          INT NOT NULL DEFAULT 0,
+  is_ready       TINYINT(1) NOT NULL DEFAULT 0,
+  joined_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+  last_seen_at   DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (room_id, user_id),
+  FOREIGN KEY (room_id) REFERENCES battle_rooms(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- ── 실시간 알고리즘 배틀 제출 ──────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS battle_submissions (
+  id                INT AUTO_INCREMENT PRIMARY KEY,
+  room_id           VARCHAR(40) NOT NULL,
+  user_id           INT NOT NULL,
+  code              LONGTEXT,
+  language          VARCHAR(50),
+  is_correct        TINYINT(1) NOT NULL DEFAULT 0,
+  execution_time_ms INT DEFAULT NULL,
+  memory_mb         FLOAT DEFAULT NULL,
+  score             INT NOT NULL DEFAULT 0,
+  detail            TEXT,
+  created_at        DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (room_id) REFERENCES battle_rooms(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  INDEX idx_battle_sub_room_user (room_id, user_id, created_at)
+);
+
+-- ── 실시간 알고리즘 배틀 이벤트 로그 ───────────────────────────────────
+CREATE TABLE IF NOT EXISTS battle_events (
+  id           INT AUTO_INCREMENT PRIMARY KEY,
+  room_id      VARCHAR(40) NOT NULL,
+  user_id      INT DEFAULT NULL,
+  event_type   VARCHAR(50) NOT NULL,
+  payload_json JSON DEFAULT NULL,
+  created_at   DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (room_id) REFERENCES battle_rooms(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+  INDEX idx_battle_events_room_created (room_id, created_at)
+);
+
+-- ── 실시간 알고리즘 배틀 결과 ──────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS battle_results (
+  id                 INT AUTO_INCREMENT PRIMARY KEY,
+  room_id            VARCHAR(40) NOT NULL,
+  user_id            INT NOT NULL,
+  rank_no            INT NOT NULL,
+  score              INT NOT NULL DEFAULT 0,
+  result             ENUM('win','lose','draw') NOT NULL DEFAULT 'draw',
+  battle_score_delta INT NOT NULL DEFAULT 0,
+  created_at         DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_battle_result_room_user (room_id, user_id),
+  FOREIGN KEY (room_id) REFERENCES battle_rooms(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
 -- ── 북마크 ────────────────────────────────────────────────────────────────

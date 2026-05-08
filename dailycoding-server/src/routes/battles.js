@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { auth, requireVerified } from '../middleware/auth.js';
 import { Battle } from '../models/Battle.js';
+import { AlgorithmBattle } from '../models/AlgorithmBattle.js';
 import { User }   from '../models/User.js';
 import { errorResponse, internalError } from '../middleware/errorHandler.js';
 import { normalizeJudgeLanguage } from '../services/judge.js';
@@ -13,6 +14,22 @@ import { evaluateBugFixAnswer, evaluateFillBlankAnswer } from '../services/battl
 const router = Router();
 router.use(auth);
 router.use(requireVerified);
+
+function emitBattleRoomUpdate(io, state) {
+  if (!io || !state?.room?.id) return;
+  io.to(`battle:${state.room.id}`).emit('battle:room:update', state);
+}
+
+function emitBattleFinished(io, state, reason = 'timeout') {
+  if (!io || !state?.room?.id) return;
+  io.to(`battle:${state.room.id}`).emit('battle:finished', { ...state, reason });
+}
+
+function emitBattleEvent(io, state, eventName, event) {
+  if (!io || !state?.room?.id) return;
+  io.to(`battle:${state.room.id}`).emit(eventName, event);
+  io.to(`battle:${state.room.id}`).emit('battle:room:update', state);
+}
 
 async function getProblemModel() {
   const { Problem } = await import('../models/Problem.js');
@@ -80,6 +97,260 @@ router.get('/history', async (req, res) => {
     res.json({ history });
   } catch (err) {
     console.error('[battles/history]', err);
+    return internalError(res);
+  }
+});
+
+// GET /api/battles/rooms — DB-backed realtime algorithm battle rooms
+router.get('/rooms', async (req, res) => {
+  try {
+    const rooms = await AlgorithmBattle.listRooms({
+      status: req.query.status || null,
+      limit: req.query.limit || 20,
+    });
+    res.json({ rooms });
+  } catch (err) {
+    console.error('[algorithm-battles/list]', err);
+    return internalError(res);
+  }
+});
+
+// GET /api/battles/modes — realtime algorithm battle mode metadata
+router.get('/modes', async (req, res) => {
+  res.json(AlgorithmBattle.getBattleModes());
+});
+
+// POST /api/battles/rooms — create realtime algorithm battle room
+router.post('/rooms', async (req, res) => {
+  try {
+    const state = await AlgorithmBattle.createRoom({
+      creatorId: req.user.id,
+      mode: req.body?.mode || 'sort-speed',
+      problemId: req.body?.problemId || null,
+      maxPlayers: req.body?.maxPlayers || 2,
+      durationSec: req.body?.durationSec || 180,
+      bannedTags: req.body?.bannedTags || [],
+    });
+    emitBattleRoomUpdate(req.app.get('io'), state);
+    res.status(201).json(state);
+  } catch (err) {
+    console.error('[algorithm-battles/create]', err);
+    return internalError(res, err?.message || '배틀 방 생성 실패');
+  }
+});
+
+router.post('/rooms/:roomId/activity', async (req, res) => {
+  try {
+    const { event, state } = await AlgorithmBattle.recordActivity(req.params.roomId, req.user.id, {
+      activity: req.body?.activity || '집중 중',
+      message: req.body?.message || '',
+    });
+    emitBattleEvent(req.app.get('io'), state, 'battle:activity', event);
+    res.json({ event, state });
+  } catch (err) {
+    const status = err.status || 500;
+    if (status < 500) return errorResponse(res, status, 'VALIDATION_ERROR', err.message);
+    console.error('[algorithm-battles/activity]', err);
+    return internalError(res);
+  }
+});
+
+router.post('/rooms/:roomId/chat', async (req, res) => {
+  try {
+    const { event, state } = await AlgorithmBattle.recordChat(req.params.roomId, req.user.id, {
+      message: req.body?.message || '',
+    });
+    emitBattleEvent(req.app.get('io'), state, 'battle:chat', event);
+    res.json({ event, state });
+  } catch (err) {
+    const status = err.status || 500;
+    if (status < 500) return errorResponse(res, status, 'VALIDATION_ERROR', err.message);
+    console.error('[algorithm-battles/chat]', err);
+    return internalError(res);
+  }
+});
+
+router.post('/rooms/:roomId/emote', async (req, res) => {
+  try {
+    const { event, state } = await AlgorithmBattle.recordEmote(req.params.roomId, req.user.id, {
+      emote: req.body?.emote || '',
+    });
+    emitBattleEvent(req.app.get('io'), state, 'battle:emote', event);
+    res.json({ event, state });
+  } catch (err) {
+    const status = err.status || 500;
+    if (status < 500) return errorResponse(res, status, 'VALIDATION_ERROR', err.message);
+    console.error('[algorithm-battles/emote]', err);
+    return internalError(res);
+  }
+});
+
+router.post('/rooms/:roomId/item', async (req, res) => {
+  try {
+    const { event, state } = await AlgorithmBattle.useItem(req.params.roomId, req.user.id, {
+      itemType: req.body?.itemType || '',
+    });
+    emitBattleEvent(req.app.get('io'), state, 'battle:item:used', event);
+    res.json({ event, state });
+  } catch (err) {
+    const status = err.status || 500;
+    if (status < 500) return errorResponse(res, status, 'VALIDATION_ERROR', err.message);
+    console.error('[algorithm-battles/item]', err);
+    return internalError(res);
+  }
+});
+
+// GET /api/battles/rooms/:roomId
+router.get('/rooms/:roomId', async (req, res) => {
+  try {
+    const state = await AlgorithmBattle.ensureNotExpired(req.params.roomId);
+    if (!state) return errorResponse(res, 404, 'NOT_FOUND', '방을 찾을 수 없습니다.');
+    res.json(state);
+  } catch (err) {
+    console.error('[algorithm-battles/get]', err);
+    return internalError(res);
+  }
+});
+
+router.post('/rooms/:roomId/join', async (req, res) => {
+  try {
+    const state = await AlgorithmBattle.joinRoom(req.params.roomId, req.user.id);
+    if (!state) return errorResponse(res, 404, 'NOT_FOUND', '방을 찾을 수 없습니다.');
+    emitBattleRoomUpdate(req.app.get('io'), state);
+    res.json(state);
+  } catch (err) {
+    const status = err.status || 500;
+    if (status < 500) return errorResponse(res, status, 'VALIDATION_ERROR', err.message);
+    console.error('[algorithm-battles/join]', err);
+    return internalError(res);
+  }
+});
+
+router.post('/rooms/:roomId/ready', async (req, res) => {
+  try {
+    const before = await AlgorithmBattle.getRoom(req.params.roomId);
+    const state = await AlgorithmBattle.markReady(req.params.roomId, req.user.id);
+    if (!state) return errorResponse(res, 404, 'NOT_FOUND', '방을 찾을 수 없습니다.');
+    const io = req.app.get('io');
+    emitBattleRoomUpdate(io, state);
+    if (before?.status === 'waiting' && state.room.status === 'playing') {
+      io?.to(`battle:${state.room.id}`).emit('battle:countdown', { seconds: 3 });
+      io?.to(`battle:${state.room.id}`).emit('battle:started', state);
+    }
+    res.json(state);
+  } catch (err) {
+    const status = err.status || 500;
+    if (status < 500) return errorResponse(res, status, 'VALIDATION_ERROR', err.message);
+    console.error('[algorithm-battles/ready]', err);
+    return internalError(res);
+  }
+});
+
+router.post('/rooms/:roomId/submit', async (req, res) => {
+  try {
+    const { code, language } = req.body || {};
+    if (!code || !language) return errorResponse(res, 400, 'VALIDATION_ERROR', 'code, language 필요');
+    if (String(code).length > 100_000) return errorResponse(res, 400, 'VALIDATION_ERROR', '코드가 너무 큽니다. (최대 100KB)');
+
+    const stateBefore = await AlgorithmBattle.ensureNotExpired(req.params.roomId);
+    if (!stateBefore) return errorResponse(res, 404, 'NOT_FOUND', '방을 찾을 수 없습니다.');
+    if (stateBefore.room.status !== 'playing') return errorResponse(res, 400, 'VALIDATION_ERROR', '진행 중인 배틀이 아닙니다.');
+    if (!stateBefore.participants.some((player) => player.userId === req.user.id)) {
+      return errorResponse(res, 403, 'FORBIDDEN', '방 참가자만 제출할 수 있습니다.');
+    }
+    const prob = await getProblemModel().then((Problem) => Problem.findById(stateBefore.room.problemId));
+    if (!prob) return errorResponse(res, 404, 'NOT_FOUND', '배틀 문제를 찾을 수 없습니다.');
+
+    const judgeRuntime = await getCachedJudgeRuntime({ logOnRefresh: true });
+    if (judgeRuntime.mode === 'unavailable') {
+      return errorResponse(res, 503, 'INTERNAL_ERROR', '현재 서버에서 채점 런타임을 사용할 수 없습니다.', {
+        supportedLanguages: judgeRuntime.supportedLanguages || [],
+      });
+    }
+    const requester = await User.findById(req.user.id);
+    const { execution, displayLang, normalizedLang } = await executeSubmissionFlow({
+      problem: prob,
+      problemId: Number(prob.id),
+      userId: req.user.id,
+      rawLang: language,
+      code,
+      judgeRuntime,
+      persist: false,
+      includeHiddenCases: true,
+      userTier: requester?.subscription_tier || 'free',
+    });
+    const timeMs = execution.time ? parseInt(execution.time, 10) : null;
+    const memoryMb = execution.mem && /^\d+/.test(execution.mem) ? parseInt(execution.mem, 10) : null;
+    const state = await AlgorithmBattle.recordSubmission({
+      roomId: req.params.roomId,
+      userId: req.user.id,
+      code,
+      language: displayLang || normalizedLang || language,
+      judgeResult: {
+        result: execution.result,
+        timeMs,
+        memoryMb,
+        detail: execution.detail,
+      },
+    });
+
+    const io = req.app.get('io');
+    const latest = state.submissions?.[0] || null;
+    io?.to(`battle:${state.room.id}`).emit('battle:submission:result', {
+      userId: req.user.id,
+      result: execution.result,
+      timeMs,
+      memoryMb,
+      detail: execution.detail,
+      score: latest?.score || 0,
+    });
+    const recentEvents = [...(state.events || [])].reverse();
+    const attackEvent = recentEvents.find((event) => event.type === 'player.attack' && event.userId === req.user.id);
+    const effectEvent = recentEvents.find((event) => event.type === 'problem.effect' && event.userId === req.user.id);
+    if (attackEvent) {
+      io?.to(`battle:${state.room.id}`).emit('battle:player:attack', attackEvent);
+    }
+    if (effectEvent) {
+      io?.to(`battle:${state.room.id}`).emit('battle:effect', effectEvent);
+    }
+    emitBattleRoomUpdate(io, state);
+    if (state.room.status === 'finished') emitBattleFinished(io, state, 'knockout');
+    res.json({ ...state, submissionResult: execution.result, timeMs, memoryMb, detail: execution.detail });
+  } catch (err) {
+    if (err.status && err.body) return res.status(err.status).json(err.body);
+    const status = err.status || 500;
+    if (status < 500) return errorResponse(res, status, 'VALIDATION_ERROR', err.message);
+    console.error('[algorithm-battles/submit]', err);
+    return internalError(res);
+  }
+});
+
+router.post('/rooms/:roomId/leave', async (req, res) => {
+  try {
+    const state = await AlgorithmBattle.leaveRoom(req.params.roomId, req.user.id);
+    if (!state) return errorResponse(res, 404, 'NOT_FOUND', '방을 찾을 수 없습니다.');
+    emitBattleRoomUpdate(req.app.get('io'), state);
+    res.json(state);
+  } catch (err) {
+    console.error('[algorithm-battles/leave]', err);
+    return internalError(res);
+  }
+});
+
+router.post('/rooms/:roomId/finish', async (req, res) => {
+  try {
+    const current = await AlgorithmBattle.getRoomState(req.params.roomId);
+    if (!current) return errorResponse(res, 404, 'NOT_FOUND', '방을 찾을 수 없습니다.');
+    if (!current.participants.some((player) => player.userId === req.user.id)) {
+      return errorResponse(res, 403, 'FORBIDDEN', '방 참가자만 종료할 수 있습니다.');
+    }
+    const state = await AlgorithmBattle.finishRoom(req.params.roomId, { reason: req.body?.reason || 'manual' });
+    const io = req.app.get('io');
+    emitBattleRoomUpdate(io, state);
+    emitBattleFinished(io, state, req.body?.reason || 'manual');
+    res.json(state);
+  } catch (err) {
+    console.error('[algorithm-battles/finish]', err);
     return internalError(res);
   }
 });

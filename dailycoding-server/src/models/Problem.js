@@ -430,6 +430,8 @@ export const Problem = {
   },
 
   async delete(id) {
+    await run('DELETE FROM troubleshooting_submissions WHERE problem_id=?', [id]);
+    await run('DELETE FROM troubleshooting_problem_configs WHERE problem_id=?', [id]);
     await run('DELETE FROM problem_testcases WHERE problem_id=?', [id]);
     await run('DELETE FROM problem_examples WHERE problem_id=?', [id]);
     await run('DELETE FROM problem_tags WHERE problem_id=?', [id]);

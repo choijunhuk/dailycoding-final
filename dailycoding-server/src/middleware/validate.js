@@ -89,7 +89,7 @@ export const profileSchema = {
 
 export const problemSchema = {
   title: { required: true, minLength: 1, maxLength: 200 },
-  problemType: { enum: ['coding', 'fill-blank', 'bug-fix'] },
+  problemType: { enum: ['coding', 'fill-blank', 'bug-fix', 'troubleshooting', 'performance-fix', 'refactor-fix'] },
   preferredLanguage: { enum: ['python', 'javascript', 'cpp', 'java', 'c', null] },
   tier: { enum: ['bronze', 'silver', 'gold', 'platinum', 'diamond'] },
   difficulty: { type: 'number' },

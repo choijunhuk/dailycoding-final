@@ -82,6 +82,179 @@ section p { font-size: 13px; color: var(--text2); line-height: 1.7; }
 
 .editor-wrap { flex: 1; overflow: hidden; min-height: 0; }
 
+.troubleshooting-workspace {
+  height: 100%;
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr) 280px;
+  background: var(--bg);
+}
+.troubleshooting-files,
+.troubleshooting-side {
+  min-width: 0;
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  overflow: auto;
+}
+.troubleshooting-side {
+  border-right: 0;
+  border-left: 1px solid var(--border);
+  padding: 14px;
+}
+.troubleshooting-panel-title {
+  padding: 10px 12px;
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--text3);
+  letter-spacing: 0;
+  border-bottom: 1px solid var(--border);
+}
+.troubleshooting-file-btn {
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  color: var(--text2);
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  cursor: pointer;
+  text-align: left;
+}
+.troubleshooting-file-btn.active {
+  background: rgba(121,192,255,.1);
+  color: var(--text);
+}
+.readonly-badge {
+  font-size: 9px;
+  color: var(--text3);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 1px 5px;
+  white-space: nowrap;
+}
+.troubleshooting-editor { min-width: 0; min-height: 0; }
+.troubleshooting-empty {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text3);
+  font-size: 13px;
+}
+.troubleshooting-side h3 {
+  font-size: 16px;
+  margin: 12px 0 8px;
+}
+.troubleshooting-side p {
+  color: var(--text2);
+  font-size: 12px;
+  line-height: 1.7;
+  white-space: pre-line;
+}
+.troubleshooting-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 14px;
+}
+.troubleshooting-metrics div {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 8px;
+}
+.troubleshooting-metrics span,
+.score-lines span {
+  display: block;
+  font-size: 10px;
+  color: var(--text3);
+}
+.troubleshooting-metrics strong {
+  display: block;
+  margin-top: 3px;
+  font-size: 13px;
+  color: var(--blue);
+}
+.troubleshooting-score-card {
+  margin-top: 14px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.score-total {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(63,185,80,.12);
+  color: var(--green);
+  font: 800 18px 'Space Mono', monospace;
+}
+.score-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.troubleshooting-result-panel { height: 220px; }
+.troubleshooting-result-grid {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr) 240px;
+  gap: 10px;
+  height: 100%;
+}
+.troubleshooting-result-summary,
+.troubleshooting-test-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text2);
+}
+.troubleshooting-feedback {
+  margin: 0;
+  padding: 10px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  color: var(--text2);
+  font-size: 11px;
+  white-space: pre-wrap;
+  overflow: auto;
+}
+.troubleshooting-test {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 9px;
+  border-radius: 6px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+}
+.troubleshooting-test.pass { color: var(--green); }
+.troubleshooting-test.fail { color: var(--red); }
+.troubleshooting-inline-score {
+  margin-top: 8px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  color: var(--text2);
+}
+.troubleshooting-inline-score span {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px 8px;
+}
+
 .result-panel {
   height: 160px; flex-shrink: 0;
   background: var(--bg2); border-top: 1px solid var(--border);

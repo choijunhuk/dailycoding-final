@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import api from '../api.js';
@@ -6,6 +7,7 @@ import { useRankingData } from '../hooks/useRankingData.js';
 import { getTierImageUrl, getTierGlowStyle } from '../utils/tierImage.js';
 import { useLang } from '../context/LangContext.jsx';
 import { TIER_THRESHOLDS, TIER_ORDER } from '../data/constants.js';
+import ProfileAvatar from '../components/ProfileAvatar';
 
 const TIER_META = {
   unranked:    { color:'#888888', bg:'rgba(136,136,136,.12)', label:'Unranked'    },
@@ -113,6 +115,7 @@ function RatingBar({ rating, width = 80 }) {
 
 export default function RankingPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const toast = useToast();
   const { t, lang } = useLang();
   const locale = lang === 'ko' ? 'ko-KR' : 'en-US';
@@ -124,6 +127,9 @@ export default function RankingPage() {
   const [seasonPayload, setSeasonPayload] = useState({ season: null, remainingDays: null, items: [] });
   const [seasonLoading, setSeasonLoading] = useState(false);
   const [seasonError, setSeasonError] = useState(null);
+  const [platformPayload, setPlatformPayload] = useState({ items: [], total: 0 });
+  const [platformLoading, setPlatformLoading] = useState(false);
+  const [platformError, setPlatformError] = useState(null);
   const [followingSet, setFollowingSet] = useState(new Set());
   const [followPending, setFollowPending] = useState(new Set());
   const limit = 20;
@@ -140,8 +146,17 @@ export default function RankingPage() {
     rank: item.rank,
     battleWins: item.battleWins,
   }));
+  const platformRankers = (platformPayload.items || []).map((item) => ({
+    ...item,
+    name: item.username || item.name,
+    rating: item.score ?? item.battleScore ?? item.collaborationScore ?? item.rating ?? 0,
+    solved_count: item.solved_count ?? item.battles ?? item.acceptedCount ?? 0,
+    solved: item.solved_count ?? item.battles ?? item.acceptedCount ?? 0,
+  }));
   const rankers = mode === 'season'
     ? seasonRankers
+    : ['battle', 'collaboration', 'overall'].includes(mode)
+      ? platformRankers
     : rankingData.map((u) => ({ ...u, name: u.username || u.name }));
 
   useEffect(() => {
@@ -168,6 +183,27 @@ export default function RankingPage() {
       })
       .finally(() => {
         if (!cancelled) setSeasonLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [mode]);
+
+  useEffect(() => {
+    if (!['battle', 'collaboration', 'overall'].includes(mode)) return;
+    let cancelled = false;
+    setPlatformLoading(true);
+    setPlatformError(null);
+    api.get(`/ranking/${mode}`)
+      .then(({ data }) => {
+        if (!cancelled) setPlatformPayload(data || { items: [], total: 0 });
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setPlatformPayload({ items: [], total: 0 });
+          setPlatformError(err);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setPlatformLoading(false);
       });
     return () => { cancelled = true; };
   }, [mode]);
@@ -204,6 +240,8 @@ export default function RankingPage() {
   const myData = rankers.find(r => r.id === user?.id);
   const myProgress = myData ? getTierProgress(myData.rating || 0) : null;
   const myPage = myRank ? Math.ceil(myRank / limit) : null;
+  const currentLoading = mode === 'global' ? loading : mode === 'season' ? seasonLoading : platformLoading;
+  const currentError = mode === 'global' ? error : mode === 'season' ? seasonError : platformError;
   const pageNumbers = Array.from({ length: Math.min(5, pagination.totalPages || 1) }, (_, index) => {
     const start = Math.max(1, Math.min((pagination.totalPages || 1) - 4, page - 2));
     return start + index;
@@ -218,16 +256,27 @@ export default function RankingPage() {
           🏆 {t('ranking')}
         </h1>
         <p style={{ color: 'var(--text2)', fontSize: 13, margin: 0 }}>
-          {mode === 'season'
+          {['battle', 'collaboration', 'overall'].includes(mode)
+            ? (platformLoading ? '...' : `${rankers.length.toLocaleString(locale)}명이 ${mode === 'battle' ? '배틀' : mode === 'collaboration' ? '협업' : '종합'} 랭킹에 집계됐습니다.`)
+            : mode === 'season'
             ? (seasonLoading ? '...' : t('rankingSeasonSummary').replace('{season}', seasonPayload.season || t('rankingThisSeason')).replace('{count}', rankers.length.toLocaleString()))
             : (loading ? '...' : t('rankingGlobalSummary').replace('{count}', rankers.length.toLocaleString()))}
         </p>
         <div style={{ display:'flex', gap:8, marginTop:12, alignItems:'center', flexWrap:'wrap' }}>
           <button className="btn btn-ghost btn-sm" onClick={() => setMode('global')} style={{ opacity: mode === 'global' ? 1 : 0.6 }}>
-            {t('rankingGlobalMode')}
+            알고리즘 랭킹
           </button>
           <button className="btn btn-ghost btn-sm" onClick={() => setMode('season')} style={{ opacity: mode === 'season' ? 1 : 0.6 }}>
             {t('rankingSeasonMode')}
+          </button>
+          <button className="btn btn-ghost btn-sm" onClick={() => setMode('battle')} style={{ opacity: mode === 'battle' ? 1 : 0.6 }}>
+            배틀 랭킹
+          </button>
+          <button className="btn btn-ghost btn-sm" onClick={() => setMode('collaboration')} style={{ opacity: mode === 'collaboration' ? 1 : 0.6 }}>
+            협업 랭킹
+          </button>
+          <button className="btn btn-ghost btn-sm" onClick={() => setMode('overall')} style={{ opacity: mode === 'overall' ? 1 : 0.6 }}>
+            종합 랭킹
           </button>
           {mode === 'season' && seasonPayload.remainingDays != null && (
             <span style={{ fontSize:12, color:'var(--text3)' }}>
@@ -239,10 +288,10 @@ export default function RankingPage() {
 
       {/* ── MY RANK CARD ── */}
       {myData && myProgress && (
-        <div style={{
+        <div className="card" style={{
           background: `linear-gradient(135deg, ${TIER_META[myData.tier]?.bg || 'var(--bg3)'}, var(--bg2))`,
           border: `1px solid ${TIER_META[myData.tier]?.color || 'var(--border)'}50`,
-          borderRadius: 16, padding: '20px 24px', marginBottom: 24,
+          padding: '20px 24px', marginBottom: 24,
           boxShadow: `0 4px 24px ${TIER_META[myData.tier]?.color || '#0000'}18`,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 20 }}>
@@ -308,7 +357,7 @@ export default function RankingPage() {
         </div>
       )}
 
-      {(mode === 'global' ? error : seasonError) && (
+      {currentError && (
         <div style={{
           marginBottom: 20,
           background: 'rgba(248,81,73,.08)',
@@ -330,7 +379,7 @@ export default function RankingPage() {
           </div>
           <button className="btn btn-ghost btn-sm" onClick={() => {
             if (mode === 'global') refreshRankingData();
-            else setMode('season');
+            else setMode(mode);
           }}>
             {t('tryAgain')}
           </button>
@@ -424,18 +473,18 @@ export default function RankingPage() {
       </div>
 
       {/* ── LOADING ── */}
-      {(mode === 'global' ? loading : seasonLoading) && (
-        <div style={{ textAlign: 'center', padding: '64px 0', color: 'var(--text3)' }}>
-          <div style={{ fontSize: 36, marginBottom: 10 }}>⏳</div>
-          <div style={{ fontSize: 14 }}>{t('rankingLoading')}</div>
+      {currentLoading && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {Array(10).fill(0).map((_, i) => (
+            <div key={i} className="skeleton skeleton-row" />
+          ))}
         </div>
       )}
 
       {/* ── TOP 3 PODIUM ── */}
-      {!(mode === 'global' ? loading : seasonLoading) && (mode === 'season' || page === 1) && top3.length >= 3 && (mode === 'season' || (tierFilter === 'all' && sortBy === 'rating')) && !search && (
-        <div style={{
-          background: 'var(--bg2)', border: '1px solid var(--border)',
-          borderRadius: 16, padding: '32px 24px 0', marginBottom: 16, overflow: 'hidden',
+      {!currentLoading && (mode !== 'global' || page === 1) && top3.length >= 3 && (mode !== 'global' || (tierFilter === 'all' && sortBy === 'rating')) && !search && (
+        <div className="card" style={{
+          padding: '32px 24px 0', marginBottom: 16, overflow: 'hidden',
         }}>
           <div style={{ textAlign: 'center', fontSize: 11, fontWeight: 700, color: 'var(--text3)', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 20 }}>
             {t('rankingTopPlayers')}
@@ -455,21 +504,19 @@ export default function RankingPage() {
                   <div style={{ fontSize: 28, lineHeight: 1 }}>{MEDALS[realIdx]}</div>
 
                   {/* circular avatar with tier gradient border */}
-                  <div style={{
-                    width: idx === 1 ? 64 : 52,
-                    height: idx === 1 ? 64 : 52,
-                    borderRadius: '50%',
-                    background: `radial-gradient(circle at 30% 30%, ${tm.color}50, ${tm.bg})`,
-                    border: `3px solid ${tm.color}`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: idx === 1 ? 16 : 13, fontWeight: 800, color: tm.color,
-                    boxShadow: `0 4px 16px ${tm.color}50`,
-                  }}>
-                    {(r.name || '??').slice(0, 2).toUpperCase()}
-                  </div>
+                  <ProfileAvatar
+                    profile={r}
+                    size={idx === 1 ? 64 : 52}
+                    border={`3px solid ${tm.color}`}
+                    style={{ boxShadow: `0 4px 16px ${tm.color}50`, cursor: 'pointer' }}
+                    onClick={() => navigate(r.id === user?.id ? '/profile' : `/user/${r.id}`)}
+                  />
 
                   {/* name */}
-                  <div style={{ fontWeight: 700, fontSize: idx === 1 ? 14 : 12, textAlign: 'center', color: 'var(--text)', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div
+                    onClick={() => navigate(r.id === user?.id ? '/profile' : `/user/${r.id}`)}
+                    style={{ fontWeight: 700, fontSize: idx === 1 ? 14 : 12, textAlign: 'center', color: 'var(--text)', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer' }}
+                  >
                     {r.name}
                   </div>
 
@@ -506,7 +553,7 @@ export default function RankingPage() {
       )}
 
       {/* ── RANKING TABLE ── */}
-      {!(mode === 'global' ? loading : seasonLoading) && (
+      {!currentLoading && (
         <div>
           <div style={{
             background: 'var(--bg2)', border: '1px solid var(--border)',
@@ -532,13 +579,13 @@ export default function RankingPage() {
               </div>
 
               {filtered.length === 0 && (
-                <div style={{ padding: '64px 0', textAlign: 'center', color: 'var(--text3)' }}>
-                  <div style={{ fontSize: 40, marginBottom: 12 }}>{error ? '⚠️' : '🔍'}</div>
+                <div className="empty-state">
+                  <div style={{ fontSize: 40, marginBottom: 12 }}>{currentError ? '⚠️' : '🔍'}</div>
                   <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 6 }}>
-                    {error ? t('rankingNoDataTitle') : t('noResults')}
+                    {currentError ? t('rankingNoDataTitle') : t('noResults')}
                   </div>
                   <div style={{ fontSize: 12, color: 'var(--text3)' }}>
-                    {error ? t('rankingNoDataErrorDesc') : t('rankingNoDataSearchDesc')}
+                    {currentError ? t('rankingNoDataErrorDesc') : t('rankingNoDataSearchDesc')}
                   </div>
                 </div>
               )}
@@ -550,6 +597,7 @@ export default function RankingPage() {
                 return (
                   <div
                     key={r.rank || i}
+                    className={isMe ? '' : 'list-item-hover'}
                     style={{
                       display: 'grid',
                       gridTemplateColumns: '56px 1fr 160px 100px 70px 80px 80px',
@@ -557,11 +605,7 @@ export default function RankingPage() {
                       borderBottom: '1px solid var(--border)',
                       background: isMe ? `${tm.color}09` : 'transparent',
                       borderLeft: isMe ? `3px solid ${tm.color}` : '3px solid transparent',
-                      transition: 'background .15s',
-                      cursor: 'default',
                     }}
-                    onMouseEnter={e => { if (!isMe) e.currentTarget.style.background = 'var(--bg3)'; }}
-                    onMouseLeave={e => { if (!isMe) e.currentTarget.style.background = 'transparent'; }}
                   >
                 {/* rank */}
                 <div style={{
@@ -575,8 +619,15 @@ export default function RankingPage() {
                 </div>
 
                 {/* player */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <Avatar name={r.name} tier={r.tier} size={38} radius="50%" />
+                <div
+                  style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}
+                  onClick={() => navigate(isMe ? '/profile' : `/user/${r.id}`)}
+                >
+                  <ProfileAvatar
+                    profile={r}
+                    size={38}
+                    border={`2px solid ${tm.color}60`}
+                  />
                   <div>
                     <div style={{ fontWeight: 600, fontSize: 13, color: isMe ? tm.color : 'var(--text)', display: 'flex', alignItems: 'center', gap: 5 }}>
                       {r.name}

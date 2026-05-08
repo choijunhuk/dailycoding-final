@@ -69,6 +69,14 @@ function safeParseJSON(value, fallback) {
   }
 }
 
+async function optionalQueryOne(sql, params = [], fallback = null) {
+  try {
+    return await queryOne(sql, params);
+  } catch {
+    return fallback;
+  }
+}
+
 router.patch('/me', auth, validateBody(profileSchema), async (req, res) => {
   try {
     const { username, bio, avatar_color, avatar_emoji, default_language, submissions_public } = req.body;
@@ -131,7 +139,7 @@ router.get('/profile/:id', auth, async (req, res) => {
     }
 
     const anonClause = isSelf ? '' : ' AND is_anonymous = 0';
-    const [statsRow, followStats, isFollowing, replyStatsRow, solvedTierRows] = await Promise.all([
+    const [statsRow, followStats, isFollowing, replyStatsRow, solvedTierRows, troubleshootingRow, battleRows, collaborationRow] = await Promise.all([
       queryOne(
         `SELECT COUNT(*) AS post_count, COALESCE(SUM(like_count),0) AS total_likes
          FROM posts WHERE user_id = ?${anonClause}`,
@@ -161,6 +169,17 @@ router.get('/profile/:id', auth, async (req, res) => {
          GROUP BY p.tier`,
         [id]
       ),
+      optionalQueryOne(
+        'SELECT COUNT(*) AS cnt FROM troubleshooting_submissions WHERE user_id = ? AND result = ?',
+        [id, 'correct'],
+        { cnt: 0 }
+      ),
+      query('SELECT * FROM battle_results WHERE user_id = ? ORDER BY created_at DESC LIMIT 500', [id]).catch(() => []),
+      optionalQueryOne(
+        'SELECT * FROM collaboration_scores WHERE user_id = ?',
+        [id],
+        { review_score: 0, suggestion_score: 0, accepted_count: 0, total_count: 0 }
+      ),
     ]);
 
     const solvedTierCounts = (solvedTierRows || []).reduce((acc, row) => {
@@ -171,6 +190,9 @@ router.get('/profile/:id', auth, async (req, res) => {
     const parsedSocialLinks = safeParseJSON(user.social_links, {});
     const parsedTechStack = safeParseJSON(user.tech_stack, []);
     const rewards = await Reward.findByUser(id);
+    const battleCount = (battleRows || []).length;
+    const battleWins = (battleRows || []).filter((row) => row.result === 'win').length;
+    const collaborationScore = Number(collaborationRow?.review_score || 0) + Number(collaborationRow?.suggestion_score || 0);
 
     const bgRow = user.equipped_background
       ? await queryOne('SELECT image_url FROM profile_backgrounds WHERE slug = ?', [user.equipped_background])
@@ -210,6 +232,15 @@ router.get('/profile/:id', auth, async (req, res) => {
       following: followStats?.following ?? 0,
       isFollowing: isSelf ? false : !!isFollowing,
       solvedTierCounts,
+      learningActivity: {
+        solvedProblems: user.solved_count ?? 0,
+        troubleshootingSolved: Number(troubleshootingRow?.cnt || 0),
+        battleCount,
+        battleWins,
+        battleWinRate: battleCount > 0 ? Math.round((battleWins / battleCount) * 100) : 0,
+        reviewAcceptedCount: Number(collaborationRow?.accepted_count || 0),
+        collaborationScore,
+      },
       rewards,
       equippedBackgroundUrl,
     };

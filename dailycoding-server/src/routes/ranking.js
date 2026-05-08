@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { queryOne }  from '../config/mysql.js';
+import { query, queryOne }  from '../config/mysql.js';
 import { auth }   from '../middleware/auth.js';
 import redis from '../config/redis.js';
 import { User } from '../models/User.js';
@@ -7,6 +7,25 @@ import { RANKING_CACHE_TTL } from '../shared/constants.js';
 import { getCurrentSeason, getSeasonRemainingDays, listSeasonRanking } from '../services/seasonService.js';
 
 const router = Router();
+
+function rankRows(rows, scoreKey = 'score') {
+  return rows
+    .sort((a, b) => Number(b[scoreKey] || 0) - Number(a[scoreKey] || 0) || String(a.username || '').localeCompare(String(b.username || '')))
+    .map((row, index) => ({ ...row, rank: index + 1 }));
+}
+
+async function hydrateUserSummary(userId) {
+  const user = await queryOne('SELECT * FROM users WHERE id = ?', [Number(userId)]);
+  if (!user || user.role === 'admin' || user.banned_at) return null;
+  return {
+    id: user.id,
+    username: user.username,
+    tier: user.tier,
+    rating: Number(user.rating || 0),
+    solved_count: Number(user.solved_count || 0),
+    avatarUrl: user.avatar_url,
+  };
+}
 
 router.get('/season', auth, async (req, res) => {
   try {
@@ -39,6 +58,103 @@ router.get('/season', auth, async (req, res) => {
   } catch (err) {
     console.error('[ranking/season]', err.message);
     res.status(500).json({ message: '서버 오류' });
+  }
+});
+
+router.get('/battle', auth, async (req, res) => {
+  try {
+    const rows = await query('SELECT * FROM battle_results ORDER BY created_at DESC LIMIT 1000');
+    const byUser = new Map();
+    for (const row of rows || []) {
+      const userId = Number(row.user_id);
+      const prev = byUser.get(userId) || { userId, battles: 0, wins: 0, draws: 0, score: 0 };
+      prev.battles += 1;
+      prev.wins += row.result === 'win' ? 1 : 0;
+      prev.draws += row.result === 'draw' ? 1 : 0;
+      prev.score += Number(row.battle_score_delta ?? row.score ?? 0);
+      byUser.set(userId, prev);
+    }
+    const items = [];
+    for (const row of byUser.values()) {
+      const user = await hydrateUserSummary(row.userId);
+      if (!user) continue;
+      items.push({
+        ...user,
+        battleScore: row.score,
+        score: row.score,
+        battles: row.battles,
+        wins: row.wins,
+        winRate: row.battles > 0 ? Math.round((row.wins / row.battles) * 100) : 0,
+      });
+    }
+    res.json({ items: rankRows(items), total: items.length });
+  } catch (err) {
+    console.error('[ranking/battle]', err);
+    res.status(500).json({ message: '배틀 랭킹을 불러오지 못했습니다.' });
+  }
+});
+
+router.get('/collaboration', auth, async (req, res) => {
+  try {
+    const rows = await query('SELECT * FROM collaboration_scores ORDER BY updated_at DESC LIMIT 1000');
+    const items = [];
+    for (const row of rows || []) {
+      const user = await hydrateUserSummary(row.user_id);
+      if (!user) continue;
+      const reviewScore = Number(row.review_score || 0);
+      const suggestionScore = Number(row.suggestion_score || 0);
+      items.push({
+        ...user,
+        reviewScore,
+        suggestionScore,
+        acceptedCount: Number(row.accepted_count || 0),
+        totalCount: Number(row.total_count || 0),
+        score: reviewScore + suggestionScore,
+      });
+    }
+    res.json({ items: rankRows(items), total: items.length });
+  } catch (err) {
+    console.error('[ranking/collaboration]', err);
+    res.status(500).json({ message: '협업 랭킹을 불러오지 못했습니다.' });
+  }
+});
+
+router.get('/overall', auth, async (req, res) => {
+  try {
+    const users = await query('SELECT * FROM users WHERE role != ? ORDER BY rating DESC LIMIT 200', ['admin']);
+    const battleRows = await query('SELECT * FROM battle_results ORDER BY created_at DESC LIMIT 2000');
+    const collaborationRows = await query('SELECT * FROM collaboration_scores ORDER BY updated_at DESC LIMIT 2000');
+    const battleByUser = new Map();
+    const collaborationByUser = new Map();
+    for (const row of battleRows || []) {
+      const userId = Number(row.user_id);
+      battleByUser.set(userId, (battleByUser.get(userId) || 0) + Number(row.battle_score_delta ?? row.score ?? 0));
+    }
+    for (const row of collaborationRows || []) {
+      collaborationByUser.set(Number(row.user_id), Number(row.review_score || 0) + Number(row.suggestion_score || 0));
+    }
+    const items = (users || [])
+      .filter((user) => !user.banned_at)
+      .map((user) => {
+        const algorithmScore = Number(user.rating || 0);
+        const battleScore = battleByUser.get(Number(user.id)) || 0;
+        const collaborationScore = collaborationByUser.get(Number(user.id)) || 0;
+        return {
+          id: user.id,
+          username: user.username,
+          tier: user.tier,
+          rating: algorithmScore,
+          solved_count: Number(user.solved_count || 0),
+          algorithmScore,
+          battleScore,
+          collaborationScore,
+          score: algorithmScore + battleScore + collaborationScore,
+        };
+      });
+    res.json({ items: rankRows(items), total: items.length });
+  } catch (err) {
+    console.error('[ranking/overall]', err);
+    res.status(500).json({ message: '종합 랭킹을 불러오지 못했습니다.' });
   }
 });
 

@@ -3,6 +3,8 @@ import redis from '../config/redis.js';
 import { auth, adminOnly } from '../middleware/auth.js';
 import { query, queryOne, run } from '../config/mysql.js';
 import { AdminLog } from '../models/AdminLog.js';
+import { Problem } from '../models/Problem.js';
+import { TroubleshootingProblem } from '../models/TroubleshootingProblem.js';
 import { getAIServiceStatus } from '../services/ai.js';
 
 const router = Router();
@@ -44,6 +46,22 @@ function normalizeBattleSettings(input = {}) {
   return normalized;
 }
 
+async function safeQuery(sql, params = [], fallback = []) {
+  try {
+    return await query(sql, params);
+  } catch {
+    return fallback;
+  }
+}
+
+async function safeQueryOne(sql, params = [], fallback = null) {
+  try {
+    return await queryOne(sql, params);
+  } catch {
+    return fallback;
+  }
+}
+
 async function logAdminAction(req, action, targetType, targetId, detail) {
   await AdminLog.create({
     adminId: req.user.id,
@@ -56,11 +74,11 @@ async function logAdminAction(req, action, targetType, targetId, detail) {
 
 router.get('/stats', auth, adminOnly, async (req, res) => {
   try {
-    const cacheKey = 'admin:stats';
+    const cacheKey = 'admin:stats:v2';
     const cached = await redis.getJSON(cacheKey);
     if (cached) return res.json(cached);
 
-    const [userTotal, userWeek, activeToday, subToday, correctToday, tierDist, popularProbs] = await Promise.all([
+    const [userTotal, userWeek, activeToday, subToday, correctToday, tierDist, popularProbs, allProblems, recentSubmissionRows, recentReviewRows, battleRooms, troubleshootingRows] = await Promise.all([
       queryOne('SELECT COUNT(*) AS cnt FROM users WHERE role != ?', ['admin']),
       queryOne('SELECT COUNT(*) AS cnt FROM users WHERE join_date >= DATE_SUB(NOW(), INTERVAL 7 DAY) AND role != ?', ['admin']),
       queryOne('SELECT COUNT(DISTINCT user_id) AS cnt FROM submissions WHERE submitted_at >= CURDATE()'),
@@ -75,6 +93,11 @@ router.get('/stats', auth, adminOnly, async (req, res) => {
          ORDER BY solveCount DESC, p.id ASC
          LIMIT 5`
       ),
+      safeQuery('SELECT * FROM problems ORDER BY created_at DESC LIMIT 1000'),
+      safeQuery('SELECT * FROM submissions ORDER BY submitted_at DESC LIMIT 8'),
+      safeQuery('SELECT * FROM code_reviews ORDER BY updated_at DESC LIMIT 8'),
+      safeQuery('SELECT * FROM battle_rooms ORDER BY created_at DESC LIMIT 200'),
+      safeQuery('SELECT * FROM troubleshooting_submissions WHERE result = ? ORDER BY submitted_at DESC LIMIT 1000', ['correct']),
     ]);
 
     const totalToday = Number(subToday?.cnt || 0);
@@ -103,6 +126,65 @@ router.get('/stats', auth, adminOnly, async (req, res) => {
       })),
     };
 
+    const problemById = new Map((allProblems || []).map((problem) => [Number(problem.id), problem]));
+    payload.problemTypeCounts = (allProblems || []).reduce((acc, problem) => {
+      const type = problem.problem_type || problem.problemType || 'coding';
+      acc[type] = (acc[type] || 0) + 1;
+      return acc;
+    }, {});
+
+    payload.recentSubmissions = [];
+    for (const row of recentSubmissionRows || []) {
+      const [user, problem] = await Promise.all([
+        safeQueryOne('SELECT id, username FROM users WHERE id = ?', [row.user_id]),
+        Promise.resolve(problemById.get(Number(row.problem_id)) || null),
+      ]);
+      payload.recentSubmissions.push({
+        id: row.id,
+        userId: row.user_id,
+        username: user?.username || `user#${row.user_id}`,
+        problemId: row.problem_id,
+        problemTitle: problem?.title || `문제 #${row.problem_id}`,
+        result: row.result,
+        lang: row.lang,
+        submittedAt: row.submitted_at,
+      });
+    }
+
+    payload.recentReviews = [];
+    for (const row of recentReviewRows || []) {
+      const [author, reviewer, problem] = await Promise.all([
+        safeQueryOne('SELECT id, username FROM users WHERE id = ?', [row.author_id]),
+        safeQueryOne('SELECT id, username FROM users WHERE id = ?', [row.reviewer_id]),
+        Promise.resolve(problemById.get(Number(row.problem_id)) || null),
+      ]);
+      payload.recentReviews.push({
+        id: row.id,
+        status: row.status,
+        problemId: row.problem_id,
+        problemTitle: problem?.title || `문제 #${row.problem_id}`,
+        authorUsername: author?.username || `user#${row.author_id}`,
+        reviewerUsername: reviewer?.username || `user#${row.reviewer_id}`,
+        updatedAt: row.updated_at,
+      });
+    }
+
+    payload.battleStatus = (battleRooms || []).reduce((acc, room) => {
+      const status = room.status || 'waiting';
+      acc[status] = (acc[status] || 0) + 1;
+      acc.total += 1;
+      return acc;
+    }, { total: 0, waiting: 0, playing: 0, finished: 0 });
+
+    const performanceProblemIds = new Set((allProblems || [])
+      .filter((problem) => (problem.problem_type || problem.problemType) === 'performance-fix')
+      .map((problem) => Number(problem.id)));
+    const performanceRows = (troubleshootingRows || [])
+      .filter((row) => performanceProblemIds.has(Number(row.problem_id)) && Number(row.execution_time_ms) > 0);
+    payload.performanceFixAverageSolveTimeMs = performanceRows.length > 0
+      ? Math.round(performanceRows.reduce((sum, row) => sum + Number(row.execution_time_ms || 0), 0) / performanceRows.length)
+      : 0;
+
     await redis.setJSON(cacheKey, payload, 300);
     return res.json(payload);
   } catch (err) {
@@ -118,6 +200,35 @@ router.get('/ai-status', auth, adminOnly, async (req, res) => {
   } catch (err) {
     console.error('[admin/ai-status]', err);
     return res.status(500).json({ message: 'AI 상태를 불러오지 못했습니다.' });
+  }
+});
+
+// POST /api/admin/problems/:id/troubleshooting
+router.post('/problems/:id/troubleshooting', auth, adminOnly, async (req, res) => {
+  const problemId = Number(req.params.id);
+  if (!Number.isInteger(problemId) || problemId <= 0) {
+    return res.status(400).json({ message: '유효하지 않은 문제 ID입니다.' });
+  }
+
+  try {
+    const problem = await Problem.findById(problemId, req.user.id);
+    if (!problem) return res.status(404).json({ message: '문제를 찾을 수 없습니다.' });
+    if (!TroubleshootingProblem.isTroubleshootingType(problem.problemType)) {
+      return res.status(400).json({ message: '트러블슈팅 문제 유형이 아닙니다.' });
+    }
+
+    const config = await TroubleshootingProblem.upsertConfig(problemId, req.body || {});
+    await redis.clearPrefix(`problem:detail:v3:`);
+    await logAdminAction(req, 'troubleshooting-config.upsert', 'problem', problemId, {
+      scenarioTitle: config.scenarioTitle,
+      visibleTests: config.visibleTests?.length || 0,
+      hiddenTests: config.hiddenTests?.length || 0,
+    });
+    return res.json(config);
+  } catch (err) {
+    const status = err.status || 500;
+    console.error('[admin/troubleshooting/upsert]', err);
+    return res.status(status).json({ message: status < 500 ? err.message : '트러블슈팅 설정 저장 실패' });
   }
 });
 
