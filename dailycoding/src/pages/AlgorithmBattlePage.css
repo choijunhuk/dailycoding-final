@@ -1,0 +1,499 @@
+.ab-page,
+.ab-room-page {
+  width: 100%;
+  min-height: calc(100vh - 54px);
+  padding: 28px;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.ab-header,
+.ab-room-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.ab-header h1 {
+  margin: 0 0 6px;
+  font-size: 28px;
+  font-weight: 900;
+}
+
+.ab-header p,
+.ab-room-top span,
+.ab-mode span,
+.ab-room-row span {
+  color: var(--text2);
+  font-size: 13px;
+}
+
+.ab-mode-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.ab-mode,
+.ab-room-row,
+.ab-player-card,
+.ab-submit-card,
+.ab-result {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.ab-mode {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 14px;
+  color: var(--text);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.ab-mode.active {
+  border-color: rgba(121, 192, 255, .35);
+  background: rgba(121, 192, 255, .08);
+}
+
+.ab-mode:hover,
+.ab-ban-tags button:hover,
+.ab-emotes button:hover,
+.ab-item-grid button:hover:not(:disabled) {
+  border-color: rgba(121, 192, 255, .4);
+}
+
+.ab-ban-panel {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  margin-bottom: 18px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.ab-ban-panel p {
+  margin: 0;
+  color: var(--text2);
+  font-size: 12px;
+}
+
+.ab-ban-tags,
+.ab-emotes,
+.ab-item-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ab-ban-tags button,
+.ab-emotes button,
+.ab-item-grid button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 32px;
+  padding: 6px 10px;
+  color: var(--text2);
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.ab-ban-tags button.active {
+  color: var(--red);
+  border-color: rgba(248, 81, 73, .45);
+  background: rgba(248, 81, 73, .08);
+}
+
+.ab-room-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ab-section-title {
+  font-size: 11px;
+  color: var(--text3);
+  font-weight: 900;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  margin: 12px 0 8px;
+}
+
+.ab-room-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+}
+
+.ab-room-row div,
+.ab-room-top div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ab-empty {
+  padding: 18px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  color: var(--text3);
+  font-size: 13px;
+  text-align: center;
+}
+
+.ab-room-grid {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr) 300px;
+  gap: 14px;
+  min-height: calc(100vh - 150px);
+}
+
+.ab-left,
+.ab-right,
+.ab-center {
+  min-width: 0;
+}
+
+.ab-player-list,
+.ab-rank-list,
+.ab-log {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ab-player-card {
+  padding: 12px;
+  transition: transform .2s ease, border-color .2s ease;
+}
+
+.ab-player-card.me {
+  border-color: rgba(63, 185, 80, .45);
+}
+
+.ab-player-card.attacking {
+  transform: translateX(8px);
+  border-color: var(--red);
+}
+
+.ab-player-head,
+.ab-rank-list div,
+.ab-log div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.ab-player-head div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.ab-player-head span,
+.ab-ready {
+  font-size: 10px;
+  color: var(--green);
+  border: 1px solid rgba(63, 185, 80, .3);
+  border-radius: 999px;
+  padding: 2px 6px;
+}
+
+.ab-hp {
+  height: 9px;
+  border-radius: 999px;
+  background: var(--bg3);
+  overflow: hidden;
+  margin: 10px 0 8px;
+}
+
+.ab-hp div {
+  height: 100%;
+  background: linear-gradient(90deg, var(--green), var(--yellow));
+  transition: width .25s ease;
+}
+
+.ab-stats {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  color: var(--text2);
+  font-size: 11px;
+}
+
+.ab-ready {
+  display: inline-flex;
+  margin-top: 8px;
+}
+
+.ab-activity-pill {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 8px;
+  color: var(--blue);
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ab-rank-list div,
+.ab-log div {
+  padding: 9px 10px;
+  border-radius: 7px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  font-size: 12px;
+}
+
+.ab-presence {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ab-presence div,
+.ab-presence > span,
+.ab-effect-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 7px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  color: var(--text2);
+  font-size: 12px;
+}
+
+.ab-problem {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 10px;
+}
+
+.ab-problem h2 {
+  margin: 0 0 8px;
+  font-size: 18px;
+}
+
+.ab-problem p {
+  color: var(--text2);
+  font-size: 13px;
+  line-height: 1.7;
+  white-space: pre-line;
+}
+
+.ab-example {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.ab-example pre {
+  margin: 0;
+  padding: 10px;
+  border-radius: 7px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--green);
+  font-size: 12px;
+  overflow: auto;
+}
+
+.ab-editor-toolbar {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 10px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-bottom: 0;
+  border-radius: 8px 8px 0 0;
+}
+
+.ab-editor-toolbar select {
+  width: auto;
+  background: var(--bg3);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 8px;
+}
+
+.ab-editor-toolbar span {
+  color: var(--text3);
+  font-size: 12px;
+}
+
+.ab-editor {
+  height: 460px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 0 0 8px 8px;
+}
+
+.ab-submit-card {
+  padding: 12px;
+  margin-bottom: 14px;
+}
+
+.ab-tactics,
+.ab-social {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.ab-item-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.ab-item-grid button {
+  justify-content: center;
+}
+
+.ab-item-grid button:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+.ab-cooldown {
+  color: var(--yellow);
+  font-size: 12px;
+}
+
+.ab-effect-card {
+  align-items: flex-start;
+}
+
+.ab-effect-card div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.ab-effect-card span {
+  color: var(--text2);
+  font-size: 12px;
+}
+
+.ab-submit-card.correct {
+  border-color: rgba(63, 185, 80, .45);
+}
+
+.ab-submit-card.wrong {
+  border-color: rgba(248, 81, 73, .45);
+}
+
+.ab-submit-card strong,
+.ab-submit-card span,
+.ab-submit-card p {
+  display: block;
+}
+
+.ab-submit-card span,
+.ab-submit-card p,
+.ab-log span {
+  color: var(--text2);
+  font-size: 12px;
+}
+
+.ab-submit-card p {
+  margin: 8px 0 0;
+  line-height: 1.5;
+}
+
+.ab-log {
+  max-height: 320px;
+  overflow: auto;
+}
+
+.ab-emotes button {
+  flex: 1 1 70px;
+  justify-content: center;
+}
+
+.ab-chat-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.ab-chat-form input {
+  min-width: 0;
+  height: 34px;
+  padding: 0 10px;
+  color: var(--text);
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+}
+
+.ab-result {
+  margin-top: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  border-color: rgba(227, 179, 65, .45);
+}
+
+.ab-result strong {
+  font-size: 18px;
+}
+
+.ab-countdown {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, .5);
+  color: white;
+  font-size: 96px;
+  font-weight: 900;
+}
+
+@media (max-width: 980px) {
+  .ab-mode-strip,
+  .ab-room-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ab-ban-panel {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .ab-editor {
+    height: 360px;
+  }
+}
