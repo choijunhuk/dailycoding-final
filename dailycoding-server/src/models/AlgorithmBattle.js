@@ -75,6 +75,7 @@ const BATTLE_ITEMS = {
 };
 
 const BATTLE_EMOTES = ['gg', 'nice', 'oops', 'focus', 'taunt'];
+const BANNABLE_TAGS = ['정렬', '수학', '문자열', '그래프', '탐색', 'DP', '구현'];
 
 function parseJson(value, fallback) {
   if (value == null || value === '') return fallback;
@@ -85,6 +86,12 @@ function parseJson(value, fallback) {
 function toIsoLike(value) {
   if (!value) return null;
   return value instanceof Date ? value.toISOString() : value;
+}
+
+function toTimeMs(value) {
+  if (!value) return null;
+  const ms = new Date(value).getTime();
+  return Number.isNaN(ms) ? null : ms;
 }
 
 function normalizeRoom(row) {
@@ -177,11 +184,15 @@ function getBattleModeConfig(mode, overrides = {}) {
     ...BATTLE_MODES[key],
     availableItems: Object.values(BATTLE_ITEMS),
     availableEmotes: BATTLE_EMOTES,
+    ...overrides,
   };
 }
 
 function getRoomConfig(room, events = []) {
-  return getBattleModeConfig(room?.mode || 'sort-speed');
+  const configEvent = [...(events || [])].reverse().find((event) => event.type === 'room.config');
+  return getBattleModeConfig(room?.mode || 'sort-speed', {
+    bannedTags: Array.isArray(configEvent?.payload?.bannedTags) ? configEvent.payload.bannedTags : [],
+  });
 }
 
 function getActivityByUserId(participants = [], events = []) {
@@ -295,7 +306,28 @@ export const AlgorithmBattle = {
         availableItems: Object.values(BATTLE_ITEMS),
         availableEmotes: BATTLE_EMOTES,
       })),
+      bannableTags: BANNABLE_TAGS,
     };
+  },
+
+  async expireStaleWaitingRooms({ now = Date.now() } = {}) {
+    const rows = await query('SELECT * FROM battle_rooms WHERE status = ?', ['waiting']);
+    let expiredCount = 0;
+
+    for (const row of rows || []) {
+      const room = normalizeRoom(row);
+      const createdAtMs = toTimeMs(room.createdAt);
+      const explicitExpiryMs = toTimeMs(room.lobbyExpiresAt);
+      const fallbackExpiryMs = createdAtMs == null ? null : createdAtMs + LOBBY_TIMEOUT_MS;
+      const expiresAtMs = explicitExpiryMs ?? fallbackExpiryMs;
+
+      if (expiresAtMs != null && now > expiresAtMs) {
+        await run('UPDATE battle_rooms SET status = ?, ended_at = ? WHERE id = ?', ['finished', nowMySQL(), room.id]);
+        expiredCount += 1;
+      }
+    }
+
+    return expiredCount;
   },
 
   async createRoom({
@@ -306,6 +338,7 @@ export const AlgorithmBattle = {
     durationSec = null,
     isPrivate = false,
     preferredLanguage = null,
+    bannedTags = [],
   } = {}) {
     const normalizedMode = normalizeMode(mode);
     const modeConfig = getBattleModeConfig(normalizedMode);
@@ -315,13 +348,13 @@ export const AlgorithmBattle = {
     let problemIdsJson = null;
 
     if (normalizedMode === 'territory') {
-      const ids = await findProblemIds(problemCount);
+      const ids = await findProblemIds(problemCount, { bannedTags });
       problemIdsJson = JSON.stringify(ids);
       resolvedProblemId = ids[0] || null;
     } else if (problemId) {
       resolvedProblemId = Number(problemId);
     } else {
-      const ids = await findProblemIds(1);
+      const ids = await findProblemIds(1, { bannedTags });
       resolvedProblemId = ids[0] || null;
     }
 
@@ -344,11 +377,13 @@ export const AlgorithmBattle = {
       ]
     );
     if (creatorId) await this.joinRoom(id, creatorId);
-    await this.recordEvent(id, creatorId || null, 'room.config', { mode: normalizedMode });
+    await this.recordEvent(id, creatorId || null, 'room.config', { mode: normalizedMode, bannedTags });
     return this.getRoomState(id);
   },
 
   async listRooms({ status = null, limit = 20 } = {}) {
+    await this.expireStaleWaitingRooms();
+
     const cap = Math.min(50, Math.max(1, Number(limit) || 20));
     const params = [];
     let sql = 'SELECT * FROM battle_rooms WHERE COALESCE(is_private, 0) = 0';
@@ -356,8 +391,8 @@ export const AlgorithmBattle = {
       sql += ' AND status = ?';
       params.push(status);
     } else {
-      sql += ' AND status != ?';
-      params.push('finished');
+      sql += ' AND status = ?';
+      params.push('waiting');
     }
     sql += ` ORDER BY created_at DESC LIMIT ${cap}`;
     const rooms = (await query(sql, params)).map(normalizeRoom);
@@ -447,6 +482,11 @@ export const AlgorithmBattle = {
     }
     const existing = await queryOne('SELECT * FROM battle_participants WHERE room_id = ? AND user_id = ?', [roomId, userId]);
     if (existing) return this.getRoomState(roomId);
+    if (room.status !== 'waiting') {
+      const err = new Error('이미 시작된 배틀입니다.');
+      err.status = 400;
+      throw err;
+    }
 
     const participants = await this.getParticipants(roomId);
     if (participants.length >= room.maxPlayers) {
@@ -765,6 +805,10 @@ export const AlgorithmBattle = {
     }
 
     const participants = await this.getParticipants(roomId);
+    if (participants.length < 2) {
+      return this.getRoomState(roomId);
+    }
+
     const sorted = [...participants].sort((a, b) => b.score - a.score || b.characterHp - a.characterHp);
     const topScore = sorted[0]?.score ?? 0;
     const topCount = sorted.filter((p) => p.score === topScore).length;

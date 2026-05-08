@@ -196,6 +196,7 @@ export default function AlgorithmBattlePage() {
   const latestSubmission = state?.submissions?.[0] || null;
   const me = participants.find((p) => p.userId === user?.id);
   const opponents = participants.filter((p) => p.userId !== user?.id);
+  const hasOpponent = opponents.length > 0;
   const sortedParticipants = useMemo(
     () => [...participants].sort((a, b) => b.score - a.score || b.characterHp - a.characterHp),
     [participants]
@@ -550,6 +551,17 @@ export default function AlgorithmBattlePage() {
   // RENDER: 방 내부
   // ════════════════════════════════════════════════
   const lobbyLeft = lobbyTimeLeft(currentRoom);
+  const topScore = sortedParticipants[0]?.score ?? 0;
+  const topScoreCount = sortedParticipants.filter((player) => player.score === topScore).length;
+  const didWin = hasOpponent && topScoreCount === 1 && sortedParticipants[0]?.userId === user?.id;
+  const isDraw = hasOpponent && topScoreCount > 1;
+  const resultTitle = !hasOpponent
+    ? '대전 성립 안 됨'
+    : isDraw
+      ? '무승부'
+      : didWin
+        ? '🏆 승리!'
+        : '배틀 종료';
 
   return (
     <div className="ab-room-page">
@@ -798,13 +810,11 @@ export default function AlgorithmBattlePage() {
           {currentRoom?.status === 'finished' && (
             <div className="ab-result">
               <Trophy size={22} />
-              <strong>
-                {isTerritoryMode
-                  ? myClaimCount > Math.floor((problems?.length || 5) / 2) ? '🏆 점령 승리!' : '배틀 종료'
-                  : sortedParticipants[0]?.userId === user?.id ? '🏆 승리!' : '배틀 종료'}
-              </strong>
+              <strong>{isTerritoryMode && didWin ? '🏆 점령 승리!' : resultTitle}</strong>
               <span>
-                {isTerritoryMode
+                {!hasOpponent
+                  ? '상대가 없어 결과에 반영되지 않습니다.'
+                  : isTerritoryMode
                   ? `점령 ${myClaimCount}/${problems?.length || 5}`
                   : `최종 ${me?.score || 0}점`}
               </span>
