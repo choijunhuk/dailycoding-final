@@ -146,6 +146,24 @@ test('algorithm battle starts with bronze-range problems for low-rated players',
   assert.ok(Number(started.problem.difficulty || 1) <= 3);
 });
 
+test('algorithm battle does not start just because the room is full', async () => {
+  await waitForDB();
+  const userA = await insert('INSERT INTO users (email, username, role, tier, rating) VALUES (?,?,?,?,?)', ['battle-wait-ready-a@test.com', 'BattleWaitReadyA', 'user', 'bronze', 500]);
+  const userB = await insert('INSERT INTO users (email, username, role, tier, rating) VALUES (?,?,?,?,?)', ['battle-wait-ready-b@test.com', 'BattleWaitReadyB', 'user', 'bronze', 520]);
+
+  const created = await AlgorithmBattle.createRoom({ creatorId: userA, mode: 'sort-speed', maxPlayers: 2 });
+  const joined = await AlgorithmBattle.joinRoom(created.room.id, userB);
+  assert.equal(joined.room.status, 'waiting');
+  assert.equal(joined.participants.length, 2);
+  assert.equal(joined.participants.every((player) => player.isReady), false);
+
+  const oneReady = await AlgorithmBattle.markReady(created.room.id, userA);
+  assert.equal(oneReady.room.status, 'waiting');
+
+  const bothReady = await AlgorithmBattle.markReady(created.room.id, userB);
+  assert.equal(bothReady.room.status, 'playing');
+});
+
 test('battle problem range widens for stronger ratings and longer modes', () => {
   const low = resolveBattleProblemRange([
     { rating: 100, battleScore: 0 },

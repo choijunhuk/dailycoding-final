@@ -18,7 +18,11 @@ const CHAT_SHORTCUTS = {
 };
 const COMBAT_EVENT_TYPES = new Set([
   'player.attack', 'player.miss', 'problem.effect',
-  'item.used', 'territory.claimed', 'player.chat', 'player.emote',
+  'item.used', 'territory.claimed',
+]);
+const SOCIAL_EVENT_TYPES = new Set([
+  'player.joined', 'player.left', 'player.ready', 'room.started',
+  'room.problem_selected', 'player.chat', 'player.emote',
 ]);
 const DURATION_PRESETS = [
   { label: '⚡ 블리츠 5분', sec: 300 },
@@ -59,38 +63,61 @@ function lobbyTimeLeft(room) {
   return Math.max(0, Math.floor((new Date(room.lobbyExpiresAt).getTime() - Date.now()) / 1000));
 }
 
-function formatCombatEvent(event, myId) {
+function formatCombatEvent(event, myId, participantById = {}) {
   if (!event || !COMBAT_EVENT_TYPES.has(event.type)) return null;
   const payload = event.payload || {};
   const isMe = event.userId === myId;
-  const who = isMe ? '나' : '상대';
+  const actor = participantById[String(event.userId)]?.username || (isMe ? '나' : '상대');
 
   switch (event.type) {
     case 'player.attack':
       return {
         emoji: isMe ? '⚔️' : '🩸',
-        text: `${who} 공격 성공 +${payload.score || 0}점${payload.damage ? ` · 피해 ${payload.damage}` : ''}`,
+        label: `${actor} 공격 성공`,
+        detail: `+${payload.score || 0}점${payload.damage ? ` · 피해 ${payload.damage}` : ''}`,
         color: isMe ? 'var(--blue)' : 'var(--red)',
       };
     case 'player.miss':
-      return { emoji: '💨', text: `${who} 오답`, color: 'var(--text3)' };
+      return { emoji: '💨', label: `${actor} 오답`, detail: payload.detail || '', color: 'var(--text3)' };
     case 'problem.effect':
-      return { emoji: '✨', text: payload.effectLabel || '문제 효과 발동', color: 'var(--purple)' };
+      return { emoji: '✨', label: payload.effectLabel || '문제 효과', detail: payload.description || '효과 발동', color: 'var(--purple)' };
     case 'item.used': {
       const statStr = payload.stat
         ? Object.entries(payload.stat).map(([k, v]) => `${k} ${v > 0 ? '+' : ''}${v}`).join(' ')
         : '';
-      return { emoji: '🎒', text: `${payload.itemLabel || '아이템'}${statStr ? ` (${statStr})` : ''}`, color: 'var(--yellow)' };
+      return { emoji: '🎒', label: payload.itemLabel || '아이템', detail: statStr || '사용됨', color: 'var(--yellow)' };
     }
     case 'territory.claimed':
-      return { emoji: '🏴', text: `${who} 점령!`, color: isMe ? 'var(--blue)' : 'var(--red)' };
+      return { emoji: '🏴', label: `${actor} 점령`, detail: payload.problemId ? `문제 #${payload.problemId}` : '', color: isMe ? 'var(--blue)' : 'var(--red)' };
+    default:
+      return null;
+  }
+}
+
+function formatSocialEvent(event, myId, participantById = {}) {
+  if (!event || !SOCIAL_EVENT_TYPES.has(event.type)) return null;
+  const payload = event.payload || {};
+  const isMe = event.userId === myId;
+  const actor = participantById[String(event.userId)]?.username || (isMe ? '나' : '상대');
+
+  switch (event.type) {
+    case 'player.joined':
+      return { kind: 'system', text: `${actor}님이 입장했습니다.` };
+    case 'player.left':
+      return { kind: 'system', text: `${actor}님이 나갔습니다.` };
+    case 'player.ready':
+      return { kind: 'system', text: `${actor}님이 준비 완료했습니다.` };
+    case 'room.problem_selected':
+      return { kind: 'system', text: '대결 문제가 선택되었습니다.' };
+    case 'room.started':
+      return { kind: 'system', text: '모든 플레이어가 준비해 배틀이 시작되었습니다.' };
     case 'player.chat': {
       const msg = payload.message || '';
       const shortcut = CHAT_SHORTCUTS[msg.toLowerCase()];
-      return { emoji: '💬', text: shortcut || msg, color: 'var(--text2)' };
+      return { kind: isMe ? 'me' : 'chat', author: actor, text: shortcut || msg };
     }
     case 'player.emote':
-      return { emoji: EMOTE_EMOJI[payload.emote] || '😊', text: '', color: 'var(--text2)' };
+      return { kind: isMe ? 'me' : 'chat', author: actor, text: EMOTE_EMOJI[payload.emote] || payload.emote || '😊' };
     default:
       return null;
   }
@@ -197,12 +224,20 @@ export default function AlgorithmBattlePage() {
   const me = participants.find((p) => p.userId === user?.id);
   const opponents = participants.filter((p) => p.userId !== user?.id);
   const hasOpponent = opponents.length > 0;
+  const participantById = useMemo(
+    () => Object.fromEntries(participants.map((player) => [String(player.userId), player])),
+    [participants]
+  );
   const sortedParticipants = useMemo(
     () => [...participants].sort((a, b) => b.score - a.score || b.characterHp - a.characterHp),
     [participants]
   );
   const combatEvents = useMemo(
     () => events.filter((e) => COMBAT_EVENT_TYPES.has(e.type)),
+    [events]
+  );
+  const socialEvents = useMemo(
+    () => events.filter((e) => SOCIAL_EVENT_TYPES.has(e.type)),
     [events]
   );
   const ownRecentItem = useMemo(
@@ -763,24 +798,41 @@ export default function AlgorithmBattlePage() {
 
           {/* 전투 로그 */}
           <div className="ab-section-title">전투 로그</div>
-          <div className="ab-log">
+          <div className="ab-combat-log">
             {combatEvents.length === 0
-              ? <span style={{ color: 'var(--text3)', fontSize: 12 }}>전투 이벤트 없음</span>
+              ? <div className="ab-log-empty">아직 교전이 없습니다.</div>
               : [...combatEvents].reverse().map((event) => {
-                const fmt = formatCombatEvent(event, user?.id);
+                const fmt = formatCombatEvent(event, user?.id, participantById);
                 if (!fmt) return null;
                 return (
                   <div key={event.id} className="ab-log-entry" style={{ borderLeft: `2px solid ${fmt.color}` }}>
                     <span className="ab-log-emoji">{fmt.emoji}</span>
-                    <span>{fmt.text}</span>
+                    <div>
+                      <strong>{fmt.label}</strong>
+                      {fmt.detail && <span>{fmt.detail}</span>}
+                    </div>
                   </div>
                 );
               })}
           </div>
 
           {/* 채팅 + 이모트 */}
-          <div className="ab-section-title">채팅 / 이모트</div>
+          <div className="ab-section-title">채팅 / 입장 알림</div>
           <div className="ab-social">
+            <div className="ab-chat-feed">
+              {socialEvents.length === 0
+                ? <div className="ab-log-empty">아직 메시지가 없습니다.</div>
+                : [...socialEvents].slice(-40).map((event) => {
+                  const fmt = formatSocialEvent(event, user?.id, participantById);
+                  if (!fmt) return null;
+                  return (
+                    <div key={event.id} className={`ab-chat-line ${fmt.kind}`}>
+                      {fmt.author && <b>{fmt.author}</b>}
+                      <span>{fmt.text}</span>
+                    </div>
+                  );
+                })}
+            </div>
             <div className="ab-emotes">
               {(config?.availableEmotes || Object.keys(EMOTE_EMOJI)).map((emote) => (
                 <button
