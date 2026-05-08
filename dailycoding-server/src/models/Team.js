@@ -50,10 +50,36 @@ export const Team = {
     return queryOne('SELECT * FROM team_members WHERE user_id = ?', [userId]);
   },
 
-  async findByUser(userId) {
-    const membership = await this.findMembership(userId);
+  async findMembershipInTeam(userId, teamId) {
+    if (!teamId) return this.findMembership(userId);
+    return queryOne('SELECT * FROM team_members WHERE user_id = ? AND team_id = ?', [userId, teamId]);
+  },
+
+  async findMemberships(userId) {
+    return query('SELECT * FROM team_members WHERE user_id = ? ORDER BY joined_at DESC', [userId]);
+  },
+
+  async findByUser(userId, teamId = null) {
+    const membership = await this.findMembershipInTeam(userId, teamId);
     if (!membership) return null;
     return this.findById(membership.team_id);
+  },
+
+  async findAllByUser(userId) {
+    const memberships = await this.findMemberships(userId);
+    const teams = [];
+    for (const membership of memberships || []) {
+      const team = await this.findById(membership.team_id);
+      if (team) {
+        teams.push({
+          ...team,
+          role: membership.role || 'member',
+          joinedAt: membership.joined_at,
+          joined_at: membership.joined_at,
+        });
+      }
+    }
+    return teams;
   },
 
   async findById(id) {
@@ -61,12 +87,6 @@ export const Team = {
   },
 
   async create(name, ownerId) {
-    const existingMembership = await this.findMembership(ownerId);
-    if (existingMembership) {
-      const err = new Error('이미 소속된 팀이 있습니다.');
-      err.status = 400;
-      throw err;
-    }
     const teamId = await insert('INSERT INTO teams (name, owner_id) VALUES (?, ?)', [name, ownerId]);
     await insert('INSERT INTO team_members (team_id, user_id, role, joined_at) VALUES (?, ?, ?, ?)', [teamId, ownerId, 'admin', nowMySQL()]);
     return teamId;
@@ -98,13 +118,8 @@ export const Team = {
   },
 
   async addMember(teamId, userId) {
-    const existingMembership = await this.findMembership(userId);
-    if (existingMembership) {
-      if (Number(existingMembership.team_id) === Number(teamId)) return { affectedRows: 0 };
-      const err = new Error('이미 다른 소속에 가입되어 있습니다.');
-      err.status = 400;
-      throw err;
-    }
+    const existingMembership = await this.findMembershipInTeam(userId, teamId);
+    if (existingMembership) return { affectedRows: 0 };
     return insert('INSERT INTO team_members (team_id, user_id, role, joined_at) VALUES (?, ?, ?, ?)', [teamId, userId, 'member', nowMySQL()]);
   },
 
@@ -156,8 +171,8 @@ export const Team = {
     return run('DELETE FROM team_members WHERE team_id = ? AND user_id = ?', [teamId, userId]);
   },
 
-  async leave(userId) {
-    const membership = await this.findMembership(userId);
+  async leave(userId, teamId = null) {
+    const membership = await this.findMembershipInTeam(userId, teamId);
     if (!membership) {
       const err = new Error('소속이 없습니다.');
       err.status = 404;

@@ -28,6 +28,8 @@ export default function TeamDashboard() {
   const { t } = useLang();
   const [loading, setLoading] = useState(true);
   const [team, setTeam] = useState(null);
+  const [teams, setTeams] = useState([]);
+  const [selectedTeamId, setSelectedTeamId] = useState(null);
   const [teamName, setTeamName] = useState('');
   const [busy, setBusy] = useState(false);
   const [editingName, setEditingName] = useState(false);
@@ -43,11 +45,28 @@ export default function TeamDashboard() {
   const isOwner = team && Number(team.ownerId || team.owner_id) === Number(user?.id);
   const adminCount = useMemo(() => members.filter((member) => member.role === 'admin').length, [members]);
 
-  const loadTeam = async () => {
+  const loadTeam = async (nextTeamId = selectedTeamId) => {
     setLoading(true);
     try {
-      const { data } = await api.get('/teams/my');
+      const { data: mine } = await api.get('/teams/mine');
+      const nextTeams = mine.teams || [];
+      setTeams(nextTeams);
+      const resolvedTeamId = nextTeams.some((item) => Number(item.id) === Number(nextTeamId))
+        ? nextTeamId
+        : nextTeams[0]?.id || null;
+
+      if (!resolvedTeamId) {
+        setSelectedTeamId(null);
+        setTeam(null);
+        return;
+      }
+
+      const { data } = await api.get('/teams/my', { params: { teamId: resolvedTeamId } });
+      setSelectedTeamId(resolvedTeamId);
       setTeam(data || null);
+      setInviteLink('');
+      setInviteExpiresAt(null);
+      setInviteCopied(false);
     } catch (err) {
       toast.show(err.response?.data?.message || '소속 정보를 불러오지 못했습니다.', 'error');
     } finally {
@@ -64,8 +83,8 @@ export default function TeamDashboard() {
     setBusy(true);
     try {
       const { data } = await api.post('/teams/create', { name: teamName });
-      setTeam(data.team || { id: data.id, name: teamName, members: [{ ...user, role: 'admin', joined_at: new Date() }] });
       setTeamName('');
+      await loadTeam(data.id);
       toast.show(data.message || t('teamCreated'), 'success');
     } catch (err) {
       toast.show(err.response?.data?.message || t('teamCreateFailed'), 'error');
@@ -78,7 +97,7 @@ export default function TeamDashboard() {
     if (busy) return;
     setBusy(true);
     try {
-      const { data } = await api.post('/teams/invite');
+      const { data } = await api.post('/teams/invite', { teamId: team.id });
       const link = `${window.location.origin}/join/team/${data.token}`;
       setInviteLink(link);
       setInviteExpiresAt(data.expiresAt || null);
@@ -108,7 +127,7 @@ export default function TeamDashboard() {
     if (busy) return;
     setBusy(true);
     try {
-      const { data } = await api.post(`/teams/members/${memberId}/role`, { role });
+      const { data } = await api.post(`/teams/members/${memberId}/role`, { role, teamId: team.id });
       setTeam(data.team);
       toast.show(data.message || '역할을 변경했습니다.', 'success');
     } catch (err) {
@@ -122,7 +141,7 @@ export default function TeamDashboard() {
     if (!window.confirm(t('teamRemoveConfirm')) || busy) return;
     setBusy(true);
     try {
-      const { data } = await api.delete(`/teams/members/${memberId}`);
+      const { data } = await api.delete(`/teams/members/${memberId}`, { data: { teamId: team.id } });
       setTeam(data.team);
       toast.show(data.message || t('teamMemberRemoved'), 'success');
     } catch (err) {
@@ -136,8 +155,8 @@ export default function TeamDashboard() {
     if (!window.confirm('소속에서 탈퇴하시겠습니까?') || busy) return;
     setBusy(true);
     try {
-      await api.delete('/teams/leave');
-      setTeam(null);
+      await api.delete('/teams/leave', { data: { teamId: team.id } });
+      await loadTeam(null);
       toast.show('소속에서 탈퇴했습니다.', 'success');
     } catch (err) {
       toast.show(err.response?.data?.message || '탈퇴 실패', 'error');
@@ -150,8 +169,9 @@ export default function TeamDashboard() {
     if (!newName.trim() || busy) return;
     setBusy(true);
     try {
-      const { data } = await api.patch('/teams/name', { name: newName });
+      const { data } = await api.patch('/teams/name', { name: newName, teamId: team.id });
       setTeam(data.team);
+      setTeams((prev) => prev.map((item) => Number(item.id) === Number(data.team.id) ? { ...item, name: data.team.name } : item));
       setEditingName(false);
       toast.show(data.message || '이름이 변경되었습니다.', 'success');
     } catch (err) {
@@ -165,8 +185,8 @@ export default function TeamDashboard() {
     if (!window.confirm(`"${team.name}" 소속을 정말 해산하시겠습니까? 모든 멤버가 소속에서 제거됩니다.`) || busy) return;
     setBusy(true);
     try {
-      await api.delete('/teams');
-      setTeam(null);
+      await api.delete('/teams', { data: { teamId: team.id } });
+      await loadTeam(null);
       toast.show('소속이 해산되었습니다.', 'success');
     } catch (err) {
       toast.show(err.response?.data?.message || '해산 실패', 'error');
@@ -198,11 +218,11 @@ export default function TeamDashboard() {
               maxLength={100}
             />
             <button className="btn btn-primary" onClick={handleCreateTeam} disabled={busy || !teamName.trim()}>
-              {t('teamCreateBtn')}
+              소속 만들기
             </button>
           </div>
           <div style={{ color:'var(--text3)', fontSize:12, lineHeight:1.7 }}>
-            무료 버전에서는 한 계정당 하나의 소속에 가입할 수 있습니다. 생성자는 자동으로 관리자가 됩니다.
+            한 계정으로 여러 소속에 가입하거나 새 소속을 만들 수 있습니다. 생성자는 자동으로 관리자가 됩니다.
           </div>
         </div>
       </div>
@@ -239,6 +259,19 @@ export default function TeamDashboard() {
             </div>
           )}
           <p style={{ color:'var(--text2)', margin:0 }}>{t('teamManageDesc')}</p>
+          {teams.length > 1 && (
+            <select
+              value={selectedTeamId || team.id}
+              onChange={(event) => loadTeam(Number(event.target.value))}
+              style={{ marginTop:12, maxWidth:280 }}
+            >
+              {teams.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name} · {item.role === 'admin' ? '관리자' : '멤버'}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
         <div style={{ display:'flex', gap:8, flexWrap:'wrap', justifyContent:'flex-end' }}>
           <button className="btn btn-ghost btn-sm" onClick={loadTeam} disabled={busy}>
@@ -260,6 +293,28 @@ export default function TeamDashboard() {
             </button>
           )}
         </div>
+      </div>
+
+      <div style={{
+        display:'grid',
+        gridTemplateColumns:'minmax(0, 1fr) auto',
+        gap:10,
+        alignItems:'center',
+        padding:14,
+        border:'1px solid var(--border)',
+        borderRadius:12,
+        background:'var(--bg2)',
+        marginBottom:22,
+      }}>
+        <input
+          placeholder="새 소속 만들기"
+          value={teamName}
+          onChange={e => setTeamName(e.target.value)}
+          maxLength={100}
+        />
+        <button className="btn btn-ghost btn-sm" onClick={handleCreateTeam} disabled={busy || !teamName.trim()}>
+          <Users size={14} /> 추가
+        </button>
       </div>
 
       {isTeamAdmin && (

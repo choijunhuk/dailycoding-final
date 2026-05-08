@@ -32,6 +32,7 @@ const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const SubmissionsPage = lazy(() => import('./pages/SubmissionsPage'));
 const AdminPage = lazy(() => import('./pages/AdminPage'));
 const BattlePage = lazy(() => import('./pages/BattlePage'));
+const ReviewsPage = lazy(() => import('./pages/ReviewsPage'));
 const PricingPage = lazy(() => import('./pages/PricingPage'));
 const TeamDashboard = lazy(() => import('./pages/TeamDashboard'));
 const JoinTeamPage = lazy(() => import('./pages/JoinTeamPage'));
@@ -197,6 +198,8 @@ function AppInner() {
                 <Route path="/profile"     element={<ProfilePage />} />
                 <Route path="/user/:id"    element={<PublicProfilePage />} />
                 <Route path="/submissions" element={<SubmissionsPage />} />
+                <Route path="/reviews"     element={<ReviewsPage />} />
+                <Route path="/reviews/:id" element={<ReviewsPage />} />
                 <Route path="/battle"      element={<BattlePage />} />
                 <Route path="/battles/history" element={<BattlePage />} />
                 <Route path="/battle/watch/:roomId" element={<BattlePage />} />

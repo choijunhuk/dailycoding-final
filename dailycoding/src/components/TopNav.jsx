@@ -140,7 +140,7 @@ export default function TopNav() {
     hoverCloseTimerRef.current = setTimeout(() => {
       setHoveredGroup(null);
       hoverCloseTimerRef.current = null;
-    }, 420);
+    }, 300);
   };
 
   const go = (path) => { navigate(path); setShowNotif(false); setShowUser(false); setShowMobile(false); };

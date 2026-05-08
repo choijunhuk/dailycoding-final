@@ -27,6 +27,30 @@ test('free team affiliation can be created, joined, and inspected by members', a
   assert.equal(state.members.find((member) => member.id === ownerId).role, 'admin');
 });
 
+test('users can belong to multiple affiliations and switch by team id', async () => {
+  await waitForDB();
+  const ownerId = await insert('INSERT INTO users (email, username, role, rating) VALUES (?,?,?,?)', ['team-multi-owner@test.com', 'TeamMultiOwner', 'user', 1500]);
+  const memberId = await insert('INSERT INTO users (email, username, role, rating) VALUES (?,?,?,?)', ['team-multi-member@test.com', 'TeamMultiMember', 'user', 900]);
+
+  const firstTeamId = await Team.create('첫 번째 소속', ownerId);
+  const secondTeamId = await Team.create('두 번째 소속', ownerId);
+  await Team.addMember(firstTeamId, memberId);
+  await Team.addMember(secondTeamId, memberId);
+
+  const memberTeams = await Team.findAllByUser(memberId);
+  assert.deepEqual(
+    memberTeams.map((team) => team.id).sort((a, b) => a - b),
+    [firstTeamId, secondTeamId].sort((a, b) => a - b)
+  );
+
+  const selectedSecond = await Team.findByUser(memberId, secondTeamId);
+  assert.equal(selectedSecond.id, secondTeamId);
+
+  await Team.leave(memberId, firstTeamId);
+  const remainingTeams = await Team.findAllByUser(memberId);
+  assert.deepEqual(remainingTeams.map((team) => team.id), [secondTeamId]);
+});
+
 test('team admins can promote, demote, and cannot remove the last admin', async () => {
   await waitForDB();
   const ownerId = await insert('INSERT INTO users (email, username, role) VALUES (?,?,?)', ['team-admin-owner@test.com', 'TeamAdminOwner', 'user']);

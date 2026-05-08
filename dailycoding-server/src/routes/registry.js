@@ -29,6 +29,7 @@ import referralRouter from './referral.js';
 import examsRouter from './exams.js';
 import sheetsRouter from './sheets.js';
 import growthRouter from './growth.js';
+import reviewsRouter from './reviews.js';
 import { getJudgeRuntime } from '../services/judge.js';
 import { getStripeOpsStatus } from './subscription.js';
 
@@ -60,6 +61,7 @@ export function registerRoutes(app) {
   app.use('/api/exams', generalLimiter, examsRouter);
   app.use('/api', generalLimiter, sheetsRouter);
   app.use('/api/growth-hub', generalLimiter, growthRouter);
+  app.use('/api/reviews', generalLimiter, reviewsRouter);
 
   app.get('/api/stats', async (req, res) => {
     try {

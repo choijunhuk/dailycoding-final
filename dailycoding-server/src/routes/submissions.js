@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { Submission } from '../models/Submission.js';
 import { Notification }from '../models/Notification.js';
+import { CodeReview } from '../models/CodeReview.js';
 import { queryOne }   from '../config/mysql.js';
 import { auth, requireVerified } from '../middleware/auth.js';
 import { validateBody, runSchema } from '../middleware/validate.js';
@@ -337,6 +338,22 @@ router.get('/judge-status', auth, async (req, res) => {
     res.json(runtime);
   } catch {
     res.json({ dockerAvailable: false, configuredMode: 'auto', mode: 'unavailable', supportedLanguages: [] });
+  }
+});
+
+// POST /api/submissions/:submissionId/reviews — 다른 유저 제출에 협업 리뷰 열기
+router.post('/:submissionId/reviews', auth, requireVerified, async (req, res) => {
+  try {
+    const review = await CodeReview.createReview(Number(req.params.submissionId), req.user.id);
+    await Notification.create(review.authorId, '내 코드에 새 리뷰가 달렸습니다.', `/reviews/${review.id}`);
+    res.status(201).json(review);
+  } catch (err) {
+    const status = err?.status || 500;
+    if (status < 500) {
+      return errorResponse(res, status, status === 403 ? 'FORBIDDEN' : 'VALIDATION_ERROR', err.message);
+    }
+    console.error('[submissions/reviews/create]', err);
+    return internalError(res, err?.message || '리뷰를 생성하지 못했습니다.');
   }
 });
 
