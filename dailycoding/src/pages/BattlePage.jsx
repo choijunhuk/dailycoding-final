@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { io } from 'socket.io-client';
 import api from '../api.js';
 import EmailVerifyGate from '../components/EmailVerifyGate.jsx';
-import { JUDGE_LANGUAGE_OPTIONS, getJudgeLanguageOptionsForSupported } from '../data/judgeLanguages.js';
+import { JUDGE_LANGUAGE_OPTIONS, getEffectiveJudgeLanguage, getJudgeLanguageOptionsForSupported } from '../data/judgeLanguages.js';
 import { useSubscriptionStatus } from '../hooks/useSubscriptionStatus.js';
 import { useToast } from '../context/ToastContext.jsx';
 import { BATTLE_AD_SLOTS, BATTLE_DURATIONS, BATTLE_MODES, BATTLE_SEC, fmtTime, getSocketUrl, POLL_MS, TYPE_COLOR, TYPE_LABEL } from './battlePageUtils.js';
@@ -420,7 +420,9 @@ export default function BattlePage() {
 
   // ── 타이핑 이벤트 전송 (500ms 쓰로틀)
   const handleCodeChange = (pid, val) => {
-    setCodeMap(prev => ({ ...prev, [pid]: { ...(prev[pid] || {}), lang: room?.preferredLanguage || fallbackLang, code: val } }));
+    const currentLang = room?.preferredLanguage || fallbackLang;
+    const effectiveLang = getEffectiveJudgeLanguage(val, currentLang, judgeStatus?.supportedLanguages);
+    setCodeMap(prev => ({ ...prev, [pid]: { ...(prev[pid] || {}), lang: effectiveLang, code: val } }));
     const now = Date.now();
     if (now - lastTypingRef.current > 500 && roomId) {
       lastTypingRef.current = now;
@@ -444,7 +446,7 @@ export default function BattlePage() {
     try {
       if (problem.type === 'coding') {
         const { code } = codeMap[problem.id] || { code: '' };
-        const lang = room?.preferredLanguage || fallbackLang;
+        const lang = getEffectiveJudgeLanguage(code, room?.preferredLanguage || fallbackLang, judgeStatus?.supportedLanguages);
         if (!lang) {
           setSubmitResults(prev => ({ ...prev, [problem.id]: 'error' }));
           return;
@@ -848,8 +850,9 @@ export default function BattlePage() {
     const isLocked = pid && lockedTeamId && lockedTeamId !== myTeamId;
     const isMine   = pid && lockedTeamId === myTeamId;
     const battleLang = room.preferredLanguage || fallbackLang;
-    const battleLangLabel = JUDGE_LANGUAGE_OPTIONS.find((option) => option.value === battleLang)?.label || battleLang;
     const codeEntry = codeMap[pid] || { code: '', lang: battleLang };
+    const codeLang = getEffectiveJudgeLanguage(codeEntry.code, codeEntry.lang || battleLang, judgeStatus?.supportedLanguages);
+    const battleLangLabel = JUDGE_LANGUAGE_OPTIONS.find((option) => option.value === codeLang)?.label || codeLang;
 
     const players = Object.values(room.players || {});
     const team1Score = players.filter(p => p.teamId === 'team_1').reduce((acc, p) => acc + p.score, 0);
@@ -961,7 +964,7 @@ export default function BattlePage() {
                 <CodingProblem
                   problem={activeProblem}
                   code={codeEntry.code}
-                  lang={codeEntry.lang}
+                  lang={codeLang}
                   lockedLanguageLabel={battleLangLabel}
                   onCodeChange={val => handleCodeChange(pid, val)}
                   onInsertStarter={(starter) => handleCodeChange(pid, starter)}

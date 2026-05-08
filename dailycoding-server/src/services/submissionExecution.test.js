@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { executeSubmissionFlow } from './submissionExecution.js';
+import { detectSubmissionLanguageFromCode, executeSubmissionFlow } from './submissionExecution.js';
 
 test('non-persist run flow does not trigger persistence or ranking side effects', async () => {
   const calls = [];
@@ -111,6 +111,40 @@ test('non-persist judge can opt into hidden cases without persistence side effec
   assert.deepEqual(calls, ['executeJudgeRequest']);
 });
 
+test('submission flow uses detected python when raw battle language is c', async () => {
+  let capturedPayload = null;
+  const problem = {
+    id: 4,
+    title: 'A+B',
+    tier: 'bronze',
+    timeLimit: 2,
+    examples: [{ input: '1\n2\n', output: '3' }],
+    testcases: [],
+  };
+  const code = '# Python 3\na = int(input())\nb = int(input())\nprint(a+b)';
+
+  const result = await executeSubmissionFlow({
+    problem,
+    problemId: 4,
+    userId: 7,
+    rawLang: 'c',
+    code,
+    judgeRuntime: { mode: 'native-subprocess', supportedLanguages: ['python', 'c'] },
+    persist: false,
+    includeHiddenCases: true,
+  }, {
+    executeJudgeRequest: async (payload) => {
+      capturedPayload = payload;
+      return { result: 'correct', time: '1ms', mem: '-', detail: 'ok' };
+    },
+  });
+
+  assert.equal(detectSubmissionLanguageFromCode(code), 'python');
+  assert.equal(capturedPayload.lang, 'python');
+  assert.equal(result.normalizedLang, 'python');
+  assert.equal(result.displayLang, 'Python 3');
+});
+
 test('persisted correct submit preserves submission-side effects', async () => {
   const calls = [];
   const problem = {
@@ -139,6 +173,7 @@ test('persisted correct submit preserves submission-side effects', async () => {
       calls.push({ type: 'findSolvedSubmission', args });
       return null;
     },
+    runQuery: async (...args) => { calls.push({ type: 'runQuery', args }); },
     createSubmission: async (payload) => {
       calls.push({ type: 'createSubmission', payload });
       return { id: 55, problem_id: payload.problemId, result: payload.result, detail: payload.detail, submitted_at: new Date().toISOString() };
@@ -152,6 +187,10 @@ test('persisted correct submit preserves submission-side effects', async () => {
     onSolve: async (userId, tier) => { calls.push({ type: 'onSolve', userId, tier }); },
     createNotification: async (userId, message, link) => { calls.push({ type: 'createNotification', userId, message, link }); },
     invalidateRanking: async () => { calls.push({ type: 'invalidateRanking' }); },
+    updateRedisLeaderboard: async () => { calls.push({ type: 'updateRedisLeaderboard' }); },
+    handleCorrectSubmissionMissions: async (userId) => { calls.push({ type: 'handleCorrectSubmissionMissions', userId }); },
+    updateSeasonRating: async (userId, points) => { calls.push({ type: 'updateSeasonRating', userId, points }); },
+    claimReferralReward: async (userId) => { calls.push({ type: 'claimReferralReward', userId }); },
   });
 
   assert.equal(result.submission.id, 55);
@@ -167,6 +206,9 @@ test('persisted correct submit preserves submission-side effects', async () => {
       'onSolve',
       'createNotification',
       'invalidateRanking',
+      'handleCorrectSubmissionMissions',
+      'updateSeasonRating',
+      'claimReferralReward',
       'findSolvedSubmission',
     ]
   );

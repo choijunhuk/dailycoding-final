@@ -1,3 +1,26 @@
+import { lazy, Suspense } from 'react';
+import { getJudgeLanguageOption } from '../data/judgeLanguages.js';
+
+const Editor = lazy(() => import('@monaco-editor/react'));
+
+const BATTLE_EDITOR_OPTIONS = Object.freeze({
+  fontSize: 14,
+  minimap: { enabled: false },
+  scrollBeyondLastLine: false,
+  tabSize: 2,
+  insertSpaces: true,
+  detectIndentation: false,
+  tabFocusMode: false,
+  autoClosingBrackets: 'always',
+  autoClosingQuotes: 'always',
+  autoSurround: 'languageDefined',
+  autoIndent: 'advanced',
+  formatOnType: true,
+  fontFamily: "'Space Mono', 'Fira Code', Consolas, monospace",
+  lineNumbers: 'on',
+  wordWrap: 'on',
+});
+
 export function BattleAdSlot({ slot }) {
   if (!slot) return null;
   const isVideo = slot.type === 'video';
@@ -133,114 +156,12 @@ const RESULT_LABEL = {
   error: '실행 오류',
 };
 
-const INDENT_TEXT = '  ';
-const AUTO_PAIRS = {
-  '(': ')',
-  '[': ']',
-  '{': '}',
-  '"': '"',
-  "'": "'",
-  '`': '`',
-};
-const CLOSING_PAIRS = new Set(Object.values(AUTO_PAIRS));
-
-function updateTextareaValue(textarea, nextValue, selectionStart, selectionEnd, onCodeChange) {
-  textarea.value = nextValue;
-  onCodeChange(nextValue);
-  requestAnimationFrame(() => {
-    textarea.selectionStart = selectionStart;
-    textarea.selectionEnd = selectionEnd ?? selectionStart;
-  });
-}
-
-function indentSelection(value, start, end) {
-  if (start === end) {
-    const nextValue = value.slice(0, start) + INDENT_TEXT + value.slice(end);
-    const cursor = start + INDENT_TEXT.length;
-    return { nextValue, selectionStart: cursor, selectionEnd: cursor };
-  }
-
-  const lineStart = value.lastIndexOf('\n', start - 1) + 1;
-  const selectedBlock = value.slice(lineStart, end);
-  const lineCount = selectedBlock.split('\n').length;
-  const nextBlock = selectedBlock.replace(/^/gm, INDENT_TEXT);
-  return {
-    nextValue: value.slice(0, lineStart) + nextBlock + value.slice(end),
-    selectionStart: start + INDENT_TEXT.length,
-    selectionEnd: end + INDENT_TEXT.length * lineCount,
-  };
-}
-
-function unindentSelection(value, start, end) {
-  const lineStart = value.lastIndexOf('\n', start - 1) + 1;
-  const selectedBlock = value.slice(lineStart, end);
-  let removedBeforeStart = 0;
-  let removedTotal = 0;
-  let offset = 0;
-  const nextBlock = selectedBlock.replace(/^( {1,2}|\t)/gm, (match, indent, index) => {
-    const removed = indent.length;
-    if (lineStart + index < start) removedBeforeStart += removed;
-    removedTotal += removed;
-    offset += removed;
-    return '';
-  });
-
-  if (offset === 0) return null;
-
-  return {
-    nextValue: value.slice(0, lineStart) + nextBlock + value.slice(end),
-    selectionStart: Math.max(lineStart, start - removedBeforeStart),
-    selectionEnd: Math.max(lineStart, end - removedTotal),
-  };
-}
-
-function handleCodeEditorKeyDown(event, code, onCodeChange) {
-  if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey || event.nativeEvent?.isComposing) {
-    return;
-  }
-
-  const textarea = event.currentTarget;
-  const value = code || '';
-  const start = textarea.selectionStart;
-  const end = textarea.selectionEnd;
-
-  if (event.key === 'Tab') {
-    event.preventDefault();
-    const edit = event.shiftKey ? unindentSelection(value, start, end) : indentSelection(value, start, end);
-    if (edit) {
-      updateTextareaValue(textarea, edit.nextValue, edit.selectionStart, edit.selectionEnd, onCodeChange);
-    }
-    return;
-  }
-
-  if (event.key === 'Backspace' && start === end && start > 0 && AUTO_PAIRS[value[start - 1]] === value[start]) {
-    event.preventDefault();
-    const nextValue = value.slice(0, start - 1) + value.slice(start + 1);
-    updateTextareaValue(textarea, nextValue, start - 1, start - 1, onCodeChange);
-    return;
-  }
-
-  if (start === end && CLOSING_PAIRS.has(event.key) && value[start] === event.key) {
-    event.preventDefault();
-    updateTextareaValue(textarea, value, start + 1, start + 1, onCodeChange);
-    return;
-  }
-
-  const close = AUTO_PAIRS[event.key];
-  if (!close) return;
-
-  event.preventDefault();
-  const selected = value.slice(start, end);
-  const nextValue = value.slice(0, start) + event.key + selected + close + value.slice(end);
-  const nextStart = start + 1;
-  const nextEnd = nextStart + selected.length;
-  updateTextareaValue(textarea, nextValue, nextStart, nextEnd, onCodeChange);
-}
-
 export function CodingProblem({ problem, code, lang, lockedLanguageLabel, onCodeChange, onInsertStarter, locked, result, judgeDetail }) {
   const resultLabel = RESULT_LABEL[result] || result;
   const starterCode = getBattleStarterCode(problem, lang);
   const hasCode = Boolean(String(code || '').trim());
+  const monacoLanguage = getJudgeLanguageOption(lang)?.monaco || 'python';
+  const isDark = typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') !== 'light';
 
   return (
     <div className="bp-problem-body">
@@ -297,15 +218,21 @@ export function CodingProblem({ problem, code, lang, lockedLanguageLabel, onCode
           {Number.isFinite(judgeDetail.timeMs) ? <small>실행 시간 {judgeDetail.timeMs}ms</small> : null}
         </div>
       )}
-      <textarea
-        className="bp-code-editor"
-        value={code || ''}
-        onChange={(event) => onCodeChange(event.target.value)}
-        onKeyDown={(event) => handleCodeEditorKeyDown(event, code, onCodeChange)}
-        disabled={locked || result === 'correct'}
-        placeholder={starterCode}
-        spellCheck={false}
-      />
+      <div className="bp-code-editor-shell">
+        <Suspense fallback={<div className="bp-code-editor-loading">에디터 로딩 중...</div>}>
+          <Editor
+            height="100%"
+            language={monacoLanguage}
+            theme={isDark ? 'vs-dark' : 'vs'}
+            value={code || ''}
+            onChange={(value) => onCodeChange(value || '')}
+            options={{
+              ...BATTLE_EDITOR_OPTIONS,
+              readOnly: locked || result === 'correct',
+            }}
+          />
+        </Suspense>
+      </div>
     </div>
   );
 }

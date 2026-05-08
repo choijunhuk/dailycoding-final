@@ -4,9 +4,6 @@ import {
   isRuntimeLanguageSupported,
   normalizeJudgeLanguage,
 } from './judge.js';
-import { handleCorrectSubmissionMissions } from './missionService.js';
-import { updateSeasonRating } from './seasonService.js';
-import { claimReferralReward } from './referralService.js';
 
 function createHttpError(status, body) {
   const err = new Error(body?.message || '요청 처리 실패');
@@ -38,6 +35,28 @@ function buildExecutableCode(problem, code) {
   return `${starterCode}\n${code}`;
 }
 
+export function detectSubmissionLanguageFromCode(code) {
+  const source = String(code || '');
+  if (!source.trim()) return null;
+
+  if (/#include\s*<stdio\.h>/.test(source) || /\bscanf\s*\(/.test(source) || /\bprintf\s*\(/.test(source)) {
+    return 'c';
+  }
+  if (/#include\s*<bits\/stdc\+\+\.h>/.test(source) || /\busing\s+namespace\s+std\b/.test(source) || /\b(cin|cout)\s*(>>|<<)/.test(source)) {
+    return 'cpp';
+  }
+  if (/\bpublic\s+class\s+Main\b/.test(source) || /\bSystem\.out\.(print|println)\s*\(/.test(source)) {
+    return 'java';
+  }
+  if (/\brequire\s*\(\s*['"]fs['"]\s*\)/.test(source) || /\breadFileSync\s*\(\s*0\b/.test(source) || /\bconsole\.log\s*\(/.test(source)) {
+    return 'javascript';
+  }
+  if (/\bdef\s+\w+\s*\(/.test(source) || /\bimport\s+sys\b/.test(source) || /\bprint\s*\(/.test(source) || /\binput\s*\(/.test(source)) {
+    return 'python';
+  }
+  return null;
+}
+
 const REQUIRED_SIDE_EFFECT_DEPS = [
   'findSolvedSubmission',
   'runQuery',
@@ -49,6 +68,9 @@ const REQUIRED_SIDE_EFFECT_DEPS = [
   'createNotification',
   'invalidateRanking',
   'updateRedisLeaderboard',
+  'handleCorrectSubmissionMissions',
+  'updateSeasonRating',
+  'claimReferralReward',
 ];
 
 async function getDefaultDeps() {
@@ -60,7 +82,10 @@ async function getDefaultDeps() {
     { User },
     { Notification },
     { Contest },
-    { Reward }
+    { Reward },
+    { handleCorrectSubmissionMissions },
+    { updateSeasonRating },
+    { claimReferralReward }
   ] = await Promise.all([
     import('../config/mysql.js'),
     import('../config/redis.js'),
@@ -70,6 +95,9 @@ async function getDefaultDeps() {
     import('../models/Notification.js'),
     import('../models/Contest.js'),
     import('../models/Reward.js'),
+    import('./missionService.js'),
+    import('./seasonService.js'),
+    import('./referralService.js'),
   ]);
 
   return {
@@ -84,6 +112,9 @@ async function getDefaultDeps() {
     invalidateRanking: () => redis.del('ranking:global:list'),
     updateRedisLeaderboard: (cid, uid, score) => Contest.updateRedisLeaderboard(cid, uid, score),
     grantReward: (userId, rewardCode) => Reward.grant(userId, rewardCode),
+    handleCorrectSubmissionMissions,
+    updateSeasonRating,
+    claimReferralReward,
   };
 }
 
@@ -127,11 +158,15 @@ export async function executeSubmissionFlow({
   const invalidateRanking = deps.invalidateRanking || defaultDeps.invalidateRanking;
   const updateRedisLeaderboard = deps.updateRedisLeaderboard || defaultDeps.updateRedisLeaderboard;
   const grantReward = deps.grantReward || defaultDeps.grantReward;
+  const handleMissions = deps.handleCorrectSubmissionMissions || defaultDeps.handleCorrectSubmissionMissions;
+  const updateRating = deps.updateSeasonRating || defaultDeps.updateSeasonRating;
+  const claimReferral = deps.claimReferralReward || defaultDeps.claimReferralReward;
   const executionCases = customInput == null
     ? (includeHiddenCases ? buildSubmitCases(problem) : (problem.examples || []))
     : [];
 
-  const normalizedLang = normalizeLanguage(rawLang || 'Python 3');
+  const detectedLang = detectSubmissionLanguageFromCode(code);
+  const normalizedLang = detectedLang || normalizeLanguage(rawLang || 'Python 3');
   if (!normalizedLang) {
     throw createHttpError(400, { message: '지원하지 않는 언어입니다.' });
   }
@@ -193,9 +228,9 @@ export async function executeSubmissionFlow({
         onSolve(userId, problem),
         createNotification(userId, `🎉 "${problem.title}" 정답! +${earnedPts}점`, 'submissions'),
         invalidateRanking(),
-        handleCorrectSubmissionMissions(userId),
-        updateSeasonRating(userId, earnedPts),
-        claimReferralReward(userId),
+        handleMissions(userId),
+        updateRating(userId, earnedPts),
+        claimReferral(userId),
       ]);
     }
 

@@ -801,26 +801,30 @@
 .bp-judge-detail.correct { border-color: rgba(86,211,100,.3); }
 .bp-judge-detail.wrong { border-color: rgba(255,190,80,.28); }
 
-.bp-code-editor {
+.bp-code-editor-shell {
   width: 100%;
-  min-height: 220px;
+  height: clamp(320px, 44vh, 520px);
+  min-height: 280px;
   background: var(--bg3);
   border: 1px solid var(--border);
   border-radius: 10px;
-  padding: 14px;
   color: var(--text);
-  font-family: 'Space Mono', monospace;
-  font-size: 13px;
-  line-height: 1.6;
-  tab-size: 2;
-  resize: vertical;
-  outline: none;
   box-sizing: border-box;
+  overflow: hidden;
   transition: border-color .15s;
 }
 
-.bp-code-editor:focus   { border-color: var(--blue); }
-.bp-code-editor:disabled { opacity: 0.6; cursor: not-allowed; }
+.bp-code-editor-shell:focus-within { border-color: var(--blue); }
+
+.bp-code-editor-loading {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text3);
+  font-size: 13px;
+  font-family: 'Space Mono', monospace;
+}
 
 @media (max-width: 900px) {
   .bp-page { padding: 20px 14px 36px; }
@@ -855,7 +859,7 @@
     grid-template-columns: 1fr;
     display: grid;
   }
-  .bp-code-editor { min-height: 280px; font-size: 12px; }
+  .bp-code-editor-shell { height: 320px; min-height: 320px; }
   .bp-result-player.opp { align-items: flex-start; }
 }
 
