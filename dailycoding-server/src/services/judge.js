@@ -212,6 +212,25 @@ function normalizeOutputText(value) {
   return String(value ?? '').replace(/\r\n/g, '\n').trim();
 }
 
+const INPUT_SHAPE_RUNTIME_HINT = '런타임 오류입니다. 입력 형식에 맞게 값을 읽는지 확인하세요. 한 줄에 여러 값이 들어올 수 있으면 split, StringTokenizer, Scanner 같은 토큰 단위 입력을 사용해야 합니다.';
+
+function sanitizeExecutionDetail(value, fallback = '런타임 오류') {
+  return String(value || fallback)
+    .replace(/\r\n/g, '\n')
+    .replace(/File ".*?\/(main\.py)"/g, 'File "/code/$1"')
+    .trim();
+}
+
+function looksLikeInputShapeRuntimeError(detail) {
+  return /ValueError: invalid literal for int\(\)|NumberFormatException|InputMismatchException|NoSuchElementException/.test(detail);
+}
+
+function formatRuntimeErrorDetail(stderr) {
+  const detail = sanitizeExecutionDetail(stderr);
+  if (!looksLikeInputShapeRuntimeError(detail)) return detail;
+  return `${INPUT_SHAPE_RUNTIME_HINT}\n\n${detail}`;
+}
+
 export function outputsMatch(actual, expected) {
   const normalizedActual = normalizeOutputText(actual);
   const normalizedExpected = normalizeOutputText(expected);
@@ -505,7 +524,7 @@ export async function judgeCode({ lang, code, examples, timeLimit = 2, userTier 
         return { result: 'timeout', time: '-', mem: '-', detail: '시간 초과' };
       }
       if (run.exitCode !== 0) {
-        return { result: 'error', time: `${elapsed}ms`, mem: '-', detail: run.stderr || '런타임 오류' };
+        return { result: 'error', time: `${elapsed}ms`, mem: '-', detail: formatRuntimeErrorDetail(run.stderr) };
       }
 
       // 정답 비교 (줄바꿈·공백 trim)
@@ -593,7 +612,7 @@ export async function runCode({ lang, code, input = '', timeLimit = 2, userTier 
         result: 'error',
         time: `${elapsed}ms`,
         mem: '-',
-        detail: run.stderr || '런타임 오류',
+        detail: formatRuntimeErrorDetail(run.stderr),
         output: run.stdout.trim(),
       };
     }
@@ -647,6 +666,9 @@ function execShell(cmd, stdin, timeoutMs, vmKb = 131072) {
         PATH: '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
         PYTHONDONTWRITEBYTECODE: '1',
         PYTHONUNBUFFERED: '1',
+        TMPDIR: tmpdir(),
+        TMP: tmpdir(),
+        TEMP: tmpdir(),
       },
       stdio: ['pipe', 'pipe', 'pipe'],
     });
@@ -721,7 +743,7 @@ export async function judgeCodeNative({ lang, code, examples, timeLimit = 2, use
 
       if (run.timedOut)        return { result: 'timeout', time: '-',            mem: '-', detail: '시간 초과' };
       if (run.outputExceeded)  return { result: 'error',   time: `${elapsed}ms`, mem: '-', detail: '출력 크기 초과 (최대 512KB)' };
-      if (run.exitCode !== 0)  return { result: 'error',   time: `${elapsed}ms`, mem: '-', detail: run.stderr || '런타임 오류' };
+      if (run.exitCode !== 0)  return { result: 'error',   time: `${elapsed}ms`, mem: '-', detail: formatRuntimeErrorDetail(run.stderr) };
 
       if (!outputsMatch(run.stdout, ex.output)) {
         return { result: 'wrong', time: `${elapsed}ms`, mem: '-', detail: '정답과 일치하지 않습니다.' };
@@ -790,7 +812,7 @@ export async function runCodeNative({ lang, code, input = '', timeLimit = 2, use
         result: 'error',
         time: `${elapsed}ms`,
         mem: '-',
-        detail: run.stderr || '런타임 오류',
+        detail: formatRuntimeErrorDetail(run.stderr),
         output: run.stdout.trim(),
       };
     }

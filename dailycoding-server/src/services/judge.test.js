@@ -131,6 +131,58 @@ test('judgeCodeNative runs Python standard library imports with stdin', async ()
   assert.equal(result.result, 'correct', result.detail);
 });
 
+test('judgeCodeNative accepts one-line pair input across supported languages', async () => {
+  const cases = [{ input: '1 2\n', output: '3' }];
+  const submissions = [
+    {
+      lang: 'python',
+      code: 'a, b = map(int, input().split())\nprint(a + b)',
+    },
+    {
+      lang: 'javascript',
+      code: 'const fs = require("fs");\nconst [a, b] = fs.readFileSync(0, "utf8").trim().split(/\\s+/).map(Number);\nconsole.log(a + b);',
+    },
+    {
+      lang: 'cpp',
+      code: '#include <bits/stdc++.h>\nusing namespace std;\nint main(){ int a, b; cin >> a >> b; cout << a + b << "\\n"; return 0; }',
+    },
+    {
+      lang: 'c',
+      code: '#include <stdio.h>\nint main(){ int a, b; if (scanf("%d %d", &a, &b) != 2) return 1; printf("%d\\n", a + b); return 0; }',
+    },
+    {
+      lang: 'java',
+      code: 'import java.util.*;\npublic class Main { public static void main(String[] args) { Scanner sc = new Scanner(System.in); int a = sc.nextInt(); int b = sc.nextInt(); System.out.println(a + b); } }',
+    },
+  ];
+
+  for (const submission of submissions) {
+    const result = await judgeCodeNative({
+      lang: submission.lang,
+      code: submission.code,
+      examples: cases,
+      timeLimit: 2,
+    });
+
+    assert.equal(result.result, 'correct', `${submission.lang}: ${result.detail}`);
+  }
+});
+
+test('judgeCodeNative explains Python one-token parser failures on one-line pair input', async () => {
+  const result = await judgeCodeNative({
+    lang: 'python',
+    code: 'a = int(input())\nprint(a)',
+    examples: [
+      { input: '1 2\n', output: '3' },
+    ],
+    timeLimit: 1,
+  });
+
+  assert.equal(result.result, 'error');
+  assert.match(result.detail, /입력 형식/);
+  assert.match(result.detail, /ValueError: invalid literal for int\(\)/);
+});
+
 test('judgeCodeNative handles wrong answer', async () => {
   const result = await judgeCodeNative({
     lang: 'python',
