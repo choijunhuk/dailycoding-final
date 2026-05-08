@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import { insert, query, queryOne, run } from '../config/mysql.js';
-import { nowMySQL } from '../config/dateutil.js';
+import { nowMySQL, toMySQL } from '../config/dateutil.js';
 
 const ROOM_PREFIX = 'algo_';
 const DEFAULT_DURATION_SEC = 300;
@@ -361,7 +361,7 @@ export const AlgorithmBattle = {
     const id = ROOM_PREFIX + crypto.randomBytes(5).toString('hex');
     const now = nowMySQL();
     const inviteCodeVal = isPrivate ? crypto.randomBytes(3).toString('hex').toUpperCase() : null;
-    const lobbyExpiresAt = new Date(Date.now() + LOBBY_TIMEOUT_MS).toISOString().slice(0, 19).replace('T', ' ');
+    const lobbyExpiresAt = toMySQL(new Date(Date.now() + LOBBY_TIMEOUT_MS));
 
     await insert(
       `INSERT INTO battle_rooms

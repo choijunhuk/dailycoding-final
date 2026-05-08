@@ -105,6 +105,25 @@ test('algorithm battle list hides and expires stale waiting rooms', async () => 
   assert.equal(rows[0]?.status, 'finished');
 });
 
+test('algorithm battle keeps a newly created room waiting in the lobby', async () => {
+  await waitForDB();
+  const userA = await insert('INSERT INTO users (email, username, role) VALUES (?,?,?)', ['battle-wait-a@test.com', 'BattleWaitA', 'user']);
+  const problemId = await insert(
+    'INSERT INTO problems (title, problem_type, description, visibility) VALUES (?,?,?,?)',
+    ['Waiting Battle Guard', 'coding', 'Sort numbers', 'global']
+  );
+
+  const created = await AlgorithmBattle.createRoom({ creatorId: userA, problemId, maxPlayers: 2 });
+  const createdAtMs = new Date(created.room.createdAt).getTime();
+  const lobbyExpiresAtMs = new Date(created.room.lobbyExpiresAt).getTime();
+  assert.ok(lobbyExpiresAtMs > createdAtMs);
+
+  const rooms = await AlgorithmBattle.listRooms();
+  const listed = rooms.find((item) => item.room.id === created.room.id);
+  assert.equal(listed?.room.status, 'waiting');
+  assert.equal(listed?.participants.length, 1);
+});
+
 test('algorithm battle does not award wins for abandoned single-player rooms', async () => {
   await waitForDB();
   const userA = await insert('INSERT INTO users (email, username, role) VALUES (?,?,?)', ['battle-solo-a@test.com', 'BattleSoloA', 'user']);
