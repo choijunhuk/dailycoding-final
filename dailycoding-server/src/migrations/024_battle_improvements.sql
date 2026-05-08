@@ -40,4 +40,8 @@ SET @s6 = (SELECT IF(COUNT(*) = 0,
   FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=@db AND TABLE_NAME='battle_rooms' AND COLUMN_NAME='lobby_expires_at');
 PREPARE stmt FROM @s6; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_battle_rooms_invite_code ON battle_rooms (invite_code);
+SET @idx = (SELECT IF(COUNT(*) = 0,
+  'CREATE UNIQUE INDEX idx_battle_rooms_invite_code ON battle_rooms (invite_code)',
+  'SELECT 1 /* index already exists */')
+  FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=@db AND TABLE_NAME='battle_rooms' AND INDEX_NAME='idx_battle_rooms_invite_code');
+PREPARE stmt FROM @idx; EXECUTE stmt; DEALLOCATE PREPARE stmt;
