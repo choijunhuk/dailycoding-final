@@ -210,6 +210,12 @@ All page components use **inline `style={{}}`**, which CSS cannot override witho
 - `JUDGE_MODE=docker` — VPS는 Docker socket 사용 가능
 - 배포 스크립트: `scripts/deploy.sh` / 초기 세팅: `scripts/vps-setup.sh`
 
+### Deploy Command
+To deploy after committing and pushing to GitHub:
+```bash
+ssh -i ~/Downloads/LightsailDefaultKey-ap-northeast-2.pem ubuntu@13.125.79.231 "cd /home/ubuntu/dailycoding-final && bash scripts/deploy.sh"
+```
+
 ---
 
 ## API Endpoints Added (Post-Launch)

@@ -3,73 +3,75 @@ import { insert, query, queryOne, run } from '../config/mysql.js';
 import { nowMySQL } from '../config/dateutil.js';
 
 const ROOM_PREFIX = 'algo_';
-const DEFAULT_DURATION_SEC = 180;
+const DEFAULT_DURATION_SEC = 300;
 const DEFAULT_MAX_PLAYERS = 2;
 const MAX_PLAYERS = 6;
-const BANNABLE_TAGS = ['정렬', '그래프', 'DP', '문자열', '구현', '수학', '탐색'];
+const LOBBY_TIMEOUT_MS = 5 * 60 * 1000;
+
 const BATTLE_MODES = {
   'sort-speed': {
     key: 'sort-speed',
-    title: '정렬 스피드전',
-    description: '기본 1:1 성능 배틀입니다. 빠르고 정확한 제출이 공격력으로 전환됩니다.',
+    title: '⚡ 스피드전',
+    description: '빠르고 정확한 제출이 공격력으로 전환됩니다. 상대 HP를 0으로 만들면 승리!',
     maxPlayers: 2,
-    durationSec: 180,
+    durationSec: 300,
     itemsEnabled: false,
     effectsEnabled: false,
     chatEnabled: true,
     emotesEnabled: true,
     activityEnabled: true,
-    itemCooldownSec: 25,
+    itemCooldownSec: 0,
+    problemCount: 1,
   },
   'duel-effects': {
     key: 'duel-effects',
-    title: '효과 결투',
-    description: '정답 제출 시 문제 태그 기반 버프/디버프가 발동되고 아이템을 사용할 수 있습니다.',
+    title: '✨ 효과전',
+    description: '정답 제출 시 문제 태그 기반 버프/디버프가 발동됩니다.',
     maxPlayers: 2,
-    durationSec: 210,
+    durationSec: 300,
     itemsEnabled: true,
     effectsEnabled: true,
     chatEnabled: true,
     emotesEnabled: true,
     activityEnabled: true,
     itemCooldownSec: 20,
+    problemCount: 1,
   },
   'chaos-items': {
     key: 'chaos-items',
-    title: '아이템 난투',
-    description: '짧은 쿨다운 아이템과 이모트로 상대를 흔드는 빠른 전술 모드입니다.',
+    title: '🎒 아이템 난투',
+    description: '짧은 쿨다운 아이템으로 상대를 흔드는 전술 모드.',
     maxPlayers: 2,
-    durationSec: 150,
+    durationSec: 300,
     itemsEnabled: true,
     effectsEnabled: true,
     chatEnabled: true,
     emotesEnabled: true,
     activityEnabled: true,
     itemCooldownSec: 12,
+    problemCount: 1,
+  },
+  'territory': {
+    key: 'territory',
+    title: '🏴 점령전',
+    description: '5개 문제 동시 공개! 먼저 풀면 내 영토. 가장 많은 영토를 점령한 플레이어가 승리합니다.',
+    maxPlayers: 2,
+    durationSec: 600,
+    itemsEnabled: false,
+    effectsEnabled: false,
+    chatEnabled: true,
+    emotesEnabled: true,
+    activityEnabled: true,
+    itemCooldownSec: 0,
+    problemCount: 5,
   },
 };
 
 const BATTLE_ITEMS = {
-  'lag-spike': {
-    key: 'lag-spike',
-    label: '렉 스파이크',
-    description: '상대의 속도를 잠시 낮춥니다.',
-  },
-  shield: {
-    key: 'shield',
-    label: '실드',
-    description: '내 HP를 회복합니다.',
-  },
-  'power-up': {
-    key: 'power-up',
-    label: '파워업',
-    description: '내 공격력을 올립니다.',
-  },
-  breakpoint: {
-    key: 'breakpoint',
-    label: '브레이크포인트',
-    description: '상대의 공격력을 낮춥니다.',
-  },
+  'lag-spike': { key: 'lag-spike', label: '렉 스파이크', description: '상대의 속도를 잠시 낮춥니다.' },
+  shield: { key: 'shield', label: '실드', description: '내 HP를 회복합니다.' },
+  'power-up': { key: 'power-up', label: '파워업', description: '내 공격력을 올립니다.' },
+  breakpoint: { key: 'breakpoint', label: '브레이크포인트', description: '상대의 공격력을 낮춥니다.' },
 };
 
 const BATTLE_EMOTES = ['gg', 'nice', 'oops', 'focus', 'taunt'];
@@ -77,11 +79,7 @@ const BATTLE_EMOTES = ['gg', 'nice', 'oops', 'focus', 'taunt'];
 function parseJson(value, fallback) {
   if (value == null || value === '') return fallback;
   if (typeof value === 'object') return value;
-  try {
-    return JSON.parse(value);
-  } catch {
-    return fallback;
-  }
+  try { return JSON.parse(value); } catch { return fallback; }
 }
 
 function toIsoLike(value) {
@@ -95,6 +93,8 @@ function normalizeRoom(row) {
     id: row.id,
     mode: row.mode || 'sort-speed',
     problemId: row.problem_id == null ? null : Number(row.problem_id),
+    problemIds: parseJson(row.problem_ids, null),
+    territoryClaims: parseJson(row.territory_claims, {}),
     status: row.status || 'waiting',
     maxPlayers: Number(row.max_players || DEFAULT_MAX_PLAYERS),
     durationSec: Number(row.duration_sec || DEFAULT_DURATION_SEC),
@@ -102,6 +102,10 @@ function normalizeRoom(row) {
     endedAt: toIsoLike(row.ended_at),
     createdBy: row.created_by == null ? null : Number(row.created_by),
     createdAt: toIsoLike(row.created_at),
+    isPrivate: Boolean(row.is_private),
+    inviteCode: row.invite_code || null,
+    preferredLanguage: row.preferred_language || null,
+    lobbyExpiresAt: toIsoLike(row.lobby_expires_at),
   };
 }
 
@@ -146,6 +150,7 @@ function normalizeSubmission(row) {
     memoryMb: row.memory_mb == null ? null : Number(row.memory_mb),
     score: Number(row.score || 0),
     detail: row.detail || '',
+    problemId: row.problem_id == null ? null : Number(row.problem_id),
     createdAt: toIsoLike(row.created_at),
   };
 }
@@ -160,66 +165,42 @@ function normalizeMode(mode) {
   return BATTLE_MODES[mode] ? mode : 'sort-speed';
 }
 
-function normalizeBannedTags(tags) {
-  const values = Array.isArray(tags) ? tags : [];
-  const allowed = new Set(BANNABLE_TAGS.map((tag) => tag.toLowerCase()));
-  return [...new Set(values
-    .map((tag) => String(tag || '').trim())
-    .filter((tag) => tag && allowed.has(tag.toLowerCase())))]
-    .slice(0, 3);
-}
-
 function sanitizeText(value, maxLength = 220) {
   return Array.from(String(value || ''))
-    .map((char) => {
-      const code = char.charCodeAt(0);
-      return code < 32 || code === 127 ? ' ' : char;
-    })
-    .join('')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, maxLength);
+    .map((char) => { const code = char.charCodeAt(0); return code < 32 || code === 127 ? ' ' : char; })
+    .join('').replace(/\s+/g, ' ').trim().slice(0, maxLength);
 }
 
 function getBattleModeConfig(mode, overrides = {}) {
   const key = normalizeMode(mode);
   return {
     ...BATTLE_MODES[key],
-    bannedTags: normalizeBannedTags(overrides.bannedTags || []),
     availableItems: Object.values(BATTLE_ITEMS),
     availableEmotes: BATTLE_EMOTES,
   };
 }
 
 function getRoomConfig(room, events = []) {
-  const configEvent = [...(events || [])].reverse().find((event) => event.type === 'room.config');
-  const payload = configEvent?.payload || {};
-  return getBattleModeConfig(payload.mode || room?.mode, {
-    bannedTags: payload.bannedTags || [],
-  });
+  return getBattleModeConfig(room?.mode || 'sort-speed');
 }
 
 function getActivityByUserId(participants = [], events = []) {
-  const participantIds = new Set(participants.map((player) => Number(player.userId)));
+  const participantIds = new Set(participants.map((p) => Number(p.userId)));
   const activityTypes = new Set(['player.activity', 'player.chat', 'player.emote', 'item.used', 'problem.effect', 'player.ready']);
   const activity = {};
   for (const event of events || []) {
     if (!event.userId || !participantIds.has(Number(event.userId)) || !activityTypes.has(event.type)) continue;
-    const label = event.type === 'player.chat'
-      ? '채팅 중'
-      : event.type === 'player.emote'
-        ? '이모트 사용'
-        : event.type === 'item.used'
-          ? '아이템 사용'
-          : event.type === 'problem.effect'
-            ? '문제 효과 발동'
-            : event.type === 'player.ready'
-              ? '준비 완료'
-              : event.payload?.activity || '집중 중';
+    const label =
+      event.type === 'player.chat' ? '채팅 중' :
+      event.type === 'player.emote' ? '이모트 사용' :
+      event.type === 'item.used' ? '아이템 사용' :
+      event.type === 'problem.effect' ? '문제 효과 발동' :
+      event.type === 'player.ready' ? '준비 완료' :
+      event.payload?.activity || '집중 중';
     activity[String(event.userId)] = {
       userId: Number(event.userId),
       label,
-      message: sanitizeText(event.payload?.message || event.payload?.emote || event.payload?.itemLabel || event.payload?.effectLabel || '', 80),
+      message: sanitizeText(event.payload?.message || event.payload?.emote || event.payload?.itemLabel || '', 80),
       createdAt: event.createdAt,
     };
   }
@@ -227,82 +208,37 @@ function getActivityByUserId(participants = [], events = []) {
 }
 
 function hasBannedTag(tags = [], bannedTags = []) {
-  const banned = new Set((bannedTags || []).map((tag) => String(tag).toLowerCase()));
-  return (tags || []).some((tag) => banned.has(String(tag).toLowerCase()));
+  const banned = new Set((bannedTags || []).map((t) => String(t).toLowerCase()));
+  return (tags || []).some((t) => banned.has(String(t).toLowerCase()));
 }
 
 function inferProblemEffect(problem) {
-  const tags = [
-    ...(problem?.tags || []),
-    problem?.title || '',
-  ].map((tag) => String(tag).toLowerCase()).join(' ');
-
+  const tags = [...(problem?.tags || []), problem?.title || ''].map((t) => String(t).toLowerCase()).join(' ');
   if (/그래프|graph|bfs|dfs|탐색|search|maze|path/.test(tags)) {
-    return {
-      key: 'snare',
-      label: '경로 봉쇄',
-      target: 'opponents',
-      description: '상대 속도를 낮춥니다.',
-    };
+    return { key: 'snare', label: '경로 봉쇄', target: 'opponents', description: '상대 속도를 낮춥니다.' };
   }
   if (/dp|dynamic|다이나믹|동적/.test(tags)) {
-    return {
-      key: 'shield',
-      label: '메모이제이션 실드',
-      target: 'self',
-      description: '내 HP를 회복합니다.',
-    };
+    return { key: 'shield', label: '메모이제이션 실드', target: 'self', description: '내 HP를 회복합니다.' };
   }
   if (/정렬|sort|수학|math/.test(tags)) {
-    return {
-      key: 'haste',
-      label: '정렬 가속',
-      target: 'self',
-      description: '내 속도와 공격력을 올립니다.',
-    };
+    return { key: 'haste', label: '정렬 가속', target: 'self', description: '내 속도와 공격력을 올립니다.' };
   }
-  return {
-    key: 'precision',
-    label: '정밀 타격',
-    target: 'self',
-    description: '내 공격력을 올립니다.',
-  };
+  return { key: 'precision', label: '정밀 타격', target: 'self', description: '내 공격력을 올립니다.' };
 }
 
-export function calculateBattleScore({
-  isCorrect,
-  executionTimeMs = null,
-  memoryMb = null,
-  elapsedSec = 0,
-}) {
+export function calculateBattleScore({ isCorrect, executionTimeMs = null, memoryMb = null, elapsedSec = 0 }) {
   const correct = Boolean(isCorrect);
   const correctnessBase = correct ? 100 : 0;
   const runtime = Number.isFinite(Number(executionTimeMs)) ? Math.max(0, Number(executionTimeMs)) : null;
   const memory = Number.isFinite(Number(memoryMb)) ? Math.max(0, Number(memoryMb)) : null;
-  const performanceBonus = correct && runtime != null
-    ? Math.max(0, Math.round(80 - runtime / 25))
-    : 0;
-  const timeBonus = correct
-    ? Math.max(0, Math.round(60 - Math.max(0, Number(elapsedSec) || 0) / 3))
-    : 0;
-  const memoryBonus = correct && memory != null
-    ? Math.max(0, Math.round(20 - memory / 8))
-    : 0;
+  const performanceBonus = correct && runtime != null ? Math.max(0, Math.round(80 - runtime / 25)) : 0;
+  const timeBonus = correct ? Math.max(0, Math.round(60 - Math.max(0, Number(elapsedSec) || 0) / 3)) : 0;
+  const memoryBonus = correct && memory != null ? Math.max(0, Math.round(20 - memory / 8)) : 0;
   const penalty = correct ? 0 : 35;
   const score = Math.max(0, correctnessBase + performanceBonus + timeBonus + memoryBonus - penalty);
   const speed = correct ? Math.max(10, Math.min(70, 10 + Math.round(performanceBonus / 2))) : 6;
   const attackPower = correct ? Math.max(10, Math.min(60, 10 + Math.round(score / 10))) : 0;
-
-  return {
-    score,
-    correctnessBase,
-    performanceBonus,
-    timeBonus,
-    memoryBonus,
-    penalty,
-    speed,
-    attackPower,
-  };
+  return { score, correctnessBase, performanceBonus, timeBonus, memoryBonus, penalty, speed, attackPower };
 }
 
 async function getUserById(userId) {
@@ -316,27 +252,41 @@ async function getProblemById(problemId) {
   return Problem.findById(Number(problemId));
 }
 
-async function findDefaultProblemId({ bannedTags = [] } = {}) {
-  const battleSeed = await queryOne('SELECT id FROM problems WHERE id = ?', [900001]);
-  if (battleSeed?.id && bannedTags.length === 0) return Number(battleSeed.id);
+async function findProblemIds(count = 1, { bannedTags = [] } = {}) {
   const rows = await query(
     `SELECT id FROM problems
      WHERE COALESCE(visibility, 'global') = 'global'
        AND COALESCE(problem_type, 'coding') = 'coding'
-     ORDER BY id ASC
-     LIMIT 50`
+     ORDER BY RAND()
+     LIMIT ?`,
+    [Math.max(count * 5, 30)]
   );
+
+  const result = [];
+  const usedIds = new Set();
+
   for (const row of rows || []) {
-    if (bannedTags.length === 0) return Number(row.id);
-    const tagRows = await query('SELECT tag FROM problem_tags WHERE problem_id = ?', [row.id]);
-    const tags = (tagRows || []).map((item) => item.tag);
-    if (!hasBannedTag(tags, bannedTags)) return Number(row.id);
+    if (result.length >= count) break;
+    if (usedIds.has(Number(row.id))) continue;
+    if (bannedTags.length > 0) {
+      const tagRows = await query('SELECT tag FROM problem_tags WHERE problem_id = ?', [row.id]);
+      const tags = (tagRows || []).map((t) => t.tag);
+      if (hasBannedTag(tags, bannedTags)) continue;
+    }
+    result.push(Number(row.id));
+    usedIds.add(Number(row.id));
   }
-  return battleSeed?.id ? Number(battleSeed.id) : null;
+
+  // fallback if DB doesn't have enough problems
+  const fallback = result[0] || 900001;
+  while (result.length < count) result.push(fallback);
+
+  return result;
 }
 
 export const AlgorithmBattle = {
   calculateBattleScore,
+
   getBattleModes() {
     return {
       modes: Object.values(BATTLE_MODES).map((mode) => ({
@@ -344,49 +294,68 @@ export const AlgorithmBattle = {
         availableItems: Object.values(BATTLE_ITEMS),
         availableEmotes: BATTLE_EMOTES,
       })),
-      bannableTags: BANNABLE_TAGS,
     };
   },
 
-  async createRoom({ creatorId, mode = 'sort-speed', problemId = null, maxPlayers = null, durationSec = null, bannedTags = [] } = {}) {
+  async createRoom({
+    creatorId,
+    mode = 'sort-speed',
+    problemId = null,
+    maxPlayers = null,
+    durationSec = null,
+    isPrivate = false,
+    preferredLanguage = null,
+  } = {}) {
     const normalizedMode = normalizeMode(mode);
-    const cleanBannedTags = normalizeBannedTags(bannedTags);
-    const modeConfig = getBattleModeConfig(normalizedMode, { bannedTags: cleanBannedTags });
-    const resolvedProblemId = problemId ? Number(problemId) : await findDefaultProblemId({ bannedTags: cleanBannedTags });
+    const modeConfig = getBattleModeConfig(normalizedMode);
+    const problemCount = BATTLE_MODES[normalizedMode]?.problemCount || 1;
+
+    let resolvedProblemId = null;
+    let problemIdsJson = null;
+
+    if (normalizedMode === 'territory') {
+      const ids = await findProblemIds(problemCount);
+      problemIdsJson = JSON.stringify(ids);
+      resolvedProblemId = ids[0] || null;
+    } else if (problemId) {
+      resolvedProblemId = Number(problemId);
+    } else {
+      const ids = await findProblemIds(1);
+      resolvedProblemId = ids[0] || null;
+    }
+
     const id = ROOM_PREFIX + crypto.randomBytes(5).toString('hex');
     const now = nowMySQL();
+    const inviteCodeVal = isPrivate ? crypto.randomBytes(3).toString('hex').toUpperCase() : null;
+    const lobbyExpiresAt = new Date(Date.now() + LOBBY_TIMEOUT_MS).toISOString().slice(0, 19).replace('T', ' ');
+
     await insert(
-      `INSERT INTO battle_rooms (id, mode, problem_id, status, max_players, duration_sec, created_by, created_at)
-       VALUES (?,?,?,?,?,?,?,?)`,
+      `INSERT INTO battle_rooms
+         (id, mode, problem_id, problem_ids, territory_claims, status, max_players, duration_sec,
+          created_by, created_at, is_private, invite_code, preferred_language, lobby_expires_at)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
-        id,
-        normalizedMode,
-        resolvedProblemId,
-        'waiting',
+        id, normalizedMode, resolvedProblemId, problemIdsJson, '{}', 'waiting',
         clampInt(maxPlayers ?? modeConfig.maxPlayers, modeConfig.maxPlayers, 2, MAX_PLAYERS),
-        clampInt(durationSec ?? modeConfig.durationSec, modeConfig.durationSec, 60, 900),
-        creatorId || null,
-        now,
+        clampInt(durationSec ?? modeConfig.durationSec, modeConfig.durationSec, 60, 1200),
+        creatorId || null, now, isPrivate ? 1 : 0, inviteCodeVal,
+        preferredLanguage || null, lobbyExpiresAt,
       ]
     );
     if (creatorId) await this.joinRoom(id, creatorId);
-    await this.recordEvent(id, creatorId || null, 'room.config', {
-      mode: normalizedMode,
-      bannedTags: cleanBannedTags,
-    });
-    await this.recordEvent(id, creatorId || null, 'room.created', { mode: normalizedMode, problemId: resolvedProblemId });
+    await this.recordEvent(id, creatorId || null, 'room.config', { mode: normalizedMode });
     return this.getRoomState(id);
   },
 
   async listRooms({ status = null, limit = 20 } = {}) {
     const cap = Math.min(50, Math.max(1, Number(limit) || 20));
     const params = [];
-    let sql = 'SELECT * FROM battle_rooms';
+    let sql = 'SELECT * FROM battle_rooms WHERE COALESCE(is_private, 0) = 0';
     if (status) {
-      sql += ' WHERE status = ?';
+      sql += ' AND status = ?';
       params.push(status);
     } else {
-      sql += ' WHERE status != ?';
+      sql += ' AND status != ?';
       params.push('finished');
     }
     sql += ` ORDER BY created_at DESC LIMIT ${cap}`;
@@ -407,8 +376,8 @@ export const AlgorithmBattle = {
     return Promise.all((rows || []).map(async (row) => normalizeParticipant(row, await getUserById(row.user_id))));
   },
 
-  async getEvents(roomId, { limit = 40 } = {}) {
-    const cap = Math.min(100, Math.max(1, Number(limit) || 40));
+  async getEvents(roomId, { limit = 60 } = {}) {
+    const cap = Math.min(200, Math.max(1, Number(limit) || 60));
     const rows = await query(
       `SELECT * FROM battle_events WHERE room_id = ? ORDER BY created_at DESC LIMIT ${cap}`,
       [roomId]
@@ -416,8 +385,8 @@ export const AlgorithmBattle = {
     return (rows || []).map(normalizeEvent).reverse();
   },
 
-  async getLatestSubmissions(roomId, { limit = 12 } = {}) {
-    const cap = Math.min(50, Math.max(1, Number(limit) || 12));
+  async getLatestSubmissions(roomId, { limit = 20 } = {}) {
+    const cap = Math.min(100, Math.max(1, Number(limit) || 20));
     const rows = await query(
       `SELECT * FROM battle_submissions WHERE room_id = ? ORDER BY created_at DESC LIMIT ${cap}`,
       [roomId]
@@ -428,12 +397,33 @@ export const AlgorithmBattle = {
   async getRoomState(roomId) {
     const room = await this.getRoom(roomId);
     if (!room) return null;
-    const [participants, events, submissions, problem] = await Promise.all([
+
+    let problemFetches;
+    if (room.mode === 'territory' && Array.isArray(room.problemIds) && room.problemIds.length > 0) {
+      problemFetches = room.problemIds.map((id) => getProblemById(id));
+    } else {
+      problemFetches = [getProblemById(room.problemId)];
+    }
+
+    const [participants, events, submissions, ...problemResults] = await Promise.all([
       this.getParticipants(roomId),
       this.getEvents(roomId),
       this.getLatestSubmissions(roomId),
-      getProblemById(room.problemId),
+      ...problemFetches,
     ]);
+
+    const formatProblem = (p) => p ? {
+      id: p.id, title: p.title, tier: p.tier, difficulty: p.difficulty,
+      desc: p.desc, inputDesc: p.inputDesc, outputDesc: p.outputDesc,
+      tags: p.tags || [], examples: p.examples || [],
+      timeLimit: p.timeLimit, memLimit: p.memLimit,
+    } : null;
+
+    const problem = formatProblem(problemResults[0]);
+    const problems = room.mode === 'territory'
+      ? problemResults.map(formatProblem).filter(Boolean)
+      : null;
+
     return {
       room,
       participants,
@@ -441,19 +431,8 @@ export const AlgorithmBattle = {
       activityByUserId: getActivityByUserId(participants, events),
       events,
       submissions,
-      problem: problem ? {
-        id: problem.id,
-        title: problem.title,
-        tier: problem.tier,
-        difficulty: problem.difficulty,
-        desc: problem.desc,
-        inputDesc: problem.inputDesc,
-        outputDesc: problem.outputDesc,
-        tags: problem.tags || [],
-        examples: problem.examples || [],
-        timeLimit: problem.timeLimit,
-        memLimit: problem.memLimit,
-      } : null,
+      problem,
+      problems,
     };
   },
 
@@ -484,6 +463,19 @@ export const AlgorithmBattle = {
     return this.getRoomState(roomId);
   },
 
+  async joinByCode(inviteCode, userId) {
+    const row = await queryOne(
+      "SELECT * FROM battle_rooms WHERE invite_code = ? AND status = 'waiting'",
+      [String(inviteCode).toUpperCase()]
+    );
+    if (!row) {
+      const err = new Error('유효하지 않은 초대 코드이거나 이미 시작된 방입니다.');
+      err.status = 404;
+      throw err;
+    }
+    return this.joinRoom(row.id, userId);
+  },
+
   async markReady(roomId, userId) {
     const room = await this.getRoom(roomId);
     if (!room) return null;
@@ -497,7 +489,7 @@ export const AlgorithmBattle = {
     await run('UPDATE battle_participants SET is_ready = ?, last_seen_at = ? WHERE room_id = ? AND user_id = ?', [1, nowMySQL(), roomId, userId]);
     await this.recordEvent(roomId, userId, 'player.ready', {});
     const participants = await this.getParticipants(roomId);
-    if (participants.length >= 2 && participants.every((player) => player.isReady)) {
+    if (participants.length >= 2 && participants.every((p) => p.isReady)) {
       await this.startRoom(roomId);
     }
     return this.getRoomState(roomId);
@@ -511,7 +503,32 @@ export const AlgorithmBattle = {
     return this.getRoom(roomId);
   },
 
-  async recordSubmission({ roomId, userId, code, language, judgeResult }) {
+  async claimTerritory(roomId, userId, problemId, room) {
+    const claims = { ...(room.territoryClaims || {}) };
+    const key = String(problemId);
+    if (claims[key] != null) return false; // already claimed
+
+    claims[key] = Number(userId);
+    await run('UPDATE battle_rooms SET territory_claims = ? WHERE id = ?', [JSON.stringify(claims), roomId]);
+    await this.recordEvent(roomId, userId, 'territory.claimed', { problemId: Number(problemId) });
+
+    // Update score to claim count
+    const myClaimCount = Object.values(claims).filter((uid) => uid === Number(userId)).length;
+    await run(
+      'UPDATE battle_participants SET score = ?, last_seen_at = ? WHERE room_id = ? AND user_id = ?',
+      [myClaimCount * 100, nowMySQL(), roomId, userId]
+    );
+
+    // All claimed? finish room
+    const problemIds = room.problemIds || [];
+    if (problemIds.length > 0 && Object.keys(claims).length >= problemIds.length) {
+      await this.finishRoom(roomId, { reason: 'all_claimed' });
+    }
+
+    return true;
+  },
+
+  async recordSubmission({ roomId, userId, code, language, judgeResult, problemId = null }) {
     const room = await this.getRoom(roomId);
     if (!room) return null;
     if (room.status !== 'playing') {
@@ -532,12 +549,27 @@ export const AlgorithmBattle = {
     const executionTimeMs = Number.isFinite(Number(judgeResult?.timeMs)) ? Number(judgeResult.timeMs) : null;
     const memoryMb = Number.isFinite(Number(judgeResult?.memoryMb)) ? Number(judgeResult.memoryMb) : null;
     const scoring = calculateBattleScore({ isCorrect, executionTimeMs, memoryMb, elapsedSec });
+
+    // Store submission with optional problemId for territory mode
+    const effectiveProblemId = room.mode === 'territory' && problemId ? Number(problemId) : room.problemId;
     await insert(
       `INSERT INTO battle_submissions (room_id, user_id, code, language, is_correct, execution_time_ms, memory_mb, score, detail, created_at)
        VALUES (?,?,?,?,?,?,?,?,?,?)`,
       [roomId, userId, code || '', language || '', isCorrect ? 1 : 0, executionTimeMs, memoryMb, scoring.score, judgeResult?.detail || '', nowMySQL()]
     );
 
+    if (room.mode === 'territory') {
+      // Territory: claiming beats combat
+      if (isCorrect && effectiveProblemId) {
+        await this.claimTerritory(roomId, userId, effectiveProblemId, room);
+      }
+      await this.recordEvent(roomId, userId, isCorrect ? 'player.attack' : 'player.miss', {
+        score: scoring.score, problemId: effectiveProblemId, executionTimeMs, detail: judgeResult?.detail || '',
+      });
+      return this.getRoomState(roomId);
+    }
+
+    // Standard combat mode
     const nextScore = Math.max(0, Number(participant.score || 0) + scoring.score);
     const nextAttack = isCorrect ? scoring.attackPower : Number(participant.attack_power || 10);
     const nextSpeed = isCorrect ? scoring.speed : Math.max(5, Number(participant.speed || 10) - 2);
@@ -547,7 +579,7 @@ export const AlgorithmBattle = {
     );
 
     const participants = await this.getParticipants(roomId);
-    const targets = participants.filter((player) => player.userId !== Number(userId));
+    const targets = participants.filter((p) => p.userId !== Number(userId));
     const damage = isCorrect ? Math.max(5, Math.min(45, scoring.attackPower)) : 0;
     for (const target of targets) {
       await run(
@@ -557,17 +589,16 @@ export const AlgorithmBattle = {
     }
 
     await this.recordEvent(roomId, userId, isCorrect ? 'player.attack' : 'player.miss', {
-      score: scoring.score,
-      damage,
-      executionTimeMs,
-      detail: judgeResult?.detail || '',
+      score: scoring.score, damage, executionTimeMs, detail: judgeResult?.detail || '',
     });
+
     if (isCorrect) {
-      await this.applyProblemEffect(roomId, userId, room);
+      const config = getRoomConfig(room, []);
+      if (config.effectsEnabled) await this.applyProblemEffect(roomId, userId, room);
     }
 
     const updatedState = await this.getRoomState(roomId);
-    const othersAlive = updatedState.participants.filter((player) => player.userId !== Number(userId) && player.characterHp > 0);
+    const othersAlive = updatedState.participants.filter((p) => p.userId !== Number(userId) && p.characterHp > 0);
     if (isCorrect && updatedState.participants.length >= 2 && othersAlive.length === 0) {
       await this.finishRoom(roomId, { reason: 'knockout' });
       return this.getRoomState(roomId);
@@ -577,27 +608,11 @@ export const AlgorithmBattle = {
 
   async requireParticipant(roomId, userId, { allowWaiting = true } = {}) {
     const room = await this.getRoom(roomId);
-    if (!room) {
-      const err = new Error('방을 찾을 수 없습니다.');
-      err.status = 404;
-      throw err;
-    }
-    if (room.status === 'finished') {
-      const err = new Error('이미 종료된 배틀입니다.');
-      err.status = 400;
-      throw err;
-    }
-    if (!allowWaiting && room.status !== 'playing') {
-      const err = new Error('진행 중인 배틀이 아닙니다.');
-      err.status = 400;
-      throw err;
-    }
+    if (!room) { const err = new Error('방을 찾을 수 없습니다.'); err.status = 404; throw err; }
+    if (room.status === 'finished') { const err = new Error('이미 종료된 배틀입니다.'); err.status = 400; throw err; }
+    if (!allowWaiting && room.status !== 'playing') { const err = new Error('진행 중인 배틀이 아닙니다.'); err.status = 400; throw err; }
     const participant = await queryOne('SELECT * FROM battle_participants WHERE room_id = ? AND user_id = ?', [roomId, userId]);
-    if (!participant) {
-      const err = new Error('방 참가자만 사용할 수 있습니다.');
-      err.status = 403;
-      throw err;
-    }
+    if (!participant) { const err = new Error('방 참가자만 사용할 수 있습니다.'); err.status = 403; throw err; }
     return { room, participant };
   },
 
@@ -613,99 +628,64 @@ export const AlgorithmBattle = {
 
   async recordChat(roomId, userId, { message = '' } = {}) {
     const { room } = await this.requireParticipant(roomId, userId);
-    const state = await this.getRoomState(roomId);
-    const config = getRoomConfig(room, state.events || []);
-    if (!config.chatEnabled) {
-      const err = new Error('이 모드에서는 채팅을 사용할 수 없습니다.');
-      err.status = 400;
-      throw err;
-    }
+    const config = getRoomConfig(room);
+    if (!config.chatEnabled) { const err = new Error('이 모드에서는 채팅을 사용할 수 없습니다.'); err.status = 400; throw err; }
     const text = sanitizeText(message, 220);
-    if (!text) {
-      const err = new Error('메시지가 비어 있습니다.');
-      err.status = 400;
-      throw err;
-    }
+    if (!text) { const err = new Error('메시지가 비어 있습니다.'); err.status = 400; throw err; }
     const event = await this.recordEvent(roomId, userId, 'player.chat', { message: text });
     return { event, state: await this.getRoomState(roomId) };
   },
 
   async recordEmote(roomId, userId, { emote = '' } = {}) {
     const { room } = await this.requireParticipant(roomId, userId);
-    const state = await this.getRoomState(roomId);
-    const config = getRoomConfig(room, state.events || []);
-    if (!config.emotesEnabled) {
-      const err = new Error('이 모드에서는 이모트를 사용할 수 없습니다.');
-      err.status = 400;
-      throw err;
-    }
+    const config = getRoomConfig(room);
+    if (!config.emotesEnabled) { const err = new Error('이 모드에서는 이모트를 사용할 수 없습니다.'); err.status = 400; throw err; }
     const normalized = sanitizeText(emote, 20).toLowerCase();
-    if (!BATTLE_EMOTES.includes(normalized)) {
-      const err = new Error('지원하지 않는 이모트입니다.');
-      err.status = 400;
-      throw err;
-    }
+    if (!BATTLE_EMOTES.includes(normalized)) { const err = new Error('지원하지 않는 이모트입니다.'); err.status = 400; throw err; }
     const event = await this.recordEvent(roomId, userId, 'player.emote', { emote: normalized });
     return { event, state: await this.getRoomState(roomId) };
   },
 
   async useItem(roomId, userId, { itemType = '' } = {}) {
     const { room, participant } = await this.requireParticipant(roomId, userId, { allowWaiting: false });
-    const state = await this.getRoomState(roomId);
-    const config = getRoomConfig(room, state.events || []);
-    if (!config.itemsEnabled) {
-      const err = new Error('이 모드에서는 아이템을 사용할 수 없습니다.');
-      err.status = 400;
-      throw err;
-    }
+    const config = getRoomConfig(room);
+    if (!config.itemsEnabled) { const err = new Error('이 모드에서는 아이템을 사용할 수 없습니다.'); err.status = 400; throw err; }
     const item = BATTLE_ITEMS[sanitizeText(itemType, 30)];
-    if (!item) {
-      const err = new Error('지원하지 않는 아이템입니다.');
-      err.status = 400;
-      throw err;
-    }
+    if (!item) { const err = new Error('지원하지 않는 아이템입니다.'); err.status = 400; throw err; }
 
     const cooldownMs = Number(config.itemCooldownSec || 20) * 1000;
-    const recentItem = [...(state.events || [])].reverse().find((event) => event.userId === Number(userId) && event.type === 'item.used');
+    const state = await this.getRoomState(roomId);
+    const recentItem = [...(state.events || [])].reverse().find((e) => e.userId === Number(userId) && e.type === 'item.used');
     if (recentItem?.createdAt && Date.now() - new Date(recentItem.createdAt).getTime() < cooldownMs) {
-      const err = new Error('아이템 쿨다운 중입니다.');
-      err.status = 429;
-      throw err;
+      const err = new Error('아이템 쿨다운 중입니다.'); err.status = 429; throw err;
     }
 
-    const opponents = state.participants.filter((player) => player.userId !== Number(userId));
+    const opponents = state.participants.filter((p) => p.userId !== Number(userId));
     const payload = { itemType: item.key, itemLabel: item.label, targetUserIds: [], stat: null };
+
     if (item.key === 'shield') {
-      await run(
-        'UPDATE battle_participants SET character_hp = ? WHERE room_id = ? AND user_id = ?',
-        [Math.min(120, Number(participant.character_hp || 100) + 14), roomId, userId]
-      );
+      await run('UPDATE battle_participants SET character_hp = ? WHERE room_id = ? AND user_id = ?',
+        [Math.min(120, Number(participant.character_hp || 100) + 14), roomId, userId]);
       payload.targetUserIds = [Number(userId)];
       payload.stat = { hpDelta: 14 };
     } else if (item.key === 'power-up') {
-      await run(
-        'UPDATE battle_participants SET attack_power = ? WHERE room_id = ? AND user_id = ?',
-        [Math.min(80, Number(participant.attack_power || 10) + 6), roomId, userId]
-      );
+      await run('UPDATE battle_participants SET attack_power = ? WHERE room_id = ? AND user_id = ?',
+        [Math.min(80, Number(participant.attack_power || 10) + 6), roomId, userId]);
       payload.targetUserIds = [Number(userId)];
       payload.stat = { attackDelta: 6 };
     } else if (item.key === 'lag-spike') {
       for (const target of opponents) {
-        await run(
-          'UPDATE battle_participants SET speed = ? WHERE room_id = ? AND user_id = ?',
-          [Math.max(4, Number(target.speed || 10) - 5), roomId, target.userId]
-        );
+        await run('UPDATE battle_participants SET speed = ? WHERE room_id = ? AND user_id = ?',
+          [Math.max(4, Number(target.speed || 10) - 5), roomId, target.userId]);
       }
-      payload.targetUserIds = opponents.map((target) => target.userId);
+      payload.targetUserIds = opponents.map((t) => t.userId);
       payload.stat = { speedDelta: -5 };
     } else if (item.key === 'breakpoint') {
       for (const target of opponents) {
-        await run(
-          'UPDATE battle_participants SET attack_power = ? WHERE room_id = ? AND user_id = ?',
-          [Math.max(4, Number(target.attackPower || 10) - 5), roomId, target.userId]
-        );
+        await run('UPDATE battle_participants SET attack_power = ? WHERE room_id = ? AND user_id = ?',
+          [Math.max(4, Number(target.attackPower || 10) - 5), roomId, target.userId]);
       }
-      payload.targetUserIds = opponents.map((target) => target.userId);
+      payload.targetUserIds = opponents.map((t) => t.userId);
       payload.stat = { attackDelta: -5 };
     }
 
@@ -715,50 +695,34 @@ export const AlgorithmBattle = {
 
   async applyProblemEffect(roomId, userId, room) {
     const state = await this.getRoomState(roomId);
-    const config = getRoomConfig(room, state.events || []);
-    if (!config.effectsEnabled) return null;
     const problem = await getProblemById(room.problemId);
     const effect = inferProblemEffect(problem);
-    const self = state.participants.find((player) => player.userId === Number(userId));
-    const opponents = state.participants.filter((player) => player.userId !== Number(userId));
+    const self = state.participants.find((p) => p.userId === Number(userId));
+    const opponents = state.participants.filter((p) => p.userId !== Number(userId));
     if (!self) return null;
 
-    const payload = {
-      effect: effect.key,
-      effectLabel: effect.label,
-      target: effect.target,
-      targetUserIds: [],
-      description: effect.description,
-    };
+    const payload = { effect: effect.key, effectLabel: effect.label, target: effect.target, targetUserIds: [], description: effect.description };
 
     if (effect.key === 'snare') {
       for (const target of opponents) {
-        await run(
-          'UPDATE battle_participants SET speed = ? WHERE room_id = ? AND user_id = ?',
-          [Math.max(4, Number(target.speed || 10) - 4), roomId, target.userId]
-        );
+        await run('UPDATE battle_participants SET speed = ? WHERE room_id = ? AND user_id = ?',
+          [Math.max(4, Number(target.speed || 10) - 4), roomId, target.userId]);
       }
-      payload.targetUserIds = opponents.map((target) => target.userId);
+      payload.targetUserIds = opponents.map((t) => t.userId);
       payload.stat = { speedDelta: -4 };
     } else if (effect.key === 'shield') {
-      await run(
-        'UPDATE battle_participants SET character_hp = ? WHERE room_id = ? AND user_id = ?',
-        [Math.min(120, Number(self.characterHp || 100) + 12), roomId, userId]
-      );
+      await run('UPDATE battle_participants SET character_hp = ? WHERE room_id = ? AND user_id = ?',
+        [Math.min(120, Number(self.characterHp || 100) + 12), roomId, userId]);
       payload.targetUserIds = [Number(userId)];
       payload.stat = { hpDelta: 12 };
     } else if (effect.key === 'haste') {
-      await run(
-        'UPDATE battle_participants SET speed = ?, attack_power = ? WHERE room_id = ? AND user_id = ?',
-        [Math.min(80, Number(self.speed || 10) + 5), Math.min(80, Number(self.attackPower || 10) + 2), roomId, userId]
-      );
+      await run('UPDATE battle_participants SET speed = ?, attack_power = ? WHERE room_id = ? AND user_id = ?',
+        [Math.min(80, Number(self.speed || 10) + 5), Math.min(80, Number(self.attackPower || 10) + 2), roomId, userId]);
       payload.targetUserIds = [Number(userId)];
       payload.stat = { speedDelta: 5, attackDelta: 2 };
     } else {
-      await run(
-        'UPDATE battle_participants SET attack_power = ? WHERE room_id = ? AND user_id = ?',
-        [Math.min(80, Number(self.attackPower || 10) + 6), roomId, userId]
-      );
+      await run('UPDATE battle_participants SET attack_power = ? WHERE room_id = ? AND user_id = ?',
+        [Math.min(80, Number(self.attackPower || 10) + 6), roomId, userId]);
       payload.targetUserIds = [Number(userId)];
       payload.stat = { attackDelta: 6 };
     }
@@ -802,16 +766,16 @@ export const AlgorithmBattle = {
     const participants = await this.getParticipants(roomId);
     const sorted = [...participants].sort((a, b) => b.score - a.score || b.characterHp - a.characterHp);
     const topScore = sorted[0]?.score ?? 0;
-    const topCount = sorted.filter((player) => player.score === topScore).length;
-    for (let index = 0; index < sorted.length; index += 1) {
-      const player = sorted[index];
-      const result = topCount > 1 ? 'draw' : index === 0 ? 'win' : 'lose';
+    const topCount = sorted.filter((p) => p.score === topScore).length;
+    for (let i = 0; i < sorted.length; i += 1) {
+      const player = sorted[i];
+      const result = topCount > 1 ? 'draw' : i === 0 ? 'win' : 'lose';
       const delta = result === 'win' ? 25 : result === 'draw' ? 5 : -10;
       const existing = await queryOne('SELECT id FROM battle_results WHERE room_id = ? AND user_id = ?', [roomId, player.userId]);
       if (!existing) {
         await insert(
           'INSERT INTO battle_results (room_id, user_id, rank_no, score, result, battle_score_delta, created_at) VALUES (?,?,?,?,?,?,?)',
-          [roomId, player.userId, index + 1, player.score, result, delta, nowMySQL()]
+          [roomId, player.userId, i + 1, player.score, result, delta, nowMySQL()]
         );
       }
     }
@@ -820,7 +784,18 @@ export const AlgorithmBattle = {
 
   async ensureNotExpired(roomId) {
     const state = await this.getRoomState(roomId);
-    if (!state?.room || state.room.status !== 'playing' || !state.room.startedAt) return state;
+    if (!state?.room) return state;
+
+    // Lobby timeout
+    if (state.room.status === 'waiting' && state.room.lobbyExpiresAt) {
+      if (Date.now() > new Date(state.room.lobbyExpiresAt).getTime()) {
+        await run('UPDATE battle_rooms SET status = ?, ended_at = ? WHERE id = ?', ['finished', nowMySQL(), roomId]);
+        return this.getRoomState(roomId);
+      }
+    }
+
+    // Game timeout
+    if (state.room.status !== 'playing' || !state.room.startedAt) return state;
     const elapsedSec = Math.floor((Date.now() - new Date(state.room.startedAt).getTime()) / 1000);
     if (elapsedSec >= state.room.durationSec) {
       return this.finishRoom(roomId, { reason: 'timeout' });

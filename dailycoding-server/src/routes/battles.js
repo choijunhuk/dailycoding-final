@@ -129,14 +129,30 @@ router.post('/rooms', async (req, res) => {
       mode: req.body?.mode || 'sort-speed',
       problemId: req.body?.problemId || null,
       maxPlayers: req.body?.maxPlayers || 2,
-      durationSec: req.body?.durationSec || 180,
-      bannedTags: req.body?.bannedTags || [],
+      durationSec: req.body?.durationSec || null,
+      isPrivate: Boolean(req.body?.isPrivate),
+      preferredLanguage: req.body?.preferredLanguage || null,
     });
     emitBattleRoomUpdate(req.app.get('io'), state);
     res.status(201).json(state);
   } catch (err) {
     console.error('[algorithm-battles/create]', err);
     return internalError(res, err?.message || '배틀 방 생성 실패');
+  }
+});
+
+// GET /api/battles/rooms/join-by-code/:code — join private room by invite code
+router.get('/rooms/join-by-code/:code', async (req, res) => {
+  try {
+    const state = await AlgorithmBattle.joinByCode(req.params.code, req.user.id);
+    if (!state) return errorResponse(res, 404, 'NOT_FOUND', '방을 찾을 수 없습니다.');
+    emitBattleRoomUpdate(req.app.get('io'), state);
+    res.json({ state, roomId: state.room.id });
+  } catch (err) {
+    const status = err.status || 500;
+    if (status < 500) return errorResponse(res, status, 'VALIDATION_ERROR', err.message);
+    console.error('[algorithm-battles/join-by-code]', err);
+    return internalError(res);
   }
 });
 
@@ -249,7 +265,7 @@ router.post('/rooms/:roomId/ready', async (req, res) => {
 
 router.post('/rooms/:roomId/submit', async (req, res) => {
   try {
-    const { code, language } = req.body || {};
+    const { code, language, problemId } = req.body || {};
     if (!code || !language) return errorResponse(res, 400, 'VALIDATION_ERROR', 'code, language 필요');
     if (String(code).length > 100_000) return errorResponse(res, 400, 'VALIDATION_ERROR', '코드가 너무 큽니다. (최대 100KB)');
 
@@ -259,7 +275,10 @@ router.post('/rooms/:roomId/submit', async (req, res) => {
     if (!stateBefore.participants.some((player) => player.userId === req.user.id)) {
       return errorResponse(res, 403, 'FORBIDDEN', '방 참가자만 제출할 수 있습니다.');
     }
-    const prob = await getProblemModel().then((Problem) => Problem.findById(stateBefore.room.problemId));
+    const effectiveProblemId = (stateBefore.room.mode === 'territory' && problemId)
+      ? Number(problemId)
+      : stateBefore.room.problemId;
+    const prob = await getProblemModel().then((Problem) => Problem.findById(effectiveProblemId));
     if (!prob) return errorResponse(res, 404, 'NOT_FOUND', '배틀 문제를 찾을 수 없습니다.');
 
     const judgeRuntime = await getCachedJudgeRuntime({ logOnRefresh: true });
@@ -293,6 +312,7 @@ router.post('/rooms/:roomId/submit', async (req, res) => {
         memoryMb,
         detail: execution.detail,
       },
+      problemId: problemId ? Number(problemId) : null,
     });
 
     const io = req.app.get('io');
