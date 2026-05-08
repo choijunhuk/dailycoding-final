@@ -2,7 +2,7 @@
 .ab-room-page {
   width: 100%;
   min-height: calc(100vh - 54px);
-  padding: 28px;
+  padding: clamp(18px, 2vw, 30px);
   background: var(--bg);
   color: var(--text);
 }
@@ -12,8 +12,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 18px;
+  gap: clamp(12px, 1.5vw, 18px);
+  margin-bottom: clamp(14px, 1.5vw, 20px);
 }
 
 .ab-header h1 {
@@ -32,8 +32,8 @@
 
 .ab-mode-strip {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: clamp(10px, 1.2vw, 14px);
   margin-bottom: 18px;
 }
 
@@ -121,7 +121,7 @@
 .ab-room-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .ab-section-title {
@@ -159,9 +159,10 @@
 
 .ab-room-grid {
   display: grid;
-  grid-template-columns: 260px minmax(0, 1fr) 300px;
-  gap: 14px;
-  min-height: calc(100vh - 150px);
+  grid-template-columns: clamp(230px, 18vw, 286px) minmax(520px, 1fr) clamp(312px, 23vw, 380px);
+  gap: clamp(12px, 1.35vw, 20px);
+  min-height: calc(100vh - 126px);
+  align-items: start;
 }
 
 .ab-left,
@@ -170,17 +171,23 @@
   min-width: 0;
 }
 
+.ab-left,
+.ab-right {
+  display: flex;
+  flex-direction: column;
+}
+
 .ab-player-list,
 .ab-rank-list,
 .ab-combat-log,
 .ab-chat-feed {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 7px;
 }
 
 .ab-player-card {
-  padding: 12px;
+  padding: clamp(11px, 1vw, 14px);
   transition: transform .2s ease, border-color .2s ease;
 }
 
@@ -288,19 +295,20 @@
   background: var(--bg2);
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 16px;
+  padding: clamp(14px, 1.4vw, 20px);
   margin-bottom: 10px;
 }
 
 .ab-problem h2 {
   margin: 0 0 8px;
-  font-size: 18px;
+  font-size: clamp(18px, 1.35vw, 22px);
 }
 
 .ab-problem p {
+  margin: 0;
   color: var(--text2);
   font-size: 13px;
-  line-height: 1.7;
+  line-height: 1.6;
   white-space: pre-line;
 }
 
@@ -308,7 +316,7 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
-  margin-top: 12px;
+  margin-top: 10px;
 }
 
 .ab-example pre {
@@ -323,7 +331,7 @@
 }
 
 .ab-editor-toolbar {
-  height: 44px;
+  min-height: 42px;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -349,23 +357,23 @@
 }
 
 .ab-editor {
-  height: 460px;
+  height: clamp(440px, calc(100vh - 390px), 680px);
   overflow: hidden;
   border: 1px solid var(--border);
   border-radius: 0 0 8px 8px;
 }
 
 .ab-submit-card {
-  padding: 12px;
-  margin-bottom: 14px;
+  padding: 11px 12px;
+  margin-bottom: 12px;
 }
 
 .ab-tactics,
 .ab-social {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-bottom: 14px;
+  gap: 9px;
+  margin-bottom: 12px;
 }
 
 .ab-item-grid {
@@ -435,13 +443,15 @@
 }
 
 .ab-combat-log {
-  max-height: 260px;
-  margin-bottom: 14px;
+  min-height: 118px;
+  max-height: clamp(210px, 24vh, 310px);
+  margin-bottom: 12px;
 }
 
 .ab-chat-feed {
-  max-height: 220px;
-  padding: 10px;
+  min-height: 126px;
+  max-height: clamp(180px, 22vh, 280px);
+  padding: 9px;
   background: var(--bg2);
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -470,8 +480,8 @@
 }
 
 .ab-result {
-  margin-top: 16px;
-  padding: 16px;
+  margin-top: 12px;
+  padding: 14px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -501,15 +511,15 @@
   background: var(--bg2);
   border: 1px solid var(--border);
   border-radius: 10px;
-  padding: 20px;
-  margin-bottom: 20px;
+  padding: clamp(16px, 1.8vw, 22px);
+  margin-bottom: 16px;
 }
 
 .ab-create-options {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
-  margin: 16px 0;
+  gap: 14px;
+  margin: 14px 0;
 }
 
 .ab-option-group {
@@ -588,7 +598,7 @@
 
 /* ── 초대 코드 입장 ─────────────────────────────────────────────── */
 .ab-join-code-section {
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .ab-join-code-row {
@@ -724,7 +734,7 @@
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  padding: 10px 11px;
+  padding: 9px 10px;
   border-radius: 7px;
   background: color-mix(in srgb, var(--bg2) 82%, var(--red) 18%);
   border: 1px solid var(--border);
@@ -750,6 +760,10 @@
 }
 
 .ab-log-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 72px;
   padding: 12px;
   border: 1px dashed var(--border);
   border-radius: 8px;
@@ -762,7 +776,7 @@
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  padding: 7px 8px;
+  padding: 6px 8px;
   border-radius: 7px;
   color: var(--text2);
   font-size: 12px;
@@ -788,8 +802,18 @@
   color: var(--blue);
 }
 
-@media (max-width: 980px) {
-  .ab-mode-strip,
+@media (max-width: 1180px) {
+  .ab-room-grid {
+    grid-template-columns: 220px minmax(420px, 1fr) 300px;
+    gap: 12px;
+  }
+
+  .ab-editor {
+    height: clamp(400px, calc(100vh - 380px), 600px);
+  }
+}
+
+@media (max-width: 1040px) {
   .ab-room-grid {
     grid-template-columns: 1fr;
   }
