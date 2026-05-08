@@ -243,7 +243,12 @@ test('judgeCodeNative handles runtime error', async () => {
   assert.match(result.detail, /ZeroDivisionError/);
 });
 
-test('judgeCodeNative handles compilation error for C++', async () => {
+test('judgeCodeNative handles compilation error for C++', async (t) => {
+  if (!commandAvailable('g++')) {
+    t.skip('g++ is not installed in this native test environment');
+    return;
+  }
+
   const result = await judgeCodeNative({
     lang: 'cpp',
     code: 'int main() { return 0 }', // Missing semicolon
@@ -257,7 +262,12 @@ test('judgeCodeNative handles compilation error for C++', async () => {
   assert.match(result.detail, /error/);
 });
 
-test('judgeCodeNative compiles advertised C++17 syntax', async () => {
+test('judgeCodeNative compiles advertised C++17 syntax', async (t) => {
+  if (!commandAvailable('g++')) {
+    t.skip('g++ is not installed in this native test environment');
+    return;
+  }
+
   const result = await judgeCodeNative({
     lang: 'cpp',
     code: '#include <bits/stdc++.h>\nusing namespace std;\nint main(){ optional<int> x = 3; cout << *x << "\\n"; }',

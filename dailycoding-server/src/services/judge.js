@@ -688,7 +688,10 @@ function execShell(cmd, stdin, timeoutMs, vmKb = 131072) {
     proc.stderr.on('data', (d) => {
       if (stderr.length < OUTPUT_LIMIT) stderr += d;
     });
-    proc.stdin.write(stdin || '');
+    proc.stdin.on('error', () => {
+      // Fast-failing commands can close stdin before the write lands.
+    });
+    if (stdin) proc.stdin.write(stdin);
     proc.stdin.end();
 
     proc.on('close', (code) => {
