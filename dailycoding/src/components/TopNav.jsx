@@ -88,6 +88,7 @@ export default function TopNav() {
   const [showUser,     setShowUser]     = useState(false);
   const [showMobile,   setShowMobile]   = useState(false);
   const [hoveredGroup, setHoveredGroup] = useState(null);
+  const hoverCloseTimerRef = useRef(null);
   const { lang, toggleLang, t } = useLang();
   
   useEffect(() => {
@@ -123,6 +124,24 @@ export default function TopNav() {
     onScroll();
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
+
+  useEffect(() => () => {
+    if (hoverCloseTimerRef.current) clearTimeout(hoverCloseTimerRef.current);
+  }, []);
+
+  const openNavGroup = (key) => {
+    if (hoverCloseTimerRef.current) clearTimeout(hoverCloseTimerRef.current);
+    hoverCloseTimerRef.current = null;
+    setHoveredGroup(key);
+  };
+
+  const scheduleNavGroupClose = () => {
+    if (hoverCloseTimerRef.current) clearTimeout(hoverCloseTimerRef.current);
+    hoverCloseTimerRef.current = setTimeout(() => {
+      setHoveredGroup(null);
+      hoverCloseTimerRef.current = null;
+    }, 420);
+  };
 
   const go = (path) => { navigate(path); setShowNotif(false); setShowUser(false); setShowMobile(false); };
   const tc = TIER_COLOR[user?.tier] || '#888';
@@ -197,8 +216,10 @@ export default function TopNav() {
 
             return (
               <div key={group.key} style={{ position:'relative' }}
-                onMouseEnter={() => setHoveredGroup(group.key)}
-                onMouseLeave={() => setHoveredGroup(null)}
+                onMouseEnter={() => openNavGroup(group.key)}
+                onMouseLeave={scheduleNavGroupClose}
+                onFocus={() => openNavGroup(group.key)}
+                onBlur={scheduleNavGroupClose}
               >
                 <button style={btnStyle}>
                   <Icon size={15} strokeWidth={2.1} />{t(group.labelKey)}
@@ -206,31 +227,38 @@ export default function TopNav() {
                 </button>
                 {hoveredGroup === group.key && (
                   <div style={{
-                    position:'absolute', top:'calc(100% + 4px)', left:0,
-                    minWidth:140, background:'var(--bg2)',
-                    border:'1px solid var(--border)', borderRadius:10,
-                    boxShadow:'0 8px 24px rgba(0,0,0,.35)', overflow:'hidden', zIndex:200,
-                  }}>
-                    {group.items.map(item => {
-                      const itemActive = currentPath === item.path || currentPath.startsWith(item.path + '/');
-                      return (
-                        <button key={item.path} onClick={() => go(item.path)} style={{
-                          width:'100%', padding:'9px 14px', border:'none',
-                          background: itemActive ? 'var(--bg3)' : 'transparent',
-                          color: itemActive ? 'var(--text)' : 'var(--text2)',
-                          fontWeight: itemActive ? 700 : 500,
-                          cursor:'pointer', fontSize:13, fontFamily:'inherit',
-                          textAlign:'left', display:'flex', alignItems:'center', gap:8,
-                          transition:'background .1s',
-                          borderLeft: itemActive ? '2px solid var(--accent)' : '2px solid transparent',
-                        }}
-                          onMouseEnter={e=>{ if(!itemActive){ e.currentTarget.style.background='var(--bg3)'; e.currentTarget.style.color='var(--text)'; }}}
-                          onMouseLeave={e=>{ if(!itemActive){ e.currentTarget.style.background='transparent'; e.currentTarget.style.color='var(--text2)'; }}}
-                        >
-                          <item.Icon size={14} strokeWidth={2} />{t(item.labelKey)}
-                        </button>
-                      );
-                    })}
+                    position:'absolute', top:'calc(100% - 10px)', left:-14,
+                    minWidth:178, padding:'14px 14px 0', zIndex:200,
+                  }}
+                    onMouseEnter={() => openNavGroup(group.key)}
+                    onMouseLeave={scheduleNavGroupClose}
+                  >
+                    <div style={{
+                      background:'var(--bg2)',
+                      border:'1px solid var(--border)', borderRadius:10,
+                      boxShadow:'0 8px 24px rgba(0,0,0,.35)', overflow:'hidden',
+                    }}>
+                      {group.items.map(item => {
+                        const itemActive = currentPath === item.path || currentPath.startsWith(item.path + '/');
+                        return (
+                          <button key={item.path} onClick={() => go(item.path)} style={{
+                            width:'100%', padding:'9px 14px', border:'none',
+                            background: itemActive ? 'var(--bg3)' : 'transparent',
+                            color: itemActive ? 'var(--text)' : 'var(--text2)',
+                            fontWeight: itemActive ? 700 : 500,
+                            cursor:'pointer', fontSize:13, fontFamily:'inherit',
+                            textAlign:'left', display:'flex', alignItems:'center', gap:8,
+                            transition:'background .1s',
+                            borderLeft: itemActive ? '2px solid var(--accent)' : '2px solid transparent',
+                          }}
+                            onMouseEnter={e=>{ if(!itemActive){ e.currentTarget.style.background='var(--bg3)'; e.currentTarget.style.color='var(--text)'; }}}
+                            onMouseLeave={e=>{ if(!itemActive){ e.currentTarget.style.background='transparent'; e.currentTarget.style.color='var(--text2)'; }}}
+                          >
+                            <item.Icon size={14} strokeWidth={2} />{t(item.labelKey)}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
               </div>

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, LogOut, Pencil, RefreshCw, ShieldCheck, ShieldOff, Trash2, UserPlus, Users, X } from 'lucide-react';
+import { Check, Copy, Link as LinkIcon, LogOut, Pencil, RefreshCw, ShieldCheck, ShieldOff, Trash2, UserPlus, Users, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import api from '../api';
 import { useToast } from '../context/ToastContext';
@@ -32,6 +32,9 @@ export default function TeamDashboard() {
   const [busy, setBusy] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [newName, setNewName] = useState('');
+  const [inviteLink, setInviteLink] = useState('');
+  const [inviteExpiresAt, setInviteExpiresAt] = useState(null);
+  const [inviteCopied, setInviteCopied] = useState(false);
   const nameInputRef = useRef(null);
 
   const members = team?.members || [];
@@ -77,12 +80,27 @@ export default function TeamDashboard() {
     try {
       const { data } = await api.post('/teams/invite');
       const link = `${window.location.origin}/join/team/${data.token}`;
+      setInviteLink(link);
+      setInviteExpiresAt(data.expiresAt || null);
+      setInviteCopied(false);
       await navigator.clipboard.writeText(link);
+      setInviteCopied(true);
       toast.show(t('teamInviteCopied'), 'success');
     } catch (err) {
       toast.show(err.response?.data?.message || t('teamInviteFailed'), 'error');
     } finally {
       setBusy(false);
+    }
+  };
+
+  const copyInviteLink = async () => {
+    if (!inviteLink) return;
+    try {
+      await navigator.clipboard.writeText(inviteLink);
+      setInviteCopied(true);
+      toast.show(t('copied'), 'success');
+    } catch {
+      toast.show(t('copyFailed'), 'error');
     }
   };
 
@@ -243,6 +261,59 @@ export default function TeamDashboard() {
           )}
         </div>
       </div>
+
+      {isTeamAdmin && (
+        <div style={{
+          background:'linear-gradient(135deg, rgba(121,192,255,.10), rgba(63,185,80,.06))',
+          border:'1px solid rgba(121,192,255,.22)',
+          borderRadius:14,
+          padding:18,
+          display:'grid',
+          gap:14,
+          marginBottom:22,
+        }}>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, flexWrap:'wrap' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+              <div style={{ width:38, height:38, borderRadius:10, background:'rgba(121,192,255,.14)', color:'var(--blue)', display:'grid', placeItems:'center' }}>
+                <UserPlus size={18} />
+              </div>
+              <div>
+                <div style={{ fontWeight:900 }}>멤버 초대하기</div>
+                <div style={{ color:'var(--text2)', fontSize:12, marginTop:2 }}>초대 링크를 보내면 상대방이 로그인 후 바로 소속에 합류합니다.</div>
+              </div>
+            </div>
+            <button className="btn btn-primary btn-sm" onClick={generateInviteLink} disabled={busy}>
+              <LinkIcon size={14} /> 새 초대 링크 만들기
+            </button>
+          </div>
+
+          {inviteLink && (
+            <div style={{ display:'grid', gridTemplateColumns:'minmax(0, 1fr) auto', gap:8, alignItems:'center' }}>
+              <div style={{
+                minWidth:0,
+                border:'1px solid var(--border)',
+                background:'var(--bg)',
+                borderRadius:10,
+                padding:'10px 12px',
+                color:'var(--text2)',
+                fontSize:12,
+                overflow:'hidden',
+                textOverflow:'ellipsis',
+                whiteSpace:'nowrap',
+                fontFamily:'Space Mono, monospace',
+              }}>
+                {inviteLink}
+              </div>
+              <button className="btn btn-ghost btn-sm" onClick={copyInviteLink} disabled={busy}>
+                <Copy size={13} /> {inviteCopied ? '복사됨' : '복사'}
+              </button>
+              <div style={{ gridColumn:'1 / -1', color:'var(--text3)', fontSize:11 }}>
+                {inviteExpiresAt ? `${fmtDate(inviteExpiresAt)}까지 유효합니다.` : '초대 링크는 7일간 유효합니다.'}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(150px, 1fr))', gap:12, marginBottom:22 }}>
         <StatCard label="멤버" value={team.stats?.memberCount ?? members.length} caption={`${team.stats?.activeMembers ?? 0}명 최근 활동`} />

@@ -113,6 +113,24 @@ test('judgeCodeNative handles correct answer with multiple test cases', async ()
   assert.match(result.time, /ms$/);
 });
 
+test('judgeCodeNative runs Python standard library imports with stdin', async () => {
+  const result = await judgeCodeNative({
+    lang: 'python',
+    code: [
+      'import json',
+      'import sys',
+      'data = list(map(int, sys.stdin.read().split()))',
+      'print(json.dumps({"sum": sum(data), "count": len(data)}, sort_keys=True))',
+    ].join('\n'),
+    examples: [
+      { input: '1 2 3 4\n', output: '{"count": 4, "sum": 10}' },
+    ],
+    timeLimit: 1,
+  });
+
+  assert.equal(result.result, 'correct', result.detail);
+});
+
 test('judgeCodeNative handles wrong answer', async () => {
   const result = await judgeCodeNative({
     lang: 'python',

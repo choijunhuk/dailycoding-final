@@ -49,10 +49,11 @@ router.post('/invite', auth, async (req, res) => {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7); // 7일 뒤 만료
 
-    await Team.createInvite(team.id, token, expiresAt.toISOString().slice(0, 19).replace('T', ' '));
-    res.json({ token });
+    const expiresAtSql = expiresAt.toISOString().slice(0, 19).replace('T', ' ');
+    await Team.createInvite(team.id, token, expiresAtSql);
+    res.json({ token, expiresAt: expiresAt.toISOString() });
   } catch (err) {
-    res.status(500).json({ message: '초대 링크 생성 실패' });
+    sendError(res, err, '초대 링크 생성 실패');
   }
 });
 

@@ -330,6 +330,10 @@ async function runInContainer({ image, cmd, binds, timeoutMs, memoryLimit = 128 
       Image:       image,
       Cmd:         cmd,
       WorkingDir:  '/code',
+      Env: [
+        'PYTHONDONTWRITEBYTECODE=1',
+        'PYTHONUNBUFFERED=1',
+      ],
       AttachStdin: false,
       AttachStdout: true,
       AttachStderr: true,
@@ -623,9 +627,9 @@ export async function isDockerAvailable() {
 // Dockerfile에서 python3, gcc, g++, openjdk21 설치 필요
 
 // vmKb: OS-level virtual memory cap (ulimit -v, in KB)
-// Java JVM needs 512MB+ for bootstrap; Node needs 256MB; C/C++/Python are fine at 128MB
+// Java JVM needs 512MB+ for bootstrap; Node/Python need 256MB for reliable startup and stdlib imports.
 const NATIVE_LANG = {
-  python:     { file: 'main.py',   vmKb: 131072,  run: (d) => `python3 "${d}/main.py"`,                        compile: null },
+  python:     { file: 'main.py',   vmKb: 262144,  run: (d) => `python3 "${d}/main.py"`,                        compile: null },
   javascript: { file: 'main.js',   vmKb: 262144,  run: (d) => `node --max-old-space-size=64 "${d}/main.js"`,   compile: null },
   cpp:        { file: 'main.cpp',  vmKb: 131072,  run: (d) => `"${d}/main"`,                                   compile: (d) => `g++ -std=c++17 -O2 -o "${d}/main" "${d}/main.cpp"` },
   c:          { file: 'main.c',    vmKb: 131072,  run: (d) => `"${d}/main"`,                                   compile: (d) => `gcc -std=c99 -O2 -o "${d}/main" "${d}/main.c"` },
@@ -637,7 +641,11 @@ function execShell(cmd, stdin, timeoutMs, vmKb = 131072) {
     // ulimit: virtual memory (per-lang), CPU 10s hard, max 64 processes
     const safe = `ulimit -v ${vmKb} -t 10 -u 64 2>/dev/null; ${cmd}`;
     const proc = spawn('sh', ['-c', safe], {
-      env:   { PATH: '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin' },
+      env:   {
+        PATH: '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
+        PYTHONDONTWRITEBYTECODE: '1',
+        PYTHONUNBUFFERED: '1',
+      },
       stdio: ['pipe', 'pipe', 'pipe'],
     });
 
