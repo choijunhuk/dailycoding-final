@@ -94,7 +94,7 @@ export async function findOrCreateOAuthUser({ provider, oauthId, email, username
   for (let index = 0; index < 5; index += 1) {
     const exists = await queryOne('SELECT 1 FROM users WHERE username=?', [finalUsername]);
     if (!exists) break;
-    finalUsername = `${finalUsername.slice(0, 24)}_${Math.random().toString(36).slice(2, 6)}`;
+    finalUsername = `${finalUsername.slice(0, 24)}_${crypto.randomBytes(3).toString('hex')}`;
   }
 
   const today = new Date().toISOString().slice(0, 10);

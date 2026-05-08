@@ -63,6 +63,23 @@ test('bug-fix problems require at least one keyword and buggy code', () => {
   });
 });
 
+test('troubleshooting family problem types do not require coding testcases', () => {
+  for (const problemType of ['troubleshooting', 'performance-fix', 'refactor-fix']) {
+    const result = normalizeProblemMutationPayload({
+      problemType,
+      title: 'Slow API scenario',
+      desc: '서버 응답 시간을 개선하세요.',
+      testcases: [],
+      specialConfig: { unexpected: true },
+    });
+
+    assert.equal(result.error, undefined);
+    assert.equal(result.payload.problemType, problemType);
+    assert.equal(result.payload.specialConfig, null);
+    assert.deepEqual(result.payload.testcases, []);
+  }
+});
+
 test('public problem payload hides solution and hidden testcases', () => {
   const safe = sanitizeProblemForClient({
     id: 1001,

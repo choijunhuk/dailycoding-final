@@ -10,6 +10,7 @@ import { executeSubmissionFlow } from '../services/submissionExecution.js';
 import { completeMission } from '../services/missionService.js';
 import { recordPromotionLoss } from '../services/promotionService.js';
 import { evaluateBugFixAnswer, evaluateFillBlankAnswer } from '../services/battleAnswerEvaluation.js';
+import redis from '../config/redis.js';
 
 const router = Router();
 router.use(auth);
@@ -548,6 +549,7 @@ router.post('/room/:roomId/submit', async (req, res) => {
       if (updatedRoom?.status === 'ended') {
         await rewardBattleWinnerMissions(updatedRoom);
         await applyBattlePromotionLosses(updatedRoom);
+        await Promise.all([redis.del('ranking:battle'), redis.del('ranking:overall')]);
         const { winnerTeamId, loserTeamId, teamScores } = resolveWinner(updatedRoom.players, updatedRoom.teams);
         io.to(`battle:${req.params.roomId}`).emit('battle:ended', {
           winnerTeamId, loserTeamId, teamScores, players: updatedRoom.players,
@@ -625,6 +627,7 @@ router.post('/room/:roomId/code-judge', async (req, res) => {
       if (updatedRoom?.status === 'ended') {
         await rewardBattleWinnerMissions(updatedRoom);
         await applyBattlePromotionLosses(updatedRoom);
+        await Promise.all([redis.del('ranking:battle'), redis.del('ranking:overall')]);
         const { winnerTeamId, loserTeamId, teamScores } = resolveWinner(updatedRoom.players, updatedRoom.teams);
         io.to(`battle:${req.params.roomId}`).emit('battle:ended', {
           winnerTeamId, loserTeamId, teamScores, players: updatedRoom.players,
@@ -651,6 +654,7 @@ router.post('/room/:roomId/end', async (req, res) => {
     if (ended?.status === 'ended') {
       await rewardBattleWinnerMissions(ended);
       await applyBattlePromotionLosses(ended);
+      await Promise.all([redis.del('ranking:battle'), redis.del('ranking:overall')]);
     }
 
     // Notify all players the battle has ended (timer expiry)

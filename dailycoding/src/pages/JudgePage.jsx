@@ -67,10 +67,10 @@ const JudgeTimer = forwardRef(({ onReset }, ref) => {
   return (
     <div style={{display:'flex',alignItems:'center',gap:6,marginLeft:8,padding:'3px 10px',borderRadius:6,background:timerOn?'rgba(121,192,255,.08)':'var(--bg3)',border:'1px solid var(--border)'}}>
       <span className="mono" style={{fontSize:13,fontWeight:700,color:timerOn?'var(--blue)':'var(--text3)',minWidth:42}}>{fmtTimer(timerSec)}</span>
-      <button onClick={()=>setTimerOn(p=>!p)} style={{background:'none',border:'none',cursor:'pointer',fontSize:12,color:timerOn?'var(--red)':'var(--green)',fontWeight:700}}>
+      <button aria-label={timerOn ? '타이머 일시정지' : '타이머 시작'} onClick={()=>setTimerOn(p=>!p)} style={{background:'none',border:'none',cursor:'pointer',fontSize:12,color:timerOn?'var(--red)':'var(--green)',fontWeight:700}}>
         {timerOn?'⏸':'▶'}
       </button>
-      <button onClick={()=>{setTimerOn(false);setTimerSec(0); if(onReset) onReset();}} style={{background:'none',border:'none',cursor:'pointer',fontSize:11,color:'var(--text3)'}}>↺</button>
+      <button aria-label="타이머 초기화" onClick={()=>{setTimerOn(false);setTimerSec(0); if(onReset) onReset();}} style={{background:'none',border:'none',cursor:'pointer',fontSize:11,color:'var(--text3)'}}>↺</button>
     </div>
   );
 });
@@ -124,7 +124,6 @@ export default function JudgePage() {
   const [result,      setResult]      = useState(null);
   const [testResults, setTestResults] = useState([]);
   const [isJudging,   setIsJudging]   = useState(false);
-  const [,            setSimilar]     = useState([]);
   const [customInput, setCustomInput] = useState('');
   const [aiReview,    setAiReview]    = useState(null);
   const [reviewLoading,setReviewLoading]=useState(false);
@@ -146,7 +145,6 @@ export default function JudgePage() {
   // ★ 코드 템플릿
   const [showTpl,     setShowTpl]     = useState(false);
   // ★ 힌트
-  const [,            setShowHint]    = useState(false);
   const [judgeStatus,  setJudgeStatus]  = useState(null);
   const [judgeStatusError, setJudgeStatusError] = useState('');
   const [fillBlankAnswers, setFillBlankAnswers] = useState([])
@@ -159,7 +157,6 @@ export default function JudgePage() {
   const [isSavingNote, setIsSavingNote] = useState(false);
   const [wrongNote, setWrongNote] = useState('');
   const [editorial, setEditorial] = useState(null)
-  const [timerOn, setTimerOn] = useState(false); // eslint-disable-line no-unused-vars
   const availableLangOptions = getJudgeLanguageOptionsForSupported(judgeStatus?.supportedLanguages);
   const editorSettings = user?.settings?.editor || {};
 
@@ -167,7 +164,11 @@ export default function JudgePage() {
     try {
       const res = await api.get('/notes/' + probId);
       setProblemNote(res.data.content || '');
-    } catch (err) { console.error('Note load failed'); }
+    } catch (err) {
+      if (err.response?.status !== 404) {
+        toast?.show('풀이 노트를 불러오지 못했습니다.', 'error');
+      }
+    }
   };
 
   const saveNote = async () => {
@@ -222,8 +223,9 @@ export default function JudgePage() {
 
   useEffect(() => {
     if (problem?.id) {
-      api.get('/problems/'+problem.id+'/similar').then(r => setSimilar(r.data || [])).catch(() => {});
-      api.get('/problems/'+problem.id+'/comments').then(r => setComments(r.data)).catch(() => {});
+      api.get('/problems/'+problem.id+'/comments').then(r => setComments(r.data)).catch(() => {
+        toast?.show('댓글을 불러오지 못했습니다.', 'error');
+      });
     }
   }, [problem?.id]);
 
@@ -277,10 +279,8 @@ export default function JudgePage() {
   useEffect(() => {
     if (code && problem?.id) {
       const key = getDraftStorageKey(problem.id, lang);
-      const legacyKey = getLegacyDraftStorageKey(problem.id, lang);
       const t = setTimeout(() => {
         localStorage.setItem(key, code);
-        localStorage.setItem(legacyKey, code);
       }, 800);
       return () => clearTimeout(t);
     }
@@ -288,7 +288,7 @@ export default function JudgePage() {
 
   // 문제 변경 시 타이머 리셋 + 노트 로드
   useEffect(() => {
-    timerComponentRef.current?.reset(); setShowEditorial(false); setShowHint(false);
+    timerComponentRef.current?.reset(); setShowEditorial(false);
     setResult(null); setTestResults([]); setAiReview(null);
     setVoteSubmitted(false); setMyVote(0); setDiffVote(null);
     setSolutions([]); setWrongNote('');
@@ -327,7 +327,9 @@ export default function JudgePage() {
 
   useEffect(() => {
     if (availableLangOptions.length > 0 && !availableLangOptions.some(o => o.value === lang)) {
-      setLang(availableLangOptions[0]?.value || 'python');
+      const fallback = availableLangOptions[0]?.value || 'python';
+      setLang(fallback);
+      toast?.show(`선택한 언어를 지원하지 않아 ${fallback}으로 변경되었습니다.`, 'warning');
     }
   }, [availableLangOptions, lang]);
 
@@ -583,7 +585,6 @@ export default function JudgePage() {
 
     setIsJudging(true);
     setTestResults([]);
-    setTimerOn(false);
     setLeftTab('submissions');
     setResult({
       status: 'judging',
@@ -683,7 +684,6 @@ export default function JudgePage() {
     const submitLang = getEffectiveJudgeLanguage(code, lang, judgeStatus?.supportedLanguages);
     applyDetectedLanguage(submitLang, '제출');
     setIsJudging(true); setTestResults([]); setResult({ status: 'judging' });
-    setTimerOn(false);
     try {
       const sub = await addSubmission({
         problemId: problem.id, problemTitle: problem.title,

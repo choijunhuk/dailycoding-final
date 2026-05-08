@@ -14,17 +14,27 @@ function rankRows(rows, scoreKey = 'score') {
     .map((row, index) => ({ ...row, rank: index + 1 }));
 }
 
-async function hydrateUserSummary(userId) {
-  const user = await queryOne('SELECT * FROM users WHERE id = ?', [Number(userId)]);
-  if (!user || user.role === 'admin' || user.banned_at) return null;
-  return {
-    id: user.id,
-    username: user.username,
-    tier: user.tier,
-    rating: Number(user.rating || 0),
-    solved_count: Number(user.solved_count || 0),
-    avatarUrl: user.avatar_url,
-  };
+async function hydrateUsersBatch(userIds) {
+  if (!userIds.length) return new Map();
+  const ids = [...new Set(userIds.map(Number))];
+  const placeholders = ids.map(() => '?').join(',');
+  const rows = await query(
+    `SELECT id, username, tier, rating, solved_count, avatar_url, role, banned_at FROM users WHERE id IN (${placeholders})`,
+    ids
+  );
+  const map = new Map();
+  for (const user of rows || []) {
+    if (user.role === 'admin' || user.banned_at) continue;
+    map.set(Number(user.id), {
+      id: user.id,
+      username: user.username,
+      tier: user.tier,
+      rating: Number(user.rating || 0),
+      solved_count: Number(user.solved_count || 0),
+      avatarUrl: user.avatar_url,
+    });
+  }
+  return map;
 }
 
 router.get('/season', auth, async (req, res) => {
@@ -63,7 +73,11 @@ router.get('/season', auth, async (req, res) => {
 
 router.get('/battle', auth, async (req, res) => {
   try {
-    const rows = await query('SELECT * FROM battle_results ORDER BY created_at DESC LIMIT 1000');
+    const cacheKey = 'ranking:battle';
+    const cached = await redis.getJSON(cacheKey);
+    if (cached) return res.json(cached);
+
+    const rows = await query('SELECT user_id, result, battle_score_delta, score FROM battle_results ORDER BY created_at DESC LIMIT 1000');
     const byUser = new Map();
     for (const row of rows || []) {
       const userId = Number(row.user_id);
@@ -74,9 +88,10 @@ router.get('/battle', auth, async (req, res) => {
       prev.score += Number(row.battle_score_delta ?? row.score ?? 0);
       byUser.set(userId, prev);
     }
+    const userMap = await hydrateUsersBatch([...byUser.keys()]);
     const items = [];
     for (const row of byUser.values()) {
-      const user = await hydrateUserSummary(row.userId);
+      const user = userMap.get(row.userId);
       if (!user) continue;
       items.push({
         ...user,
@@ -87,7 +102,9 @@ router.get('/battle', auth, async (req, res) => {
         winRate: row.battles > 0 ? Math.round((row.wins / row.battles) * 100) : 0,
       });
     }
-    res.json({ items: rankRows(items), total: items.length });
+    const payload = { items: rankRows(items), total: items.length };
+    await redis.setJSON(cacheKey, payload, RANKING_CACHE_TTL);
+    res.json(payload);
   } catch (err) {
     console.error('[ranking/battle]', err);
     res.status(500).json({ message: '배틀 랭킹을 불러오지 못했습니다.' });
@@ -96,10 +113,15 @@ router.get('/battle', auth, async (req, res) => {
 
 router.get('/collaboration', auth, async (req, res) => {
   try {
-    const rows = await query('SELECT * FROM collaboration_scores ORDER BY updated_at DESC LIMIT 1000');
+    const cacheKey = 'ranking:collaboration';
+    const cached = await redis.getJSON(cacheKey);
+    if (cached) return res.json(cached);
+
+    const rows = await query('SELECT user_id, review_score, suggestion_score, accepted_count, total_count FROM collaboration_scores ORDER BY updated_at DESC LIMIT 1000');
+    const userMap = await hydrateUsersBatch((rows || []).map(r => r.user_id));
     const items = [];
     for (const row of rows || []) {
-      const user = await hydrateUserSummary(row.user_id);
+      const user = userMap.get(Number(row.user_id));
       if (!user) continue;
       const reviewScore = Number(row.review_score || 0);
       const suggestionScore = Number(row.suggestion_score || 0);
@@ -112,7 +134,9 @@ router.get('/collaboration', auth, async (req, res) => {
         score: reviewScore + suggestionScore,
       });
     }
-    res.json({ items: rankRows(items), total: items.length });
+    const payload = { items: rankRows(items), total: items.length };
+    await redis.setJSON(cacheKey, payload, RANKING_CACHE_TTL);
+    res.json(payload);
   } catch (err) {
     console.error('[ranking/collaboration]', err);
     res.status(500).json({ message: '협업 랭킹을 불러오지 못했습니다.' });
@@ -121,9 +145,13 @@ router.get('/collaboration', auth, async (req, res) => {
 
 router.get('/overall', auth, async (req, res) => {
   try {
-    const users = await query('SELECT * FROM users WHERE role != ? ORDER BY rating DESC LIMIT 200', ['admin']);
-    const battleRows = await query('SELECT * FROM battle_results ORDER BY created_at DESC LIMIT 2000');
-    const collaborationRows = await query('SELECT * FROM collaboration_scores ORDER BY updated_at DESC LIMIT 2000');
+    const cacheKey = 'ranking:overall';
+    const cached = await redis.getJSON(cacheKey);
+    if (cached) return res.json(cached);
+
+    const users = await query('SELECT id, username, tier, rating, solved_count, banned_at FROM users WHERE role != ? ORDER BY rating DESC LIMIT 200', ['admin']);
+    const battleRows = await query('SELECT user_id, battle_score_delta, score FROM battle_results ORDER BY created_at DESC LIMIT 2000');
+    const collaborationRows = await query('SELECT user_id, review_score, suggestion_score FROM collaboration_scores ORDER BY updated_at DESC LIMIT 2000');
     const battleByUser = new Map();
     const collaborationByUser = new Map();
     for (const row of battleRows || []) {
@@ -151,7 +179,9 @@ router.get('/overall', auth, async (req, res) => {
           score: algorithmScore + battleScore + collaborationScore,
         };
       });
-    res.json({ items: rankRows(items), total: items.length });
+    const payload = { items: rankRows(items), total: items.length };
+    await redis.setJSON(cacheKey, payload, RANKING_CACHE_TTL);
+    res.json(payload);
   } catch (err) {
     console.error('[ranking/overall]', err);
     res.status(500).json({ message: '종합 랭킹을 불러오지 못했습니다.' });

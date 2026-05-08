@@ -106,15 +106,17 @@ export const voteSchema = {
   vote: { required: true, type: 'number' },
 };
 
+const SUPPORTED_LANGS = ['python', 'javascript', 'cpp', 'java', 'c'];
+
 export const submissionSchema = {
   problemId: { required: true, type: 'number' },
-  lang: { required: true },
+  lang: { required: true, enum: SUPPORTED_LANGS },
   code: { required: true, maxLength: 100000 },
 };
 
 export const runSchema = {
   problemId: { required: true, type: 'number' },
-  lang: { required: true },
+  lang: { required: true, enum: SUPPORTED_LANGS },
   code: { required: true, maxLength: 100000 },
   input: { maxLength: 10000 },
 };

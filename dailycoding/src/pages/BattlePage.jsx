@@ -58,7 +58,8 @@ export default function BattlePage() {
   const isFreePlan = subscriptionTier === 'free';
 
   // ── 페이즈 상태
-  const [phase, setPhase]           = useState('lobby');   // lobby | battle | ended
+  const [phase, setPhase]           = useState('lobby');   // lobby | countdown | battle | ended
+  const [countdown, setCountdown]   = useState(5);
   const [lobbyPhase, setLobbyPhase] = useState('idle');    // idle | invite_sent | invite_received
   const [opponentName, setOpponentName] = useState('');
   const [inviteInput, setInviteInput]   = useState('');
@@ -94,6 +95,7 @@ export default function BattlePage() {
   const lastTypingRef  = useRef(0);
   const lastOppTypingRef = useRef(0);
   const roomIdRef      = useRef(null);
+  const pendingRoomRef = useRef(null);
   const loadErrorToastShownRef = useRef(false);
   const availableLangOptions = getJudgeLanguageOptionsForSupported(judgeStatus?.supportedLanguages);
   const fallbackLang = availableLangOptions[0]?.value || '';
@@ -138,7 +140,7 @@ export default function BattlePage() {
       }
     };
     fetchBattles();
-    const t = setInterval(fetchBattles, 5000);
+    const t = setInterval(fetchBattles, POLL_MS * 2);
     return () => clearInterval(t);
   }, [phase, showLoadErrorToast]);
 
@@ -236,6 +238,24 @@ export default function BattlePage() {
     }, 1000);
   }, []);
 
+  // ── 카운트다운 (5→0 후 배틀 시작)
+  useEffect(() => {
+    if (phase !== 'countdown') return;
+    let count = 5;
+    setCountdown(count);
+    const t = setInterval(() => {
+      count -= 1;
+      setCountdown(count);
+      if (count <= 0) {
+        clearInterval(t);
+        setPhase('battle');
+        const pending = pendingRoomRef.current;
+        if (pending) startTimer(pending.startTime, pending.duration);
+      }
+    }, 1000);
+    return () => clearInterval(t);
+  }, [phase, startTimer]);
+
   const fetchRoomSnapshot = useCallback(async (targetRoomId = roomIdRef.current) => {
     if (!targetRoomId) return;
     try {
@@ -247,7 +267,7 @@ export default function BattlePage() {
   }, [handleRoomUpdate]);
 
   useEffect(() => {
-    const shouldConnect = Boolean(user?.id && roomId && (phase === 'battle' || lobbyPhase === 'invite_sent'));
+    const shouldConnect = Boolean(user?.id && roomId && (phase === 'battle' || phase === 'countdown' || lobbyPhase === 'invite_sent'));
     if (!shouldConnect) {
       socketRef.current?.disconnect();
       socketRef.current = null;
@@ -271,7 +291,7 @@ export default function BattlePage() {
     socket.on('connect', () => {
       setSocketConnected(true);
       socket.emit('authenticate');
-      if (phase === 'battle') {
+      if (phase === 'battle' || phase === 'countdown') {
         if (isSpectator) socket.emit('battle:spectate', roomId);
         else socket.emit('battle:join', { battleId: roomId, teamId: myTeamId || room?.players?.[user?.id]?.teamId || null });
       } else {
@@ -283,9 +303,10 @@ export default function BattlePage() {
     socket.on('battle:started', ({ room: startedRoom }) => {
       if (!startedRoom) return;
       setRoom(startedRoom);
-      setPhase('battle');
+      pendingRoomRef.current = startedRoom;
+      setCountdown(5);
+      setPhase('countdown');
       setLobbyPhase('idle');
-      startTimer(startedRoom.startTime, startedRoom.duration);
     });
     socket.on('battle:opponent_submitted', () => {
       fetchRoomSnapshot(roomId);
@@ -375,9 +396,10 @@ export default function BattlePage() {
         const r = data.room;
         if (r.status === 'active') {
           setRoom(r);
-          setPhase('battle');
+          pendingRoomRef.current = r;
+          setCountdown(5);
+          setPhase('countdown');
           setLobbyPhase('idle');
-          startTimer(r.startTime, r.duration);
         } else if (r.status === 'declined') {
           setLobbyPhase('idle');
           setInviteError('상대방이 초대를 거절했습니다.');
@@ -398,9 +420,10 @@ export default function BattlePage() {
       setRoom(data.room);
       setRoomId(data.room.id);
       roomIdRef.current = data.room.id;
-      setPhase('battle');
+      pendingRoomRef.current = data.room;
+      setCountdown(5);
+      setPhase('countdown');
       setLobbyPhase('idle');
-      startTimer(data.room.startTime, data.room.duration);
     } catch (err) {
       setInviteError(err.response?.data?.message || '수락 실패');
     }
@@ -834,6 +857,35 @@ export default function BattlePage() {
               )}
             </div>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // RENDER: 카운트다운
+  // ─────────────────────────────────────────────────────────────────────────
+  if (phase === 'countdown') {
+    const players = Object.values(room?.players || {});
+    return (
+      <div className="bp-page" style={{ display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:8, background:'var(--bg)' }}>
+        <div style={{ textAlign:'center' }}>
+          <div style={{ fontSize:13, color:'var(--text3)', letterSpacing:3, marginBottom:16, textTransform:'uppercase' }}>배틀 시작까지</div>
+          <div style={{ fontSize:128, fontWeight:900, color: countdown > 0 ? 'var(--blue)' : 'var(--green)', lineHeight:1, fontFamily:'Space Mono,monospace', minWidth:160, transition:'color 0.3s' }}>
+            {countdown > 0 ? countdown : '🔥'}
+          </div>
+          <div style={{ fontSize:15, color:'var(--text2)', marginTop:20 }}>
+            {countdown > 0 ? '잠시 후 문제가 공개됩니다...' : '배틀 시작!'}
+          </div>
+          {players.length > 0 && (
+            <div style={{ marginTop:28, display:'flex', gap:12, justifyContent:'center', flexWrap:'wrap' }}>
+              {players.map(p => (
+                <div key={p.id} style={{ padding:'6px 18px', borderRadius:20, background:'var(--bg3)', border:`2px solid ${p.teamId === 'team_1' ? 'var(--blue)' : 'var(--red)'}`, fontSize:14, fontWeight:600, color:'var(--text)' }}>
+                  {p.id === myId ? `${p.username} (나)` : p.username}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     );
