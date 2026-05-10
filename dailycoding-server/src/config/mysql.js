@@ -72,7 +72,7 @@ const MEM = {
   troubleshooting_problem_configs: [], troubleshooting_submissions: [],
   battle_rooms: [], battle_participants: [], battle_submissions: [], battle_events: [], battle_results: [],
   code_reviews: [], code_review_comments: [], code_suggestions: [], test_suggestions: [], collaboration_scores: [],
-  user_problem_sets: [],
+  user_problem_sets: [], ai_hint_cache: [],
 };
 
 function memNextId(table) {

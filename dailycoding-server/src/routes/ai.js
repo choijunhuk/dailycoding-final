@@ -1,7 +1,9 @@
 import { Router }               from 'express';
+import { createHash }           from 'crypto';
 import { auth, adminOnly, requireVerified } from '../middleware/auth.js';
 import { User }                 from '../models/User.js';
 import { Problem }              from '../models/Problem.js';
+import { AiHintCache }          from '../models/AiHintCache.js';
 import { Submission }           from '../models/Submission.js';
 import { askAI, askAIWithMeta } from '../services/ai.js';
 import redis                    from '../config/redis.js';
@@ -40,6 +42,23 @@ async function incrementAiQuotaIfFree(req, userOverride = null) {
   const today = new Date().toISOString().split('T')[0];
   const key = `quota:ai:${req.user.id}:${today}`;
   return redis.incr(key, 86400);
+}
+
+async function getRemainingAiQuota(req, userOverride = null) {
+  const user = userOverride || req.aiUser || await User.findById(req.user.id);
+  if (!user || (user.subscription_tier || 'free') !== 'free') return null;
+  const today = new Date().toISOString().split('T')[0];
+  const key = `quota:ai:${req.user.id}:${today}`;
+  const current = await redis.get(key);
+  return Math.max(0, AI_DAILY_QUOTA - parseInt(current || 0));
+}
+
+function createProblemHintContentHash(problem, desc) {
+  return createHash('sha256').update(JSON.stringify({
+    title: problem.title || '',
+    desc: desc || '',
+    tier: problem.tier || '',
+  })).digest('hex');
 }
 
 async function serveAnalyzeCache(req, res, next) {
@@ -217,11 +236,22 @@ router.post('/hint', auth, requireVerified, checkAiQuota, async (req, res) => {
       commonMistake: '인덱스 범위, 빈 입력, 정수 오버플로우 같은 엣지 케이스를 놓치지 마세요.',
       relatedConcept: '완전탐색 또는 구현',
     };
+    const contentHash = createProblemHintContentHash(problem, desc);
 
-    const cacheKey = `ai:hint:${problemId}`;
-    let hintData = await redis.getJSON(cacheKey);
-    const cacheHit = !!hintData;
-    let hintAiSource = cacheHit ? 'cache' : 'fallback';
+    const cacheKey = `ai:hint:${problem.id}`;
+    const cachedPayload = await redis.getJSON(cacheKey);
+    let hintData = cachedPayload?.contentHash === contentHash ? cachedPayload.hint : null;
+    let cacheSource = hintData ? 'redis' : null;
+
+    if (!hintData) {
+      const cachedHint = await AiHintCache.findByProblemId(problem.id, contentHash);
+      if (cachedHint) {
+        hintData = cachedHint.hint;
+        cacheSource = 'db';
+        await redis.setJSON(cacheKey, { contentHash, hint: hintData }, 86400);
+        await AiHintCache.incrementServed(problem.id);
+      }
+    }
 
     if (!hintData) {
       const prompt = `다음 코딩 문제에 대해 3단계 점진적 힌트를 JSON으로 작성하세요 (한국어).
@@ -246,26 +276,26 @@ JSON 형식으로만 응답:
 }`;
       const aiResult = await askAIWithMeta(req.user.id, prompt, fallback, 600);
       hintData = aiResult.data;
-      hintAiSource = aiResult.source;
       if (aiResult.source === 'ai') {
-        await redis.setJSON(cacheKey, hintData, 3600);
+        await AiHintCache.save({
+          problemId: problem.id,
+          contentHash,
+          hint: hintData,
+          userId: req.user.id,
+          model: aiResult.model || null,
+        });
+        await redis.setJSON(cacheKey, { contentHash, hint: hintData }, 86400);
+        cacheSource = 'ai';
       }
     }
 
-    // 쿼터 차감 후 remaining 계산 (Free 유저만)
     const user = req.aiUser || await User.findById(req.user.id);
-    let remaining;
-    const today = new Date().toISOString().split('T')[0];
-    const key = `quota:ai:${req.user.id}:${today}`;
-    if (!cacheHit && hintAiSource === 'ai' && (user.subscription_tier === 'free' || !user.subscription_tier)) {
-      const newCount = await redis.incr(key, 86400);
-      remaining = Math.max(0, AI_DAILY_QUOTA - newCount);
-    } else {
-      const current = await redis.get(key);
-      remaining = Math.max(0, AI_DAILY_QUOTA - parseInt(current || 0));
+    if (cacheSource) {
+      await incrementAiQuotaIfFree(req, user);
     }
+    const remaining = await getRemainingAiQuota(req, user);
 
-    res.json({ ...hintData, remaining });
+    res.json({ ...hintData, remaining, source: cacheSource || 'fallback' });
   } catch (err) {
     console.error('[ai/hint]', err.message);
     res.status(500).json({ message: '힌트 생성 실패' });
