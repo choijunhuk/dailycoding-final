@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { auth } from '../middleware/auth.js';
+import { auth, requireVerified } from '../middleware/auth.js';
 import { UserProblemSet } from '../models/UserProblemSet.js';
 import { errorResponse, internalError } from '../middleware/errorHandler.js';
 
@@ -19,7 +19,7 @@ router.get('/shared/:token', async (req, res) => {
   }
 });
 
-router.use(auth);
+router.use(auth, requireVerified);
 
 // GET /api/problem-sets — list my sets
 router.get('/', async (req, res) => {
@@ -77,8 +77,8 @@ router.put('/:id', async (req, res) => {
   try {
     const { name, description, problemIds } = req.body || {};
     const updates = {};
-    if (name !== undefined) updates.name = name.trim();
-    if (description !== undefined) updates.description = description.trim();
+    if (name !== undefined) updates.name = String(name ?? '').trim();
+    if (description !== undefined) updates.description = String(description ?? '').trim();
     if (problemIds !== undefined) {
       updates.problemIds = (Array.isArray(problemIds) ? problemIds : [])
         .map(Number)

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { auth, adminOnly } from '../middleware/auth.js';
+import { auth, adminOnly, requireVerified } from '../middleware/auth.js';
 import { CommunityProblem } from '../models/CommunityProblem.js';
 import { Problem } from '../models/Problem.js';
 import { redis } from '../config/redis.js';
@@ -27,7 +27,7 @@ const router = Router();
 const ALLOWED_SUBMIT_TIERS = new Set(['unranked', 'bronze', 'silver', 'gold', 'platinum', 'diamond']);
 
 // POST /api/community-problems — 유저가 문제 제출
-router.post('/', auth, async (req, res) => {
+router.post('/', auth, requireVerified, async (req, res) => {
   try {
     const { title, description, hint, inputDesc, outputDesc, examples, testcases, tier, problemType, difficulty, tags } = req.body;
     if (!title?.trim() || !description?.trim()) {
