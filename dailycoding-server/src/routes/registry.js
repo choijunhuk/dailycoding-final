@@ -30,6 +30,8 @@ import examsRouter from './exams.js';
 import sheetsRouter from './sheets.js';
 import growthRouter from './growth.js';
 import reviewsRouter from './reviews.js';
+import communityProblemsRouter from './community-problems.js';
+import problemSetsRouter from './problem-sets.js';
 import { getJudgeRuntime } from '../services/judge.js';
 import { getStripeOpsStatus } from './subscription.js';
 
@@ -62,6 +64,8 @@ export function registerRoutes(app) {
   app.use('/api', generalLimiter, sheetsRouter);
   app.use('/api/growth-hub', generalLimiter, growthRouter);
   app.use('/api/reviews', generalLimiter, reviewsRouter);
+  app.use('/api/community-problems', generalLimiter, communityProblemsRouter);
+  app.use('/api/problem-sets', generalLimiter, problemSetsRouter);
 
   app.get('/api/stats', async (req, res) => {
     try {

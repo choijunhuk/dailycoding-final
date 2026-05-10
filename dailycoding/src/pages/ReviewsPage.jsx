@@ -52,7 +52,7 @@ export default function ReviewsPage() {
   const { user, isAdmin } = useAuth();
   const [filters, setFilters] = useState({ status: 'all', lang: 'all', difficulty: '', problemId: '' });
   const [loading, setLoading] = useState(false);
-  const [listData, setListData] = useState({ reviews: [], reviewableSubmissions: [], collaborationScore: null });
+  const [listData, setListData] = useState({ reviews: [], myCodeReviews: [], reviewableSubmissions: [], collaborationScore: null });
   const [review, setReview] = useState(null);
   const [comment, setComment] = useState('');
   const [codeForm, setCodeForm] = useState({ filePath: 'solution', suggestedCode: '', reason: '' });
@@ -76,6 +76,7 @@ export default function ReviewsPage() {
       const { data } = await api.get('/reviews', { params: queryParams });
       setListData({
         reviews: data.reviews || [],
+        myCodeReviews: data.myCodeReviews || [],
         reviewableSubmissions: data.reviewableSubmissions || [],
         collaborationScore: data.collaborationScore || null,
       });
@@ -310,8 +311,9 @@ export default function ReviewsPage() {
       </section>
 
       <section className="review-columns">
-        <div className="review-panel">
-          <h2>리뷰 가능한 제출</h2>
+        <div className="review-panel review-panel-scroll">
+          <h2>리뷰 가능한 제출 <span className="review-count">{listData.reviewableSubmissions.length}</span></h2>
+          <p className="muted" style={{ marginBottom: 10, fontSize: 12 }}>내가 푼 문제 중 다른 유저의 정답 제출을 리뷰할 수 있습니다.</p>
           {loading && <p className="muted">불러오는 중...</p>}
           {listData.reviewableSubmissions.map((submission) => (
             <article key={submission.id} className="review-card">
@@ -325,25 +327,43 @@ export default function ReviewsPage() {
               </button>
             </article>
           ))}
-          {listData.reviewableSubmissions.length === 0 && (
+          {!loading && listData.reviewableSubmissions.length === 0 && (
             <div className="review-empty">
-              리뷰 가능한 공개 제출이 없습니다. 제출 기록을 공개한 다른 유저의 정답 코드가 생기면 여기에서 리뷰를 시작할 수 있습니다.
+              아직 풀어본 문제의 다른 유저 제출이 없습니다. 더 많은 문제를 풀면 리뷰할 수 있는 제출이 생깁니다.
             </div>
           )}
         </div>
 
-        <div className="review-panel">
-          <h2>내 리뷰</h2>
-          {listData.reviews.map((item) => (
-            <article key={item.id} className="review-card" onClick={() => navigate(`/reviews/${item.id}`)}>
-              <div>
-                <b>{item.problemTitle}</b>
-                <StatusPill status={item.status} />
-              </div>
-              <p>작성자 {item.authorUsername} · 리뷰어 {item.reviewerUsername}</p>
-            </article>
-          ))}
-          {listData.reviews.length === 0 && <div className="review-empty">아직 참여 중인 코드 리뷰가 없습니다.</div>}
+        <div className="review-panel-right">
+          {listData.reviews.length > 0 && (
+            <div className="review-panel review-panel-scroll" style={{ marginBottom: 16 }}>
+              <h2>내가 리뷰함 <span className="review-count">{listData.reviews.length}</span></h2>
+              {listData.reviews.map((item) => (
+                <article key={item.id} className="review-card" onClick={() => navigate(`/reviews/${item.id}`)}>
+                  <div>
+                    <b>{item.problemTitle}</b>
+                    <StatusPill status={item.status} />
+                  </div>
+                  <p>작성자 {item.authorUsername} · 리뷰어 {item.reviewerUsername}</p>
+                </article>
+              ))}
+            </div>
+          )}
+
+          <div className="review-panel review-panel-scroll">
+            <h2>내 코드의 리뷰 <span className="review-count">{listData.myCodeReviews.length}</span></h2>
+            {listData.myCodeReviews.length > 0 ? listData.myCodeReviews.map((item) => (
+              <article key={item.id} className="review-card" onClick={() => navigate(`/reviews/${item.id}`)}>
+                <div>
+                  <b>{item.problemTitle}</b>
+                  <StatusPill status={item.status} />
+                </div>
+                <p>리뷰어 {item.reviewerUsername}</p>
+              </article>
+            )) : (
+              <div className="review-empty">내 제출에 대한 리뷰가 아직 없습니다.</div>
+            )}
+          </div>
         </div>
       </section>
     </main>

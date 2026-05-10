@@ -42,11 +42,13 @@ const TIER_COLOR = {
 const NAV_GROUPS = [
   {
     key: 'problems', labelKey: 'problems', Icon: BookOpen,
-    matchPaths: ['/problems', '/sheets', '/submissions'],
+    matchPaths: ['/problems', '/sheets', '/submissions', '/submit-problem', '/problem-sets'],
     items: [
-      { path: '/problems',    labelKey: 'problems',    Icon: BookOpen },
-      { path: '/sheets',      labelKey: 'sheets',      Icon: BookOpen },
-      { path: '/submissions', labelKey: 'submissions', Icon: FileText },
+      { path: '/problems',        labelKey: 'problems',       Icon: BookOpen },
+      { path: '/sheets',          labelKey: 'sheets',         Icon: BookOpen },
+      { path: '/problem-sets',    label: '내 문제 세트',       Icon: BookOpen },
+      { path: '/submissions',     labelKey: 'submissions',    Icon: FileText },
+      { path: '/submit-problem',  label: '문제 제출하기',     Icon: FileText },
     ],
   },
   {
@@ -254,7 +256,7 @@ export default function TopNav() {
                             onMouseEnter={e=>{ if(!itemActive){ e.currentTarget.style.background='var(--bg3)'; e.currentTarget.style.color='var(--text)'; }}}
                             onMouseLeave={e=>{ if(!itemActive){ e.currentTarget.style.background='transparent'; e.currentTarget.style.color='var(--text2)'; }}}
                           >
-                            <item.Icon size={14} strokeWidth={2} />{t(item.labelKey)}
+                            <item.Icon size={14} strokeWidth={2} />{item.label || t(item.labelKey)}
                           </button>
                         );
                       })}

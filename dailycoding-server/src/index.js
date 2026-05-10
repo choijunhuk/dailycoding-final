@@ -106,6 +106,9 @@ async function initDatabase() {
     await runSql(join(__dir, 'migrations', '021_troubleshooting_problems.sql'));
     await runSql(join(__dir, 'migrations', '022_algorithm_battles.sql'));
     await runSql(join(__dir, 'migrations', '023_collaboration_reviews.sql'));
+    await runSql(join(__dir, 'migrations', '024_battle_improvements.sql'));
+    await runSql(join(__dir, 'migrations', '025_community_problems.sql'));
+    await runSql(join(__dir, 'migrations', '026_problem_sets.sql'));
     logger.info('✅ DB 스키마 초기화 완료');
   } catch (err) {
     logger.warn('⚠️  DB 초기화 스킵:', { message: err.message });

@@ -390,7 +390,10 @@ export const AlgorithmBattle = {
         `UPDATE battle_rooms
          SET status = 'finished', ended_at = NOW()
          WHERE status = 'waiting'
-           AND created_at < DATE_SUB(NOW(), INTERVAL 5 MINUTE)`,
+           AND (
+             (lobby_expires_at IS NOT NULL AND lobby_expires_at < NOW())
+             OR (lobby_expires_at IS NULL AND created_at < DATE_SUB(NOW(), INTERVAL 5 MINUTE))
+           )`,
         []
       );
       return Number(result?.affectedRows || 0);
@@ -425,6 +428,18 @@ export const AlgorithmBattle = {
     preferredLanguage = null,
     bannedTags = [],
   } = {}) {
+    if (creatorId) {
+      const existingActive = await queryOne(
+        "SELECT id FROM battle_rooms WHERE created_by = ? AND status IN ('waiting', 'playing') LIMIT 1",
+        [creatorId]
+      );
+      if (existingActive) {
+        const err = new Error('이미 활성화된 배틀 방이 있습니다. 기존 방을 먼저 나가거나 종료해주세요.');
+        err.status = 409;
+        throw err;
+      }
+    }
+
     const normalizedMode = normalizeMode(mode);
     const modeConfig = getBattleModeConfig(normalizedMode);
 
@@ -967,20 +982,23 @@ export const AlgorithmBattle = {
     const state = await this.getRoomState(roomId);
     if (!state?.room) return state;
 
-    // Lobby timeout
-    if (state.room.status === 'waiting' && state.room.lobbyExpiresAt) {
+    // Lobby timeout — use lobby_expires_at when available, fall back to 5-min rule
+    if (state.room.status === 'waiting') {
       if (isConnected()) {
         await run(
           `UPDATE battle_rooms
            SET status = 'finished', ended_at = NOW()
            WHERE id = ?
              AND status = 'waiting'
-             AND created_at < DATE_SUB(NOW(), INTERVAL 5 MINUTE)`,
+             AND (
+               (lobby_expires_at IS NOT NULL AND lobby_expires_at < NOW())
+               OR (lobby_expires_at IS NULL AND created_at < DATE_SUB(NOW(), INTERVAL 5 MINUTE))
+             )`,
           [roomId]
         );
         return this.getRoomState(roomId);
       }
-      if (Date.now() > new Date(state.room.lobbyExpiresAt).getTime()) {
+      if (state.room.lobbyExpiresAt && Date.now() > new Date(state.room.lobbyExpiresAt).getTime()) {
         await run('UPDATE battle_rooms SET status = ?, ended_at = ? WHERE id = ?', ['finished', nowMySQL(), roomId]);
         return this.getRoomState(roomId);
       }

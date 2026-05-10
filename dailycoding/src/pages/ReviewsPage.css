@@ -129,6 +129,34 @@
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 16px;
   margin-top: 16px;
+  align-items: start;
+}
+
+.review-panel-right {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.review-panel-scroll {
+  max-height: 560px;
+  overflow-y: auto;
+}
+
+.review-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--bg3);
+  color: var(--text2);
+  font-size: 11px;
+  font-weight: 700;
+  margin-left: 6px;
+  vertical-align: middle;
 }
 
 .review-panel {
@@ -309,6 +337,14 @@
   .review-lists {
     grid-template-columns: 1fr;
     flex-direction: column;
+  }
+
+  .review-panel-scroll {
+    max-height: 400px;
+  }
+
+  .review-panel-right {
+    margin-top: 0;
   }
 
   .review-score-card {

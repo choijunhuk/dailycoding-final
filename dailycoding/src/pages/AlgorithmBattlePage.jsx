@@ -367,7 +367,16 @@ export default function AlgorithmBattlePage() {
       });
       navigate(`/battle/${data.room.id}`);
     } catch (err) {
-      toast?.show(err.response?.data?.message || '방 생성 실패', 'error');
+      if (err.response?.status === 409) {
+        toast?.show(err.response.data?.message || '이미 활성화된 방이 있습니다.', 'error');
+        try {
+          const { data: listData } = await api.get('/battles/rooms', { params: { status: 'waiting' } });
+          const myRoom = (listData.rooms || []).find((r) => r.room?.createdBy === user?.id);
+          if (myRoom?.room?.id) navigate(`/battle/${myRoom.room.id}`);
+        } catch { /* 조회 실패 시 무시 */ }
+      } else {
+        toast?.show(err.response?.data?.message || '방 생성 실패', 'error');
+      }
     } finally { setCreating(false); }
   };
 

@@ -214,10 +214,19 @@ export const CodeReview = {
   },
 
   async listReviewableSubmissions(viewerId, filters = {}) {
-    const rows = await query('SELECT * FROM submissions ORDER BY submitted_at DESC LIMIT 200');
+    // Only show problems the viewer has already solved
+    const solvedRows = await query(
+      'SELECT DISTINCT problem_id FROM submissions WHERE user_id = ? AND result = ?',
+      [Number(viewerId), 'correct']
+    );
+    const solvedProblemIds = new Set((solvedRows || []).map((r) => Number(r.problem_id)));
+    if (solvedProblemIds.size === 0) return [];
+
+    const rows = await query('SELECT * FROM submissions WHERE result = ? ORDER BY submitted_at DESC LIMIT 300', ['correct']);
     const items = [];
     for (const row of rows || []) {
       if (Number(row.user_id) === Number(viewerId)) continue;
+      if (!solvedProblemIds.has(Number(row.problem_id))) continue;
       if (filters.lang && filters.lang !== 'all' && row.lang !== filters.lang) continue;
       if (filters.problemId && Number(row.problem_id) !== Number(filters.problemId)) continue;
       const item = await hydrateSubmission(row, { includeCode: false, viewerId });
@@ -233,13 +242,15 @@ export const CodeReview = {
   },
 
   async listReviews(viewerId, filters = {}) {
-    const rows = await query('SELECT * FROM code_reviews ORDER BY updated_at DESC LIMIT 200');
+    // Reviews where this user is the reviewer
+    const rows = await query(
+      'SELECT * FROM code_reviews WHERE reviewer_id = ? ORDER BY updated_at DESC LIMIT 100',
+      [Number(viewerId)]
+    );
     const reviews = [];
     for (const row of rows || []) {
       const review = normalizeReview(row);
       if (!review) continue;
-      const visible = review.authorId === Number(viewerId) || review.reviewerId === Number(viewerId) || review.status === OPEN_STATUS;
-      if (!visible) continue;
       if (filters.status && filters.status !== 'all' && review.status !== filters.status) continue;
       if (filters.problemId && review.problemId !== Number(filters.problemId)) continue;
       const hydrated = await hydrateReview(row);
@@ -247,7 +258,26 @@ export const CodeReview = {
       if (filters.difficulty && Number(hydrated?.submission?.difficulty || 0) !== Number(filters.difficulty)) continue;
       reviews.push(hydrated);
     }
-    return reviews.slice(0, 100);
+    return reviews;
+  },
+
+  async listMyCodeReviews(viewerId, filters = {}) {
+    // Reviews where others are reviewing my code
+    const rows = await query(
+      'SELECT * FROM code_reviews WHERE author_id = ? ORDER BY updated_at DESC LIMIT 100',
+      [Number(viewerId)]
+    );
+    const reviews = [];
+    for (const row of rows || []) {
+      const review = normalizeReview(row);
+      if (!review) continue;
+      if (filters.status && filters.status !== 'all' && review.status !== filters.status) continue;
+      if (filters.problemId && review.problemId !== Number(filters.problemId)) continue;
+      const hydrated = await hydrateReview(row);
+      if (filters.lang && filters.lang !== 'all' && hydrated?.submission?.lang !== filters.lang) continue;
+      reviews.push(hydrated);
+    }
+    return reviews;
   },
 
   async createReview(submissionId, reviewerId) {

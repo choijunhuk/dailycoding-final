@@ -37,12 +37,13 @@ router.get('/', async (req, res) => {
       problemId: req.query.problemId || null,
       difficulty: req.query.difficulty || null,
     };
-    const [reviews, reviewableSubmissions, collaborationScore] = await Promise.all([
+    const [reviews, myCodeReviews, reviewableSubmissions, collaborationScore] = await Promise.all([
       CodeReview.listReviews(req.user.id, filters),
+      CodeReview.listMyCodeReviews(req.user.id, filters),
       CodeReview.listReviewableSubmissions(req.user.id, filters),
       CodeReview.getScore(req.user.id),
     ]);
-    res.json({ reviews, reviewableSubmissions, collaborationScore });
+    res.json({ reviews, myCodeReviews, reviewableSubmissions, collaborationScore });
   } catch (err) {
     return handleReviewError(res, err, '리뷰 목록을 불러오지 못했습니다.');
   }

@@ -46,6 +46,8 @@ const ExamPage = lazy(() => import('./pages/ExamPage'));
 const SheetsPage = lazy(() => import('./pages/SheetsPage'));
 const SheetDetailPage = lazy(() => import('./pages/SheetDetailPage'));
 const LearningPathPage = lazy(() => import('./pages/LearningPathPage'));
+const SubmitProblemPage = lazy(() => import('./pages/SubmitProblemPage'));
+const ProblemSetsPage = lazy(() => import('./pages/ProblemSetsPage'));
 
 function getInternalRedirectPath(redirect) {
   if (!redirect) return null;
@@ -208,6 +210,9 @@ function AppInner() {
                 <Route path="/profile"     element={<ProfilePage />} />
                 <Route path="/user/:id"    element={<PublicProfilePage />} />
                 <Route path="/submissions" element={<SubmissionsPage />} />
+                <Route path="/submit-problem" element={<SubmitProblemPage />} />
+                <Route path="/problem-sets" element={<ProblemSetsPage />} />
+                <Route path="/problem-sets/shared/:token" element={<ProblemSetsPage />} />
                 <Route path="/reviews"     element={<ReviewsPage />} />
                 <Route path="/reviews/:id" element={<ReviewsPage />} />
                 <Route path="/battle"      element={<AlgorithmBattlePage />} />
