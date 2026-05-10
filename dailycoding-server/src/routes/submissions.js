@@ -11,6 +11,7 @@ import { executeSubmissionFlow } from '../services/submissionExecution.js';
 import { errorResponse, internalError } from '../middleware/errorHandler.js';
 import { handleCorrectSubmissionMissions } from '../services/missionService.js';
 import { updateSeasonRating } from '../services/seasonService.js';
+import { evaluateFillBlankAnswer, evaluateBugFixAnswer } from '../services/battleAnswerEvaluation.js';
 
 const router = Router();
 async function getProblemModel() {
@@ -38,26 +39,22 @@ function evaluateSpecialSubmission(problem, body) {
   const config = parseSpecialConfig(problem) || {};
 
   if (type === 'fill-blank') {
-    const blanks = Array.isArray(config.blanks) ? config.blanks : [];
     const userAnswers = Array.isArray(body.blankAnswers)
       ? body.blankAnswers
       : Array.isArray(body.answer)
         ? body.answer
         : [body.answer];
-
-    const normalizedUser = userAnswers.map((value) => String(value ?? '').trim());
-    const normalizedExpected = blanks.map((value) => String(value ?? '').trim());
-    const correct = normalizedExpected.length > 0 && normalizedExpected.every((value, index) => normalizedUser[index] === value);
+    const configWithMeta = { ...config, title: problem.title };
+    const correct = evaluateFillBlankAnswer(configWithMeta, userAnswers);
     return {
       correct,
       lang: 'fill-blank',
-      storedCode: JSON.stringify(normalizedUser),
+      storedCode: JSON.stringify(userAnswers.map((v) => String(v ?? '').trim())),
       detail: correct ? '모든 빈칸이 정답입니다.' : '일부 빈칸이 올바르지 않습니다.',
     };
   }
 
   if (type === 'bug-fix') {
-    const keywords = Array.isArray(config.keywords) ? config.keywords : [];
     const answerText = String(body.answer ?? '').trim();
     if (!answerText) {
       return {
@@ -67,8 +64,7 @@ function evaluateSpecialSubmission(problem, body) {
         detail: '수정 코드를 입력해주세요.',
       };
     }
-    const lowered = answerText.toLowerCase();
-    const correct = keywords.length > 0 && keywords.some((keyword) => lowered.includes(String(keyword).toLowerCase()));
+    const correct = evaluateBugFixAnswer(config, answerText);
     return {
       correct,
       lang: 'bug-fix',

@@ -6,6 +6,7 @@ import { Problem } from '../models/Problem.js';
 import { getCachedJudgeRuntime } from '../services/judgeRuntimeCache.js';
 import { executeSubmissionFlow } from '../services/submissionExecution.js';
 import { errorResponse, internalError } from '../middleware/errorHandler.js';
+import { evaluateFillBlankAnswer, evaluateBugFixAnswer } from '../services/battleAnswerEvaluation.js';
 
 const router = Router();
 router.use(auth);
@@ -233,11 +234,8 @@ router.post('/:id/submit', async (req, res) => {
 
       if (problemType === 'fill-blank') {
         const config = parseSpecialConfig(problem);
-        const blanks = Array.isArray(config?.blanks) ? config.blanks : [];
         const userBlanks = Array.isArray(answer?.blankAnswers) ? answer.blankAnswers : [];
-        const correct = blanks.length > 0 && blanks.every((v, i) =>
-          String(v ?? '').trim() === String(userBlanks[i] ?? '').trim()
-        );
+        const correct = evaluateFillBlankAnswer({ ...config, title: problem.title }, userBlanks);
         breakdown.push({
           problemId: problem.id,
           problemTitle: problem.title,
@@ -251,14 +249,12 @@ router.post('/:id/submit', async (req, res) => {
 
       if (problemType === 'bug-fix') {
         const config = parseSpecialConfig(problem);
-        const keywords = Array.isArray(config?.keywords) ? config.keywords : [];
         const answerText = String(answer?.answer ?? '').trim();
         if (!answerText) {
           breakdown.push({ problemId: problem.id, problemTitle: problem.title, tier: problem.tier, problemType, result: 'empty', timeMs: null });
           continue;
         }
-        const lowered = answerText.toLowerCase();
-        const correct = keywords.length > 0 && keywords.some((k) => lowered.includes(String(k).toLowerCase()));
+        const correct = evaluateBugFixAnswer(config, answerText);
         breakdown.push({ problemId: problem.id, problemTitle: problem.title, tier: problem.tier, problemType, result: correct ? 'correct' : 'wrong', timeMs: null });
         continue;
       }
