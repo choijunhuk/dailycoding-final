@@ -3,7 +3,7 @@ import { auth, adminOnly } from '../middleware/auth.js';
 import { CommunityProblem } from '../models/CommunityProblem.js';
 import { Problem } from '../models/Problem.js';
 import { redis } from '../config/redis.js';
-import Notification from '../models/Notification.js';
+import { Notification } from '../models/Notification.js';
 import { TIER_ORDER } from '../shared/constants.js';
 
 const ALLOWED_PROBLEM_TYPES = new Set(['coding', 'fill-blank', 'bug-fix']);
