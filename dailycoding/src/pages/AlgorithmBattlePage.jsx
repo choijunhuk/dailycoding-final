@@ -209,6 +209,7 @@ export default function AlgorithmBattlePage() {
   const [showRules, setShowRules] = useState(false);
 
   const lastActivityRef = useRef(0);
+  const lobbyExpiredRef = useRef(false);
 
   // ── 파생 상태
   const currentRoom = state?.room || null;
@@ -346,6 +347,19 @@ export default function AlgorithmBattlePage() {
       api.post(`/battles/rooms/${currentRoom.id}/finish`, { reason: 'timeout' }).catch(() => {});
     }
   }, [clock, currentRoom]);
+
+  // ── 로비 만료 체크 (대기 중 방) — 한 번만 실행
+  useEffect(() => { lobbyExpiredRef.current = false; }, [roomId]);
+  useEffect(() => {
+    if (!currentRoom || currentRoom.status !== 'waiting' || lobbyExpiredRef.current) return;
+    const ll = lobbyTimeLeft(currentRoom);
+    if (ll !== null && ll <= 0) {
+      lobbyExpiredRef.current = true;
+      toast?.show('대기 시간이 만료됐습니다.', 'warning');
+      const t = setTimeout(() => navigate('/battle', { replace: true }), 2500);
+      return () => clearTimeout(t);
+    }
+  }, [clock, currentRoom, navigate, toast]);
 
   const emitActivity = useCallback((activity, message = '') => {
     if (!roomId || !socketRef.current?.connected) return;
@@ -596,7 +610,7 @@ export default function AlgorithmBattlePage() {
               <div key={item.room.id} className="ab-room-row">
                 <div>
                   <strong>{item.problem?.title || '문제 로딩 중'}</strong>
-                  <span>{modeLabel} · {item.participants.length}/{item.room.maxPlayers}명 · {item.room.status === 'playing' ? `⏱ ${fmtSec(timeLeft(item.room))} 남음` : fmtSec(item.room.durationSec)}</span>
+                  <span>{modeLabel} · {item.participants.length}/{item.room.maxPlayers}명 · {item.room.status === 'playing' ? `⏱ ${fmtSec(timeLeft(item.room))} 남음` : (() => { const ll = lobbyTimeLeft(item.room); return ll != null ? `⏳ ${fmtSec(ll)} 대기` : '대기 중'; })()}</span>
                 </div>
                 <button className="btn btn-ghost btn-sm" onClick={() => joinRoom(item.room.id)}>참가</button>
               </div>

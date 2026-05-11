@@ -91,6 +91,8 @@ export default function ProfilePage() {
   const [techStack, setTechStack] = useState(user?.techStack || []);
   const [profileInfoSaving, setProfileInfoSaving] = useState(false);
   const [fullGrass, setFullGrass] = useState([]);
+  const [yearCorrectSubs, setYearCorrectSubs] = useState([]);
+  const [yearSubsLoaded, setYearSubsLoaded] = useState(false);
   const [solveStats, setSolveStats] = useState({
     avgSolveTime: null,
     fastestSolve: null,
@@ -170,6 +172,13 @@ export default function ProfilePage() {
       setFullGrass(Array.isArray(res.data) ? res.data : []);
     }).catch(() => {
       setFullGrass([]);
+    });
+    api.get('/submissions?result=correct&limit=500').then((res) => {
+      setYearCorrectSubs(Array.isArray(res.data) ? res.data : []);
+    }).catch(() => {
+      setYearCorrectSubs([]);
+    }).finally(() => {
+      setYearSubsLoaded(true);
     });
   }, [user?.id]);
 
@@ -252,17 +261,20 @@ export default function ProfilePage() {
 
   const solvedByDate = useMemo(() => {
     const map = {};
-    submissions.filter(s => s.result === 'correct').forEach(s => {
-      const date = (s.date || s.createdAt || '').slice(0, 10);
-      if (!date) return;
+    const allCorrect = yearCorrectSubs.length > 0 ? yearCorrectSubs : submissions.filter(s => s.result === 'correct');
+    allCorrect.forEach(s => {
+      const rawDate = s.submitted_at || s.date || s.createdAt || '';
+      const date = String(rawDate).slice(0, 10);
+      if (!date || date.length < 10) return;
       if (!map[date]) map[date] = [];
-      const pid = s.problemId || s.problem_id;
+      const pid = s.problem_id || s.problemId;
+      const title = s.problem_title || s.problemTitle || `#${pid}`;
       if (pid && !map[date].find(p => p.id === pid)) {
-        map[date].push({ id: pid, title: s.problemTitle || `#${pid}` });
+        map[date].push({ id: pid, title });
       }
     });
     return map;
-  }, [submissions]);
+  }, [yearCorrectSubs, submissions]);
   const upgradePlans = getProfileUpgradePlans();
 
   const handlePwChange = async () => {
@@ -825,12 +837,12 @@ export default function ProfilePage() {
                   <div style={{ fontSize:13, color:'var(--text3)' }}>제출 기록이 없어요.</div>
                 </div>
               : submissions.slice(0,8).map(s=>(
-                <div key={s.id} className="list-item-hover" style={{ display:'flex', alignItems:'center', gap:12, padding:'9px 0', borderBottom:'1px solid var(--border)' }}>
-                  <span style={{ flex:1, fontSize:13, fontWeight:500 }}>{s.problemTitle}</span>
+                <div key={s.id} className="list-item-hover" onClick={() => navigate(`/problems/${s.problem_id || s.problemId}`)} style={{ display:'flex', alignItems:'center', gap:12, padding:'9px 0', borderBottom:'1px solid var(--border)', cursor:'pointer' }}>
+                  <span style={{ flex:1, fontSize:13, fontWeight:500 }}>{s.problem_title || s.problemTitle}</span>
                   <span style={{ fontSize:12, fontWeight:700, color:s.result==='correct'?'var(--green)':s.result==='wrong'?'var(--red)':'var(--yellow)' }}>
                     {s.result==='correct'?'✓ 정답':s.result==='wrong'?'✗ 오답':'시간초과'}
                   </span>
-                  <span style={{ fontSize:11, color:'var(--text3)' }}>{s.date}</span>
+                  <span style={{ fontSize:11, color:'var(--text3)' }}>{(s.submitted_at || s.date || '').slice(0,10)}</span>
                 </div>
               ))
             }
@@ -868,7 +880,12 @@ export default function ProfilePage() {
               <div style={{ fontSize:13, fontWeight:700, marginBottom:8, color:'var(--blue)' }}>
                 📅 {heatmapHover.date} — {['없음','적음','보통','많음','매우 많음'][heatmapHover.level]} ({heatmapHover.count}문제)
               </div>
-              {(solvedByDate[heatmapHover.date] || []).length > 0 ? (
+              {!yearSubsLoaded ? (
+                <div style={{ fontSize:12, color:'var(--text3)', display:'flex', alignItems:'center', gap:6 }}>
+                  <span className="spinner" style={{ width:12, height:12, borderWidth:2 }} />
+                  불러오는 중...
+                </div>
+              ) : (solvedByDate[heatmapHover.date] || []).length > 0 ? (
                 <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
                   {solvedByDate[heatmapHover.date].map(p => (
                     <div key={p.id} onClick={() => navigate(`/problems/${p.id}`)}
@@ -880,7 +897,7 @@ export default function ProfilePage() {
                   ))}
                 </div>
               ) : (
-                <div style={{ fontSize:12, color:'var(--text3)' }}>이 날의 풀이 기록을 불러올 수 없습니다.</div>
+                <div style={{ fontSize:12, color:'var(--text3)' }}>문제 정보를 찾을 수 없습니다. (총 {heatmapHover.count}문제 풀이)</div>
               )}
             </div>
           )}

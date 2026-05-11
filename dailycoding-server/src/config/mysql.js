@@ -36,7 +36,7 @@ async function init() {
       connectionLimit:    10,
       connectTimeout:     5000,
       charset:            'utf8mb4',
-      timezone:           '+09:00',
+      timezone:           'Z',
     });
     const conn = await pool.getConnection();
     conn.release();

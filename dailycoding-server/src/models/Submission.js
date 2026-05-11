@@ -314,7 +314,8 @@ export const Submission = {
   },
 
   async findFeed(viewerId, { scope = 'me', q = '', result = 'all', lang = 'all', limit = 100, userId } = {}) {
-    const cap = Math.min(Math.max(1, Number(limit) || 100), 200);
+    const maxCap = result && result !== 'all' ? 500 : 200;
+    const cap = Math.min(Math.max(1, Number(limit) || 100), maxCap);
     const targetUserId = userId ? Number(userId) : null;
     const buildQuery = ({ includeVisibilityColumn }) => {
       const params = [];
