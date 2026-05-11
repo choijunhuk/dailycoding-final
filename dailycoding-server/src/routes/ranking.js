@@ -250,4 +250,32 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
+// ── 소속(팀) 랭킹 ────────────────────────────────────────────
+router.get('/teams', auth, async (req, res) => {
+  const cacheKey = 'ranking:teams';
+  try {
+    const cached = await redis.getJSON(cacheKey);
+    if (cached) return res.json(cached);
+    const rows = await query(`
+      SELECT t.id, t.name, t.avatar_emoji,
+             COUNT(DISTINCT tm.user_id) AS member_count,
+             ROUND(AVG(u.rating), 0) AS avg_rating,
+             SUM(u.solved_count) AS total_solved,
+             MAX(u.rating) AS top_rating
+      FROM teams t
+      JOIN team_members tm ON t.id = tm.team_id
+      JOIN users u ON tm.user_id = u.id
+      GROUP BY t.id, t.name, t.avatar_emoji
+      ORDER BY avg_rating DESC
+      LIMIT 50
+    `);
+    const result = rows.map((row, i) => ({ ...row, rank: i + 1 }));
+    await redis.setJSON(cacheKey, result, 120);
+    res.json(result);
+  } catch (err) {
+    console.error('[ranking/teams]', err.message);
+    res.status(500).json({ message: '서버 오류' });
+  }
+});
+
 export default router;

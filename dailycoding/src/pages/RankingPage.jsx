@@ -116,6 +116,8 @@ export default function RankingPage() {
   const [platformError, setPlatformError] = useState(null);
   const [followingSet, setFollowingSet] = useState(new Set());
   const [followPending, setFollowPending] = useState(new Set());
+  const [teamRankers, setTeamRankers] = useState([]);
+  const [teamLoading, setTeamLoading] = useState(false);
   const limit = 20;
   const { rankingData, pagination, loading, error, refreshRankingData } = useRankingData({ page, limit, tier: tierFilter, sort: sortBy });
   const seasonRankers = (seasonPayload.items || []).map((item) => ({
@@ -168,6 +170,17 @@ export default function RankingPage() {
       .finally(() => {
         if (!cancelled) setSeasonLoading(false);
       });
+    return () => { cancelled = true; };
+  }, [mode]);
+
+  useEffect(() => {
+    if (mode !== 'teams') return;
+    let cancelled = false;
+    setTeamLoading(true);
+    api.get('/ranking/teams')
+      .then(({ data }) => { if (!cancelled) setTeamRankers(Array.isArray(data) ? data : []); })
+      .catch(() => { if (!cancelled) setTeamRankers([]); })
+      .finally(() => { if (!cancelled) setTeamLoading(false); });
     return () => { cancelled = true; };
   }, [mode]);
 
@@ -261,6 +274,9 @@ export default function RankingPage() {
           </button>
           <button className="btn btn-ghost btn-sm" onClick={() => setMode('overall')} style={{ opacity: mode === 'overall' ? 1 : 0.6 }}>
             종합 랭킹
+          </button>
+          <button className="btn btn-ghost btn-sm" onClick={() => setMode('teams')} style={{ opacity: mode === 'teams' ? 1 : 0.6 }}>
+            🏢 소속 랭킹
           </button>
           {mode === 'season' && seasonPayload.remainingDays != null && (
             <span style={{ fontSize:12, color:'var(--text3)' }}>
@@ -456,8 +472,52 @@ export default function RankingPage() {
         ) : null}
       </div>
 
+      {/* ── 소속(팀) 랭킹 ── */}
+      {mode === 'teams' && (
+        <div>
+          {teamLoading && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {Array(8).fill(0).map((_, i) => <div key={i} className="skeleton skeleton-row" />)}
+            </div>
+          )}
+          {!teamLoading && teamRankers.length === 0 && (
+            <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--text3)' }}>
+              <div style={{ fontSize: 40, marginBottom: 12 }}>🏢</div>
+              <div style={{ fontWeight: 700 }}>등록된 소속이 없습니다.</div>
+              <div style={{ fontSize: 12, marginTop: 6 }}>소속을 만들고 팀원을 초대해 보세요.</div>
+            </div>
+          )}
+          {!teamLoading && teamRankers.map((team) => (
+            <div key={team.id} className="card" style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '14px 18px', marginBottom: 8 }}>
+              <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text3)', width: 28, textAlign: 'center', flexShrink: 0 }}>
+                {team.rank <= 3 ? ['🥇', '🥈', '🥉'][team.rank - 1] : `#${team.rank}`}
+              </div>
+              <div style={{ fontSize: 28, flexShrink: 0 }}>{team.avatar_emoji || '🏢'}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: 15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{team.name}</div>
+                <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>멤버 {team.member_count}명</div>
+              </div>
+              <div style={{ display: 'flex', gap: 20, flexShrink: 0, textAlign: 'center' }}>
+                <div>
+                  <div className="mono" style={{ fontWeight: 800, fontSize: 15, color: 'var(--blue)' }}>{Number(team.avg_rating).toLocaleString()}</div>
+                  <div style={{ fontSize: 10, color: 'var(--text3)' }}>평균 레이팅</div>
+                </div>
+                <div>
+                  <div className="mono" style={{ fontWeight: 800, fontSize: 15, color: 'var(--green)' }}>{Number(team.total_solved).toLocaleString()}</div>
+                  <div style={{ fontSize: 10, color: 'var(--text3)' }}>총 해결</div>
+                </div>
+                <div>
+                  <div className="mono" style={{ fontWeight: 800, fontSize: 15, color: 'var(--yellow)' }}>{Number(team.top_rating).toLocaleString()}</div>
+                  <div style={{ fontSize: 10, color: 'var(--text3)' }}>최고 레이팅</div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* ── LOADING ── */}
-      {currentLoading && (
+      {mode !== 'teams' && currentLoading && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {Array(10).fill(0).map((_, i) => (
             <div key={i} className="skeleton skeleton-row" />
@@ -466,7 +526,7 @@ export default function RankingPage() {
       )}
 
       {/* ── TOP 3 PODIUM ── */}
-      {!currentLoading && (mode !== 'global' || page === 1) && top3.length >= 3 && (mode !== 'global' || (tierFilter === 'all' && sortBy === 'rating')) && !search && (
+      {mode !== 'teams' && !currentLoading && (mode !== 'global' || page === 1) && top3.length >= 3 && (mode !== 'global' || (tierFilter === 'all' && sortBy === 'rating')) && !search && (
         <div className="card" style={{
           padding: '32px 24px 0', marginBottom: 16, overflow: 'hidden',
         }}>
@@ -537,7 +597,7 @@ export default function RankingPage() {
       )}
 
       {/* ── RANKING TABLE ── */}
-      {!currentLoading && (
+      {mode !== 'teams' && !currentLoading && (
         <div>
           <div style={{
             background: 'var(--bg2)', border: '1px solid var(--border)',

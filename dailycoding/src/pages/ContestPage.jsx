@@ -71,6 +71,14 @@ export default function ContestPage() {
   const [pinContest, setPinContest] = useState(null);
   const [pinValue, setPinValue] = useState('');
 
+  // 대회 개최 요청
+  const [showRequestForm, setShowRequestForm] = useState(false);
+  const [requestForm, setRequestForm] = useState({ name: '', description: '', desiredDate: '', reason: '' });
+  const [submittingRequest, setSubmittingRequest] = useState(false);
+  const [showCreationRequests, setShowCreationRequests] = useState(false);
+  const [creationRequests, setCreationRequests] = useState([]);
+  const [creationReqBusy, setCreationReqBusy] = useState({});
+
   // ★ 서버는 'running' 반환, 클라이언트는 'live' 사용 → 매핑
   const mapStatus = (c) => ({ ...c, status: c.status === 'running' ? 'live' : c.status });
 
@@ -223,6 +231,35 @@ export default function ContestPage() {
     } catch { setResultsBoard([]); }
   };
 
+  const fetchCreationRequests = async () => {
+    try {
+      const res = await api.get('/contests/creation-requests');
+      setCreationRequests(res.data || []);
+    } catch { setCreationRequests([]); }
+  };
+
+  const handleSubmitCreationRequest = async () => {
+    if (!requestForm.name.trim()) return;
+    setSubmittingRequest(true);
+    try {
+      await api.post('/contests/creation-requests', requestForm);
+      toast?.show('대회 개최 요청이 접수되었습니다. 관리자 검토 후 안내드립니다.', 'success');
+      setShowRequestForm(false);
+      setRequestForm({ name: '', description: '', desiredDate: '', reason: '' });
+    } catch (err) { toast?.show(err.response?.data?.message || '요청 제출 실패', 'error'); }
+    setSubmittingRequest(false);
+  };
+
+  const handleCreationRequestAction = async (reqId, status) => {
+    setCreationReqBusy(p => ({ ...p, [reqId]: true }));
+    try {
+      await api.patch(`/contests/creation-requests/${reqId}`, { status });
+      setCreationRequests(p => p.map(r => r.id === reqId ? { ...r, status } : r));
+      toast?.show(status === 'approved' ? '요청을 승인했습니다.' : '요청을 거절했습니다.', 'success');
+    } catch { toast?.show('처리 실패', 'error'); }
+    setCreationReqBusy(p => ({ ...p, [reqId]: false }));
+  };
+
   const confirmDelete = async () => {
     const id = deleteConfirmId;
     setDeleteConfirmId(null);
@@ -324,7 +361,11 @@ export default function ContestPage() {
           <h1>{t('contestMode')}</h1>
           <p>{isAdmin ? t('contestAdminDesc') : t('contestUserDesc')}</p>
         </div>
-        {isAdmin && <button className="btn btn-danger" onClick={() => setShowCreate(true)}>{t('createContestBtn')}</button>}
+        <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+          {isAdmin && <button className="btn btn-ghost" onClick={() => { setShowCreationRequests(true); fetchCreationRequests(); }}>📋 개최 요청 목록</button>}
+          {isAdmin && <button className="btn btn-danger" onClick={() => setShowCreate(true)}>{t('createContestBtn')}</button>}
+          {!isAdmin && <button className="btn btn-ghost" onClick={() => setShowRequestForm(true)}>📋 대회 개최 요청</button>}
+        </div>
       </div>
 
       <div className="contest-filter fade-up" style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:16,flexWrap:'wrap'}}>
@@ -775,6 +816,81 @@ export default function ContestPage() {
             </div>
             <div className="modal-actions">
               <button className="btn btn-ghost" onClick={()=>setReqContest(null)}>닫기</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── 대회 개최 요청 모달 (유저) ── */}
+      {showRequestForm && (
+        <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setShowRequestForm(false)}>
+          <div className="modal-box card fade-up" style={{maxWidth:480,width:'95vw'}}>
+            <h2>📋 대회 개최 요청</h2>
+            <p style={{fontSize:13,color:'var(--text2)',marginBottom:16}}>관리자가 검토 후 대회를 개설해드립니다.</p>
+            <div style={{display:'flex',flexDirection:'column',gap:10}}>
+              <div className="form-group">
+                <label style={{fontSize:12,color:'var(--text3)',marginBottom:4,display:'block'}}>대회 이름 *</label>
+                <input placeholder="예: 알고리즘 마스터 챌린지" value={requestForm.name} onChange={e=>setRequestForm(p=>({...p,name:e.target.value}))} />
+              </div>
+              <div className="form-group">
+                <label style={{fontSize:12,color:'var(--text3)',marginBottom:4,display:'block'}}>대회 설명</label>
+                <textarea rows={3} placeholder="대회 주제, 참가 대상 등 자유롭게 적어주세요." value={requestForm.description} onChange={e=>setRequestForm(p=>({...p,description:e.target.value}))} style={{width:'100%',resize:'vertical',background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:8,color:'var(--text)',padding:'8px 12px',fontSize:13,fontFamily:'inherit'}} />
+              </div>
+              <div className="form-group">
+                <label style={{fontSize:12,color:'var(--text3)',marginBottom:4,display:'block'}}>희망 날짜</label>
+                <input type="date" value={requestForm.desiredDate} onChange={e=>setRequestForm(p=>({...p,desiredDate:e.target.value}))} />
+              </div>
+              <div className="form-group">
+                <label style={{fontSize:12,color:'var(--text3)',marginBottom:4,display:'block'}}>요청 이유</label>
+                <textarea rows={2} placeholder="개최를 원하는 이유를 적어주세요." value={requestForm.reason} onChange={e=>setRequestForm(p=>({...p,reason:e.target.value}))} style={{width:'100%',resize:'vertical',background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:8,color:'var(--text)',padding:'8px 12px',fontSize:13,fontFamily:'inherit'}} />
+              </div>
+            </div>
+            <div className="modal-actions" style={{marginTop:20}}>
+              <button className="btn btn-ghost" onClick={()=>setShowRequestForm(false)}>취소</button>
+              <button className="btn btn-primary" onClick={handleSubmitCreationRequest} disabled={!requestForm.name.trim()||submittingRequest}>
+                {submittingRequest ? <span className="spinner"/> : '요청 제출'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── 개최 요청 목록 모달 (어드민) ── */}
+      {showCreationRequests && (
+        <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setShowCreationRequests(false)}>
+          <div className="modal-box card fade-up" style={{maxWidth:560,width:'95vw'}}>
+            <h2>📋 대회 개최 요청 목록</h2>
+            <div style={{maxHeight:420,overflowY:'auto',margin:'14px 0'}}>
+              {creationRequests.length === 0
+                ? <div style={{color:'var(--text3)',fontSize:13,textAlign:'center',padding:'20px 0'}}>요청이 없습니다.</div>
+                : creationRequests.map(r => (
+                  <div key={r.id} style={{padding:'12px 14px',borderRadius:10,marginBottom:8,background:'var(--bg3)',border:`1px solid ${r.status==='pending'?'var(--border)':r.status==='approved'?'rgba(63,185,80,.3)':'rgba(248,81,73,.3)'}`}}>
+                    <div style={{display:'flex',alignItems:'flex-start',gap:12}}>
+                      <div style={{flex:1}}>
+                        <div style={{fontWeight:700,fontSize:14}}>{r.name}</div>
+                        <div style={{fontSize:11,color:'var(--text3)',marginTop:2}}>by {r.username} ({r.tier}) · {new Date(r.created_at).toLocaleDateString()}</div>
+                        {r.description && <div style={{fontSize:12,color:'var(--text2)',marginTop:6}}>{r.description}</div>}
+                        {r.desired_date && <div style={{fontSize:12,color:'var(--text3)',marginTop:4}}>희망일: {r.desired_date}</div>}
+                        {r.reason && <div style={{fontSize:12,color:'var(--text2)',marginTop:4}}>이유: {r.reason}</div>}
+                      </div>
+                      <div style={{display:'flex',flexDirection:'column',gap:6,alignItems:'flex-end'}}>
+                        <span style={{fontSize:11,fontWeight:700,color:r.status==='pending'?'var(--yellow)':r.status==='approved'?'var(--green)':'var(--red)'}}>
+                          {r.status==='pending'?'대기중':r.status==='approved'?'승인됨':'거절됨'}
+                        </span>
+                        {r.status === 'pending' && (
+                          <div style={{display:'flex',gap:6}}>
+                            <button className="btn btn-sm btn-primary" onClick={()=>handleCreationRequestAction(r.id,'approved')} disabled={creationReqBusy[r.id]}>승인</button>
+                            <button className="btn btn-sm btn-ghost" onClick={()=>handleCreationRequestAction(r.id,'rejected')} disabled={creationReqBusy[r.id]} style={{color:'var(--red)'}}>거절</button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              }
+            </div>
+            <div className="modal-actions">
+              <button className="btn btn-ghost" onClick={()=>setShowCreationRequests(false)}>닫기</button>
             </div>
           </div>
         </div>

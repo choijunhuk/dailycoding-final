@@ -101,14 +101,35 @@ function DonutChart({ counts, centerLabel }) {
   )
 }
 
+const HEATMAP_LEVEL_LABELS = ['없음', '적음 (1문제)', '보통 (2-3문제)', '많음 (4-5문제)', '매우 많음 (6문제+)'];
+
 function Heatmap({ cells, caption }) {
+  const [hovered, setHovered] = useState(null);
+  const colorFor = (level) => (
+    level === 0 ? 'var(--bg3)'
+      : level === 1 ? 'rgba(88,166,255,.25)'
+      : level === 2 ? 'rgba(88,166,255,.45)'
+      : level === 3 ? 'rgba(46,160,67,.55)'
+      : 'rgba(46,160,67,.85)'
+  );
   return (
     <div style={{ display: 'grid', gap: 10 }}>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(10, minmax(0, 1fr))', gap: 6 }}>
         {cells.map((cell) => (
-          <div key={cell.date} title={`${cell.date} · level ${cell.level}`} style={{ aspectRatio: '1 / 1', borderRadius: 8, background: cell.level === 0 ? 'var(--bg3)' : cell.level === 1 ? 'rgba(88,166,255,.25)' : cell.level === 2 ? 'rgba(88,166,255,.45)' : cell.level === 3 ? 'rgba(46,160,67,.55)' : 'rgba(46,160,67,.85)', border: '1px solid var(--border)' }} />
+          <div
+            key={cell.date}
+            title={`${cell.date} · ${HEATMAP_LEVEL_LABELS[cell.level]}${cell.count > 0 ? ` (${cell.count}개)` : ''}`}
+            onMouseEnter={() => cell.level > 0 && setHovered(cell)}
+            onMouseLeave={() => setHovered(null)}
+            style={{ aspectRatio: '1 / 1', borderRadius: 8, background: colorFor(cell.level), border: '1px solid var(--border)', cursor: cell.level > 0 ? 'pointer' : 'default' }}
+          />
         ))}
       </div>
+      {hovered && (
+        <div style={{ fontSize: 12, color: 'var(--text2)', background: 'var(--bg3)', borderRadius: 8, padding: '6px 10px', border: '1px solid var(--border)' }}>
+          📅 {hovered.date} — {HEATMAP_LEVEL_LABELS[hovered.level]} ({hovered.count}문제)
+        </div>
+      )}
       <div style={{ fontSize: 11, color: 'var(--text3)' }}>{caption}</div>
     </div>
   )
@@ -143,7 +164,7 @@ export default function PublicProfilePage() {
         const today = new Date()
         const rawGrass = Array.isArray(grassRes.data) ? grassRes.data : []
         const grassMap = rawGrass.reduce((acc, item) => {
-          acc[item.date] = Math.min(4, item.level || 1)
+          acc[item.date] = Number(item.level) || 0
           return acc
         }, {})
         const last30 = []
@@ -151,7 +172,8 @@ export default function PublicProfilePage() {
           const date = new Date(today)
           date.setDate(date.getDate() - offset)
           const key = date.toISOString().slice(0, 10)
-          last30.push({ date: key, level: grassMap[key] || 0 })
+          const count = grassMap[key] || 0
+          last30.push({ date: key, count, level: Math.min(4, count) })
         }
         setProfile(profileRes.data)
         setGrass(last30)

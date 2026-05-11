@@ -60,6 +60,40 @@ router.get('/', auth, async (req, res) => {
   catch (err) { console.error('[contests/list]', err.message); return internalError(res); }
 });
 
+// ── 대회 개최 요청 (유저 → 어드민) ────────────────────────────
+router.post('/creation-requests', auth, requireVerified, async (req, res) => {
+  try {
+    const { name, description, desiredDate, reason } = req.body;
+    if (!name || !String(name).trim()) return errorResponse(res, 400, 'MISSING_NAME', '대회 이름을 입력하세요.');
+    await query(
+      'INSERT INTO contest_creation_requests (user_id, name, description, desired_date, reason) VALUES (?, ?, ?, ?, ?)',
+      [req.user.id, String(name).trim().slice(0, 100), String(description || '').trim().slice(0, 500), String(desiredDate || '').trim().slice(0, 50), String(reason || '').trim().slice(0, 500)],
+    );
+    res.json({ message: '대회 개최 요청이 접수되었습니다. 관리자 검토 후 안내드립니다.' });
+  } catch (err) { console.error('[contests/creation-requests/post]', err.message); return internalError(res); }
+});
+
+router.get('/creation-requests', auth, adminOnly, async (req, res) => {
+  try {
+    const rows = await query(
+      'SELECT cr.*, u.username, u.tier FROM contest_creation_requests cr JOIN users u ON cr.user_id = u.id ORDER BY cr.created_at DESC LIMIT 100',
+    );
+    res.json(rows);
+  } catch (err) { console.error('[contests/creation-requests/get]', err.message); return internalError(res); }
+});
+
+router.patch('/creation-requests/:reqId', auth, adminOnly, async (req, res) => {
+  try {
+    const { status, adminNote } = req.body;
+    if (!['approved', 'rejected'].includes(status)) return errorResponse(res, 400, 'INVALID_STATUS', '잘못된 상태값');
+    await query(
+      'UPDATE contest_creation_requests SET status = ?, admin_note = ? WHERE id = ?',
+      [status, String(adminNote || '').trim().slice(0, 255), Number(req.params.reqId)],
+    );
+    res.json({ message: status === 'approved' ? '요청을 승인했습니다.' : '요청을 거절했습니다.' });
+  } catch (err) { console.error('[contests/creation-requests/patch]', err.message); return internalError(res); }
+});
+
 router.get('/:id', auth, async (req, res) => {
   try {
     const c = await Contest.findById(Number(req.params.id));
