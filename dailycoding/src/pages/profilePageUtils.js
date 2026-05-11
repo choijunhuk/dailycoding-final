@@ -18,9 +18,9 @@ export const PROFILE_TIER_LABELS = {
 export function buildYearHeatmap(rows = [], today = new Date()) {
   const start = new Date(today);
   start.setDate(today.getDate() - 363);
-  const map = {};
+  const rawMap = {};
   rows.forEach((row) => {
-    map[row.date] = Math.min(4, Number(row.level) || 0);
+    rawMap[row.date] = Number(row.level) || 0;
   });
 
   const cells = [];
@@ -28,9 +28,11 @@ export function buildYearHeatmap(rows = [], today = new Date()) {
     const date = new Date(start);
     date.setDate(start.getDate() + offset);
     const key = date.toISOString().slice(0, 10);
+    const count = rawMap[key] || 0;
     cells.push({
       date: key,
-      level: map[key] || 0,
+      count,
+      level: Math.min(4, count),
       day: date.getDay(),
       week: Math.floor(offset / 7),
     });

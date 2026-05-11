@@ -12,7 +12,25 @@ const BATTLE_MODES = {
   'sort-speed': {
     key: 'sort-speed',
     title: '⚡ 스피드전',
-    description: '빠르고 정확한 제출이 공격력으로 전환됩니다. 상대 HP를 0으로 만들면 승리!',
+    description: '먼저 정답을 제출한 플레이어가 즉시 승리! HP 없음 — 순수한 속도 대결.',
+    winCondition: 'first-correct',
+    rules: ['같은 문제 1개를 동시에 풀기', '먼저 정답 제출한 플레이어 즉시 승리', 'HP·아이템·효과 없음', '시간 내 정답 없으면 점수 비교'],
+    maxPlayers: 2,
+    durationSec: 300,
+    itemsEnabled: false,
+    effectsEnabled: false,
+    chatEnabled: true,
+    emotesEnabled: true,
+    activityEnabled: true,
+    itemCooldownSec: 0,
+    problemCount: 1,
+  },
+  'survival': {
+    key: 'survival',
+    title: '💀 생존전',
+    description: '상대 HP를 0으로 만들면 승리! 정답 제출마다 공격력이 증가해 상대를 공격합니다.',
+    winCondition: 'hp-knockout',
+    rules: ['같은 문제 1개를 동시에 풀기', '정답 제출 → 상대 HP 감소', '오답 제출 → 내 속도 감소', '상대 HP가 0이 되면 즉시 승리', '시간 종료 시 HP가 더 많은 플레이어 승리'],
     maxPlayers: 2,
     durationSec: 300,
     itemsEnabled: false,
@@ -26,7 +44,9 @@ const BATTLE_MODES = {
   'duel-effects': {
     key: 'duel-effects',
     title: '✨ 효과전',
-    description: '정답 제출 시 문제 태그 기반 버프/디버프가 발동됩니다.',
+    description: '정답 제출 시 문제 태그 기반 버프/디버프가 발동! HP 전투 + 무작위 효과로 역전 가능.',
+    winCondition: 'hp-knockout',
+    rules: ['HP 전투 기본 규칙 동일', '정답 제출 시 문제 효과 발동 (버프/디버프)', '아이템 사용 가능 (쿨다운 20초)', '효과로 HP 회복·공격력 증가 등 역전 가능'],
     maxPlayers: 2,
     durationSec: 300,
     itemsEnabled: true,
@@ -40,7 +60,9 @@ const BATTLE_MODES = {
   'chaos-items': {
     key: 'chaos-items',
     title: '🎒 아이템 난투',
-    description: '짧은 쿨다운 아이템으로 상대를 흔드는 전술 모드.',
+    description: '빠른 쿨다운 아이템으로 상대를 흔드는 HP 전투! 아이템 전략이 승패를 가릅니다.',
+    winCondition: 'hp-knockout',
+    rules: ['HP 전투 기본 규칙 동일', '아이템 쿨다운 12초 (효과전보다 빠름)', '실드·공격 아이템 적극 활용 권장', '아이템 없이는 불리한 모드'],
     maxPlayers: 2,
     durationSec: 300,
     itemsEnabled: true,
@@ -54,7 +76,9 @@ const BATTLE_MODES = {
   'territory': {
     key: 'territory',
     title: '🏴 점령전',
-    description: '5개 문제 동시 공개! 먼저 풀면 내 영토. 가장 많은 영토를 점령한 플레이어가 승리합니다.',
+    description: '5개 문제 동시 공개! 먼저 풀면 내 영토. HP 없음 — 더 많은 구역을 점령한 플레이어가 승리.',
+    winCondition: 'territory',
+    rules: ['5개 문제가 동시에 공개됨', '정답 제출 → 해당 문제 구역 점령', '5개 모두 점령 시 즉시 승리', '시간 종료 시 점령 수가 많은 플레이어 승리', 'HP·아이템 없음'],
     maxPlayers: 2,
     durationSec: 600,
     itemsEnabled: false,
@@ -761,7 +785,18 @@ export const AlgorithmBattle = {
       return this.getRoomState(roomId);
     }
 
-    // Standard combat mode
+    // Speed mode: first correct answer wins immediately
+    if (room.mode === 'sort-speed' && isCorrect) {
+      await run(
+        'UPDATE battle_participants SET score = ?, attack_power = ?, speed = ?, last_seen_at = ? WHERE room_id = ? AND user_id = ?',
+        [scoring.score, scoring.attackPower, scoring.speed, nowMySQL(), roomId, userId]
+      );
+      await this.recordEvent(roomId, userId, 'player.attack', { score: scoring.score, damage: 0, executionTimeMs, detail: judgeResult?.detail || '' });
+      await this.finishRoom(roomId, { reason: 'speed_win' });
+      return this.getRoomState(roomId);
+    }
+
+    // Standard combat mode (survival, duel-effects, chaos-items)
     const nextScore = Math.max(0, Number(participant.score || 0) + scoring.score);
     const nextAttack = isCorrect ? scoring.attackPower : Number(participant.attack_power || 10);
     const nextSpeed = isCorrect ? scoring.speed : Math.max(5, Number(participant.speed || 10) - 2);

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
@@ -248,6 +248,21 @@ export default function ProfilePage() {
   };
   const heatmapCells = buildYearHeatmap(fullGrass);
   const activeHeatmapDays = heatmapCells.filter((item) => item.level > 0).length;
+  const [heatmapHover, setHeatmapHover] = useState(null);
+
+  const solvedByDate = useMemo(() => {
+    const map = {};
+    submissions.filter(s => s.result === 'correct').forEach(s => {
+      const date = (s.date || s.createdAt || '').slice(0, 10);
+      if (!date) return;
+      if (!map[date]) map[date] = [];
+      const pid = s.problemId || s.problem_id;
+      if (pid && !map[date].find(p => p.id === pid)) {
+        map[date].push({ id: pid, title: s.problemTitle || `#${pid}` });
+      }
+    });
+    return map;
+  }, [submissions]);
   const upgradePlans = getProfileUpgradePlans();
 
   const handlePwChange = async () => {
@@ -606,7 +621,7 @@ export default function ProfilePage() {
             {/* 티어 배지 격자 */}
             <div className="profile-top100-grid">
               {top100.map(p=>(
-                <div key={p.id} title={`${p.title} (+${TIER_POINTS[p.tier]||20})`} onClick={() => navigate(`/problems/${p.id}`)} style={{ cursor: 'pointer' }}>
+                <div key={p.id} title={`#${p.id} ${p.title}\n+${TIER_POINTS[p.tier]||20}점 (${p.tier})`} onClick={() => navigate(`/problems/${p.id}`)} style={{ cursor: 'pointer' }}>
                   <TierBadge tier={p.tier} size={34} />
                 </div>
               ))}
@@ -828,7 +843,7 @@ export default function ProfilePage() {
       ══════════════════════════════════════ */}
       {mainTab==='streak' && (
         <div className="fade-up" style={{ display:'flex', flexDirection:'column', gap:16 }}>
-          <div className="card card-pad">
+          <div className="card card-pad" style={{ position:'relative' }}>
             <div className="section-header" style={{ marginBottom:16 }}>
               <div>
                 <div style={{ fontSize:22, fontWeight:800 }}>현재 {user?.streak||0}일</div>
@@ -839,15 +854,36 @@ export default function ProfilePage() {
                 <div style={{ fontSize:20, fontWeight:800, fontFamily:'Space Mono,monospace' }}>{activeHeatmapDays}일</div>
               </div>
             </div>
-            <YearHeatmap cells={heatmapCells} />
+            <YearHeatmap cells={heatmapCells} onCellHover={(cell) => setHeatmapHover(cell)} />
             <div style={{ display:'flex', gap:6, alignItems:'center', marginTop:12, fontSize:11, color:'var(--text3)' }}>
-              <span>적음</span>
+              <span>없음</span>
               {[0,1,2,3,4].map(l=>(
                 <div key={l} className={`gcell lv${l}`} style={{ width:12, height:12, borderRadius:3, flexShrink:0 }}/>
               ))}
               <span>많음</span>
             </div>
           </div>
+          {heatmapHover && heatmapHover.level > 0 && (
+            <div className="card card-pad" style={{ borderColor:'var(--blue)', borderWidth:1, borderStyle:'solid' }}>
+              <div style={{ fontSize:13, fontWeight:700, marginBottom:8, color:'var(--blue)' }}>
+                📅 {heatmapHover.date} — {['없음','적음','보통','많음','매우 많음'][heatmapHover.level]} ({heatmapHover.count}문제)
+              </div>
+              {(solvedByDate[heatmapHover.date] || []).length > 0 ? (
+                <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+                  {solvedByDate[heatmapHover.date].map(p => (
+                    <div key={p.id} onClick={() => navigate(`/problems/${p.id}`)}
+                      style={{ display:'flex', alignItems:'center', gap:8, padding:'6px 10px', borderRadius:8, cursor:'pointer', background:'var(--bg2)' }}
+                      className="list-item-hover">
+                      <span style={{ fontSize:11, color:'var(--text3)', fontFamily:'Space Mono,monospace' }}>#{p.id}</span>
+                      <span style={{ fontSize:13 }}>{p.title}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ fontSize:12, color:'var(--text3)' }}>이 날의 풀이 기록을 불러올 수 없습니다.</div>
+              )}
+            </div>
+          )}
         </div>
       )}
 

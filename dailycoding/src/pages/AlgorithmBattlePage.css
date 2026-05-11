@@ -672,9 +672,12 @@
 }
 
 .ab-territory-title {
+  display: inline-block;
   max-width: 120px;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
 }
 
 .ab-territory-flag {
@@ -713,6 +716,15 @@
   gap: 2px;
   text-align: center;
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.ab-room-title strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ab-room-actions {

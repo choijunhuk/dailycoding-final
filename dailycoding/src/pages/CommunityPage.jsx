@@ -158,7 +158,7 @@ export default function CommunityPage() {
   const params = useParams()
   const navigate = useNavigate()
   const location = useLocation()
-  const { user } = useAuth()
+  const { user, isAdmin } = useAuth()
   const toast = useToast()
   useLang()
   const activeBoard = BOARD_META[params.board] ? params.board : 'qna'
@@ -494,6 +494,8 @@ export default function CommunityPage() {
                       <button onClick={() => openComposer('edit', selectedPost)} style={{ border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--text)', borderRadius: 12, padding: '9px 12px', cursor: 'pointer', fontWeight: 700 }}>수정</button>
                       <button onClick={deletePost} style={{ border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--red)', borderRadius: 12, padding: '9px 12px', cursor: 'pointer', fontWeight: 700 }}>삭제</button>
                     </>
+                  ) : isAdmin ? (
+                    <button onClick={deletePost} style={{ border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--red)', borderRadius: 12, padding: '9px 12px', cursor: 'pointer', fontWeight: 700 }}>🛡 삭제</button>
                   ) : null}
                 </div>
               </div>
@@ -525,7 +527,7 @@ export default function CommunityPage() {
                 <SectionTitle title={`댓글 ${selectedPost.replies?.length || 0}`} desc={activeBoard === 'qna' ? '답글 버튼은 멘션 프리필로 대댓글 흐름을 보조합니다.' : '답글 버튼으로 작성자 멘션을 빠르게 시작할 수 있습니다.'} />
                 <div style={{ display: 'grid', gap: 12, marginBottom: 16 }}>
                   {(selectedPost.replies || []).map((reply) => {
-                    const canDelete = reply.user_id === user?.id || isMyPost
+                    const canDelete = reply.user_id === user?.id || isMyPost || isAdmin
                     const canAccept = activeBoard === 'qna' && isMyPost && reply.user_id !== user?.id && !reply.is_accepted
                     return (
                       <div key={reply.id} className="card" style={{ padding: 16 }}>

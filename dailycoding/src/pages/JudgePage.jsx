@@ -20,6 +20,9 @@ import {
   RESULT_INFO_COLORS,
   TEMPLATES,
 } from './judgePageUtils.js';
+import { JUDGE_AD_SLOT } from './battlePageUtils.js';
+import { BattleAdSlot } from './battleProblemViews.jsx';
+import { useSubscriptionStatus } from '../hooks/useSubscriptionStatus.js';
 import './JudgePage.css';
 
 const TROUBLESHOOTING_TYPES = new Set(['troubleshooting', 'performance-fix', 'refactor-fix']);
@@ -98,6 +101,8 @@ export default function JudgePage() {
   const { user, isAdmin } = useAuth();
   const { isDark } = useTheme();
   const { t } = useLang();
+  const { tier: subscriptionTier } = useSubscriptionStatus(user?.id);
+  const isFreePlan = !subscriptionTier || subscriptionTier === 'free';
   const RESULT_INFO = {
     correct: { label: t('accepted'),           color: RESULT_INFO_COLORS.correct },
     success: { label: '실행 완료',              color: RESULT_INFO_COLORS.success },
@@ -1486,6 +1491,9 @@ export default function JudgePage() {
             </Suspense>
           )}
         </div>
+
+        {/* ★ 광고 슬롯 (무료 플랜) */}
+        {isFreePlan && <BattleAdSlot slot={JUDGE_AD_SLOT} />}
 
         {/* Bottom panel */}
         {isTroubleshootingProblem && (

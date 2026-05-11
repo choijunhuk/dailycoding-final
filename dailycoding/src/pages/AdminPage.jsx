@@ -86,6 +86,11 @@ export default function AdminPage() {
   const [weeklyChallenge, setWeeklyChallenge] = useState(null);
   const [weeklyForm, setWeeklyForm] = useState({ problemId: '', rewardCode: 'weekly_solver' });
   const [weeklySaving, setWeeklySaving] = useState(false);
+  const [communitySubmissions, setCommunitySubmissions] = useState([]);
+  const [communityLoading, setCommunityLoading] = useState(false);
+  const [communityFilter, setCommunityFilter] = useState('pending');
+  const [communityDetail, setCommunityDetail] = useState(null);
+  const [communityRejectNote, setCommunityRejectNote] = useState('');
 
   useEffect(() => { api.get('/problems').then(r=>setProblems(r.data)).catch(()=>{}); }, []);
   useEffect(() => {
@@ -113,6 +118,39 @@ export default function AdminPage() {
       }).finally(() => setAdminStatsLoading(false));
     }
   }, [activeTab]);
+
+  useEffect(() => {
+    if (activeTab !== 'community') return;
+    setCommunityLoading(true);
+    api.get(`/community-problems/admin?status=${communityFilter}`)
+      .then(r => setCommunitySubmissions(r.data.rows || []))
+      .catch(() => {})
+      .finally(() => setCommunityLoading(false));
+  }, [activeTab, communityFilter]);
+
+  const handleCommunityApprove = async (id) => {
+    if (!window.confirm('이 문제를 승인하고 공식 문제로 등록하시겠습니까?')) return;
+    try {
+      await api.post(`/community-problems/admin/${id}/approve`);
+      toast?.show('✅ 문제가 등록되었습니다.', 'success');
+      setCommunitySubmissions(s => s.filter(x => x.id !== id));
+      setCommunityDetail(null);
+    } catch (err) {
+      toast?.show(err.response?.data?.message || '승인 실패', 'error');
+    }
+  };
+
+  const handleCommunityReject = async (id) => {
+    try {
+      await api.post(`/community-problems/admin/${id}/reject`, { note: communityRejectNote });
+      toast?.show('반려되었습니다.', 'success');
+      setCommunitySubmissions(s => s.filter(x => x.id !== id));
+      setCommunityDetail(null);
+      setCommunityRejectNote('');
+    } catch (err) {
+      toast?.show(err.response?.data?.message || '반려 실패', 'error');
+    }
+  };
 
   if (!isAdmin) return (
     <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'calc(100vh - 54px)',flexDirection:'column',gap:12}}>
@@ -547,7 +585,7 @@ export default function AdminPage() {
         {activeTab==='problems' && <button className="btn btn-primary" onClick={()=>{setForm(createEmptyForm());setEditTarget(null);setAiPreview(null);setView('create');}}>+ 문제 만들기</button>}
       </div>
       <div className="admin-tabs fade-up">
-        {[['problems','📝 문제'],['contests','🏆 대회'],['users','👥 유저'],['battle','⚔️ 배틀'],['stats','📊 통계'],['system','⚙️ 시스템']].map(([k,l])=>(
+        {[['problems','📝 문제'],['contests','🏆 대회'],['users','👥 유저'],['battle','⚔️ 배틀'],['stats','📊 통계'],['system','⚙️ 시스템'],['community','💡 제출 검토']].map(([k,l])=>(
           <button key={k} className={`at-btn ${activeTab===k?'active':''}`} onClick={()=>setActiveTab(k)}>{l}</button>
         ))}
       </div>
@@ -942,6 +980,107 @@ export default function AdminPage() {
               ))}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ── 커뮤니티 제출 검토 탭 */}
+      {activeTab==='community' && (
+        <div className="fade-up">
+          {/* 필터 + 상세 패널 */}
+          {communityDetail ? (
+            <div className="card" style={{padding:24}}>
+              <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:20}}>
+                <button className="btn btn-ghost btn-sm" onClick={()=>{setCommunityDetail(null);setCommunityRejectNote('');}}>← 목록으로</button>
+                <h3 style={{margin:0}}>문제 상세 검토</h3>
+              </div>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:16,fontSize:13}}>
+                <div><span style={{color:'var(--text3)'}}>제출자</span><br/><strong>{communityDetail.username}</strong></div>
+                <div><span style={{color:'var(--text3)'}}>유형</span><br/><strong>{communityDetail.problem_type}</strong></div>
+                <div><span style={{color:'var(--text3)'}}>티어</span><br/><strong>{communityDetail.tier}</strong></div>
+                <div><span style={{color:'var(--text3)'}}>난이도</span><br/><strong>{communityDetail.difficulty}/10</strong></div>
+              </div>
+              <div style={{marginBottom:14}}>
+                <div style={{fontSize:12,color:'var(--text3)',marginBottom:4}}>제목</div>
+                <div style={{fontWeight:700,fontSize:16}}>{communityDetail.title}</div>
+              </div>
+              <div style={{marginBottom:14}}>
+                <div style={{fontSize:12,color:'var(--text3)',marginBottom:4}}>문제 설명</div>
+                <pre style={{background:'var(--bg3)',padding:14,borderRadius:8,fontSize:13,whiteSpace:'pre-wrap',margin:0}}>{communityDetail.description}</pre>
+              </div>
+              {communityDetail.hint && (
+                <div style={{marginBottom:14}}>
+                  <div style={{fontSize:12,color:'var(--text3)',marginBottom:4}}>힌트</div>
+                  <div style={{fontSize:13,color:'var(--text2)'}}>{communityDetail.hint}</div>
+                </div>
+              )}
+              {(communityDetail.examples||[]).length > 0 && (
+                <div style={{marginBottom:14}}>
+                  <div style={{fontSize:12,color:'var(--text3)',marginBottom:6}}>예제 입출력</div>
+                  {communityDetail.examples.map((ex,i) => (
+                    <div key={i} style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:6}}>
+                      <pre className="io-box mono" style={{margin:0,fontSize:12}}>{ex.input||'(없음)'}</pre>
+                      <pre className="io-box mono" style={{margin:0,fontSize:12}}>{ex.output||'(없음)'}</pre>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {communityDetail.status === 'pending' && (
+                <div style={{marginTop:20,borderTop:'1px solid var(--border)',paddingTop:18}}>
+                  <div style={{display:'flex',gap:10,flexWrap:'wrap',alignItems:'flex-start'}}>
+                    <button className="btn btn-success" onClick={()=>handleCommunityApprove(communityDetail.id)}>✅ 승인하고 문제 등록</button>
+                    <div style={{display:'flex',flexDirection:'column',gap:6,flex:1,minWidth:200}}>
+                      <input className="input" placeholder="반려 사유 (선택)" value={communityRejectNote}
+                        onChange={e=>setCommunityRejectNote(e.target.value)} />
+                      <button className="btn btn-danger btn-sm" onClick={()=>handleCommunityReject(communityDetail.id)}>❌ 반려</button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="card" style={{overflow:'hidden'}}>
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'14px 18px',borderBottom:'1px solid var(--border)'}}>
+                <h3 style={{margin:0}}>💡 유저 문제 제출 검토</h3>
+                <div style={{display:'flex',gap:6}}>
+                  {['pending','approved','rejected'].map(s=>(
+                    <button key={s} className={`btn btn-sm ${communityFilter===s?'btn-primary':'btn-ghost'}`}
+                      onClick={()=>setCommunityFilter(s)}>
+                      {s==='pending'?'⏳ 검토 중':s==='approved'?'✅ 승인됨':'❌ 반려됨'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {communityLoading ? (
+                <div style={{padding:24,textAlign:'center',color:'var(--text3)'}}>불러오는 중...</div>
+              ) : communitySubmissions.length === 0 ? (
+                <div style={{padding:24,textAlign:'center',color:'var(--text3)'}}>제출된 문제가 없습니다.</div>
+              ) : (
+                <table className="admin-table">
+                  <thead>
+                    <tr><th style={{width:40}}>ID</th><th>제목</th><th style={{width:90}}>제출자</th><th style={{width:70}}>유형</th><th style={{width:60}}>티어</th><th style={{width:70}}>난이도</th><th style={{width:100}}>제출일</th><th style={{width:80}}>액션</th></tr>
+                  </thead>
+                  <tbody>
+                    {communitySubmissions.map(s=>(
+                      <tr key={s.id} className="at-row">
+                        <td className="mono" style={{fontSize:11,color:'var(--text3)'}}>#{s.id}</td>
+                        <td style={{fontWeight:600,maxWidth:240,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{s.title}</td>
+                        <td style={{fontSize:12,color:'var(--text2)'}}>{s.username}</td>
+                        <td><span className="tag" style={{fontSize:10,background:'var(--bg3)',color:'var(--text2)'}}>{s.problem_type}</span></td>
+                        <td style={{fontSize:12}}>{s.tier}</td>
+                        <td className="mono" style={{fontSize:12}}>{s.difficulty}/10</td>
+                        <td style={{fontSize:11,color:'var(--text3)'}}>{new Date(s.created_at).toLocaleDateString('ko-KR')}</td>
+                        <td>
+                          <button className="btn btn-ghost btn-sm" onClick={()=>api.get(`/community-problems/admin/${s.id}`).then(r=>setCommunityDetail(r.data)).catch(()=>{})}>
+                            상세보기
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          )}
         </div>
       )}
 

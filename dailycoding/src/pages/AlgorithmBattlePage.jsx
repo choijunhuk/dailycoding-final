@@ -30,10 +30,11 @@ const DURATION_PRESETS = [
   { label: '🏔️ 마라톤 20분', sec: 1200 },
 ];
 const FALLBACK_MODES = [
-  { key: 'sort-speed', title: '⚡ 스피드전', description: '빠른 정답 제출이 공격력으로!', itemsEnabled: false, effectsEnabled: false, problemCount: 1 },
-  { key: 'duel-effects', title: '✨ 효과전', description: '문제 효과와 아이템 전투', itemsEnabled: true, effectsEnabled: true, problemCount: 1 },
-  { key: 'chaos-items', title: '🎒 아이템 난투', description: '짧은 쿨다운 아이템 배틀', itemsEnabled: true, effectsEnabled: true, problemCount: 1 },
-  { key: 'territory', title: '🏴 점령전', description: '5문제 땅따먹기! 더 많이 점령하면 승리', itemsEnabled: false, effectsEnabled: false, problemCount: 5 },
+  { key: 'sort-speed', title: '⚡ 스피드전', description: '먼저 정답 제출한 플레이어 즉시 승리! HP 없음.', winCondition: 'first-correct', rules: ['먼저 정답 제출하면 즉시 승리', 'HP·아이템·효과 없음', '시간 초과 시 점수 비교'], itemsEnabled: false, effectsEnabled: false, problemCount: 1 },
+  { key: 'survival', title: '💀 생존전', description: '상대 HP를 0으로 만들어야 승리! 순수 HP 배틀.', winCondition: 'hp-knockout', rules: ['정답 → 상대 HP 감소', '상대 HP 0 = 즉시 승리', '아이템·효과 없음'], itemsEnabled: false, effectsEnabled: false, problemCount: 1 },
+  { key: 'duel-effects', title: '✨ 효과전', description: '문제 효과 발동 + HP 배틀. 역전 가능!', winCondition: 'hp-knockout', rules: ['정답 → 상대 HP 감소 + 문제 효과 발동', '아이템 쿨다운 20초', 'HP 0 = 패배'], itemsEnabled: true, effectsEnabled: true, problemCount: 1 },
+  { key: 'chaos-items', title: '🎒 아이템 난투', description: '빠른 쿨다운 아이템 HP 배틀!', winCondition: 'hp-knockout', rules: ['아이템 쿨다운 12초 (빠름)', '정답 → 상대 HP 감소', 'HP 0 = 패배'], itemsEnabled: true, effectsEnabled: true, problemCount: 1 },
+  { key: 'territory', title: '🏴 점령전', description: '5문제 동시 공개. 더 많이 점령하면 승리!', winCondition: 'territory', rules: ['5개 문제 동시 공개', '정답 → 해당 문제 점령', '점령 수가 많은 플레이어 승리', 'HP 없음'], itemsEnabled: false, effectsEnabled: false, problemCount: 5 },
 ];
 
 function getSocketOrigin() {
@@ -205,6 +206,7 @@ export default function AlgorithmBattlePage() {
   const [attackUserId, setAttackUserId] = useState(null);
   const [clock, setClock] = useState(0);
   const [selectedProblemIdx, setSelectedProblemIdx] = useState(0);
+  const [showRules, setShowRules] = useState(false);
 
   const lastActivityRef = useRef(0);
 
@@ -474,7 +476,7 @@ export default function AlgorithmBattlePage() {
         <div className="ab-header">
           <div>
             <h1>실시간 알고리즘 배틀</h1>
-            <p>실력을 겨루고 상대 HP를 0으로 만들어 승리하세요.</p>
+            <p>5가지 모드로 코딩 실력을 겨루세요 — 스피드, HP 생존, 효과전, 아이템 난투, 점령전.</p>
           </div>
         </div>
 
@@ -499,6 +501,20 @@ export default function AlgorithmBattlePage() {
               </button>
             ))}
           </div>
+
+          {/* 선택된 모드 규칙 */}
+          {battleModes.find(m => m.key === selectedMode)?.rules && (
+            <div style={{ background:'var(--bg)', border:'1px solid var(--border)', borderRadius:10, padding:'10px 14px', marginTop:8 }}>
+              <div style={{ fontSize:12, fontWeight:700, color:'var(--text2)', marginBottom:6 }}>
+                📋 {battleModes.find(m => m.key === selectedMode)?.title} 규칙
+              </div>
+              <ul style={{ margin:0, paddingLeft:18, display:'flex', flexDirection:'column', gap:3 }}>
+                {(battleModes.find(m => m.key === selectedMode)?.rules || []).map((rule, i) => (
+                  <li key={i} style={{ fontSize:12, color:'var(--text2)' }}>{rule}</li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {/* 시간 + 언어 + 비밀방 설정 */}
           <div className="ab-create-options">
@@ -580,7 +596,7 @@ export default function AlgorithmBattlePage() {
               <div key={item.room.id} className="ab-room-row">
                 <div>
                   <strong>{item.problem?.title || '문제 로딩 중'}</strong>
-                  <span>{modeLabel} · {item.participants.length}/{item.room.maxPlayers}명 · {fmtSec(item.room.durationSec)}</span>
+                  <span>{modeLabel} · {item.participants.length}/{item.room.maxPlayers}명 · {item.room.status === 'playing' ? `⏱ ${fmtSec(timeLeft(item.room))} 남음` : fmtSec(item.room.durationSec)}</span>
                 </div>
                 <button className="btn btn-ghost btn-sm" onClick={() => joinRoom(item.room.id)}>참가</button>
               </div>
@@ -624,6 +640,9 @@ export default function AlgorithmBattlePage() {
           </span>
         </div>
         <div className="ab-room-actions">
+          <button className="btn btn-ghost btn-sm" onClick={() => setShowRules(v => !v)} title="모드 규칙 보기">
+            📋 규칙
+          </button>
           {currentRoom?.inviteCode && (
             <button className="btn btn-ghost btn-sm ab-invite-code" onClick={copyInviteCode} title="초대 코드 복사">
               <Copy size={13} /> {currentRoom.inviteCode}
@@ -643,6 +662,16 @@ export default function AlgorithmBattlePage() {
       </div>
 
       {countdown != null && <div className="ab-countdown">{countdown > 0 ? countdown : '🔥 시작!'}</div>}
+
+      {/* 모드 규칙 패널 */}
+      {showRules && config?.rules && (
+        <div style={{ margin:'0 16px', padding:'12px 16px', background:'var(--bg2)', border:'1px solid var(--border)', borderRadius:10, fontSize:13 }}>
+          <div style={{ fontWeight:700, marginBottom:8 }}>📋 {config.title} 규칙</div>
+          <ul style={{ margin:0, paddingLeft:18, display:'flex', flexDirection:'column', gap:4 }}>
+            {config.rules.map((rule, i) => <li key={i} style={{ color:'var(--text2)' }}>{rule}</li>)}
+          </ul>
+        </div>
+      )}
 
       {/* 점령전 문제 탭 */}
       {isTerritoryMode && problems && (

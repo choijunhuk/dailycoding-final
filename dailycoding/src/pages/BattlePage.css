@@ -548,15 +548,16 @@
   flex-direction: column;
   align-items: center;
   gap: 3px;
-  padding: 8px 16px;
+  padding: 8px 12px;
   border-radius: 10px;
   border: 1px solid var(--border);
   background: var(--bg3);
   cursor: pointer;
   transition: all .15s;
-  min-width: 90px;
+  min-width: 80px;
   font-family: inherit;
   color: var(--text);
+  white-space: nowrap;
 }
 
 .bp-territory-cell:hover   { border-color: var(--blue); }
@@ -565,8 +566,8 @@
 .bp-territory-cell.opp     { border-color: var(--red);   background: rgba(248,81,73,.08); opacity: 0.7; }
 
 .bp-territory-num  { font-size: 16px; font-weight: 800; }
-.bp-territory-type { font-size: 10px; color: var(--text3); }
-.bp-territory-flag { font-size: 10px; color: var(--text2); }
+.bp-territory-type { font-size: 10px; color: var(--text3); white-space: nowrap; }
+.bp-territory-flag { font-size: 10px; color: var(--text2); white-space: nowrap; }
 
 /* ── 문제 영역 ───────────────────────────────────────────── */
 .bp-problem-area {

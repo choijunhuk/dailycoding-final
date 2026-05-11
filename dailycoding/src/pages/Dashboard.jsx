@@ -7,7 +7,7 @@ import { useToast } from '../context/ToastContext.jsx';
 import { PROBLEMS as DEFAULT_PROBLEMS, TIERS } from '../data/problems';
 import api from '../api.js';
 import { useRankingData } from '../hooks/useRankingData.js';
-import { BarChart3, BookOpen, Bot, CheckCircle2, FileText, Flame, MessageSquare, Sparkles, Swords, Target, TrendingUp, Trophy } from 'lucide-react';
+import { BarChart3, BookOpen, Bot, CheckCircle2, FileText, Flame, Sparkles, Swords, Target, TrendingUp, Trophy } from 'lucide-react';
 import ProfileAvatar from '../components/ProfileAvatar';
 import { TIER_THRESHOLDS } from '../data/constants.js';
 import { useLang } from '../context/LangContext.jsx';
@@ -95,40 +95,6 @@ export default function Dashboard() {
   const locale = lang === 'ko' ? 'ko-KR' : 'en-US';
   const tierMeta   = TIER_META[user?.tier] || TIER_META.bronze;
   const solvedList = PROBLEMS.filter(p => solved[p.id]);
-  const learningModes = [
-    {
-      title: '기본 알고리즘 문제 풀이',
-      desc: '티어별 알고리즘 문제를 풀고 레이팅을 올립니다.',
-      icon: <BookOpen size={20} />,
-      color: 'var(--blue)',
-      to: '/problems?problemType=algorithm',
-      stat: `${solvedList.length} solved`,
-    },
-    {
-      title: '실무형 트러블슈팅',
-      desc: '버그 코드베이스를 고치고 성능 목표를 달성합니다.',
-      icon: <FileText size={20} />,
-      color: 'var(--orange)',
-      to: '/problems?problemType=troubleshooting',
-      stat: 'scenario fix',
-    },
-    {
-      title: '실시간 알고리즘 배틀',
-      desc: '같은 문제를 동시에 풀고 실행 결과로 승패를 겨룹니다.',
-      icon: <Swords size={20} />,
-      color: 'var(--red)',
-      to: '/battle',
-      stat: 'realtime',
-    },
-    {
-      title: '협업 코드 리뷰',
-      desc: '다른 유저의 코드를 리뷰하고 개선 제안으로 점수를 얻습니다.',
-      icon: <MessageSquare size={20} />,
-      color: 'var(--green)',
-      to: '/reviews',
-      stat: 'collab',
-    },
-  ];
   const recentSolved = solvedList.slice(-5).reverse();
   const unsolved   = PROBLEMS.filter(p => !solved[p.id]);
   const todayProb  = unsolved[0] || PROBLEMS[0];
@@ -351,23 +317,9 @@ export default function Dashboard() {
 
       {/* 통계 카드 */}
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:12,marginBottom:20}}>
-        <StatCard icon={<BookOpen size={20} />} value={PROBLEMS.length}    label={t('problems')}    color="var(--blue)" delta={t('dashboardProblemsDelta')} onClick={() => navigate('/problems')} />
         <StatCard icon={<CheckCircle2 size={20} />} value={solvedList.length}  label={t('solved')}  color="var(--green)" delta={solvedList.length > 0 ? `▲ ${Math.min(99, Math.round(solvedList.length / Math.max(PROBLEMS.length, 1) * 100))}%` : null} onClick={() => navigate('/submissions')} />
         <StatCard icon={<TrendingUp size={20} />} value={progression ? `Lv.${progression.level}` : (user?.rating||800)}  label={progression ? '성장 레벨' : t('rating')}  color="var(--yellow)" delta={progression ? `${progression.xp.toLocaleString()} XP` : ((user?.streak||0) > 0 ? `+${(user.streak) * 2} 성장` : null)} onClick={() => navigate('/profile')} />
         <StatCard icon={<Target size={20} />} value={myRank?`#${myRank}`:'−'} label={t('dashboardMyRank')} color="var(--purple)" delta={t('dashboardRealtimeTrack')} onClick={() => navigate('/ranking')} />
-      </div>
-
-      <div className="dashboard-learning-modes">
-        {learningModes.map((mode) => (
-          <button key={mode.title} className="dashboard-learning-card" onClick={() => navigate(mode.to)} style={{ '--mode-color': mode.color }}>
-            <span className="dashboard-learning-icon">{mode.icon}</span>
-            <span className="dashboard-learning-body">
-              <strong>{mode.title}</strong>
-              <small>{mode.desc}</small>
-            </span>
-            <span className="dashboard-learning-stat">{mode.stat}</span>
-          </button>
-        ))}
       </div>
 
       <div style={{display:'grid',gridTemplateColumns:'minmax(0,1fr) 360px',gap:16}} className="dashboard-main-grid">

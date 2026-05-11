@@ -84,7 +84,9 @@ export function DonutChart({ data, total }) {
   );
 }
 
-export function YearHeatmap({ cells }) {
+const HEATMAP_LEVEL_LABELS = ['없음', '적음 (1문제)', '보통 (2-3문제)', '많음 (4-5문제)', '매우 많음 (6문제+)'];
+
+export function YearHeatmap({ cells, onCellHover }) {
   const cell = 11;
   const gap = 4;
   const width = 52 * (cell + gap);
@@ -98,7 +100,7 @@ export function YearHeatmap({ cells }) {
   );
 
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} width="100%" height={height}>
+    <svg viewBox={`0 0 ${width} ${height}`} width="100%" height={height} style={{ overflow: 'visible' }}>
       {cells.map((cellData) => (
         <rect
           key={cellData.date}
@@ -109,8 +111,11 @@ export function YearHeatmap({ cells }) {
           rx="3"
           fill={colorFor(cellData.level)}
           stroke="var(--border)"
+          style={{ cursor: cellData.level > 0 ? 'pointer' : 'default' }}
+          onMouseEnter={(e) => onCellHover?.({ ...cellData, clientX: e.clientX, clientY: e.clientY })}
+          onMouseLeave={() => onCellHover?.(null)}
         >
-          <title>{`${cellData.date} · ${cellData.level > 0 ? `${cellData.level}문제` : '기록 없음'}`}</title>
+          <title>{`${cellData.date} · ${HEATMAP_LEVEL_LABELS[cellData.level]}${cellData.count > 0 ? ` (총 ${cellData.count}개)` : ''}`}</title>
         </rect>
       ))}
     </svg>

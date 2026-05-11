@@ -13,6 +13,16 @@ export const BATTLE_MODES = [
 ];
 export const TYPE_LABEL = { coding: '코딩', 'fill-blank': '빈칸채우기', 'bug-fix': '버그수정' };
 export const TYPE_COLOR = { coding: 'var(--blue)', 'fill-blank': 'var(--green)', 'bug-fix': 'var(--yellow)' };
+export const JUDGE_AD_SLOT = Object.freeze({
+  id: 'judge-result-banner',
+  title: '스폰서 배너 슬롯 (예시)',
+  description: '여기에 이미지 광고를 연결할 수 있습니다.',
+  type: 'image',
+  imageUrl: '',
+  ctaText: '광고 링크 자리',
+  ctaUrl: '#',
+});
+
 export const BATTLE_AD_SLOTS = Object.freeze({
   lobby: {
     id: 'battle-lobby-top',
