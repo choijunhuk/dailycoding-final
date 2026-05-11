@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext.jsx'
 import { useLang } from '../context/LangContext.jsx'
 import ProfileAvatar from '../components/ProfileAvatar.jsx'
+import FollowListModal from '../components/FollowListModal.jsx'
 
 const TIER_COLORS = {
   unranked: 'var(--text3)',
@@ -125,6 +126,7 @@ export default function PublicProfilePage() {
   const [grass, setGrass] = useState([])
   const [submissions, setSubmissions] = useState([])
   const [activity, setActivity] = useState([])
+  const [followModalType, setFollowModalType] = useState(null)
 
   useEffect(() => {
     let cancelled = false
@@ -268,10 +270,29 @@ export default function PublicProfilePage() {
                 {[
                   { label: t('rating'), value: Number(profile.rating || 0).toLocaleString(), color: 'var(--yellow)' },
                   { label: t('streak'), value: t('publicProfileStreakDays').replace('{n}', String(profile.streak || 0)), color: 'var(--green)' },
-                  { label: t('followers'), value: profile.followers || 0, color: 'var(--blue)' },
-                  { label: t('following'), value: profile.following || 0, color: 'var(--purple)' },
-                ].map((item) => (
-                  <div key={item.label} style={{ background: 'var(--bg3)', borderRadius: 12, padding: '12px 10px' }}>
+                  { label: t('followers'), value: profile.followers || 0, color: 'var(--blue)', action: 'followers' },
+                  { label: t('following'), value: profile.following || 0, color: 'var(--purple)', action: 'following' },
+                ].map((item) => item.action ? (
+                  <button
+                    key={item.label}
+                    type="button"
+                    onClick={() => setFollowModalType(item.action)}
+                    style={{
+                      background: 'var(--bg3)',
+                      border: '1px solid transparent',
+                      borderRadius: 12,
+                      padding: '12px 10px',
+                      textAlign: 'left',
+                      color: 'inherit',
+                      fontFamily: 'inherit',
+                      cursor: item.action ? 'pointer' : 'default',
+                    }}
+                  >
+                    <div style={{ fontSize: 18, fontWeight: 900, color: item.color }}>{item.value}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 6 }}>{item.label}</div>
+                  </button>
+                ) : (
+                  <div key={item.label} style={{ background: 'var(--bg3)', border: '1px solid transparent', borderRadius: 12, padding: '12px 10px' }}>
                     <div style={{ fontSize: 18, fontWeight: 900, color: item.color }}>{item.value}</div>
                     <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 6 }}>{item.label}</div>
                   </div>
@@ -406,6 +427,12 @@ export default function PublicProfilePage() {
           )}
         </div>
       </div>
+      <FollowListModal
+        userId={profile.id}
+        initialType={followModalType || 'followers'}
+        open={Boolean(followModalType)}
+        onClose={() => setFollowModalType(null)}
+      />
     </div>
   )
 }

@@ -10,6 +10,7 @@ import { useSubscriptionCheckout } from '../hooks/useSubscriptionCheckout.js';
 import { JUDGE_LANGUAGE_OPTIONS } from '../data/judgeLanguages.js';
 import { TIER_POINTS, TIER_ORDER } from '../data/constants.js';
 import ProfileAvatar from '../components/ProfileAvatar.jsx';
+import FollowListModal from '../components/FollowListModal.jsx';
 import { buildYearHeatmap, formatDuration, PROFILE_TIER_LABELS, PROFILE_TIER_THRESHOLDS } from './profilePageUtils.js';
 import { buildPaymentFeedback, formatCurrentSubscriptionLabel, getProfileUpgradePlans } from './profileSubscriptionUtils.js';
 import { DonutChart, TierBadge, YearHeatmap } from './profilePageWidgets.jsx';
@@ -72,6 +73,7 @@ export default function ProfilePage() {
   const [equippedTitle, setEquippedTitle] = useState(user?.equippedTitle || null);
   const [progression, setProgression] = useState(null);
   const [followStats,   setFollowStats]   = useState({ followers:0, following:0 });
+  const [followModalType, setFollowModalType] = useState(null);
   const [bio,           setBio]           = useState(user?.bio || '');
   const [pwCurrent,     setPwCurrent]     = useState('');
   const [pwNext,        setPwNext]        = useState('');
@@ -438,8 +440,14 @@ export default function ProfilePage() {
                 { v: solvedProblemsMain.length, l:'메인 풀이수', c:'var(--green)'          },
                 { v: `🔥${user?.streak||0}`,  l:'스트릭',  c:'var(--yellow)'             },
                 { v: `${accuracy}%`,           l:'정답률',  c:'var(--orange)'             },
-                { v: followStats.followers,    l:'팔로워',  c:'var(--text)'               },
-              ].map(s=>(
+                { v: followStats.followers,    l:'팔로워',  c:'var(--blue)', action:'followers' },
+                { v: followStats.following,    l:'팔로잉',  c:'var(--purple)', action:'following' },
+              ].map(s=> s.action ? (
+                <button key={s.l} type="button" className="profile-stat-item clickable" onClick={() => setFollowModalType(s.action)}>
+                  <div className="profile-stat-value" style={{ color:s.c, fontFamily:s.mono?'Space Mono,monospace':undefined }}>{s.v}</div>
+                  <div className="profile-stat-label">{s.l}</div>
+                </button>
+              ) : (
                 <div key={s.l} className="profile-stat-item">
                   <div className="profile-stat-value" style={{ color:s.c, fontFamily:s.mono?'Space Mono,monospace':undefined }}>{s.v}</div>
                   <div className="profile-stat-label">{s.l}</div>
@@ -1304,6 +1312,12 @@ export default function ProfilePage() {
           </div>
         </div>
       )}
+      <FollowListModal
+        userId={user?.id}
+        initialType={followModalType || 'followers'}
+        open={Boolean(followModalType)}
+        onClose={() => setFollowModalType(null)}
+      />
     </div>
   );
 }

@@ -260,7 +260,7 @@
 
 .profile-header-stats {
   display: grid;
-  grid-template-columns: repeat(5, minmax(96px, 1fr));
+  grid-template-columns: repeat(6, minmax(88px, 1fr));
   gap: 10px;
   margin-top: 18px;
 }
@@ -273,6 +273,20 @@
   border-radius: 14px;
   padding: 12px 14px;
   min-width: 0;
+  color: inherit;
+  font: inherit;
+}
+button.profile-stat-item {
+  cursor: default;
+}
+button.profile-stat-item.clickable {
+  cursor: pointer;
+  transition: border-color .15s ease, background .15s ease, transform .15s ease;
+}
+button.profile-stat-item.clickable:hover {
+  border-color: rgba(121,192,255,.38);
+  background: rgba(121,192,255,.08);
+  transform: translateY(-1px);
 }
 .profile-stat-value {
   font-weight: 800;
