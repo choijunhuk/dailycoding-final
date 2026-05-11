@@ -237,7 +237,7 @@ nav {
 
 .fade-up { animation: fadeUp .3s ease both; }
 .fade-in { animation: fadeIn .2s ease both; }
-.page-enter { animation: fadeUp .25s ease-out both; }
+.page-enter { animation: fadeIn .2s ease-out; }
 .badge-earned { animation: badgePop .4s ease both; }
 .timer-active { animation: timerPulse 1.5s ease infinite; }
 .toast-enter { animation: toastIn .3s cubic-bezier(.34,1.56,.64,1); }
