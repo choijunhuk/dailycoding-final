@@ -30,11 +30,11 @@ const DURATION_PRESETS = [
   { label: '🏔️ 마라톤 20분', sec: 1200 },
 ];
 const FALLBACK_MODES = [
-  { key: 'sort-speed', title: '⚡ 스피드전', description: '먼저 정답 제출한 플레이어 즉시 승리! HP 없음.', winCondition: 'first-correct', rules: ['먼저 정답 제출하면 즉시 승리', 'HP·아이템·효과 없음', '시간 초과 시 점수 비교'], itemsEnabled: false, effectsEnabled: false, problemCount: 1 },
-  { key: 'survival', title: '💀 생존전', description: '상대 HP를 0으로 만들어야 승리! 순수 HP 배틀.', winCondition: 'hp-knockout', rules: ['정답 → 상대 HP 감소', '상대 HP 0 = 즉시 승리', '아이템·효과 없음'], itemsEnabled: false, effectsEnabled: false, problemCount: 1 },
-  { key: 'duel-effects', title: '✨ 효과전', description: '문제 효과 발동 + HP 배틀. 역전 가능!', winCondition: 'hp-knockout', rules: ['정답 → 상대 HP 감소 + 문제 효과 발동', '아이템 쿨다운 20초', 'HP 0 = 패배'], itemsEnabled: true, effectsEnabled: true, problemCount: 1 },
-  { key: 'chaos-items', title: '🎒 아이템 난투', description: '빠른 쿨다운 아이템 HP 배틀!', winCondition: 'hp-knockout', rules: ['아이템 쿨다운 12초 (빠름)', '정답 → 상대 HP 감소', 'HP 0 = 패배'], itemsEnabled: true, effectsEnabled: true, problemCount: 1 },
-  { key: 'territory', title: '🏴 점령전', description: '5문제 동시 공개. 더 많이 점령하면 승리!', winCondition: 'territory', rules: ['5개 문제 동시 공개', '정답 → 해당 문제 점령', '점령 수가 많은 플레이어 승리', 'HP 없음'], itemsEnabled: false, effectsEnabled: false, problemCount: 5 },
+  { key: 'sort-speed', title: '⚡ 스피드전', description: '먼저 정답을 제출한 플레이어가 즉시 승리! HP 없음 — 순수한 속도 대결.', winCondition: 'first-correct', rules: ['먼저 정답 제출하면 즉시 승리', '시간 초과 시 점수 비교'], itemsEnabled: false, effectsEnabled: false, problemCount: 1 },
+  { key: 'survival', title: '💀 생존전', description: '상대 HP를 0으로 만들면 승리! 정답 제출마다 공격력이 증가해 상대를 공격합니다.', winCondition: 'hp-knockout', rules: ['정답 → 상대 HP 감소', '상대 HP 0 = 즉시 승리'], itemsEnabled: false, effectsEnabled: false, problemCount: 1 },
+  { key: 'duel-effects', title: '✨ 효과전', description: '정답 제출 시 문제 태그 기반 버프/디버프가 발동! HP 전투 + 무작위 효과로 역전 가능.', winCondition: 'hp-knockout', rules: ['정답 → 상대 HP 감소 + 문제 효과 발동', '아이템 쿨다운 20초', 'HP 0 = 패배'], itemsEnabled: true, effectsEnabled: true, problemCount: 1 },
+  { key: 'chaos-items', title: '🎒 아이템 난투', description: '빠른 쿨다운 아이템으로 상대를 흔드는 HP 전투! 아이템 전략이 승패를 가릅니다.', winCondition: 'hp-knockout', rules: ['아이템 쿨다운 12초 (빠름)', '정답 → 상대 HP 감소', 'HP 0 = 패배'], itemsEnabled: true, effectsEnabled: true, problemCount: 1 },
+  { key: 'territory', title: '🏴 점령전', description: '5개 문제 동시 공개! 먼저 풀면 내 영토. HP 없음 — 더 많은 구역을 점령한 플레이어가 승리.', winCondition: 'territory', rules: ['5개 문제 동시 공개', '정답 → 해당 문제 점령', '점령 수가 많은 플레이어 승리'], itemsEnabled: false, effectsEnabled: false, problemCount: 5 },
 ];
 
 function getSocketOrigin() {
@@ -62,6 +62,13 @@ function timeLeft(room) {
 function lobbyTimeLeft(room) {
   if (!room?.lobbyExpiresAt || room.status !== 'waiting') return null;
   return Math.max(0, Math.floor((new Date(room.lobbyExpiresAt).getTime() - Date.now()) / 1000));
+}
+
+function getBattleObjectiveText(config, isTerritoryMode) {
+  if (isTerritoryMode) return '🏴 정답 제출 시 해당 문제 점령';
+  if (config?.winCondition === 'first-correct') return '⚡ 먼저 정답 제출 시 승리';
+  if (config?.effectsEnabled) return '✨ 정답 제출 시 공격 + 문제 효과';
+  return '⚔️ 정답 제출 시 공격';
 }
 
 function formatCombatEvent(event, myId, participantById = {}) {
@@ -124,7 +131,7 @@ function formatSocialEvent(event, myId, participantById = {}) {
   }
 }
 
-function PlayerCard({ player, me, attacking, activity }) {
+function PlayerCard({ player, me, attacking, activity, showHp = true }) {
   const hpPct = Math.max(0, Math.min(100, player.characterHp || 0));
   return (
     <div className={`ab-player-card ${me ? 'me' : ''} ${attacking ? 'attacking' : ''}`}>
@@ -132,10 +139,10 @@ function PlayerCard({ player, me, attacking, activity }) {
         <div><strong>{player.username}</strong>{me && <span> 나</span>}</div>
         <b>{player.score}</b>
       </div>
-      <div className="ab-hp"><div style={{ width: `${hpPct}%` }} /></div>
+      {showHp && <div className="ab-hp"><div style={{ width: `${hpPct}%` }} /></div>}
       <div className="ab-stats">
-        <span>HP {player.characterHp}</span>
-        <span>ATK {player.attackPower}</span>
+        {showHp && <span>HP {player.characterHp}</span>}
+        {showHp && <span>ATK {player.attackPower}</span>}
         <span>SPD {player.speed}</span>
       </div>
       {activity && (
@@ -606,13 +613,25 @@ export default function AlgorithmBattlePage() {
             <div className="ab-empty">대기 중인 방이 없습니다. 새 방을 만들어 시작하세요.</div>
           ) : rooms.map((item) => {
             const modeLabel = battleModes.find((m) => m.key === item.room.mode)?.title || item.room.mode;
+            const isPlaying = item.room.status === 'playing';
+            const isFull = item.participants.length >= item.room.maxPlayers;
             return (
               <div key={item.room.id} className="ab-room-row">
                 <div>
-                  <strong>{item.problem?.title || '문제 로딩 중'}</strong>
-                  <span>{modeLabel} · {item.participants.length}/{item.room.maxPlayers}명 · {item.room.status === 'playing' ? `⏱ ${fmtSec(timeLeft(item.room))} 남음` : (() => { const ll = lobbyTimeLeft(item.room); return ll != null ? `⏳ ${fmtSec(ll)} 대기` : '대기 중'; })()}</span>
+                  <strong>
+                    {item.problem?.title || (isPlaying ? '배틀 진행 중' : modeLabel)}
+                  </strong>
+                  <span>
+                    {modeLabel} · {item.participants.length}/{item.room.maxPlayers}명 · {isPlaying ? `⏱ ${fmtSec(timeLeft(item.room))} 남음` : (() => { const ll = lobbyTimeLeft(item.room); return ll != null ? `⏳ ${fmtSec(ll)} 대기` : '대기 중'; })()}
+                  </span>
                 </div>
-                <button className="btn btn-ghost btn-sm" onClick={() => joinRoom(item.room.id)}>참가</button>
+                <button
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => !isPlaying && !isFull && joinRoom(item.room.id)}
+                  disabled={isPlaying || isFull}
+                >
+                  {isPlaying ? '진행 중' : isFull ? '정원 초과' : '참가'}
+                </button>
               </div>
             );
           })}
@@ -710,6 +729,7 @@ export default function AlgorithmBattlePage() {
                 me={player.userId === user?.id}
                 attacking={attackUserId === player.userId}
                 activity={activityByUserId[String(player.userId)]}
+                showHp={config?.winCondition === 'hp-knockout'}
               />
             ))}
           </div>
@@ -783,8 +803,7 @@ export default function AlgorithmBattlePage() {
               ))}
             </select>
             <span style={{ fontSize: 12, color: 'var(--text3)' }}>
-              {config?.effectsEnabled ? '✨ 정답 → 공격 + 문제 효과' : '⚔️ 정답 → 공격'}
-              {isTerritoryMode && ' 🏴 먼저 풀면 점령!'}
+              {getBattleObjectiveText(config, isTerritoryMode)}
             </span>
           </div>
 

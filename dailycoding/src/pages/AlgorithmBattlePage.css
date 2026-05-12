@@ -47,10 +47,17 @@
   border-radius: 8px;
 }
 
+.ab-mode > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
 .ab-mode {
   display: flex;
   gap: 12px;
-  align-items: center;
+  align-items: flex-start;
   padding: 14px;
   color: var(--text);
   text-align: left;
