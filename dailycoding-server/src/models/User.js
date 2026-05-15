@@ -130,8 +130,8 @@ export const User = {
     // 어드민은 이메일 인증 불필요 — 생성 시 자동 인증 처리
     const emailVerified = role === 'admin' ? 1 : 0;
     const id = await insert(
-      'INSERT INTO users (email,password,username,role,tier,rating,join_date,email_verified) VALUES (?,?,?,?,?,?,?,?)',
-      [email, hashed, username, role, tier, rating, today, emailVerified]
+      'INSERT INTO users (email,password,username,role,tier,rating,join_date,email_verified,equipped_background) VALUES (?,?,?,?,?,?,?,?,?)',
+      [email, hashed, username, role, tier, rating, today, emailVerified, 'gradient-midnight']
     );
     return this.findById(id);
   },

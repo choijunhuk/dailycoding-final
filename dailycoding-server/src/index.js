@@ -549,6 +549,11 @@ async function seedGrowthCollections() {
       backgroundRows
     );
 
+    // Backfill existing users that have no background equipped
+    await dbRun(
+      "UPDATE users SET equipped_background = 'gradient-midnight' WHERE equipped_background IS NULL"
+    );
+
     // Deprecated practice set cleanup: keep old DBs aligned with current seed data.
     await dbRun("DELETE FROM problem_sheets WHERE REPLACE(title, ' ', '') = ?", ['일반코테연습A']);
     await dbRun("DELETE FROM exam_sets WHERE REPLACE(title, ' ', '') = ?", ['일반코테연습A']);
