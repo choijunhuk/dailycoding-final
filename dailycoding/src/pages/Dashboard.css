@@ -61,7 +61,7 @@
   text-align: left;
   min-height: 132px;
   padding: 16px;
-  border-radius: 12px;
+  border-radius: 8px;
   border: 1px solid var(--border);
   background: linear-gradient(135deg, color-mix(in srgb, var(--mode-color) 10%, transparent), var(--bg2));
   color: var(--text);
@@ -79,7 +79,7 @@
 .dashboard-learning-icon {
   width: 42px;
   height: 42px;
-  border-radius: 10px;
+  border-radius: 8px;
   display: grid;
   place-items: center;
   color: var(--mode-color);
@@ -101,12 +101,14 @@
   font-size: 14px;
   line-height: 1.35;
   margin-bottom: 6px;
+  overflow-wrap: anywhere;
 }
 
 .dashboard-learning-body small {
   color: var(--text2);
   font-size: 12px;
   line-height: 1.55;
+  overflow-wrap: anywhere;
 }
 
 .dashboard-learning-stat {

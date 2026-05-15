@@ -36,10 +36,12 @@ pm2 reload ecosystem.config.cjs --env production || pm2 start ecosystem.config.c
 
 echo "🏥 [8/8] 헬스체크..."
 HEALTH_URL="${HEALTH_URL:-https://dailycoding-final.com/api/health}"
+EXPECTED_JUDGE_HEALTH="${EXPECTED_JUDGE_HEALTH:-docker}"
 for attempt in 1 2 3 4 5; do
   if curl -fsS "$HEALTH_URL" >/tmp/dailycoding-health.json; then
     cat /tmp/dailycoding-health.json
     echo
+    EXPECTED_JUDGE_HEALTH="$EXPECTED_JUDGE_HEALTH" node -e "const fs=require('fs'); const h=JSON.parse(fs.readFileSync('/tmp/dailycoding-health.json','utf8')); const s=h.services||{}; const expectedJudge=process.env.EXPECTED_JUDGE_HEALTH; const bad=[]; if(h.status!=='ok') bad.push('status'); if(s.database!=='connected') bad.push('database='+s.database); if(s.redis!=='connected') bad.push('redis='+s.redis); if(expectedJudge && s.judge!==expectedJudge) bad.push('judge='+s.judge); if(bad.length){ console.error('Health check degraded:', bad.join(', ')); process.exit(1); }"
     break
   fi
   if [ "$attempt" -eq 5 ]; then

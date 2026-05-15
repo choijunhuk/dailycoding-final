@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Check, GitMerge, MessageSquare, Plus, RefreshCw, X } from 'lucide-react';
+import { Check, GitMerge, MessageSquare, Plus, RefreshCw, RotateCcw, Trash2, X } from 'lucide-react';
 import api from '../api.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
@@ -11,6 +11,7 @@ const STATUS_LABEL = {
   approved: '승인',
   rejected: '반려',
   merged: '병합',
+  cancelled: '취소됨',
 };
 
 function splitLines(value) {
@@ -59,6 +60,8 @@ export default function ReviewsPage() {
   const [testForm, setTestForm] = useState({ inputData: '', expectedOutput: '', reason: '' });
   const isDetail = Boolean(id);
   const canResolve = review && (isAdmin || review.authorId === user?.id);
+  const canCancel = review && review.status === 'open' && (isAdmin || review.reviewerId === user?.id);
+  const canReopen = review && review.status === 'cancelled' && (isAdmin || review.reviewerId === user?.id);
   const isClosed = review && review.status !== 'open';
   const firstSuggestion = review?.codeSuggestions?.[0] || null;
 
@@ -166,6 +169,39 @@ export default function ReviewsPage() {
     }
   };
 
+  const cancelReview = async () => {
+    if (!window.confirm('이 리뷰 요청을 취소할까요? 취소 후 다시 요청할 수 있습니다.')) return;
+    try {
+      const { data } = await api.post(`/reviews/${id}/cancel`);
+      setReview(data);
+      toast?.show('리뷰 요청을 취소했습니다.', 'success');
+    } catch (err) {
+      toast?.show(err.response?.data?.message || '리뷰 취소 실패', 'error');
+    }
+  };
+
+  const reopenReview = async () => {
+    try {
+      const { data } = await api.post(`/reviews/${id}/reopen`);
+      setReview(data);
+      toast?.show('리뷰를 다시 요청했습니다.', 'success');
+    } catch (err) {
+      toast?.show(err.response?.data?.message || '리뷰 재요청 실패', 'error');
+    }
+  };
+
+  const deleteReview = async (reviewId) => {
+    if (!window.confirm('리뷰를 삭제하면 댓글·제안이 모두 사라집니다. 계속할까요?')) return;
+    try {
+      await api.delete(`/reviews/${reviewId}`);
+      toast?.show('리뷰가 삭제되었습니다.', 'success');
+      if (isDetail) navigate('/reviews', { replace: true });
+      else loadList();
+    } catch (err) {
+      toast?.show(err.response?.data?.message || '삭제 실패', 'error');
+    }
+  };
+
   if (isDetail) {
     return (
       <main className="reviews-page">
@@ -173,6 +209,21 @@ export default function ReviewsPage() {
           <button className="ghost" onClick={() => navigate('/reviews')}>목록</button>
           <button className="ghost" onClick={loadReview}><RefreshCw size={15} />새로고침</button>
           {review && <StatusPill status={review.status} />}
+          {canCancel && (
+            <button className="ghost danger" onClick={cancelReview} title="리뷰 요청 취소">
+              <X size={15} /> 요청 취소
+            </button>
+          )}
+          {canReopen && (
+            <button className="ghost" onClick={reopenReview} title="리뷰 재요청">
+              <RotateCcw size={15} /> 재요청
+            </button>
+          )}
+          {review && review.reviewerId === user?.id && (
+            <button className="ghost danger" onClick={() => deleteReview(review.id)} title="내 리뷰 삭제">
+              <Trash2 size={15} /> 삭제
+            </button>
+          )}
         </div>
 
         {!review || loading ? (
@@ -298,6 +349,7 @@ export default function ReviewsPage() {
           <option value="approved">승인</option>
           <option value="rejected">반려</option>
           <option value="merged">병합</option>
+          <option value="cancelled">취소됨</option>
         </select>
         <select value={filters.lang} onChange={(event) => setFilters((prev) => ({ ...prev, lang: event.target.value }))}>
           <option value="all">전체 언어</option>
@@ -345,6 +397,13 @@ export default function ReviewsPage() {
                     <StatusPill status={item.status} />
                   </div>
                   <p>작성자 {item.authorUsername} · 리뷰어 {item.reviewerUsername}</p>
+                  <button
+                    className="review-delete-btn"
+                    onClick={(e) => { e.stopPropagation(); deleteReview(item.id); }}
+                    title="리뷰 삭제"
+                  >
+                    <Trash2 size={13} /> 삭제
+                  </button>
                 </article>
               ))}
             </div>

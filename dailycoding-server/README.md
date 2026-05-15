@@ -111,24 +111,30 @@ GEMINI_API_KEY=구글_AI스튜디오_API_키
 ENABLE_LOCAL_BOOTSTRAP=false
 FRONTEND_URL=https://yourdomain.com
 ALLOWED_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
+AUTH_COOKIE_SAMESITE=Lax
+# 다른 최상위 사이트 간 쿠키가 필요한 배포에서만:
+# AUTH_COOKIE_SAMESITE=None
+# AUTH_COOKIE_DOMAIN=.yourdomain.com
 
 DB_HOST=127.0.0.1
 DB_PORT=3307
 DB_NAME=dailycoding
-DB_USER=dcuser
-DB_PASS=dcpass1234
+MYSQL_ROOT_PASSWORD=강한_mysql_root_비밀번호
+DB_USER=운영_db_user
+DB_PASS=강한_db_비밀번호
 
-REDIS_URL=redis://:redis1234@localhost:6379
-JUDGE_MODE=auto
+REDIS_PASSWORD=강한_redis_비밀번호
+REDIS_URL=redis://:강한_redis_비밀번호@localhost:6379
+JUDGE_MODE=docker
 
 STRIPE_PRO_MONTHLY_ID=price_1TMw1HCLaoSRWv0iBNyj2VCG
 STRIPE_PRO_ANNUAL_ID=price_1TMw5LCLaoSRWv0iZLncCZez
 STRIPE_TEAM_MONTHLY_ID=price_1TMw5hCLaoSRWv0i1qtbccfV
 STRIPE_TEAM_ANNUAL_ID=price_1TMw66CLaoSRWv0iPJLPw5Pu
-STRIPE_PRO_MONTHLY_URL=https://buy.stripe.com/test_aFa7sKcI66dAa3x20a5c409
-STRIPE_PRO_ANNUAL_URL=https://buy.stripe.com/test_6oU7sKeQegSe0sX0W65c40c
-STRIPE_TEAM_MONTHLY_URL=https://buy.stripe.com/test_cNidR88rQ59wcbF8oy5c40b
-STRIPE_TEAM_ANNUAL_URL=https://buy.stripe.com/test_3cIdR89vUbxUa3x48i5c40a
+STRIPE_PRO_MONTHLY_URL=https://buy.stripe.com/your_pro_monthly_link
+STRIPE_PRO_ANNUAL_URL=https://buy.stripe.com/your_pro_annual_link
+STRIPE_TEAM_MONTHLY_URL=https://buy.stripe.com/your_team_monthly_link
+STRIPE_TEAM_ANNUAL_URL=https://buy.stripe.com/your_team_annual_link
 ```
 
 ## ✅ 로컬 확인 순서
@@ -157,7 +163,7 @@ STRIPE_TEAM_ANNUAL_URL=https://buy.stripe.com/test_3cIdR89vUbxUa3x48i5c40a
 3. 프론트엔드 `dailycoding/.env.production`은 API 기준으로 맞춥니다.
    - `VITE_API_URL=https://api.dailycoding.example.com`
    - `VITE_ALLOWED_HOSTS=localhost,127.0.0.1`
-4. production에서는 `accessToken` / `refreshToken` 쿠키가 `Secure + SameSite=None`으로 발급되므로 반드시 HTTPS 뒤에서 운영해야 합니다.
+4. production에서는 `accessToken` / `refreshToken` 쿠키가 `Secure`로 발급됩니다. 기본값은 `SameSite=Lax`이며, 다른 최상위 사이트 간 쿠키가 필요할 때만 `AUTH_COOKIE_SAMESITE=None`과 `AUTH_COOKIE_DOMAIN`을 설정하고 반드시 HTTPS 뒤에서 운영하세요.
 5. Stripe는 가능하면 `STRIPE_SECRET_KEY + Price ID` 조합으로 운영하고, 결제 링크 URL은 테스트/비상 fallback 용도로 사용하세요.
 6. 관리자 계정으로 `/api/subscription/ops`를 호출하면 Stripe 설정 상태와 최근 webhook 이벤트/에러를 점검할 수 있습니다.
 7. `/api/health`의 `services.billing` 값이 `stripe_session`이면 checkout-session 기반 구성이 활성화된 상태입니다.

@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "start": "npx serve -s dist -l ${PORT:-3000}",
     "lint": "npx eslint src --ext .js,.jsx --max-warnings 0",
-    "lint:fix": "npx eslint src --ext .js,.jsx --fix"
+    "lint:fix": "npx eslint src --ext .js,.jsx --fix",
+    "verify": "npm run lint && npm test && npm run build"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.6.0",

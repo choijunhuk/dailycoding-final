@@ -6,9 +6,22 @@ import { randomUUID } from 'crypto';
 import xss from 'xss';
 import logger from '../config/logger.js';
 
-export const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://localhost:3000')
-  .split(',')
-  .map((value) => value.trim());
+export function resolveAllowedOrigins(env = process.env) {
+  const raw = String(env.ALLOWED_ORIGINS || '').trim();
+  if (env.NODE_ENV === 'production' && !raw) {
+    throw new Error('Missing required CORS env: ALLOWED_ORIGINS');
+  }
+  const origins = (raw || 'http://localhost:5173,http://localhost:3000')
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean);
+  if (origins.length === 0) {
+    throw new Error('ALLOWED_ORIGINS must include at least one origin');
+  }
+  return origins;
+}
+
+export const ALLOWED_ORIGINS = resolveAllowedOrigins();
 
 function buildConnectSrc() {
   const sources = new Set(["'self'"]);

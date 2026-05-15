@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">DailyCoding</title>
+  <desc id="desc">DailyCoding app icon</desc>
+  <rect width="512" height="512" rx="112" fill="#0f1117"/>
+  <path d="M128 304 72 256l56-48" fill="none" stroke="#58d68d" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="m384 208 56 48-56 48" fill="none" stroke="#7aa2ff" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M296 126 216 386" fill="none" stroke="#f7c948" stroke-width="36" stroke-linecap="round"/>
+  <circle cx="256" cy="256" r="168" fill="none" stroke="#ffffff" stroke-opacity=".12" stroke-width="20"/>
+  <text x="256" y="438" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="52" font-weight="800" fill="#ffffff">DC</text>
+</svg>

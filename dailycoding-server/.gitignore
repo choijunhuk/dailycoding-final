@@ -4,6 +4,7 @@
 .env.production
 .env.bak
 .env.*.bak
+!.env.example
 
 # 의존성
 node_modules/

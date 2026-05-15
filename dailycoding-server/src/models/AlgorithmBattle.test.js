@@ -201,6 +201,12 @@ test('algorithm battle exposes mode metadata and blocks items in classic mode', 
   const modes = AlgorithmBattle.getBattleModes();
   assert.ok(modes.modes.some((mode) => mode.key === 'duel-effects'));
   assert.ok(modes.bannableTags.includes('정렬'));
+  const speedMode = modes.modes.find((mode) => mode.key === 'sort-speed');
+  const territoryMode = modes.modes.find((mode) => mode.key === 'territory');
+  assert.ok(!speedMode.description.includes('HP 없음'));
+  assert.ok(!speedMode.rules.some((rule) => rule.includes('HP') && rule.includes('없음')));
+  assert.ok(!territoryMode.description.includes('HP 없음'));
+  assert.ok(!territoryMode.rules.some((rule) => rule.includes('HP') && rule.includes('없음')));
 
   const userA = await insert('INSERT INTO users (email, username, role) VALUES (?,?,?)', ['battle-mode-a@test.com', 'BattleModeA', 'user']);
   const userB = await insert('INSERT INTO users (email, username, role) VALUES (?,?,?)', ['battle-mode-b@test.com', 'BattleModeB', 'user']);

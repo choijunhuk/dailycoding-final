@@ -2,7 +2,8 @@ import { insert, query, queryOne, run } from '../config/mysql.js';
 import { nowMySQL } from '../config/dateutil.js';
 
 const OPEN_STATUS = 'open';
-const CLOSED_STATUSES = new Set(['approved', 'rejected', 'merged']);
+const CANCELLED_STATUS = 'cancelled';
+const CLOSED_STATUSES = new Set(['approved', 'rejected', 'merged', CANCELLED_STATUS]);
 const REVIEW_SCORE = 5;
 const CODE_SUGGESTION_SCORE = 20;
 const TEST_SUGGESTION_SCORE = 15;
@@ -190,6 +191,22 @@ function assertAuthorOrAdmin(review, actor) {
   }
 }
 
+function assertReviewer(review, userId) {
+  if (Number(review.reviewerId) !== Number(userId)) {
+    const err = new Error('리뷰 담당자만 개선 제안을 작성할 수 있습니다.');
+    err.status = 403;
+    throw err;
+  }
+}
+
+function assertReviewerOrAdmin(review, actor, message = '리뷰 담당자 또는 관리자만 처리할 수 있습니다.') {
+  if (Number(review.reviewerId) !== Number(actor.id) && actor.role !== 'admin') {
+    const err = new Error(message);
+    err.status = 403;
+    throw err;
+  }
+}
+
 async function awardAcceptedSuggestions(review) {
   if (review.scoreAwarded || Number(review.reviewerId) === Number(review.authorId)) return;
   const [codeRows, testRows] = await Promise.all([
@@ -292,9 +309,23 @@ export const CodeReview = {
       err.status = 400;
       throw err;
     }
+    if (submission.result !== 'correct') {
+      const err = new Error('정답 제출만 리뷰할 수 있습니다.');
+      err.status = 400;
+      throw err;
+    }
     const author = await getUser(submission.user_id);
     if (!author || author.submissions_public === 0) {
       const err = new Error('비공개 제출은 리뷰할 수 없습니다.');
+      err.status = 403;
+      throw err;
+    }
+    const reviewerSolved = await queryOne(
+      'SELECT id FROM submissions WHERE user_id = ? AND problem_id = ? AND result = ? LIMIT 1',
+      [Number(reviewerId), Number(submission.problem_id), 'correct']
+    );
+    if (!reviewerSolved) {
+      const err = new Error('먼저 같은 문제를 맞힌 뒤 리뷰할 수 있습니다.');
       err.status = 403;
       throw err;
     }
@@ -303,6 +334,20 @@ export const CodeReview = {
       [Number(submissionId), Number(reviewerId), OPEN_STATUS]
     );
     if (existing) return this.getReview(existing.id);
+    const cancelled = await queryOne(
+      'SELECT * FROM code_reviews WHERE submission_id = ? AND reviewer_id = ? AND status = ? LIMIT 1',
+      [Number(submissionId), Number(reviewerId), CANCELLED_STATUS]
+    );
+    if (cancelled) {
+      if (cancelled.score_awarded) {
+        await adjustScore(reviewerId, { reviewScore: REVIEW_SCORE, totalCount: 1 });
+      }
+      await run(
+        'UPDATE code_reviews SET status = ?, score_awarded = ?, updated_at = ? WHERE id = ?',
+        [OPEN_STATUS, 0, nowMySQL(), cancelled.id]
+      );
+      return this.getReview(cancelled.id);
+    }
 
     const now = nowMySQL();
     const id = await insert(
@@ -350,6 +395,7 @@ export const CodeReview = {
     const review = await this.getReview(reviewId);
     if (!review) return null;
     assertOpen(review);
+    assertReviewer(review, userId);
     if (review.authorId === Number(userId)) {
       const err = new Error('자기 제출에는 개선 제안 점수를 받을 수 없습니다.');
       err.status = 400;
@@ -380,6 +426,7 @@ export const CodeReview = {
     const review = await this.getReview(reviewId);
     if (!review) return null;
     assertOpen(review);
+    assertReviewer(review, userId);
     if (review.authorId === Number(userId)) {
       const err = new Error('자기 제출에는 테스트 제안 점수를 받을 수 없습니다.');
       err.status = 400;
@@ -445,6 +492,11 @@ export const CodeReview = {
       err.status = 400;
       throw err;
     }
+    if (review.status === CANCELLED_STATUS) {
+      const err = new Error('취소된 리뷰는 병합할 수 없습니다.');
+      err.status = 400;
+      throw err;
+    }
     await Promise.all([
       run('UPDATE code_suggestions SET status = ? WHERE review_id = ? AND status != ?', ['merged', Number(reviewId), 'rejected']),
       run('UPDATE test_suggestions SET status = ? WHERE review_id = ? AND status != ?', ['merged', Number(reviewId), 'rejected']),
@@ -452,5 +504,60 @@ export const CodeReview = {
     ]);
     await awardAcceptedSuggestions({ ...review, status: 'merged' });
     return this.getReview(reviewId);
+  },
+
+  async cancel(reviewId, actor) {
+    const review = await this.getReview(reviewId);
+    if (!review) return null;
+    assertReviewerOrAdmin(review, actor, '리뷰 담당자 또는 관리자만 취소할 수 있습니다.');
+    assertOpen(review);
+    await Promise.all([
+      run('UPDATE code_suggestions SET status = ?, updated_at = ? WHERE review_id = ? AND status = ?', ['rejected', nowMySQL(), Number(reviewId), 'pending']),
+      run('UPDATE test_suggestions SET status = ?, updated_at = ? WHERE review_id = ? AND status = ?', ['rejected', nowMySQL(), Number(reviewId), 'pending']),
+      run('UPDATE code_reviews SET status = ?, score_awarded = ?, updated_at = ? WHERE id = ?', [CANCELLED_STATUS, 1, nowMySQL(), Number(reviewId)]),
+    ]);
+    if (!review.scoreAwarded) {
+      await adjustScore(review.reviewerId, { reviewScore: -REVIEW_SCORE, totalCount: -1 });
+    }
+    return this.getReview(reviewId);
+  },
+
+  async reopen(reviewId, actor) {
+    const review = await this.getReview(reviewId);
+    if (!review) return null;
+    assertReviewerOrAdmin(review, actor, '리뷰 담당자 또는 관리자만 재요청할 수 있습니다.');
+    if (review.status !== CANCELLED_STATUS) {
+      const err = new Error('취소된 리뷰만 재요청할 수 있습니다.');
+      err.status = 400;
+      throw err;
+    }
+    if (review.scoreAwarded) {
+      await adjustScore(review.reviewerId, { reviewScore: REVIEW_SCORE, totalCount: 1 });
+    }
+    await run(
+      'UPDATE code_reviews SET status = ?, score_awarded = ?, updated_at = ? WHERE id = ?',
+      [OPEN_STATUS, 0, nowMySQL(), Number(reviewId)]
+    );
+    return this.getReview(reviewId);
+  },
+
+  async delete(reviewId, actor) {
+    const review = await this.getReview(reviewId);
+    if (!review) return null;
+    if (Number(review.reviewerId) !== Number(actor.id) && actor.role !== 'admin') {
+      const err = new Error('리뷰를 삭제할 권한이 없습니다.');
+      err.status = 403;
+      throw err;
+    }
+    await Promise.all([
+      run('DELETE FROM code_review_comments WHERE review_id = ?', [Number(reviewId)]),
+      run('DELETE FROM code_suggestions WHERE review_id = ?', [Number(reviewId)]),
+      run('DELETE FROM test_suggestions WHERE review_id = ?', [Number(reviewId)]),
+    ]);
+    await run('DELETE FROM code_reviews WHERE id = ?', [Number(reviewId)]);
+    if (!review.scoreAwarded) {
+      await adjustScore(review.reviewerId, { reviewScore: -REVIEW_SCORE, totalCount: -1 });
+    }
+    return { deleted: true, id: Number(reviewId) };
   },
 };

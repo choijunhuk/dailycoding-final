@@ -119,7 +119,7 @@ CREATE TABLE IF NOT EXISTS code_reviews (
   submission_id   INT NOT NULL,
   author_id       INT NOT NULL,
   reviewer_id     INT NOT NULL,
-  status          ENUM('open','approved','rejected','merged') NOT NULL DEFAULT 'open',
+  status          ENUM('open','approved','rejected','merged','cancelled') NOT NULL DEFAULT 'open',
   score_awarded   TINYINT(1) NOT NULL DEFAULT 0,
   created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at      DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

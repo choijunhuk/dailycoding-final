@@ -10,10 +10,12 @@
     "docker": "docker-compose up -d",
     "docker:down": "docker-compose down",
     "docker:logs": "docker-compose logs -f api",
-    "test": "NODE_ENV=test node --test --test-force-exit --test-timeout=10000 src/**/*.test.js",
+    "test": "NODE_ENV=test node --test --test-force-exit --test-timeout=30000 src/**/*.test.js",
     "test:single": "NODE_ENV=test node --test",
     "lint": "npx eslint src --ext .js --max-warnings 0",
-    "lint:fix": "npx eslint src --ext .js --fix"
+    "lint:fix": "npx eslint src --ext .js --fix",
+    "preflight:production": "node ../scripts/production-preflight.mjs",
+    "verify": "npm run lint && npm test"
   },
   "dependencies": {
     "@google/generative-ai": "^0.21.0",

@@ -16,6 +16,29 @@ let connected = false;
 let _resolveReady;
 const readyPromise = new Promise(resolve => { _resolveReady = resolve; });
 
+const REQUIRED_PRODUCTION_DB_ENV = ['DB_HOST', 'DB_NAME', 'DB_USER', 'DB_PASS'];
+
+export function resolveMysqlConfig(env = process.env) {
+  const isProduction = env.NODE_ENV === 'production';
+  const missing = REQUIRED_PRODUCTION_DB_ENV.filter((key) => !String(env[key] || '').trim());
+  if (isProduction && missing.length > 0) {
+    throw new Error(`Missing required MySQL env: ${missing.join(', ')}`);
+  }
+
+  return {
+    host:               env.DB_HOST  || 'localhost',
+    port:               Number(env.DB_PORT) || 3306,
+    database:           env.DB_NAME  || 'dailycoding',
+    user:               env.DB_USER  || 'dcuser',
+    password:           env.DB_PASS  || 'dcpass1234',
+    waitForConnections: true,
+    connectionLimit:    10,
+    connectTimeout:     5000,
+    charset:            'utf8mb4',
+    timezone:           'Z',
+  };
+}
+
 async function init() {
   if (process.env.NODE_ENV === 'test') {
     connected = false;
@@ -26,18 +49,7 @@ async function init() {
   }
 
   try {
-    pool = mysql.createPool({
-      host:               process.env.DB_HOST  || 'localhost',
-      port:               Number(process.env.DB_PORT) || 3306,
-      database:           process.env.DB_NAME  || 'dailycoding',
-      user:               process.env.DB_USER  || 'dcuser',
-      password:           process.env.DB_PASS  || 'dcpass1234',
-      waitForConnections: true,
-      connectionLimit:    10,
-      connectTimeout:     5000,
-      charset:            'utf8mb4',
-      timezone:           'Z',
-    });
+    pool = mysql.createPool(resolveMysqlConfig());
     const conn = await pool.getConnection();
     conn.release();
     connected = true;
@@ -72,7 +84,7 @@ const MEM = {
   troubleshooting_problem_configs: [], troubleshooting_submissions: [],
   battle_rooms: [], battle_participants: [], battle_submissions: [], battle_events: [], battle_results: [],
   code_reviews: [], code_review_comments: [], code_suggestions: [], test_suggestions: [], collaboration_scores: [],
-  user_problem_sets: [], ai_hint_cache: [],
+  user_problem_sets: [], ai_hint_cache: [], admin_logs: [],
 };
 
 function memNextId(table) {

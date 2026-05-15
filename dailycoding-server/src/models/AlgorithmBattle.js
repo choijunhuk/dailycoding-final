@@ -12,7 +12,7 @@ const BATTLE_MODES = {
   'sort-speed': {
     key: 'sort-speed',
     title: '⚡ 스피드전',
-    description: '먼저 정답을 제출한 플레이어가 즉시 승리! HP 없음 — 순수한 속도 대결.',
+    description: '먼저 정답을 제출한 플레이어가 즉시 승리하는 순수 속도 대결.',
     winCondition: 'first-correct',
     rules: ['같은 문제 1개를 동시에 풀기', '먼저 정답 제출한 플레이어 즉시 승리', '시간 내 정답 없으면 점수 비교'],
     maxPlayers: 2,
@@ -76,7 +76,7 @@ const BATTLE_MODES = {
   'territory': {
     key: 'territory',
     title: '🏴 점령전',
-    description: '5개 문제 동시 공개! 먼저 풀면 내 영토. HP 없음 — 더 많은 구역을 점령한 플레이어가 승리.',
+    description: '5개 문제 동시 공개! 먼저 풀면 내 영토. 더 많은 구역을 점령한 플레이어가 승리.',
     winCondition: 'territory',
     rules: ['5개 문제가 동시에 공개됨', '정답 제출 → 해당 문제 구역 점령', '5개 모두 점령 시 즉시 승리', '시간 종료 시 점령 수가 많은 플레이어 승리'],
     maxPlayers: 2,

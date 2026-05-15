@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { CodeReview } from '../models/CodeReview.js';
 import { Notification } from '../models/Notification.js';
+import { AdminLog } from '../models/AdminLog.js';
 import { auth, requireVerified } from '../middleware/auth.js';
 import { errorResponse, internalError } from '../middleware/errorHandler.js';
 
@@ -8,9 +9,30 @@ const router = Router();
 router.use(auth);
 router.use(requireVerified);
 
-function handleReviewError(res, err, fallback = '리뷰 처리 중 오류가 발생했습니다.') {
+async function logReviewSecurityEvent(req, action, reviewId, reason) {
+  try {
+    await AdminLog.create({
+      adminId: req.user.id,
+      action,
+      targetType: 'code_review',
+      targetId: Number.isFinite(Number(reviewId)) ? Number(reviewId) : null,
+      detail: {
+        reason,
+        method: req.method,
+        path: req.originalUrl || req.path,
+      },
+    });
+  } catch (logErr) {
+    console.warn('[reviews:security-log]', logErr.message);
+  }
+}
+
+async function handleReviewError(req, res, err, fallback = '리뷰 처리 중 오류가 발생했습니다.') {
   const status = err?.status || 500;
   if (status < 500) {
+    if (status === 403) {
+      await logReviewSecurityEvent(req, 'review.forbidden_action', req.params?.id, err.message || fallback);
+    }
     return errorResponse(res, status, status === 403 ? 'FORBIDDEN' : 'VALIDATION_ERROR', err.message || fallback);
   }
   console.error('[reviews]', err);
@@ -45,7 +67,7 @@ router.get('/', async (req, res) => {
     ]);
     res.json({ reviews, myCodeReviews, reviewableSubmissions, collaborationScore });
   } catch (err) {
-    return handleReviewError(res, err, '리뷰 목록을 불러오지 못했습니다.');
+    return handleReviewError(req, res, err, '리뷰 목록을 불러오지 못했습니다.');
   }
 });
 
@@ -53,10 +75,13 @@ router.get('/:id', async (req, res) => {
   try {
     const review = await CodeReview.getReview(Number(req.params.id));
     if (!review) return errorResponse(res, 404, 'NOT_FOUND', '리뷰를 찾을 수 없습니다.');
-    if (!canViewDetail(review, req.user)) return errorResponse(res, 403, 'FORBIDDEN', '리뷰 참여자만 상세 내용을 볼 수 있습니다.');
+    if (!canViewDetail(review, req.user)) {
+      await logReviewSecurityEvent(req, 'review.forbidden_detail', req.params.id, '리뷰 참여자만 상세 내용을 볼 수 있습니다.');
+      return errorResponse(res, 403, 'FORBIDDEN', '리뷰 참여자만 상세 내용을 볼 수 있습니다.');
+    }
     res.json(review);
   } catch (err) {
-    return handleReviewError(res, err, '리뷰 상세를 불러오지 못했습니다.');
+    return handleReviewError(req, res, err, '리뷰 상세를 불러오지 못했습니다.');
   }
 });
 
@@ -68,7 +93,7 @@ router.post('/:id/comments', async (req, res) => {
     await notifyBestEffort(receiverId, '내 코드 리뷰에 새 댓글이 달렸습니다.', `/reviews/${review.id}`);
     res.status(201).json(review);
   } catch (err) {
-    return handleReviewError(res, err, '댓글을 작성하지 못했습니다.');
+    return handleReviewError(req, res, err, '댓글을 작성하지 못했습니다.');
   }
 });
 
@@ -79,7 +104,7 @@ router.post('/:id/suggestions/code', async (req, res) => {
     await notifyBestEffort(review.authorId, '내 코드에 개선 제안이 도착했습니다.', `/reviews/${review.id}`);
     res.status(201).json(review);
   } catch (err) {
-    return handleReviewError(res, err, '코드 제안을 저장하지 못했습니다.');
+    return handleReviewError(req, res, err, '코드 제안을 저장하지 못했습니다.');
   }
 });
 
@@ -90,7 +115,7 @@ router.post('/:id/suggestions/test', async (req, res) => {
     await notifyBestEffort(review.authorId, '내 코드에 테스트 케이스 제안이 도착했습니다.', `/reviews/${review.id}`);
     res.status(201).json(review);
   } catch (err) {
-    return handleReviewError(res, err, '테스트 제안을 저장하지 못했습니다.');
+    return handleReviewError(req, res, err, '테스트 제안을 저장하지 못했습니다.');
   }
 });
 
@@ -101,7 +126,7 @@ router.post('/:id/approve', async (req, res) => {
     await notifyBestEffort(review.reviewerId, '내 협업 제안이 승인되었습니다.', `/reviews/${review.id}`);
     res.json(review);
   } catch (err) {
-    return handleReviewError(res, err, '리뷰를 승인하지 못했습니다.');
+    return handleReviewError(req, res, err, '리뷰를 승인하지 못했습니다.');
   }
 });
 
@@ -112,7 +137,7 @@ router.post('/:id/reject', async (req, res) => {
     await notifyBestEffort(review.reviewerId, '내 협업 제안이 반려되었습니다.', `/reviews/${review.id}`);
     res.json(review);
   } catch (err) {
-    return handleReviewError(res, err, '리뷰를 반려하지 못했습니다.');
+    return handleReviewError(req, res, err, '리뷰를 반려하지 못했습니다.');
   }
 });
 
@@ -123,7 +148,39 @@ router.post('/:id/merge', async (req, res) => {
     await notifyBestEffort(review.reviewerId, '내 협업 제안이 병합되었습니다.', `/reviews/${review.id}`);
     res.json(review);
   } catch (err) {
-    return handleReviewError(res, err, '리뷰를 병합하지 못했습니다.');
+    return handleReviewError(req, res, err, '리뷰를 병합하지 못했습니다.');
+  }
+});
+
+router.post('/:id/cancel', async (req, res) => {
+  try {
+    const review = await CodeReview.cancel(Number(req.params.id), req.user);
+    if (!review) return errorResponse(res, 404, 'NOT_FOUND', '리뷰를 찾을 수 없습니다.');
+    await notifyBestEffort(review.authorId, '코드 리뷰 요청이 취소되었습니다.', `/reviews/${review.id}`);
+    res.json(review);
+  } catch (err) {
+    return handleReviewError(req, res, err, '리뷰를 취소하지 못했습니다.');
+  }
+});
+
+router.post('/:id/reopen', async (req, res) => {
+  try {
+    const review = await CodeReview.reopen(Number(req.params.id), req.user);
+    if (!review) return errorResponse(res, 404, 'NOT_FOUND', '리뷰를 찾을 수 없습니다.');
+    await notifyBestEffort(review.authorId, '코드 리뷰가 다시 요청되었습니다.', `/reviews/${review.id}`);
+    res.json(review);
+  } catch (err) {
+    return handleReviewError(req, res, err, '리뷰를 재요청하지 못했습니다.');
+  }
+});
+
+router.delete('/:id', async (req, res) => {
+  try {
+    const result = await CodeReview.delete(Number(req.params.id), req.user);
+    if (!result) return errorResponse(res, 404, 'NOT_FOUND', '리뷰를 찾을 수 없습니다.');
+    res.json({ message: '리뷰가 삭제되었습니다.' });
+  } catch (err) {
+    return handleReviewError(req, res, err, '리뷰를 삭제하지 못했습니다.');
   }
 });
 

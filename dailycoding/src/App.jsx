@@ -20,6 +20,7 @@ import ErrorBoundary from './components/ErrorBoundary.jsx';
 import OnboardingModal from './components/OnboardingModal.jsx';
 import api from './api.js';
 import { applyAppTypographyPreference } from './utils/fontPreferences.js';
+import { resolvePostLoginRedirect } from './utils/redirects.js';
 import './index.css';
 
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -48,18 +49,6 @@ const SheetDetailPage = lazy(() => import('./pages/SheetDetailPage'));
 const LearningPathPage = lazy(() => import('./pages/LearningPathPage'));
 const SubmitProblemPage = lazy(() => import('./pages/SubmitProblemPage'));
 const ProblemSetsPage = lazy(() => import('./pages/ProblemSetsPage'));
-
-function getInternalRedirectPath(redirect) {
-  if (!redirect) return null;
-
-  try {
-    const url = new URL(redirect, window.location.origin);
-    if (url.origin !== window.location.origin) return null;
-    return `${url.pathname}${url.search}${url.hash}`;
-  } catch {
-    return redirect.startsWith('/') ? redirect : null;
-  }
-}
 
 function RouteFallback({ isJudge }) {
   if (isJudge) {
@@ -116,9 +105,7 @@ function AppInner() {
       const redirect = sessionStorage.getItem('postLoginRedirect');
       if (redirect) {
         sessionStorage.removeItem('postLoginRedirect');
-        const internalPath = getInternalRedirectPath(redirect);
-        if (internalPath) navigate(internalPath, { replace: true });
-        else window.location.assign(redirect);
+        navigate(resolvePostLoginRedirect(redirect), { replace: true });
       }
     }
   }, [user?.id, loadAll, navigate]);

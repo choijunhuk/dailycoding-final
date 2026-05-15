@@ -1,26 +1,50 @@
 import nodemailer from 'nodemailer';
 
-const SMTP_CONFIGURED =
-  process.env.SMTP_HOST &&
-  process.env.SMTP_USER &&
-  process.env.SMTP_PASS;
+export function resolveEmailConfig(env = process.env) {
+  const smtp = {
+    host: String(env.SMTP_HOST || '').trim(),
+    port: Number(env.SMTP_PORT) || 587,
+    user: String(env.SMTP_USER || '').trim(),
+    pass: String(env.SMTP_PASS || '').trim(),
+    from: env.SMTP_FROM || 'DailyCoding <noreply@dailycoding.kr>',
+  };
+  const frontendUrl = String(env.FRONTEND_URL || '').trim();
+  const missingSmtp = ['host', 'user', 'pass'].filter((key) => !smtp[key]);
+
+  if (env.NODE_ENV === 'production') {
+    const missing = [];
+    if (!frontendUrl) missing.push('FRONTEND_URL');
+    missing.push(...missingSmtp.map((key) => `SMTP_${key.toUpperCase()}`));
+    if (missing.length > 0) {
+      throw new Error(`Missing required email env: ${missing.join(', ')}`);
+    }
+  }
+
+  return {
+    smtp,
+    frontendUrl: frontendUrl || 'http://localhost:5173',
+    configured: missingSmtp.length === 0,
+  };
+}
+
+const EMAIL_CONFIG = resolveEmailConfig();
 
 let transporter = null;
 
-if (SMTP_CONFIGURED) {
+if (EMAIL_CONFIG.configured) {
   transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT) || 587,
-    secure: Number(process.env.SMTP_PORT) === 465,
+    host: EMAIL_CONFIG.smtp.host,
+    port: EMAIL_CONFIG.smtp.port,
+    secure: EMAIL_CONFIG.smtp.port === 465,
     auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
+      user: EMAIL_CONFIG.smtp.user,
+      pass: EMAIL_CONFIG.smtp.pass,
     },
   });
 }
 
-const FROM = process.env.SMTP_FROM || 'DailyCoding <noreply@dailycoding.kr>';
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+const FROM = EMAIL_CONFIG.smtp.from;
+const FRONTEND_URL = EMAIL_CONFIG.frontendUrl;
 
 async function sendMail({ to, subject, html }) {
   if (!transporter) {

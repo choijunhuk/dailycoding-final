@@ -30,11 +30,11 @@ const DURATION_PRESETS = [
   { label: '🏔️ 마라톤 20분', sec: 1200 },
 ];
 const FALLBACK_MODES = [
-  { key: 'sort-speed', title: '⚡ 스피드전', description: '먼저 정답을 제출한 플레이어가 즉시 승리! HP 없음 — 순수한 속도 대결.', winCondition: 'first-correct', rules: ['먼저 정답 제출하면 즉시 승리', '시간 초과 시 점수 비교'], itemsEnabled: false, effectsEnabled: false, problemCount: 1 },
+  { key: 'sort-speed', title: '⚡ 스피드전', description: '먼저 정답을 제출한 플레이어가 즉시 승리하는 순수 속도 대결.', winCondition: 'first-correct', rules: ['먼저 정답 제출하면 즉시 승리', '시간 초과 시 점수 비교'], itemsEnabled: false, effectsEnabled: false, problemCount: 1 },
   { key: 'survival', title: '💀 생존전', description: '상대 HP를 0으로 만들면 승리! 정답 제출마다 공격력이 증가해 상대를 공격합니다.', winCondition: 'hp-knockout', rules: ['정답 → 상대 HP 감소', '상대 HP 0 = 즉시 승리'], itemsEnabled: false, effectsEnabled: false, problemCount: 1 },
   { key: 'duel-effects', title: '✨ 효과전', description: '정답 제출 시 문제 태그 기반 버프/디버프가 발동! HP 전투 + 무작위 효과로 역전 가능.', winCondition: 'hp-knockout', rules: ['정답 → 상대 HP 감소 + 문제 효과 발동', '아이템 쿨다운 20초', 'HP 0 = 패배'], itemsEnabled: true, effectsEnabled: true, problemCount: 1 },
   { key: 'chaos-items', title: '🎒 아이템 난투', description: '빠른 쿨다운 아이템으로 상대를 흔드는 HP 전투! 아이템 전략이 승패를 가릅니다.', winCondition: 'hp-knockout', rules: ['아이템 쿨다운 12초 (빠름)', '정답 → 상대 HP 감소', 'HP 0 = 패배'], itemsEnabled: true, effectsEnabled: true, problemCount: 1 },
-  { key: 'territory', title: '🏴 점령전', description: '5개 문제 동시 공개! 먼저 풀면 내 영토. HP 없음 — 더 많은 구역을 점령한 플레이어가 승리.', winCondition: 'territory', rules: ['5개 문제 동시 공개', '정답 → 해당 문제 점령', '점령 수가 많은 플레이어 승리'], itemsEnabled: false, effectsEnabled: false, problemCount: 5 },
+  { key: 'territory', title: '🏴 점령전', description: '5개 문제 동시 공개! 먼저 풀면 내 영토. 더 많은 구역을 점령한 플레이어가 승리.', winCondition: 'territory', rules: ['5개 문제 동시 공개', '정답 → 해당 문제 점령', '점령 수가 많은 플레이어 승리'], itemsEnabled: false, effectsEnabled: false, problemCount: 5 },
 ];
 
 function getSocketOrigin() {

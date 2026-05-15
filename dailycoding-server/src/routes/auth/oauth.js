@@ -1,16 +1,13 @@
 import { Router } from 'express';
 import crypto from 'crypto';
-import { issueTokens, clearAuthStatus, findOrCreateOAuthUser } from './helpers.js';
+import { issueTokens, clearAuthStatus, findOrCreateOAuthUser, getCookieBaseOptions } from './helpers.js';
 
 const router = Router();
 
 function setOauthStateCookie(res, state) {
   res.cookie('oauth_state', state, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'Lax',
+    ...getCookieBaseOptions(),
     maxAge: 10 * 60 * 1000,
-    path: '/',
   });
 }
 
@@ -30,7 +27,7 @@ router.get('/github/callback', async (req, res) => {
   const { code, state } = req.query;
   const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
   const storedState = req.cookies?.oauth_state;
-  res.clearCookie('oauth_state', { httpOnly: true, path: '/' });
+  res.clearCookie('oauth_state', getCookieBaseOptions());
   if (!storedState || storedState !== state) return res.redirect(`${frontendUrl}#oauth_error=invalid_state`);
   if (!code) return res.redirect(`${frontendUrl}#oauth_error=code_missing`);
 
@@ -92,7 +89,7 @@ router.get('/google/callback', async (req, res) => {
   const { code, state } = req.query;
   const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
   const storedState = req.cookies?.oauth_state;
-  res.clearCookie('oauth_state', { httpOnly: true, path: '/' });
+  res.clearCookie('oauth_state', getCookieBaseOptions());
   if (!storedState || storedState !== state) return res.redirect(`${frontendUrl}#oauth_error=invalid_state`);
   if (!code) return res.redirect(`${frontendUrl}#oauth_error=code_missing`);
 

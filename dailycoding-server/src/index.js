@@ -110,6 +110,7 @@ async function initDatabase() {
     await runSql(join(__dir, 'migrations', '025_community_problems.sql'));
     await runSql(join(__dir, 'migrations', '026_problem_sets.sql'));
     await runSql(join(__dir, 'migrations', '027_ai_hint_cache.sql'));
+    await runSql(join(__dir, 'migrations', '029_review_cancel_status.sql'));
     await runSql(join(__dir, 'migrations', '028_contest_creation_requests.sql'));
     logger.info('✅ DB 스키마 초기화 완료');
   } catch (err) {

@@ -117,9 +117,39 @@
   color: var(--text);
 }
 
+.reviews-page button.ghost.danger,
+.reviews-page button.danger {
+  color: var(--red, #f85149);
+}
+
+.reviews-page button.ghost.danger:hover,
+.reviews-page button.danger:hover {
+  background: rgba(248, 81, 73, 0.12);
+}
+
 .reviews-page button:disabled {
   opacity: .45;
   cursor: not-allowed;
+}
+
+.review-delete-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  padding: 3px 8px;
+  font-size: 12px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--red, #f85149);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.review-card:hover .review-delete-btn {
+  opacity: 1;
 }
 
 .review-columns,
@@ -224,7 +254,8 @@
 }
 
 .review-status.rejected,
-.review-status.wrong {
+.review-status.wrong,
+.review-status.cancelled {
   background: rgba(255, 99, 132, .12);
   color: #ff6384;
 }

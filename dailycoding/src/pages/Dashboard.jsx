@@ -11,6 +11,7 @@ import { BarChart3, BookOpen, Bot, CheckCircle2, FileText, Flame, Sparkles, Swor
 import ProfileAvatar from '../components/ProfileAvatar';
 import { TIER_THRESHOLDS } from '../data/constants.js';
 import { useLang } from '../context/LangContext.jsx';
+import { buildDailyFocusPlan } from './dashboardPlanUtils.js';
 
 const TIER_META = {
   unranked:    { label:'언랭크드',      color:'#888',    next:'아이언',       threshold:TIER_THRESHOLDS.iron,         bg:'rgba(136,136,136,.06)' },
@@ -24,6 +25,14 @@ const TIER_META = {
   master:      { label:'마스터',        color:'#9b59b6', next:'그랜드마스터', threshold:TIER_THRESHOLDS.grandmaster,  bg:'rgba(155,89,182,.08)'  },
   grandmaster: { label:'그랜드마스터',  color:'#e74c3c', next:'챌린저',       threshold:16001,                        bg:'rgba(231,76,60,.08)'   },
   challenger:  { label:'챌린저',        color:'#f1c40f', next:'MAX',          threshold:99999,                        bg:'rgba(241,196,15,.08)'  },
+};
+
+const DAILY_FOCUS_ICONS = {
+  target: Target,
+  file: FileText,
+  trophy: Trophy,
+  bot: Bot,
+  swords: Swords,
 };
 
 const StatCard = memo(function StatCard({ icon, value, label, color, sub, delta, onClick }) {
@@ -98,6 +107,14 @@ export default function Dashboard() {
   const recentSolved = solvedList.slice(-5).reverse();
   const unsolved   = PROBLEMS.filter(p => !solved[p.id]);
   const todayProb  = unsolved[0] || PROBLEMS[0];
+  const dailyFocusPlan = buildDailyFocusPlan({
+    todayProblem: todayProb,
+    recoveryQueue,
+    weeklyChallenge,
+    progression,
+    solvedCount: solvedList.length,
+    totalProblems: PROBLEMS.length,
+  });
   const accuracy   = appProblems.length > 0
     ? Math.round((solvedList.length / Math.max(PROBLEMS.length,1)) * 100)
     : 0;
@@ -321,6 +338,33 @@ export default function Dashboard() {
         <StatCard icon={<TrendingUp size={20} />} value={progression ? `Lv.${progression.level}` : (user?.rating||800)}  label={progression ? '성장 레벨' : t('rating')}  color="var(--yellow)" delta={progression ? `${progression.xp.toLocaleString()} XP` : ((user?.streak||0) > 0 ? `+${(user.streak) * 2} 성장` : null)} onClick={() => navigate('/profile')} />
         <StatCard icon={<Target size={20} />} value={myRank?`#${myRank}`:'−'} label={t('dashboardMyRank')} color="var(--purple)" delta={t('dashboardRealtimeTrack')} onClick={() => navigate('/ranking')} />
       </div>
+
+      {dailyFocusPlan.length > 0 && (
+        <div className="dashboard-learning-modes" aria-label="오늘의 학습 루틴">
+          {dailyFocusPlan.map((item) => {
+            const Icon = DAILY_FOCUS_ICONS[item.icon] || Target;
+            return (
+              <button
+                key={item.key}
+                type="button"
+                className="dashboard-learning-card"
+                style={{ '--mode-color': item.color }}
+                onClick={() => navigate(item.path, item.state ? { state: item.state } : undefined)}
+                aria-label={`${item.title}: ${item.description}`}
+              >
+                <span className="dashboard-learning-icon" aria-hidden="true">
+                  <Icon size={20} />
+                </span>
+                <span className="dashboard-learning-body">
+                  <strong>{item.title}</strong>
+                  <small>{item.description}</small>
+                </span>
+                <span className="dashboard-learning-stat">{item.stat}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       <div style={{display:'grid',gridTemplateColumns:'minmax(0,1fr) 360px',gap:16}} className="dashboard-main-grid">
         {/* 왼쪽 */}

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { Submission } from '../models/Submission.js';
 import { Notification }from '../models/Notification.js';
 import { CodeReview } from '../models/CodeReview.js';
+import { AdminLog } from '../models/AdminLog.js';
 import { queryOne }   from '../config/mysql.js';
 import { auth, requireVerified } from '../middleware/auth.js';
 import { validateBody, runSchema } from '../middleware/validate.js';
@@ -14,6 +15,24 @@ import { updateSeasonRating } from '../services/seasonService.js';
 import { evaluateFillBlankAnswer, evaluateBugFixAnswer } from '../services/battleAnswerEvaluation.js';
 
 const router = Router();
+async function logReviewSecurityEvent(req, submissionId, reason) {
+  try {
+    await AdminLog.create({
+      adminId: req.user.id,
+      action: 'review.forbidden_create',
+      targetType: 'submission',
+      targetId: Number.isFinite(Number(submissionId)) ? Number(submissionId) : null,
+      detail: {
+        reason,
+        method: req.method,
+        path: req.originalUrl || req.path,
+      },
+    });
+  } catch (logErr) {
+    console.warn('[submissions:review-security-log]', logErr.message);
+  }
+}
+
 async function getProblemModel() {
   const { Problem } = await import('../models/Problem.js');
   return Problem;
@@ -346,6 +365,9 @@ router.post('/:submissionId/reviews', auth, requireVerified, async (req, res) =>
   } catch (err) {
     const status = err?.status || 500;
     if (status < 500) {
+      if (status === 403) {
+        await logReviewSecurityEvent(req, req.params.submissionId, err.message);
+      }
       return errorResponse(res, status, status === 403 ? 'FORBIDDEN' : 'VALIDATION_ERROR', err.message);
     }
     console.error('[submissions/reviews/create]', err);

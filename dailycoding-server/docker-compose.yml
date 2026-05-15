@@ -6,17 +6,17 @@ services:
     container_name: dailycoding-mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: root1234
-      MYSQL_DATABASE: dailycoding
-      MYSQL_USER: dcuser
-      MYSQL_PASSWORD: dcpass1234
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME:-dailycoding}
+      MYSQL_USER: ${DB_USER:?Set DB_USER}
+      MYSQL_PASSWORD: ${DB_PASS:?Set DB_PASS}
     ports:
       - "3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u\"$${MYSQL_USER}\" -p\"$${MYSQL_PASSWORD}\""]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -26,13 +26,15 @@ services:
     image: redis:7-alpine
     container_name: dailycoding-redis
     restart: unless-stopped
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD}
     ports:
       - "6379:6379"
-    command: redis-server --appendonly yes --requirepass redis1234
+    command: sh -c 'redis-server --appendonly yes --requirepass "$$REDIS_PASSWORD"'
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "redis1234", "ping"]
+      test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD}\" ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -48,10 +50,10 @@ services:
       PORT: 4000
       DB_HOST: mysql
       DB_PORT: 3306
-      DB_NAME: dailycoding
-      DB_USER: dcuser
-      DB_PASS: dcpass1234
-      REDIS_URL: redis://:redis1234@redis:6379
+      DB_NAME: ${DB_NAME:-dailycoding}
+      DB_USER: ${DB_USER:?Set DB_USER}
+      DB_PASS: ${DB_PASS:?Set DB_PASS}
+      REDIS_URL: ${REDIS_URL:?Set REDIS_URL}
       JWT_SECRET: ${JWT_SECRET}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
       GEMINI_API_KEY: ${GEMINI_API_KEY}

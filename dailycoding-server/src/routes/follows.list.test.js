@@ -12,6 +12,14 @@ async function getJSON(baseUrl, token, path) {
   return body;
 }
 
+function listenOnLoopback(app) {
+  const server = app.listen(0, '127.0.0.1');
+  return new Promise((resolve, reject) => {
+    server.once('listening', () => resolve(server));
+    server.once('error', reject);
+  });
+}
+
 test('follow list endpoints expose followers and following user summaries', async (t) => {
   const [
     { createApp },
@@ -40,7 +48,7 @@ test('follow list endpoints expose followers and following user summaries', asyn
   await run('INSERT INTO follows (follower_id, following_id) VALUES (?,?)', [target.id, other.id]);
 
   const app = createApp();
-  const server = app.listen(0);
+  const server = await listenOnLoopback(app);
   t.after(() => server.close());
   const baseUrl = `http://127.0.0.1:${server.address().port}`;
   const token = makeToken(viewer);

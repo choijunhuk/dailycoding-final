@@ -32,14 +32,34 @@ export async function logAdminAction(req, action, targetType, targetId, detail) 
   });
 }
 
-function getCookieBaseOptions() {
-  const isProduction = process.env.NODE_ENV === 'production';
-  return {
+const COOKIE_SAME_SITE_VALUES = new Set(['Lax', 'Strict', 'None']);
+
+function normalizeSameSite(value) {
+  const normalized = String(value || 'Lax').trim().toLowerCase();
+  if (normalized === 'strict') return 'Strict';
+  if (normalized === 'none') return 'None';
+  return 'Lax';
+}
+
+export function getCookieBaseOptions(env = process.env) {
+  const isProduction = env.NODE_ENV === 'production';
+  const sameSite = normalizeSameSite(env.AUTH_COOKIE_SAMESITE);
+  const options = {
     httpOnly: true,
-    secure: isProduction,
-    sameSite: 'Lax',
+    secure: isProduction || sameSite === 'None',
+    sameSite,
     path: '/',
   };
+
+  if (!COOKIE_SAME_SITE_VALUES.has(options.sameSite)) {
+    options.sameSite = 'Lax';
+  }
+
+  if (env.AUTH_COOKIE_DOMAIN) {
+    options.domain = env.AUTH_COOKIE_DOMAIN;
+  }
+
+  return options;
 }
 
 export function clearAuthCookies(res) {

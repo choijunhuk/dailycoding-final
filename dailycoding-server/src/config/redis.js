@@ -3,6 +3,14 @@ import { createClient } from 'redis';
 let client = null;
 let connected = false;
 
+export function resolveRedisUrl(env = process.env) {
+  const url = String(env.REDIS_URL || '').trim();
+  if (env.NODE_ENV === 'production' && !url) {
+    throw new Error('Missing required Redis env: REDIS_URL');
+  }
+  return url || 'redis://:redis1234@localhost:6379';
+}
+
 // 인메모리 폴백 (Redis 없을 때)
 const memStore = new Map();
 const memTTL   = new Map();
@@ -27,13 +35,17 @@ async function connect() {
 
   try {
     client = createClient({
-      url: process.env.REDIS_URL || 'redis://:redis1234@localhost:6379',
+      url: resolveRedisUrl(),
     });
     client.on('error', () => { connected = false; });
     await client.connect();
     connected = true;
     console.log('✅ Redis 연결 성공');
   } catch (e) {
+    if (process.env.NODE_ENV === 'production') {
+      console.error('❌ [FATAL] Production 환경에서 Redis 연결 실패 - 서버를 종료합니다:', e.message);
+      process.exit(1);
+    }
     console.warn('⚠️  Redis 연결 실패 - 인메모리 캐시로 동작합니다:', e.message);
     connected = false;
   }

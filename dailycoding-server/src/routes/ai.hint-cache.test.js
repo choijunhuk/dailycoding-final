@@ -28,6 +28,14 @@ async function postHint(baseUrl, token, problemId) {
   return body;
 }
 
+function listenOnLoopback(app) {
+  const server = app.listen(0, '127.0.0.1');
+  return new Promise((resolve, reject) => {
+    server.once('listening', () => resolve(server));
+    server.once('error', reject);
+  });
+}
+
 test('AI hints are persisted across users while preserving free quota charging', async (t) => {
   const [
     { createApp },
@@ -97,7 +105,7 @@ test('AI hints are persisted across users while preserving free quota charging',
   await User.update(secondUser.id, { email_verified: 1 });
 
   const app = createApp();
-  const server = app.listen(0);
+  const server = await listenOnLoopback(app);
   t.after(() => server.close());
   const { port } = server.address();
   const baseUrl = `http://127.0.0.1:${port}`;

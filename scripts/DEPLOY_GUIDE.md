@@ -30,7 +30,14 @@ nano .env
 - `FRONTEND_URL=https://yourdomain.com`
 - `ALLOWED_ORIGINS=https://yourdomain.com`
 - `JUDGE_MODE=docker`
+- 기본 배포 헬스체크는 `services.judge === "docker"`를 요구합니다. native 채점으로 배포해야 하는 특수 환경에서만 `EXPECTED_JUDGE_HEALTH=native`를 명시하세요.
 - Google/GitHub callback URL을 실제 도메인으로 변경
+
+배포 전 로컬 또는 VPS에서 사전검증을 실행하세요.
+
+```bash
+node scripts/production-preflight.mjs dailycoding-server/.env dailycoding/.env.production
+```
 
 루트 `docker-compose.yml`용 `.env`도 준비하세요.
 예시:
@@ -43,6 +50,7 @@ DB_PASS=change_me
 REDIS_PASSWORD=change_me
 ENVEOF
 ```
+`dailycoding-server/docker-compose.yml`도 동일한 변수들을 필수로 요구합니다. 서버 폴더에서 compose를 직접 실행할 때도 `MYSQL_ROOT_PASSWORD`, `DB_USER`, `DB_PASS`, `REDIS_PASSWORD`를 먼저 설정하세요.
 
 ### 3. Docker 시작
 ```bash
