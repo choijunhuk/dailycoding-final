@@ -23,7 +23,7 @@ const TIER_META = {
   emerald:     { label:'에메랄드',      color:'#00d18f', next:'다이아몬드',   threshold:TIER_THRESHOLDS.diamond,      bg:'rgba(0,209,143,.08)'   },
   diamond:     { label:'다이아몬드',    color:'#b9f2ff', next:'마스터',       threshold:TIER_THRESHOLDS.master,       bg:'rgba(185,242,255,.08)' },
   master:      { label:'마스터',        color:'#9b59b6', next:'그랜드마스터', threshold:TIER_THRESHOLDS.grandmaster,  bg:'rgba(155,89,182,.08)'  },
-  grandmaster: { label:'그랜드마스터',  color:'#e74c3c', next:'챌린저',       threshold:16001,                        bg:'rgba(231,76,60,.08)'   },
+  grandmaster: { label:'그랜드마스터',  color:'#e74c3c', next:'챌린저',       threshold:TIER_THRESHOLDS.grandmaster,  bg:'rgba(231,76,60,.08)'   },
   challenger:  { label:'챌린저',        color:'#f1c40f', next:'MAX',          threshold:99999,                        bg:'rgba(241,196,15,.08)'  },
 };
 

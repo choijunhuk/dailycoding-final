@@ -1036,7 +1036,7 @@ export default function BattlePage() {
                 />
               )}
 
-              {!isLocked && !isMine && !isSpectator && submitResults[pid] !== true && submitResults[pid] !== 'correct' && (
+              {!isLocked && !isMine && !isSpectator && submitResults[pid] !== true && submitResults[pid] !== 'correct' && submitResults[pid] !== 'locked' && (
                 <button
                   className="bp-btn-submit"
                   onClick={() => submitAnswer(activeProblem)}
@@ -1046,11 +1046,17 @@ export default function BattlePage() {
                 </button>
               )}
 
-              {(!isSpectator && submitResults[pid] === false) && (
+              {(!isSpectator && (submitResults[pid] === false || submitResults[pid] === 'wrong')) && (
                 <div className="bp-feedback wrong">오답입니다. 다시 시도해보세요.</div>
               )}
               {(!isSpectator && (isMine || submitResults[pid] === true || submitResults[pid] === 'correct')) && (
                 <div className="bp-feedback correct">정답! 영토를 점령했습니다 🎉</div>
+              )}
+              {(!isSpectator && submitResults[pid] === 'error') && (
+                <div className="bp-feedback error">{judgeDetails[pid]?.detail || '채점 중 오류가 발생했습니다. 다시 시도해보세요.'}</div>
+              )}
+              {(!isSpectator && submitResults[pid] === 'locked') && (
+                <div className="bp-feedback locked">이미 상대 팀이 선점한 문제입니다.</div>
               )}
               {(isSpectator && lockedTeamId) && (
                 <div className={`bp-feedback ${lockedTeamId === 'team_1' ? 'team1' : 'team2'}`}>

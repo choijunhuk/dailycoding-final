@@ -873,8 +873,10 @@
   font-weight: 600;
 }
 
-.bp-feedback.correct { background: rgba(86,211,100,.12); color: var(--green); border: 1px solid rgba(86,211,100,.3); }
-.bp-feedback.wrong   { background: rgba(248,81,73,.08);  color: var(--red);   border: 1px solid rgba(248,81,73,.2);  }
+.bp-feedback.correct { background: rgba(86,211,100,.12); color: var(--green);   border: 1px solid rgba(86,211,100,.3); }
+.bp-feedback.wrong   { background: rgba(248,81,73,.08);  color: var(--red);     border: 1px solid rgba(248,81,73,.2);  }
+.bp-feedback.error   { background: rgba(248,81,73,.05);  color: var(--text2);   border: 1px solid rgba(248,81,73,.15); }
+.bp-feedback.locked  { background: rgba(121,192,255,.06);color: var(--text3);   border: 1px solid rgba(121,192,255,.2);}
 
 /* ── 결과 화면 ───────────────────────────────────────────── */
 .bp-result {

@@ -139,10 +139,10 @@ export default function ContestPage() {
       
       if (res.data.status === 'joined') {
         setContests(p => p.map(x => x.id===c.id ? {...x, participants: (x.participants||0)+1} : x));
-        addNotification(t('contestJoinSuccess').replace('{name}', c.name), 'contest');
+        addNotification(t('contestJoinSuccess').replace('{name}', c.name));
         toast?.show(t('contestJoinSuccess').replace('{name}', c.name), 'success');
       } else {
-        addNotification(t('contestJoinPending').replace('{name}', c.name), 'contest');
+        addNotification(t('contestJoinPending').replace('{name}', c.name));
         toast?.show(t('contestJoinPendingDesc'), 'info');
       }
       setPinContest(null);
@@ -168,7 +168,7 @@ export default function ContestPage() {
         })).filter((rule) => rule.rewardCode),
       });
       setContests(p => [res.data, ...p]);
-      addNotification(t('contestCreateSuccess').replace('{name}', res.data.name), 'contest');
+      addNotification(t('contestCreateSuccess').replace('{name}', res.data.name));
       toast?.show(t('contestCreateSuccess').replace('{name}', res.data.name), 'success');
       setShowCreate(false);
       setForm(createContestForm());
