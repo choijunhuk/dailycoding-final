@@ -126,6 +126,51 @@ router.patch('/password', auth, validateBody(updatePasswordSchema), async (req, 
   }
 });
 
+router.get('/profile/backgrounds', auth, async (req, res) => {
+  try {
+    const rows = await query(
+      `SELECT pb.*,
+              (ub.user_id IS NOT NULL) AS isUnlocked
+       FROM profile_backgrounds pb
+       LEFT JOIN user_backgrounds ub
+         ON ub.background_slug = pb.slug AND ub.user_id = ?
+       WHERE pb.is_default = 1 OR ub.user_id = ?
+       ORDER BY pb.is_default DESC, pb.created_at ASC`,
+      [req.user.id, req.user.id]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error('[profile/backgrounds]', err);
+    return internalError(res);
+  }
+});
+
+router.patch('/profile/background', auth, async (req, res) => {
+  try {
+    const raw = req.body?.backgroundSlug;
+    if (raw === null || raw === undefined || raw === '') {
+      const updated = await User.update(req.user.id, { equipped_background: null });
+      await clearAuthStatus(req.user.id);
+      return res.json(User.safe(updated));
+    }
+    const backgroundSlug = String(raw).trim();
+    if (!backgroundSlug) return errorResponse(res, 400, 'VALIDATION_ERROR', '배경 slug가 필요합니다.');
+    const background = await queryOne('SELECT * FROM profile_backgrounds WHERE slug = ?', [backgroundSlug]);
+    if (!background) return errorResponse(res, 404, 'NOT_FOUND', '배경을 찾을 수 없습니다.');
+    const unlocked = background.is_default || await queryOne(
+      'SELECT 1 FROM user_backgrounds WHERE user_id = ? AND background_slug = ?',
+      [req.user.id, backgroundSlug]
+    );
+    if (!unlocked) return errorResponse(res, 403, 'FORBIDDEN', '보유하지 않은 배경입니다.');
+    const updated = await User.update(req.user.id, { equipped_background: backgroundSlug });
+    await clearAuthStatus(req.user.id);
+    res.json(User.safe(updated));
+  } catch (err) {
+    console.error('[profile/background:patch]', err);
+    return internalError(res);
+  }
+});
+
 router.get('/profile/:id', auth, async (req, res) => {
   const id = Number(req.params.id);
   if (!id || Number.isNaN(id)) return errorResponse(res, 400, 'VALIDATION_ERROR', '유효하지 않은 ID');
@@ -366,51 +411,6 @@ router.patch('/profile/extended', auth, async (req, res) => {
     res.json(User.safe(updated));
   } catch (err) {
     console.error('[profile/extended]', err);
-    return internalError(res);
-  }
-});
-
-router.get('/profile/backgrounds', auth, async (req, res) => {
-  try {
-    const rows = await query(
-      `SELECT pb.*,
-              (ub.user_id IS NOT NULL) AS isUnlocked
-       FROM profile_backgrounds pb
-       LEFT JOIN user_backgrounds ub
-         ON ub.background_slug = pb.slug AND ub.user_id = ?
-       WHERE pb.is_default = 1 OR ub.user_id = ?
-       ORDER BY pb.is_default DESC, pb.created_at ASC`,
-      [req.user.id, req.user.id]
-    );
-    res.json(rows);
-  } catch (err) {
-    console.error('[profile/backgrounds]', err);
-    return internalError(res);
-  }
-});
-
-router.patch('/profile/background', auth, async (req, res) => {
-  try {
-    const raw = req.body?.backgroundSlug;
-    if (raw === null || raw === undefined || raw === '') {
-      const updated = await User.update(req.user.id, { equipped_background: null });
-      await clearAuthStatus(req.user.id);
-      return res.json(User.safe(updated));
-    }
-    const backgroundSlug = String(raw).trim();
-    if (!backgroundSlug) return errorResponse(res, 400, 'VALIDATION_ERROR', '배경 slug가 필요합니다.');
-    const background = await queryOne('SELECT * FROM profile_backgrounds WHERE slug = ?', [backgroundSlug]);
-    if (!background) return errorResponse(res, 404, 'NOT_FOUND', '배경을 찾을 수 없습니다.');
-    const unlocked = background.is_default || await queryOne(
-      'SELECT 1 FROM user_backgrounds WHERE user_id = ? AND background_slug = ?',
-      [req.user.id, backgroundSlug]
-    );
-    if (!unlocked) return errorResponse(res, 403, 'FORBIDDEN', '보유하지 않은 배경입니다.');
-    const updated = await User.update(req.user.id, { equipped_background: backgroundSlug });
-    await clearAuthStatus(req.user.id);
-    res.json(User.safe(updated));
-  } catch (err) {
-    console.error('[profile/background:patch]', err);
     return internalError(res);
   }
 });

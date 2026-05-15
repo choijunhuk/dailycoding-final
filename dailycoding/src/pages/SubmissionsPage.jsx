@@ -141,11 +141,8 @@ export default function SubmissionsPage() {
     if (!target) return;
     setExp(target.id);
     ensureCodeLoaded(target);
-    if (location.state?.autoCoach && ['wrong', 'timeout', 'error', 'compile'].includes(target.result)) {
-      loadCoach(target);
-    }
     setHandledHighlightId(highlightId);
-  }, [ensureCodeLoaded, handledHighlightId, highlightId, loadCoach, location.state?.autoCoach, rows]);
+  }, [ensureCodeLoaded, handledHighlightId, highlightId, rows]);
 
   const compareRows = compareIds.map((id) => rows.find((row) => row.id === id)).filter(Boolean);
 
