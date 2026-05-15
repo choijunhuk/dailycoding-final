@@ -1,19 +1,12 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import api from '../api.js';
 import { io } from 'socket.io-client';
+import { getSocketUrl } from '../utils/socket.js';
 import { invalidateRankingData } from '../hooks/useRankingData.js';
 import { useAuth } from './AuthContext';
 
 const AppContext = createContext(null);
 
-function getSocketUrl() {
-  const apiUrl = import.meta.env.VITE_API_URL;
-  if (apiUrl) return apiUrl.replace(/\/api$/, '');
-  if (typeof window !== 'undefined' && window.location.port === '5173') {
-    return `${window.location.protocol}//${window.location.hostname}:4000`;
-  }
-  return typeof window !== 'undefined' ? window.location.origin : '';
-}
 
 function formatRelativeTime(value) {
   if (!value) return '방금 전';

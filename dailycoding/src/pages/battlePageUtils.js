@@ -1,3 +1,7 @@
+import { getSocketUrl } from '../utils/socket.js';
+
+export { getSocketUrl };
+
 export const POLL_MS = 2500;
 export const BATTLE_SEC = 1800;
 
@@ -45,13 +49,6 @@ export const BATTLE_AD_SLOTS = Object.freeze({
   },
 });
 
-export function getSocketUrl(apiUrl, locationLike) {
-  if (apiUrl) return apiUrl.replace(/\/api$/, '');
-  if (locationLike?.port === '5173') {
-    return `${locationLike.protocol}//${locationLike.hostname}:4000`;
-  }
-  return locationLike ? locationLike.origin : '';
-}
 
 export function fmtTime(sec) {
   const m = Math.floor(sec / 60).toString().padStart(2, '0');

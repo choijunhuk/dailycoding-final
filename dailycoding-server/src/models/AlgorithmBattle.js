@@ -119,6 +119,14 @@ function toTimeMs(value) {
   return Number.isNaN(ms) ? null : ms;
 }
 
+function isActivelyPlayingRoom(room, now = Date.now()) {
+  if (!room || room.status !== 'playing') return false;
+  if (!room.startedAt) return true;
+  const startedAtMs = toTimeMs(room.startedAt);
+  if (startedAtMs == null) return true;
+  return now < startedAtMs + room.durationSec * 1000;
+}
+
 function normalizeRoom(row) {
   if (!row) return null;
   return {
@@ -243,11 +251,6 @@ function getActivityByUserId(participants = [], events = []) {
   return activity;
 }
 
-function hasBannedTag(tags = [], bannedTags = []) {
-  const banned = new Set((bannedTags || []).map((t) => String(t).toLowerCase()));
-  return (tags || []).some((t) => banned.has(String(t).toLowerCase()));
-}
-
 function tierIndex(tier) {
   const idx = PROBLEM_TIERS.indexOf(String(tier || '').toLowerCase());
   return idx === -1 ? 0 : idx;
@@ -346,14 +349,42 @@ async function getProblemById(problemId) {
 
 async function findProblemIds(count = 1, { bannedTags = [], tiers = PROBLEM_TIERS, minDifficulty = 1, maxDifficulty = 9 } = {}) {
   const limit = Math.max(count * 20, 200);
-  const rows = await query(
-    `SELECT id, tier, difficulty FROM problems
-     WHERE COALESCE(visibility, 'global') = 'global'
-       AND COALESCE(problem_type, 'coding') = 'coding'
-     ORDER BY RAND()
-     LIMIT ${limit}`,
-    []
-  );
+  const normalizedTiers = (tiers || []).map((tier) => String(tier || '').toLowerCase()).filter(Boolean);
+  const normalizedBannedTags = (bannedTags || []).map((tag) => String(tag || '').toLowerCase()).filter(Boolean);
+  const params = [];
+  let sql = `SELECT p.id, p.tier, p.difficulty FROM problems p
+     WHERE COALESCE(p.visibility, 'global') = 'global'
+       AND COALESCE(p.problem_type, 'coding') = 'coding'
+       AND COALESCE(p.difficulty, 1) BETWEEN ? AND ?`;
+  params.push(minDifficulty, maxDifficulty);
+  if (normalizedTiers.length > 0) {
+    sql += ` AND LOWER(COALESCE(p.tier, '')) IN (${normalizedTiers.map(() => '?').join(',')})`;
+    params.push(...normalizedTiers);
+  }
+  if (normalizedBannedTags.length > 0) {
+    sql += ` AND NOT EXISTS (
+       SELECT 1 FROM problem_tags pt
+       WHERE pt.problem_id = p.id
+         AND LOWER(pt.tag) IN (${normalizedBannedTags.map(() => '?').join(',')})
+     )`;
+    params.push(...normalizedBannedTags);
+  }
+  sql += ` ORDER BY RAND() LIMIT ${limit}`;
+  const rows = await query(sql, params);
+  const tagMap = new Map();
+  if (normalizedBannedTags.length > 0 && rows.length > 0) {
+    const candidateIds = rows.map((row) => Number(row.id)).filter(Boolean);
+    const tagRows = await query(
+      `SELECT problem_id, tag FROM problem_tags
+       WHERE problem_id IN (${candidateIds.map(() => '?').join(',')})`,
+      candidateIds
+    );
+    for (const tagRow of tagRows || []) {
+      const problemId = Number(tagRow.problem_id || tagRow.problemId);
+      if (!tagMap.has(problemId)) tagMap.set(problemId, []);
+      tagMap.get(problemId).push(String(tagRow.tag || '').toLowerCase());
+    }
+  }
 
   const result = [];
   const usedIds = new Set();
@@ -361,20 +392,19 @@ async function findProblemIds(count = 1, { bannedTags = [], tiers = PROBLEM_TIER
   for (const row of rows || []) {
     if (result.length >= count) break;
     if (usedIds.has(Number(row.id))) continue;
-    if (tiers.length > 0 && !tiers.includes(String(row.tier || '').toLowerCase())) continue;
+    if (normalizedTiers.length > 0 && !normalizedTiers.includes(String(row.tier || '').toLowerCase())) continue;
     const difficulty = Number(row.difficulty || 1);
     if (difficulty < minDifficulty || difficulty > maxDifficulty) continue;
-    if (bannedTags.length > 0) {
-      const tagRows = await query('SELECT tag FROM problem_tags WHERE problem_id = ?', [row.id]);
-      const tags = (tagRows || []).map((t) => t.tag);
-      if (hasBannedTag(tags, bannedTags)) continue;
+    if (normalizedBannedTags.length > 0) {
+      const tags = tagMap.get(Number(row.id)) || [];
+      if (tags.some((tag) => normalizedBannedTags.includes(tag))) continue;
     }
     result.push(Number(row.id));
     usedIds.add(Number(row.id));
   }
 
   // fallback if DB doesn't have enough problems
-  const fallback = result[0] || rows.find((row) => !tiers.length || tiers.includes(String(row.tier || '').toLowerCase()))?.id || 900001;
+  const fallback = result[0] || rows.find((row) => !normalizedTiers.length || normalizedTiers.includes(String(row.tier || '').toLowerCase()))?.id || 900001;
   while (result.length < count) result.push(fallback);
 
   return result;
@@ -532,6 +562,57 @@ export const AlgorithmBattle = {
     sql += ` ORDER BY created_at DESC LIMIT ${cap}`;
     const rooms = (await query(sql, params)).map(normalizeRoom);
     return Promise.all(rooms.map((room) => this.getRoomState(room.id)));
+  },
+
+  async listRoomSummaries({ status = null, limit = 20 } = {}) {
+    await this.expireStaleWaitingRooms();
+
+    const cap = Math.min(50, Math.max(1, Number(limit) || 20));
+    const params = [];
+    let sql = 'SELECT * FROM battle_rooms WHERE COALESCE(is_private, 0) = 0';
+    if (status) {
+      sql += ' AND status = ?';
+      params.push(status);
+    } else {
+      sql += ' AND status = ?';
+      params.push('waiting');
+    }
+    sql += ` ORDER BY created_at DESC LIMIT ${cap}`;
+    let rooms = (await query(sql, params)).map(normalizeRoom);
+    if (status === 'playing') {
+      rooms = rooms.filter((room) => isActivelyPlayingRoom(room));
+    }
+    return Promise.all(rooms.map(async (room) => {
+      const participantRow = await queryOne('SELECT COUNT(*) AS cnt FROM battle_participants WHERE room_id = ?', [room.id]);
+      const problem = room.problemId ? await getProblemById(room.problemId) : null;
+      return {
+        room: {
+          id: room.id,
+          mode: room.mode,
+          status: room.status,
+          maxPlayers: room.maxPlayers,
+          durationSec: room.durationSec,
+          startedAt: room.startedAt,
+          createdBy: room.createdBy,
+          createdAt: room.createdAt,
+          lobbyExpiresAt: room.lobbyExpiresAt,
+        },
+        participantCount: Number(participantRow?.cnt || participantRow?.count || 0),
+        problem: problem ? {
+          id: problem.id,
+          title: problem.title,
+          tier: problem.tier,
+        } : null,
+      };
+    }));
+  },
+
+  async countActivePublicRooms() {
+    const rows = await query(
+      "SELECT * FROM battle_rooms WHERE COALESCE(is_private, 0) = 0 AND status = ?",
+      ['playing']
+    );
+    return (rows || []).map(normalizeRoom).filter((room) => !room.isPrivate && isActivelyPlayingRoom(room)).length;
   },
 
   async getRoom(roomId) {

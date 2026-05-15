@@ -1,11 +1,12 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import { Copy, MessageCircle, Play, Plus, Shield, Smile, Swords, Trophy, Zap, Lock, Unlock, Clock } from 'lucide-react';
 import api from '../api.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import { JUDGE_LANGUAGE_OPTIONS } from '../data/judgeLanguages.js';
+import { getSocketUrl } from '../utils/socket.js';
 import './AlgorithmBattlePage.css';
 
 const Editor = lazy(() => import('@monaco-editor/react'));
@@ -37,14 +38,6 @@ const FALLBACK_MODES = [
   { key: 'territory', title: '🏴 점령전', description: '5개 문제 동시 공개! 먼저 풀면 내 영토. 더 많은 구역을 점령한 플레이어가 승리.', winCondition: 'territory', rules: ['5개 문제 동시 공개', '정답 → 해당 문제 점령', '점령 수가 많은 플레이어 승리'], itemsEnabled: false, effectsEnabled: false, problemCount: 5 },
 ];
 
-function getSocketOrigin() {
-  const apiUrl = import.meta.env.VITE_API_URL;
-  if (apiUrl) return apiUrl.replace(/\/api$/, '');
-  if (typeof window !== 'undefined' && /^5\d{3}$/.test(window.location.port)) {
-    return `${window.location.protocol}//${window.location.hostname}:4000`;
-  }
-  return typeof window !== 'undefined' ? window.location.origin : '';
-}
 
 function fmtSec(seconds) {
   const sec = Math.max(0, Number(seconds) || 0);
@@ -185,6 +178,7 @@ function TerritoryBar({ problems, claims, myId, onSelect, selectedIdx }) {
 export default function AlgorithmBattlePage() {
   const { roomId } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const toast = useToast();
   const { user } = useAuth();
   const socketRef = useRef(null);
@@ -208,6 +202,8 @@ export default function AlgorithmBattlePage() {
   const [code, setCode] = useState('');
   const [language, setLanguage] = useState(user?.defaultLanguage || 'python');
   const [submitting, setSubmitting] = useState(false);
+  const [submissionResult, setSubmissionResult] = useState(null);
+  const [mobileTab, setMobileTab] = useState('problem');
   const [chatInput, setChatInput] = useState('');
   const [countdown, setCountdown] = useState(null);
   const [attackUserId, setAttackUserId] = useState(null);
@@ -234,6 +230,7 @@ export default function AlgorithmBattlePage() {
   const me = participants.find((p) => p.userId === user?.id);
   const opponents = participants.filter((p) => p.userId !== user?.id);
   const hasOpponent = opponents.length > 0;
+  const isSpectating = searchParams.get('spectate') === '1' || (currentRoom?.status === 'playing' && !me);
   const participantById = useMemo(
     () => Object.fromEntries(participants.map((player) => [String(player.userId), player])),
     [participants]
@@ -267,8 +264,18 @@ export default function AlgorithmBattlePage() {
   // ── 방 목록 폴링
   const loadRooms = useCallback(async () => {
     try {
-      const { data } = await api.get('/battles/rooms');
-      setRooms(data.rooms || []);
+      const [waitingRes, playingRes] = await Promise.all([
+        api.get('/battles/rooms', { params: { status: 'waiting', limit: 20 } }),
+        api.get('/battles/rooms', { params: { status: 'playing', limit: 20 } }),
+      ]);
+      const merged = [...(waitingRes.data?.rooms || []), ...(playingRes.data?.rooms || [])];
+      const seen = new Set();
+      setRooms(merged.filter((item) => {
+        const id = item?.room?.id;
+        if (!id || seen.has(id)) return false;
+        seen.add(id);
+        return true;
+      }));
     } catch { setRooms([]); }
   }, []);
 
@@ -309,16 +316,28 @@ export default function AlgorithmBattlePage() {
   // ── 소켓
   useEffect(() => {
     if (!roomId || !user?.id) return undefined;
-    const socket = io(getSocketOrigin(), { transports: ['websocket', 'polling'], withCredentials: true });
+    const socket = io(getSocketUrl(), { transports: ['websocket', 'polling'], withCredentials: true });
     socketRef.current = socket;
     socket.on('connect', () => {
       socket.emit('authenticate');
-      socket.emit('battle:join', { roomId }, (ack) => { if (ack?.state) setState(ack.state); });
+      if (searchParams.get('spectate') === '1') {
+        socket.emit('battle:spectate', roomId);
+      } else {
+        socket.emit('battle:join', { roomId }, (ack) => {
+          if (ack?.state) setState(ack.state);
+          if (ack && ack.ok === false) {
+            socket.emit('battle:spectate', roomId);
+            navigate(`/battle/${roomId}?spectate=1`, { replace: true });
+            toast?.show(ack.message || '관전 모드로 전환합니다.', 'info');
+          }
+        });
+      }
     });
     socket.on('battle:room:update', (next) => { if (next?.room?.id === roomId) setState(next); });
     socket.on('battle:countdown', ({ seconds }) => setCountdown(seconds || 3));
     socket.on('battle:started', (next) => { if (next?.room?.id === roomId) setState(next); setCountdown(null); });
     socket.on('battle:submission:result', (payload) => {
+      setSubmissionResult({ ...payload, receivedAt: Date.now() });
       toast?.show(payload.result === 'correct' ? '⚔️ 공격 성공!' : '💨 공격 실패', payload.result === 'correct' ? 'success' : 'warning');
     });
     socket.on('battle:player:attack', (event) => {
@@ -332,7 +351,7 @@ export default function AlgorithmBattlePage() {
     socket.on('battle:effect', (event) => { toast?.show(event?.payload?.effectLabel || '문제 효과 발동', 'info'); });
     socket.on('battle:item:used', (event) => { toast?.show(event?.payload?.itemLabel || '아이템 사용', 'info'); });
     return () => { socket.disconnect(); if (socketRef.current === socket) socketRef.current = null; };
-  }, [roomId, toast, user?.id]);
+  }, [navigate, roomId, searchParams, toast, user?.id]);
 
   // ── 틱 (타이머/쿨다운용)
   useEffect(() => {
@@ -351,7 +370,7 @@ export default function AlgorithmBattlePage() {
   useEffect(() => {
     if (!currentRoom || currentRoom.status !== 'playing') return;
     if (timeLeft(currentRoom) <= 0) {
-      api.post(`/battles/rooms/${currentRoom.id}/finish`, { reason: 'timeout' }).catch(() => {});
+      api.post(`/battles/rooms/${currentRoom.id}/finish`, { reason: 'timeout' }).catch(() => { /* best-effort timeout finish */ });
     }
   }, [clock, currentRoom]);
 
@@ -388,6 +407,13 @@ export default function AlgorithmBattlePage() {
         isPrivate,
         preferredLanguage,
       });
+      if (data.room?.inviteCode && navigator?.clipboard?.writeText) {
+        navigator.clipboard.writeText(data.room.inviteCode).then(() => {
+          toast?.show(`초대 코드 ${data.room.inviteCode}가 복사되었습니다.`, 'success');
+        }).catch(() => {
+          toast?.show(`초대 코드: ${data.room.inviteCode}`, 'info');
+        });
+      }
       navigate(`/battle/${data.room.id}`);
     } catch (err) {
       if (err.response?.status === 409) {
@@ -419,11 +445,27 @@ export default function AlgorithmBattlePage() {
     try {
       await api.post(`/battles/rooms/${id}/join`);
       navigate(`/battle/${id}`);
-    } catch (err) { toast?.show(err.response?.data?.message || '방 참가 실패', 'error'); }
+    } catch (err) {
+      try {
+        const { data } = await api.get(`/battles/rooms/${id}`);
+        if (data?.room?.status === 'playing') {
+          toast?.show('이미 시작된 방이라 관전 모드로 입장합니다.', 'info');
+          navigate(`/battle/${id}?spectate=1`);
+          return;
+        }
+      } catch {
+        // 참가 실패 원인을 확인하지 못하면 원래 오류를 표시합니다.
+      }
+      toast?.show(err.response?.data?.message || '방 참가 실패', 'error');
+    }
+  };
+
+  const spectateRoom = (id) => {
+    navigate(`/battle/${id}?spectate=1`);
   };
 
   const ready = async () => {
-    if (!currentRoom) return;
+    if (!currentRoom || isSpectating) return;
     try {
       const { data } = await api.post(`/battles/rooms/${currentRoom.id}/ready`);
       setState(data);
@@ -431,7 +473,7 @@ export default function AlgorithmBattlePage() {
   };
 
   const submit = async () => {
-    if (!currentRoom || submitting) return;
+    if (!currentRoom || submitting || isSpectating) return;
     setSubmitting(true);
     try {
       emitActivity('채점 요청 중');
@@ -439,6 +481,18 @@ export default function AlgorithmBattlePage() {
       if (isTerritoryMode && activeProblem) body.problemId = activeProblem.id;
       const { data } = await api.post(`/battles/rooms/${currentRoom.id}/submit`, body);
       setState(data);
+      const latest = data?.submissions?.[0];
+      if (latest) {
+        setSubmissionResult({
+          userId: user?.id,
+          result: latest.isCorrect ? 'correct' : 'wrong',
+          timeMs: latest.executionTimeMs,
+          memoryMb: latest.memoryMb,
+          detail: latest.detail,
+          score: latest.score || 0,
+          receivedAt: Date.now(),
+        });
+      }
     } catch (err) {
       toast?.show(err.response?.data?.message || '제출 실패', 'error');
     } finally { setSubmitting(false); }
@@ -447,7 +501,7 @@ export default function AlgorithmBattlePage() {
   const sendChat = async (e) => {
     e.preventDefault();
     const message = chatInput.trim();
-    if (!currentRoom || !message) return;
+    if (!currentRoom || isSpectating || !message) return;
     setChatInput('');
     try {
       const { data } = await api.post(`/battles/rooms/${currentRoom.id}/chat`, { message });
@@ -459,7 +513,7 @@ export default function AlgorithmBattlePage() {
   };
 
   const sendEmote = async (emote) => {
-    if (!currentRoom) return;
+    if (!currentRoom || isSpectating) return;
     try {
       const { data } = await api.post(`/battles/rooms/${currentRoom.id}/emote`, { emote });
       if (data.state) setState(data.state);
@@ -467,7 +521,7 @@ export default function AlgorithmBattlePage() {
   };
 
   const useItem = async (itemType) => {
-    if (!currentRoom || itemCooldownLeft > 0) return;
+    if (!currentRoom || isSpectating || itemCooldownLeft > 0) return;
     try {
       const { data } = await api.post(`/battles/rooms/${currentRoom.id}/item`, { itemType });
       if (data.state) setState(data.state);
@@ -475,7 +529,7 @@ export default function AlgorithmBattlePage() {
   };
 
   const leave = async () => {
-    if (currentRoom) {
+    if (currentRoom && !isSpectating) {
       try { await api.post(`/battles/rooms/${currentRoom.id}/leave`); } catch { /* best-effort */ }
     }
     navigate('/battle');
@@ -484,7 +538,28 @@ export default function AlgorithmBattlePage() {
   const copyInviteCode = () => {
     const code = currentRoom?.inviteCode;
     if (!code) return;
-    navigator.clipboard?.writeText(code).then(() => toast?.show('초대 코드 복사됨!', 'success')).catch(() => {});
+    navigator.clipboard?.writeText(code).then(() => {
+      toast?.show('초대 코드가 복사되었습니다.', 'success');
+    }).catch(() => {
+      toast?.show(`초대 코드: ${code}`, 'info');
+    });
+  };
+
+  const createAgain = async () => {
+    if (!currentRoom) { navigate('/battle'); return; }
+    try {
+      const { data } = await api.post('/battles/rooms', {
+        mode: currentRoom.mode,
+        maxPlayers: currentRoom.maxPlayers || 2,
+        durationSec: currentRoom.durationSec,
+        isPrivate: Boolean(currentRoom.isPrivate),
+        preferredLanguage: currentRoom.preferredLanguage || language,
+      });
+      navigate(`/battle/${data.room.id}`);
+    } catch (err) {
+      toast?.show(err.response?.data?.message || '새 배틀을 만들지 못했습니다.', 'error');
+      navigate('/battle');
+    }
   };
 
   // ════════════════════════════════════════════════
@@ -608,30 +683,42 @@ export default function AlgorithmBattlePage() {
 
         {/* 공개 방 목록 */}
         <section className="ab-room-list">
-          <div className="ab-section-title">공개 방 목록</div>
+          <div className="ab-section-title">공개 방 목록 / 진행 중 관전</div>
           {rooms.length === 0 ? (
-            <div className="ab-empty">대기 중인 방이 없습니다. 새 방을 만들어 시작하세요.</div>
+            <div className="ab-empty ab-empty-cta">
+              <strong>첫 번째 방을 만들어 보세요</strong>
+              <span>스피드전부터 점령전까지 바로 시작할 수 있습니다.</span>
+              <button className="btn btn-primary btn-sm" onClick={createRoom} disabled={creating}>
+                {creating ? <span className="spinner" /> : <Plus size={14} />} 방 만들기
+              </button>
+            </div>
           ) : rooms.map((item) => {
             const modeLabel = battleModes.find((m) => m.key === item.room.mode)?.title || item.room.mode;
             const isPlaying = item.room.status === 'playing';
-            const isFull = item.participants.length >= item.room.maxPlayers;
+            const participantCount = item.participantCount ?? item.participants?.length ?? 0;
+            const isFull = participantCount >= item.room.maxPlayers;
             return (
-              <div key={item.room.id} className="ab-room-row">
+              <div key={item.room.id} className={`ab-room-row ${isPlaying ? 'playing' : 'waiting'}`}>
                 <div>
                   <strong>
                     {item.problem?.title || (isPlaying ? '배틀 진행 중' : modeLabel)}
                   </strong>
                   <span>
-                    {modeLabel} · {item.participants.length}/{item.room.maxPlayers}명 · {isPlaying ? `⏱ ${fmtSec(timeLeft(item.room))} 남음` : (() => { const ll = lobbyTimeLeft(item.room); return ll != null ? `⏳ ${fmtSec(ll)} 대기` : '대기 중'; })()}
+                    {modeLabel} · {participantCount}/{item.room.maxPlayers}명 · {isPlaying ? `⏱ ${fmtSec(timeLeft(item.room))} 남음` : (() => { const ll = lobbyTimeLeft(item.room); return ll != null ? `⏳ ${fmtSec(ll)} 대기` : '대기 중'; })()}
                   </span>
                 </div>
-                <button
-                  className="btn btn-ghost btn-sm"
-                  onClick={() => !isPlaying && !isFull && joinRoom(item.room.id)}
-                  disabled={isPlaying || isFull}
-                >
-                  {isPlaying ? '진행 중' : isFull ? '정원 초과' : '참가'}
-                </button>
+                <div className="ab-room-row-actions">
+                  {isPlaying && (
+                    <span className="ab-live-badge">LIVE</span>
+                  )}
+                  <button
+                    className={isPlaying ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm'}
+                    onClick={() => (isPlaying ? spectateRoom(item.room.id) : joinRoom(item.room.id))}
+                    disabled={!isPlaying && isFull}
+                  >
+                    {isPlaying ? '관전' : isFull ? '정원 초과' : '참가'}
+                  </button>
+                </div>
               </div>
             );
           })}
@@ -646,15 +733,26 @@ export default function AlgorithmBattlePage() {
   const lobbyLeft = lobbyTimeLeft(currentRoom);
   const topScore = sortedParticipants[0]?.score ?? 0;
   const topScoreCount = sortedParticipants.filter((player) => player.score === topScore).length;
-  const didWin = hasOpponent && topScoreCount === 1 && sortedParticipants[0]?.userId === user?.id;
+  const isSpectatorResult = currentRoom?.status === 'finished' && !me;
+  const didWin = !isSpectatorResult && hasOpponent && topScoreCount === 1 && sortedParticipants[0]?.userId === user?.id;
   const isDraw = hasOpponent && topScoreCount > 1;
-  const resultTitle = !hasOpponent
+  const resultTitle = isSpectatorResult
+    ? '관전 종료'
+    : !hasOpponent
     ? '대전 성립 안 됨'
     : isDraw
       ? '무승부'
       : didWin
         ? '🏆 승리!'
         : '배틀 종료';
+  const resultTone = isSpectatorResult || !hasOpponent ? 'neutral' : isDraw ? 'draw' : didWin ? 'win' : 'lose';
+  const opponentLabel = opponents.map((player) => player.username).join(', ') || '상대 없음';
+  const winnerLabel = topScoreCount === 1 ? sortedParticipants[0]?.username : null;
+  const resultSummary = isSpectatorResult
+    ? winnerLabel ? `승자 ${winnerLabel} · 최종 ${topScore}점` : '무승부로 종료'
+    : isTerritoryMode
+    ? `점령 ${myClaimCount}/${problems?.length || 5}`
+    : `최종 ${me?.score || 0}점`;
 
   return (
     <div className="ab-room-page">
@@ -682,19 +780,24 @@ export default function AlgorithmBattlePage() {
             </button>
           )}
           {currentRoom?.status === 'waiting' && (
-            <button className="btn btn-success btn-sm" onClick={ready} disabled={me?.isReady}>
+            <button className="btn btn-success btn-sm" onClick={ready} disabled={me?.isReady || isSpectating}>
               {me?.isReady ? '준비 완료 ✓' : '준비'}
             </button>
           )}
           {currentRoom?.status === 'playing' && (
-            <button className="btn btn-primary btn-sm" onClick={submit} disabled={submitting}>
-              {submitting ? <span className="spinner" /> : <><Play size={13} /> 제출</>}
+            <button className="btn btn-primary btn-sm" onClick={submit} disabled={submitting || isSpectating}>
+              {isSpectating ? '관전 중' : submitting ? <span className="spinner" /> : <><Play size={13} /> 제출</>}
             </button>
           )}
         </div>
       </div>
 
       {countdown != null && <div className="ab-countdown">{countdown > 0 ? countdown : '🔥 시작!'}</div>}
+      {isSpectating && (
+        <div className="ab-spectator-banner">
+          👀 관전 모드입니다. 제출/아이템/준비는 비활성화되고 실시간 진행만 따라갑니다.
+        </div>
+      )}
 
       {/* 모드 규칙 패널 */}
       {showRules && config?.rules && (
@@ -717,7 +820,24 @@ export default function AlgorithmBattlePage() {
         />
       )}
 
-      <div className="ab-room-grid">
+      <div className="ab-mobile-tabs">
+        {[
+          ['problem', '문제/에디터'],
+          ['players', '플레이어 상태'],
+          ['log', '채팅/전투로그'],
+        ].map(([key, label]) => (
+          <button
+            type="button"
+            key={key}
+            className={mobileTab === key ? 'active' : ''}
+            onClick={() => setMobileTab(key)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      <div className={`ab-room-grid ab-mobile-${mobileTab}`}>
         {/* 왼쪽: 플레이어 상태 */}
         <aside className="ab-left">
           <div className="ab-section-title">플레이어</div>
@@ -840,7 +960,7 @@ export default function AlgorithmBattlePage() {
                       type="button"
                       key={item.key}
                       onClick={() => useItem(item.key)}
-                      disabled={currentRoom?.status !== 'playing' || itemCooldownLeft > 0}
+                      disabled={currentRoom?.status !== 'playing' || isSpectating || itemCooldownLeft > 0}
                       title={item.description}
                     >
                       <Shield size={13} />
@@ -857,6 +977,19 @@ export default function AlgorithmBattlePage() {
 
           {/* 제출 결과 */}
           <div className="ab-section-title">제출 결과</div>
+          {submissionResult && (
+            <div className={`ab-submit-card ab-submit-flash ${submissionResult.result === 'correct' ? 'correct' : 'wrong'}`}>
+              <strong>{submissionResult.result === 'correct' ? '⚔️ 방금 공격 성공' : '💨 방금 공격 실패'}</strong>
+              <span>
+                {submissionResult.userId === user?.id ? '내 제출' : `${participantById[String(submissionResult.userId)]?.username || '상대'} 제출`}
+                {' · '}
+                {submissionResult.timeMs != null ? `${submissionResult.timeMs}ms` : '시간 -'}
+                {' · '}
+                +{submissionResult.score || 0}
+              </span>
+              {submissionResult.detail && <p>{submissionResult.detail}</p>}
+            </div>
+          )}
           {latestSubmission ? (
             <div className={`ab-submit-card ${latestSubmission.isCorrect ? 'correct' : 'wrong'}`}>
               <strong>{latestSubmission.isCorrect ? '✅ 정답' : '❌ 오답'}</strong>
@@ -910,6 +1043,7 @@ export default function AlgorithmBattlePage() {
                   type="button"
                   key={emote}
                   onClick={() => sendEmote(emote)}
+                  disabled={isSpectating}
                   title={emote}
                 >
                   {EMOTE_EMOJI[emote] || <Smile size={13} />}
@@ -921,9 +1055,10 @@ export default function AlgorithmBattlePage() {
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
                 maxLength={220}
-                placeholder="채팅 (gg, nice, wp...)"
+                disabled={isSpectating}
+                placeholder={isSpectating ? '관전 중에는 채팅할 수 없습니다.' : '채팅 (gg, nice, wp...)'}
               />
-              <button type="submit" className="btn btn-ghost btn-sm">
+              <button type="submit" className="btn btn-ghost btn-sm" disabled={isSpectating}>
                 <MessageCircle size={14} />
               </button>
             </form>
@@ -935,7 +1070,9 @@ export default function AlgorithmBattlePage() {
               <Trophy size={22} />
               <strong>{isTerritoryMode && didWin ? '🏆 점령 승리!' : resultTitle}</strong>
               <span>
-                {!hasOpponent
+                {isSpectatorResult
+                  ? resultSummary
+                  : !hasOpponent
                   ? '상대가 없어 결과에 반영되지 않습니다.'
                   : isTerritoryMode
                   ? `점령 ${myClaimCount}/${problems?.length || 5}`
@@ -948,6 +1085,35 @@ export default function AlgorithmBattlePage() {
           )}
         </aside>
       </div>
+
+      {currentRoom?.status === 'finished' && (
+        <div className={`ab-result-overlay ${resultTone}`}>
+          <div className="ab-result-modal">
+            <div className="ab-result-kicker">{config?.title || 'Algorithm Battle'} 결과</div>
+            <div className="ab-result-icon">{resultTone === 'win' ? '🏆' : resultTone === 'draw' ? '🤝' : resultTone === 'lose' ? '💥' : '⏱️'}</div>
+            <h2>{isTerritoryMode && didWin ? '점령전 승리!' : resultTitle}</h2>
+            <p>
+              {isSpectatorResult
+                ? resultSummary
+                : !hasOpponent
+                ? '상대가 없어 전적에는 반영되지 않습니다.'
+                : `${opponentLabel} 상대 · ${resultSummary}`}
+            </p>
+            <div className="ab-result-scoreboard">
+              {sortedParticipants.map((player, index) => (
+                <div key={player.userId} className={player.userId === user?.id ? 'me' : ''}>
+                  <span>#{index + 1} {player.username}{player.userId === user?.id ? ' (나)' : ''}</span>
+                  <strong>{isTerritoryMode ? `${Object.values(territoryClaims).filter((uid) => uid === player.userId).length}점령` : `${player.score}점`}</strong>
+                </div>
+              ))}
+            </div>
+            <div className="ab-result-actions">
+              <button className="btn btn-primary" onClick={createAgain}>다시 하기</button>
+              <button className="btn btn-ghost" onClick={() => navigate('/battle')}>로비로</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

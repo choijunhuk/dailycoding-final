@@ -4,6 +4,7 @@ import { useTheme } from '../context/ThemeContext.jsx'
 import './LandingPage.css'
 import { TIER_THRESHOLDS } from '../data/constants.js'
 import { PLAN_META } from '../data/pricingPlans.js'
+import api from '../api.js'
 
 const TESTIMONIALS = [
   { name: '김개발', tier: 'gold', text: '매일 한 문제씩 풀다 보니 실력이 눈에 띄게 늘었어요.', company: '카카오 인턴' },
@@ -28,7 +29,7 @@ const STATS = [
   { value: 5000, suffix: '+', label: '문제 풀이 완료' },
   { value: 1200, suffix: '+', label: '회원' },
   { value: 98, suffix: '%', label: '정확도' },
-  { value: 5, suffix: '개', label: '언어 지원' },
+  { value: 5, suffix: '개', label: '배틀 모드' },
 ]
 
 const STEPS = [
@@ -105,6 +106,7 @@ export default function LandingPage({ onLogin, onSignup, onPricing }) {
   const statsRef = useRef(null)
   const [statsVisible, setStatsVisible] = useState(false)
   const [typedText, setTypedText] = useState('')
+  const [activeBattleCount, setActiveBattleCount] = useState(null)
   const countValues = useCountUp(statsVisible)
 
   useEffect(() => {
@@ -119,6 +121,26 @@ export default function LandingPage({ onLogin, onSignup, onPricing }) {
     )
     if (statsRef.current) observer.observe(statsRef.current)
     return () => observer.disconnect()
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    let timer = 0
+    const loadActiveBattleCount = () => {
+      api.get('/battles/public/active-count')
+        .then(({ data }) => {
+          if (!cancelled) setActiveBattleCount(Number(data?.count || 0))
+        })
+        .catch(() => {
+          if (!cancelled) setActiveBattleCount(null)
+        })
+    }
+    loadActiveBattleCount()
+    timer = window.setInterval(loadActiveBattleCount, 15000)
+    return () => {
+      cancelled = true
+      window.clearInterval(timer)
+    }
   }, [])
 
   useEffect(() => {
@@ -185,16 +207,16 @@ export default function LandingPage({ onLogin, onSignup, onPricing }) {
         <section className="landing-hero-grid" style={{ maxWidth: 1200, margin: '0 auto', padding: '72px 24px 64px', display: 'grid', gridTemplateColumns: 'minmax(0, 1.1fr) minmax(320px, .9fr)', gap: 28, alignItems: 'center' }}>
           <div className="animate-fade-in-up">
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '8px 14px', borderRadius: 999, background: 'rgba(121,192,255,.1)', border: '1px solid rgba(121,192,255,.2)', color: 'var(--blue)', fontSize: 12, fontWeight: 700, marginBottom: 20 }}>
-              <Star size={14} />
-              문제 풀이 · 오답 복구 · 프로필 성장
+              <Swords size={14} />
+              국내 코딩 플랫폼에 없던 실시간 1v1 알고리즘 배틀
             </div>
             <h1 style={{ fontSize: 'clamp(42px, 8vw, 72px)', lineHeight: 1.03, fontWeight: 900, letterSpacing: 0, marginBottom: 18 }}>
-              <span className="gradient-text">매일 푸는</span><br />
-              코딩 루틴
+              <span className="gradient-text">실시간 배틀로</span><br />
+              매일 강해지는 코딩 루틴
             </h1>
             <p style={{ fontSize: 18, color: 'var(--text2)', lineHeight: 1.75, maxWidth: 640, marginBottom: 28 }}>
-              DailyCoding은 오늘 풀 문제, 다시 잡을 오답, 쌓이는 XP를 한 흐름으로 보여줍니다.
-              경쟁 점수는 공정하게 두고, 꾸준함은 배지와 칭호, 프로필 배경으로 남깁니다.
+              HP, 아이템, 문제 효과, 점령전이 있는 5가지 실시간 배틀 모드로 풀이 압박을 훈련하세요.
+              평소에는 오늘의 문제와 오답 복구, XP 보상으로 꾸준함을 이어갑니다.
             </p>
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 24 }}>
               <button className="btn btn-primary pulse-cta" onClick={onSignup} style={{ padding: '14px 22px', fontSize: 15 }}>
@@ -203,6 +225,16 @@ export default function LandingPage({ onLogin, onSignup, onPricing }) {
               <button className="btn btn-ghost" onClick={() => document.getElementById('landing-demo')?.scrollIntoView({ behavior: 'smooth' })} style={{ padding: '14px 22px', fontSize: 15 }}>
                 데모 보기 <PlayCircle size={16} />
               </button>
+            </div>
+            <div style={{display:'flex',gap:10,flexWrap:'wrap',marginBottom:24}}>
+              {['⚡ 스피드', '💀 생존', '✨ 효과전', '🎒 아이템', '🏴 점령전'].map((mode) => (
+                <span key={mode} style={{padding:'7px 10px',borderRadius:999,background:'var(--bg2)',border:'1px solid var(--border)',fontSize:12,fontWeight:800,color:'var(--text2)'}}>
+                  {mode}
+                </span>
+              ))}
+              <span style={{padding:'7px 10px',borderRadius:999,background:'rgba(248,81,73,.1)',border:'1px solid rgba(248,81,73,.24)',fontSize:12,fontWeight:900,color:'var(--red)'}}>
+                지금 진행 중 {activeBattleCount == null ? '-' : activeBattleCount.toLocaleString('ko-KR')}개
+              </span>
             </div>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               {tierRows.map((tier) => (
@@ -217,10 +249,10 @@ export default function LandingPage({ onLogin, onSignup, onPricing }) {
             <div className="card card-hover glow-blue" style={{ padding: 18, background: 'rgba(13,17,23,.75)', border: '1px solid rgba(121,192,255,.18)' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
                 <div>
-                  <div style={{ fontSize: 11, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: 1 }}>Live Editor Preview</div>
-                  <div style={{ fontSize: 15, fontWeight: 800, marginTop: 4 }}>오늘의 합계 문제</div>
+                  <div style={{ fontSize: 11, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: 1 }}>Live Battle Preview</div>
+                  <div style={{ fontSize: 15, fontWeight: 800, marginTop: 4 }}>HP 100 · 아이템 난투</div>
                 </div>
-                <span className="badge badge-blue">Python 3</span>
+                <span className="badge badge-blue">LIVE</span>
               </div>
               <div style={{ background: '#0b0f14', borderRadius: 16, border: '1px solid rgba(121,192,255,.15)', overflow: 'hidden' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderBottom: '1px solid rgba(121,192,255,.1)' }}>
@@ -229,19 +261,29 @@ export default function LandingPage({ onLogin, onSignup, onPricing }) {
                   <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#56d364' }} />
                   <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--text3)' }}>sum-problem.py</span>
                 </div>
-                <pre style={{ margin: 0, minHeight: 260, padding: '18px 18px 22px', color: '#c9d1d9', fontSize: 13, lineHeight: 1.8, fontFamily: "'Space Mono', monospace", whiteSpace: 'pre-wrap' }}>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,padding:'12px 14px',borderBottom:'1px solid rgba(121,192,255,.1)'}}>
+                  <div style={{padding:10,borderRadius:12,background:'rgba(63,185,80,.08)',border:'1px solid rgba(63,185,80,.18)'}}>
+                    <div style={{fontSize:11,color:'var(--text3)'}}>나</div>
+                    <div style={{fontWeight:900,color:'#56d364'}}>HP 72 · 320점</div>
+                  </div>
+                  <div style={{padding:10,borderRadius:12,background:'rgba(248,81,73,.08)',border:'1px solid rgba(248,81,73,.18)'}}>
+                    <div style={{fontSize:11,color:'var(--text3)'}}>상대</div>
+                    <div style={{fontWeight:900,color:'#f85149'}}>HP 41 · 280점</div>
+                  </div>
+                </div>
+                <pre style={{ margin: 0, minHeight: 220, padding: '18px 18px 22px', color: '#c9d1d9', fontSize: 13, lineHeight: 1.8, fontFamily: "'Space Mono', monospace", whiteSpace: 'pre-wrap' }}>
 {typedText}
 <span style={{ color: 'var(--blue)' }}>|</span>
                 </pre>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10, marginTop: 14 }}>
                 <div style={{ padding: '12px 14px', borderRadius: 14, background: 'rgba(86,211,100,.08)', border: '1px solid rgba(86,211,100,.18)' }}>
-                  <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 6 }}>AI Review</div>
-                  <div style={{ fontSize: 13, fontWeight: 700 }}>시간복잡도 O(n) 유지</div>
+                  <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 6 }}>Correct</div>
+                  <div style={{ fontSize: 13, fontWeight: 700 }}>⚔️ 상대 HP -28</div>
                 </div>
                 <div style={{ padding: '12px 14px', borderRadius: 14, background: 'rgba(121,192,255,.08)', border: '1px solid rgba(121,192,255,.18)' }}>
-                  <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 6 }}>Battle Ready</div>
-                  <div style={{ fontSize: 13, fontWeight: 700 }}>실시간 제출/비교 지원</div>
+                  <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 6 }}>Territory</div>
+                  <div style={{ fontSize: 13, fontWeight: 700 }}>5개 문제 동시 점령</div>
                 </div>
               </div>
             </div>

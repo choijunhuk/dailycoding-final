@@ -94,6 +94,7 @@ export default function Dashboard() {
   const [referral, setReferral] = useState(null);
   const [recoveryQueue, setRecoveryQueue] = useState({ count: 0, items: [], summary: '' });
   const [progression, setProgression] = useState(null);
+  const [battleSummary, setBattleSummary] = useState({ total: 0, wins: 0, draws: 0, losses: 0, winRate: 0, recent: [] });
   const [copiedReferral, setCopiedReferral] = useState(false);
   const loadErrorToastShownRef = useRef(false);
   const { rankingData } = useRankingData();
@@ -106,6 +107,7 @@ export default function Dashboard() {
   const recentSolved = solvedList.slice(-5).reverse();
   const unsolved   = PROBLEMS.filter(p => !solved[p.id]);
   const todayProb  = unsolved[0] || PROBLEMS[0];
+  const recommendedProblems = (unsolved.length > 0 ? unsolved : PROBLEMS).slice(0, 6);
   const dailyFocusPlan = buildDailyFocusPlan({
     todayProblem: todayProb,
     recoveryQueue,
@@ -217,6 +219,18 @@ export default function Dashboard() {
       })
       .catch(() => {
         if (!cancelled) setProgression(null);
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    api.get('/battles/summary')
+      .then(({ data }) => {
+        if (!cancelled) setBattleSummary(data || { total: 0, wins: 0, draws: 0, losses: 0, winRate: 0, recent: [] });
+      })
+      .catch(() => {
+        if (!cancelled) setBattleSummary({ total: 0, wins: 0, draws: 0, losses: 0, winRate: 0, recent: [] });
       });
     return () => { cancelled = true; };
   }, []);
@@ -336,6 +350,33 @@ export default function Dashboard() {
         <StatCard icon={<CheckCircle2 size={20} />} value={solvedList.length}  label={t('solved')}  color="var(--green)" delta={solvedList.length > 0 ? `▲ ${Math.min(99, Math.round(solvedList.length / Math.max(PROBLEMS.length, 1) * 100))}%` : null} onClick={() => navigate('/submissions')} />
         <StatCard icon={<TrendingUp size={20} />} value={progression ? `Lv.${progression.level}` : (user?.rating||800)}  label={progression ? '성장 레벨' : t('rating')}  color="var(--yellow)" delta={progression ? `${progression.xp.toLocaleString()} XP` : ((user?.streak||0) > 0 ? `+${(user.streak) * 2} 성장` : null)} onClick={() => navigate('/profile')} />
         <StatCard icon={<Target size={20} />} value={myRank?`#${myRank}`:'−'} label={t('dashboardMyRank')} color="var(--purple)" delta={t('dashboardRealtimeTrack')} onClick={() => navigate('/ranking')} />
+        <div className="card card-pad card-hover" onClick={() => navigate('/battle')} style={{display:'flex',alignItems:'center',gap:14,cursor:'pointer',position:'relative',overflow:'hidden'}}>
+          <div className="stat-card-accent" style={{background:'linear-gradient(90deg, rgba(248,81,73,.75), rgba(248,81,73,.16))'}} />
+          <div style={{width:48,height:48,borderRadius:14,background:'rgba(248,81,73,.12)',border:'1px solid rgba(248,81,73,.22)',display:'flex',alignItems:'center',justifyContent:'center',color:'var(--red)',flexShrink:0}}>
+            <Swords size={20} />
+          </div>
+          <div style={{minWidth:0}}>
+            <div style={{fontFamily:'Space Mono,monospace',fontSize:22,fontWeight:800,color:'var(--red)',lineHeight:1}}>
+              {battleSummary.total > 0 ? `${battleSummary.winRate}%` : '0%'}
+            </div>
+            <div style={{fontSize:12,color:'var(--text2)',marginTop:3}}>배틀 승률</div>
+            <div style={{display:'flex',gap:4,marginTop:6}}>
+              {(battleSummary.recent || []).slice(0, 5).map((item, index) => (
+                <span key={`${item.roomId || index}-${item.result}`} title={item.result} style={{
+                  width:20,height:20,borderRadius:999,display:'grid',placeItems:'center',
+                  background:item.result === 'win' ? 'rgba(86,211,100,.16)' : item.result === 'draw' ? 'rgba(227,179,65,.16)' : 'rgba(248,81,73,.14)',
+                  color:item.result === 'win' ? 'var(--green)' : item.result === 'draw' ? 'var(--yellow)' : 'var(--red)',
+                  fontSize:10,fontWeight:900,
+                }}>
+                  {item.result === 'win' ? 'W' : item.result === 'draw' ? 'D' : 'L'}
+                </span>
+              ))}
+              {(!battleSummary.recent || battleSummary.recent.length === 0) && (
+                <span style={{fontSize:11,color:'var(--text3)'}}>최근 전적 없음</span>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
 
       {dailyFocusPlan.length > 0 && (
@@ -608,38 +649,41 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* 오늘의 문제 */}
-          {todayProb && (
-            <div className="card card-pad card-hover pulse-cta" style={{cursor:'pointer',transition:'border-color .2s'}}
-              onMouseEnter={e=>e.currentTarget.style.borderColor='var(--blue)'}
-              onMouseLeave={e=>e.currentTarget.style.borderColor='var(--border)'}
-              onClick={()=>navigate('/problems/'+todayProb.id, { state: { problem: todayProb } })}
-            >
-              <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:12}}>
+          {/* 추천 문제 */}
+          {recommendedProblems.length > 0 && (
+            <div className="card card-pad card-hover">
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:12,marginBottom:12}}>
                 <div>
-                  <div style={{fontSize:11,color:'var(--text3)',fontWeight:600,marginBottom:4,textTransform:'uppercase',letterSpacing:.5}}>
+                  <div style={{fontSize:11,color:'var(--text3)',fontWeight:700,marginBottom:4,textTransform:'uppercase',letterSpacing:.5}}>
                     {t('recommendedProblems')}
                   </div>
-                  <h3 style={{fontSize:17,fontWeight:800}}>{todayProb.title}</h3>
+                  <h3 style={{fontSize:17,fontWeight:800,margin:0}}>모바일에서도 넘겨보는 추천 문제</h3>
                 </div>
-                <span style={{
-                  padding:'4px 10px',borderRadius:20,fontSize:11,fontWeight:700,
-                  background:TIERS[todayProb.tier]?.bg||'var(--bg3)',
-                  color:TIERS[todayProb.tier]?.color||'var(--text2)',
-                }}>● {TIERS[todayProb.tier]?.label||todayProb.tier}</span>
+                <button className="btn btn-ghost btn-sm" onClick={()=>navigate('/problems')}>전체 보기</button>
               </div>
-              <p style={{fontSize:13,color:'var(--text2)',lineHeight:1.6,marginBottom:14}}>
-                {(todayProb.desc||todayProb.description||'').slice(0,100)}...
-              </p>
-              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                <div style={{display:'flex',gap:16,fontSize:12,color:'var(--text3)'}}>
-                  <span>{t('dashboardEstimatedTime').replace('{n}', String(todayProb.timeLimit||todayProb.time_limit||2))}</span>
-                  <span>{t('dashboardSolvedYesterday').replace('{n}', (todayProb.solved||todayProb.solved_count||0).toLocaleString())}</span>
-                </div>
-                <button style={{
-                  padding:'7px 16px',borderRadius:7,background:'var(--blue)',
-                  border:'none',color:'var(--bg)',fontSize:12,fontWeight:700,cursor:'pointer',
-                }}>{t('dashboardSolveNow')}</button>
+              <div className="dashboard-problem-rail">
+                {recommendedProblems.map((problem) => (
+                  <button
+                    key={problem.id}
+                    type="button"
+                    className="dashboard-problem-card"
+                    onClick={()=>navigate('/problems/'+problem.id, { state: { problem } })}
+                  >
+                    <span style={{
+                      alignSelf:'flex-start',
+                      padding:'4px 9px',borderRadius:20,fontSize:11,fontWeight:800,
+                      background:TIERS[problem.tier]?.bg||'var(--bg3)',
+                      color:TIERS[problem.tier]?.color||'var(--text2)',
+                    }}>● {TIERS[problem.tier]?.label||problem.tier}</span>
+                    <strong>{problem.title}</strong>
+                    <small>{(problem.desc||problem.description||'').slice(0,72)}...</small>
+                    <span className="dashboard-problem-meta">
+                      {t('dashboardEstimatedTime').replace('{n}', String(problem.timeLimit||problem.time_limit||2))}
+                      {' · '}
+                      {t('dashboardSolvedYesterday').replace('{n}', (problem.solved||problem.solved_count||0).toLocaleString())}
+                    </span>
+                  </button>
+                ))}
               </div>
             </div>
           )}

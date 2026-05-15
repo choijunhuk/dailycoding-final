@@ -11,8 +11,20 @@ import { completeMission } from '../services/missionService.js';
 import { recordPromotionLoss } from '../services/promotionService.js';
 import { evaluateBugFixAnswer, evaluateFillBlankAnswer } from '../services/battleAnswerEvaluation.js';
 import redis from '../config/redis.js';
+import { query } from '../config/mysql.js';
 
 const router = Router();
+
+// GET /api/battles/public/active-count — landing-page safe realtime signal
+router.get('/public/active-count', async (req, res) => {
+  try {
+    const count = await AlgorithmBattle.countActivePublicRooms();
+    res.json({ count });
+  } catch {
+    res.json({ count: 0 });
+  }
+});
+
 router.use(auth);
 router.use(requireVerified);
 
@@ -102,10 +114,50 @@ router.get('/history', async (req, res) => {
   }
 });
 
+// GET /api/battles/summary — dashboard battle card
+router.get('/summary', async (req, res) => {
+  try {
+    const rows = await query(
+      `SELECT room_id, result, score, battle_score_delta, created_at
+       FROM battle_results
+       WHERE user_id = ?
+       ORDER BY created_at DESC
+       LIMIT 50`,
+      [req.user.id]
+    );
+    const results = rows || [];
+    const wins = results.filter((row) => row.result === 'win').length;
+    const draws = results.filter((row) => row.result === 'draw').length;
+    const losses = results.filter((row) => row.result !== 'win' && row.result !== 'draw').length;
+    const total = results.length;
+    res.json({
+      total,
+      wins,
+      draws,
+      losses,
+      winRate: total > 0 ? Math.round((wins / total) * 100) : 0,
+      recent: results.slice(0, 5).map((row) => {
+        const result = row.result === 'win' || row.result === 'draw'
+          ? row.result
+          : 'lose';
+        return {
+          roomId: row.room_id || row.roomId,
+          result,
+          score: Number(row.battle_score_delta ?? row.score ?? 0),
+          createdAt: row.created_at || row.createdAt,
+        };
+      }),
+    });
+  } catch (err) {
+    console.error('[battles/summary]', err);
+    return internalError(res);
+  }
+});
+
 // GET /api/battles/rooms — DB-backed realtime algorithm battle rooms
 router.get('/rooms', async (req, res) => {
   try {
-    const rooms = await AlgorithmBattle.listRooms({
+    const rooms = await AlgorithmBattle.listRoomSummaries({
       status: req.query.status || null,
       limit: req.query.limit || 20,
     });
