@@ -19,9 +19,11 @@ import {
   Menu,
   MessageSquare,
   Moon,
+  Search,
   Settings,
   Sun,
   Trophy,
+  Trash2,
   User as UserIcon,
   X,
   Shield,
@@ -83,14 +85,20 @@ export default function TopNav() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, isAdmin, logout } = useAuth();
-  const { unreadCount, notifications, markRead, loadNotifications } = useApp();
+  const { unreadCount, notifications, markRead, loadNotifications, clearAllNotifications } = useApp();
   const { tier: subTier } = useSubscriptionStatus(user?.id);
   const [aiQuota, setAiQuota] = useState(null);
-  const [showNotif,    setShowNotif]    = useState(false);
-  const [showUser,     setShowUser]     = useState(false);
-  const [showMobile,   setShowMobile]   = useState(false);
-  const [hoveredGroup, setHoveredGroup] = useState(null);
+  const [showNotif,     setShowNotif]     = useState(false);
+  const [showUser,      setShowUser]      = useState(false);
+  const [showMobile,    setShowMobile]    = useState(false);
+  const [hoveredGroup,  setHoveredGroup]  = useState(null);
+  const [showSearch,    setShowSearch]    = useState(false);
+  const [searchQuery,   setSearchQuery]   = useState('');
+  const [searchResults, setSearchResults] = useState({ problems: [], posts: [] });
+  const [searchLoading, setSearchLoading] = useState(false);
   const hoverCloseTimerRef = useRef(null);
+  const searchRef      = useRef(null);
+  const searchInputRef = useRef(null);
   const { lang, toggleLang, t } = useLang();
   
   useEffect(() => {
@@ -110,11 +118,32 @@ export default function TopNav() {
     if (showNotif) loadNotifRef.current();
   }, [showNotif]);
 
+  // 검색 디바운스
+  useEffect(() => {
+    if (!searchQuery.trim()) { setSearchResults({ problems: [], posts: [] }); return; }
+    const timer = setTimeout(async () => {
+      setSearchLoading(true);
+      try {
+        const { data } = await api.get('/search', { params: { q: searchQuery, limit: 5 } });
+        setSearchResults(data);
+      } catch { setSearchResults({ problems: [], posts: [] }); }
+      finally { setSearchLoading(false); }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // 검색창 열릴 때 포커스
+  useEffect(() => {
+    if (showSearch) searchInputRef.current?.focus();
+    else setSearchQuery('');
+  }, [showSearch]);
+
   // 외부 클릭 닫기
   useEffect(() => {
     const handler = (e) => {
-      if (notifRef.current && !notifRef.current.contains(e.target)) setShowNotif(false);
-      if (userRef.current  && !userRef.current.contains(e.target))  setShowUser(false);
+      if (notifRef.current  && !notifRef.current.contains(e.target))  setShowNotif(false);
+      if (userRef.current   && !userRef.current.contains(e.target))   setShowUser(false);
+      if (searchRef.current && !searchRef.current.contains(e.target)) { setShowSearch(false); }
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
@@ -145,7 +174,7 @@ export default function TopNav() {
     }, 300);
   };
 
-  const go = (path) => { navigate(path); setShowNotif(false); setShowUser(false); setShowMobile(false); };
+  const go = (path) => { navigate(path); setShowNotif(false); setShowUser(false); setShowSearch(false); setShowMobile(false); };
   const tc = TIER_COLOR[user?.tier] || '#888';
   const currentPath = location.pathname;
   const themeToggleLabel = effectiveTheme === 'dark'
@@ -330,6 +359,87 @@ export default function TopNav() {
             background:'var(--bg3)',cursor:'pointer',fontSize:12,fontWeight:700,color:'var(--text2)',
           }}>{lang === 'ko' ? 'EN' : 'KO'}</button>
 
+          {/* 검색 */}
+          {user && (
+            <div ref={searchRef} style={{position:'relative'}}>
+              <button
+                onClick={()=>{setShowSearch(p=>!p);setShowNotif(false);setShowUser(false);}}
+                aria-label="검색"
+                style={{
+                  width:32,height:32,borderRadius:8,border:'1px solid var(--border)',
+                  background:showSearch?'var(--bg)':'var(--bg3)',cursor:'pointer',
+                  display:'flex',alignItems:'center',justifyContent:'center',
+                }}
+              ><Search size={15}/></button>
+              {showSearch&&(
+                <div style={{
+                  position:'absolute',top:'calc(100% + 8px)',right:0,
+                  width:340,background:'var(--bg2)',
+                  border:'1px solid var(--border)',borderRadius:12,
+                  boxShadow:'0 8px 30px rgba(0,0,0,.4)',overflow:'hidden',zIndex:200,
+                }}>
+                  <div style={{padding:'10px 12px',borderBottom:'1px solid var(--border)'}}>
+                    <input
+                      ref={searchInputRef}
+                      value={searchQuery}
+                      onChange={e=>setSearchQuery(e.target.value)}
+                      onKeyDown={e=>{ if(e.key==='Escape'){setShowSearch(false);} }}
+                      placeholder="문제, 커뮤니티 검색..."
+                      style={{
+                        width:'100%',background:'var(--bg3)',border:'1px solid var(--border)',
+                        borderRadius:8,padding:'7px 12px',color:'var(--text)',fontSize:13,
+                        outline:'none',boxSizing:'border-box',fontFamily:'inherit',
+                      }}
+                    />
+                  </div>
+                  {searchLoading&&<div style={{padding:'16px',textAlign:'center',color:'var(--text3)',fontSize:12}}>검색 중...</div>}
+                  {!searchLoading&&searchQuery&&searchResults.problems.length===0&&searchResults.posts.length===0&&(
+                    <div style={{padding:'16px',textAlign:'center',color:'var(--text3)',fontSize:12}}>결과 없음</div>
+                  )}
+                  {!searchLoading&&(searchResults.problems.length>0||searchResults.posts.length>0)&&(
+                    <div style={{maxHeight:320,overflowY:'auto'}}>
+                      {searchResults.problems.length>0&&(
+                        <>
+                          <div style={{padding:'6px 12px 4px',fontSize:10,fontWeight:700,color:'var(--text3)',textTransform:'uppercase',letterSpacing:1}}>문제</div>
+                          {searchResults.problems.map(p=>(
+                            <div key={p.id} onClick={()=>go(`/problems/${p.id}`)} style={{
+                              padding:'9px 12px',cursor:'pointer',borderBottom:'1px solid var(--border)',transition:'background .15s',
+                            }}
+                              onMouseEnter={e=>e.currentTarget.style.background='var(--bg3)'}
+                              onMouseLeave={e=>e.currentTarget.style.background='transparent'}
+                            >
+                              <div style={{fontSize:13,fontWeight:600}}>{p.title}</div>
+                              <div style={{fontSize:11,color:'var(--text3)',marginTop:2}}>{p.tier} · {p.difficulty}</div>
+                            </div>
+                          ))}
+                        </>
+                      )}
+                      {searchResults.posts.length>0&&(
+                        <>
+                          <div style={{padding:'6px 12px 4px',fontSize:10,fontWeight:700,color:'var(--text3)',textTransform:'uppercase',letterSpacing:1}}>커뮤니티</div>
+                          {searchResults.posts.map(p=>(
+                            <div key={p.id} onClick={()=>go(`/community/${p.board_type}/${p.id}`)} style={{
+                              padding:'9px 12px',cursor:'pointer',transition:'background .15s',
+                            }}
+                              onMouseEnter={e=>e.currentTarget.style.background='var(--bg3)'}
+                              onMouseLeave={e=>e.currentTarget.style.background='transparent'}
+                            >
+                              <div style={{fontSize:13,fontWeight:600}}>{p.title}</div>
+                              <div style={{fontSize:11,color:'var(--text3)',marginTop:2}}>{p.board_type}</div>
+                            </div>
+                          ))}
+                        </>
+                      )}
+                    </div>
+                  )}
+                  {!searchQuery&&(
+                    <div style={{padding:'16px',textAlign:'center',color:'var(--text3)',fontSize:12}}>문제 제목, 태그, 커뮤니티 글 검색</div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* 알림 */}
           <div ref={notifRef} style={{position:'relative'}}>
             <button onClick={()=>{setShowNotif(p=>!p);setShowUser(false);}} aria-label={notificationLabel} style={{
@@ -361,16 +471,20 @@ export default function TopNav() {
                 }}>
                   <span style={{fontWeight:700,fontSize:13}}>{t('notifications')} {unreadCount>0&&`(${unreadCount})`}</span>
                   {notifications.length>0&&(
-                    <button onClick={async()=>{
-                      try {
-                        await api.patch('/notifications/all/read');
-                      } catch {
-                        // 서버 동기화 실패 시에도 로컬 읽음 처리는 진행
-                      }
-                      notifications.forEach(n=>markRead(n.id));
-                    }} style={{fontSize:11,color:'var(--blue)',background:'none',border:'none',cursor:'pointer'}}>
-                      {t('markAllRead')}
-                    </button>
+                    <div style={{display:'flex',gap:10,alignItems:'center'}}>
+                      <button onClick={async()=>{
+                        try { await api.patch('/notifications/all/read'); } catch { /* ignore */ }
+                        notifications.forEach(n=>markRead(n.id));
+                      }} style={{fontSize:11,color:'var(--blue)',background:'none',border:'none',cursor:'pointer',padding:0}}>
+                        {t('markAllRead')}
+                      </button>
+                      <button onClick={clearAllNotifications} title="전체 삭제" aria-label="알림 전체 삭제" style={{
+                        background:'none',border:'none',cursor:'pointer',padding:0,
+                        color:'var(--text3)',display:'flex',alignItems:'center',
+                      }}>
+                        <Trash2 size={13}/>
+                      </button>
+                    </div>
                   )}
                 </div>
                 <div style={{maxHeight:300,overflowY:'auto'}}>

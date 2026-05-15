@@ -9,22 +9,21 @@ import api from '../api.js';
 import { useRankingData } from '../hooks/useRankingData.js';
 import { BarChart3, BookOpen, Bot, CheckCircle2, FileText, Flame, Sparkles, Swords, Target, TrendingUp, Trophy } from 'lucide-react';
 import ProfileAvatar from '../components/ProfileAvatar';
-import { TIER_THRESHOLDS } from '../data/constants.js';
 import { useLang } from '../context/LangContext.jsx';
 import { buildDailyFocusPlan } from './dashboardPlanUtils.js';
 
 const TIER_META = {
-  unranked:    { label:'언랭크드',      color:'#888',    next:'아이언',       threshold:TIER_THRESHOLDS.iron,         bg:'rgba(136,136,136,.06)' },
-  iron:        { label:'아이언',        color:'#a8a8a8', next:'브론즈',       threshold:TIER_THRESHOLDS.bronze,       bg:'rgba(168,168,168,.06)' },
-  bronze:      { label:'브론즈',        color:'#cd7f32', next:'실버',         threshold:TIER_THRESHOLDS.silver,       bg:'rgba(205,127,50,.08)'  },
-  silver:      { label:'실버',          color:'#c0c0c0', next:'골드',         threshold:TIER_THRESHOLDS.gold,         bg:'rgba(192,192,192,.08)' },
-  gold:        { label:'골드',          color:'#ffd700', next:'플래티넘',     threshold:TIER_THRESHOLDS.platinum,     bg:'rgba(255,215,0,.08)'   },
-  platinum:    { label:'플래티넘',      color:'#00e5cc', next:'에메랄드',     threshold:TIER_THRESHOLDS.emerald,      bg:'rgba(0,229,204,.08)'   },
-  emerald:     { label:'에메랄드',      color:'#00d18f', next:'다이아몬드',   threshold:TIER_THRESHOLDS.diamond,      bg:'rgba(0,209,143,.08)'   },
-  diamond:     { label:'다이아몬드',    color:'#b9f2ff', next:'마스터',       threshold:TIER_THRESHOLDS.master,       bg:'rgba(185,242,255,.08)' },
-  master:      { label:'마스터',        color:'#9b59b6', next:'그랜드마스터', threshold:TIER_THRESHOLDS.grandmaster,  bg:'rgba(155,89,182,.08)'  },
-  grandmaster: { label:'그랜드마스터',  color:'#e74c3c', next:'챌린저',       threshold:TIER_THRESHOLDS.grandmaster,  bg:'rgba(231,76,60,.08)'   },
-  challenger:  { label:'챌린저',        color:'#f1c40f', next:'MAX',          threshold:99999,                        bg:'rgba(241,196,15,.08)'  },
+  unranked:    { label:'언랭크드',      color:'#888',    next:'아이언',       bg:'rgba(136,136,136,.06)' },
+  iron:        { label:'아이언',        color:'#a8a8a8', next:'브론즈',       bg:'rgba(168,168,168,.06)' },
+  bronze:      { label:'브론즈',        color:'#cd7f32', next:'실버',         bg:'rgba(205,127,50,.08)'  },
+  silver:      { label:'실버',          color:'#c0c0c0', next:'골드',         bg:'rgba(192,192,192,.08)' },
+  gold:        { label:'골드',          color:'#ffd700', next:'플래티넘',     bg:'rgba(255,215,0,.08)'   },
+  platinum:    { label:'플래티넘',      color:'#00e5cc', next:'에메랄드',     bg:'rgba(0,229,204,.08)'   },
+  emerald:     { label:'에메랄드',      color:'#00d18f', next:'다이아몬드',   bg:'rgba(0,209,143,.08)'   },
+  diamond:     { label:'다이아몬드',    color:'#b9f2ff', next:'마스터',       bg:'rgba(185,242,255,.08)' },
+  master:      { label:'마스터',        color:'#9b59b6', next:'그랜드마스터', bg:'rgba(155,89,182,.08)'  },
+  grandmaster: { label:'그랜드마스터',  color:'#e74c3c', next:'챌린저',       bg:'rgba(231,76,60,.08)'   },
+  challenger:  { label:'챌린저',        color:'#f1c40f', next:'MAX',          bg:'rgba(241,196,15,.08)'  },
 };
 
 const DAILY_FOCUS_ICONS = {

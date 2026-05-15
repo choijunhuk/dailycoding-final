@@ -203,6 +203,12 @@ export function AppProvider({ children }) {
     ]);
   }, []);
 
+  // ── 알림 전체 삭제 ──────────────────────────────────────────
+  const clearAllNotifications = useCallback(async () => {
+    try { await api.delete('/notifications/all'); } catch { /* ignore network errors */ }
+    setNotifications([]);
+  }, []);
+
   useEffect(() => {
     if (!user?.id) {
       socketRef.current?.disconnect();
@@ -235,7 +241,7 @@ export function AppProvider({ children }) {
       solved, bookmarks, grassData, submissions, notifications, unreadCount,
       problems, contests, loading,
       loadProblems, loadSubmissions, loadNotifications, loadContests, loadAll, loadGrass,
-      addSubmission, toggleBookmark, markRead, addNotification,
+      addSubmission, toggleBookmark, markRead, addNotification, clearAllNotifications,
     }}>
       {children}
     </AppContext.Provider>
