@@ -769,9 +769,9 @@ export const AlgorithmBattle = {
     // Store submission with optional problemId for territory mode
     const effectiveProblemId = room.mode === 'territory' && problemId ? Number(problemId) : room.problemId;
     await insert(
-      `INSERT INTO battle_submissions (room_id, user_id, code, language, is_correct, execution_time_ms, memory_mb, score, detail, created_at)
-       VALUES (?,?,?,?,?,?,?,?,?,?)`,
-      [roomId, userId, code || '', language || '', isCorrect ? 1 : 0, executionTimeMs, memoryMb, scoring.score, judgeResult?.detail || '', nowMySQL()]
+      `INSERT INTO battle_submissions (room_id, user_id, code, language, is_correct, execution_time_ms, memory_mb, score, detail, problem_id, created_at)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+      [roomId, userId, code || '', language || '', isCorrect ? 1 : 0, executionTimeMs, memoryMb, scoring.score, judgeResult?.detail || '', effectiveProblemId || null, nowMySQL()]
     );
 
     if (room.mode === 'territory') {

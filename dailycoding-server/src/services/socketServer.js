@@ -71,7 +71,7 @@ export function initSocketServer(httpServer, allowedOrigins) {
           mode: payload.mode || 'sort-speed',
           problemId: payload.problemId || null,
           maxPlayers: payload.maxPlayers || 2,
-          durationSec: payload.durationSec || 180,
+          durationSec: payload.durationSec || null,
           bannedTags: payload.bannedTags || [],
         });
         socket.join(`battle:${state.room.id}`);
@@ -184,7 +184,7 @@ export function initSocketServer(httpServer, allowedOrigins) {
           io.to(`battle:${roomId}`).emit('battle:effect', effectEvent);
         }
         io.to(`battle:${roomId}`).emit('battle:room:update', state);
-        if (state.room.status === 'finished') io.to(`battle:${roomId}`).emit('battle:finished', state);
+        if (state.room.status === 'finished') io.to(`battle:${roomId}`).emit('battle:finished', { ...state, reason: 'knockout' });
         if (typeof ack === 'function') ack({ ok: true, state, result: execution.result });
       } catch (err) {
         if (typeof ack === 'function') ack({ ok: false, message: err.message });
