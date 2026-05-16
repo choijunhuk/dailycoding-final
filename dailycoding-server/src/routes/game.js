@@ -107,6 +107,7 @@ async function getSolvedIds(userId, problemIds = []) {
 }
 
 async function buildGhostChallenges(userId, limit = 12) {
+  const safeLimit = Math.max(1, Math.min(20, Number(limit) || 12));
   const rows = await query(
     `SELECT p.id AS problem_id, p.title, p.tier, p.difficulty, p.solved_count,
             s.user_id AS ghost_user_id, u.username AS ghost_username,
@@ -128,8 +129,8 @@ async function buildGhostChallenges(userId, limit = 12) {
        )
      ORDER BY COALESCE(s.solve_time_sec, CEIL(COALESCE(s.time_ms, 120000) / 1000), 600) ASC,
               s.submitted_at DESC
-     LIMIT ?`,
-    [userId, userId, limit]
+     LIMIT ${safeLimit}`,
+    [userId, userId]
   );
 
   const challenges = (rows || [])
@@ -153,15 +154,15 @@ async function buildGhostChallenges(userId, limit = 12) {
       };
     })
     .filter((challenge) => challenge.problemId)
-    .slice(0, limit);
+    .slice(0, safeLimit);
 
   if (challenges.length > 0) return challenges;
 
-  const fallbackProblems = await getPublicCodingProblems(limit);
+  const fallbackProblems = await getPublicCodingProblems(safeLimit);
   const solvedIds = await getSolvedIds(userId, fallbackProblems.map((problem) => problem.id));
   return fallbackProblems
     .filter((problem) => !solvedIds.has(problem.id))
-    .slice(0, limit)
+    .slice(0, safeLimit)
     .map((problem, index) => {
       const targetTimeSec = 240 + index * 35 + toInt(problem.difficulty, 1) * 20;
       return {
