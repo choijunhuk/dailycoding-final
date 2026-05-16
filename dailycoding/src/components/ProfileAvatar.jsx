@@ -5,7 +5,8 @@ function pickProfileValue(profile, camelKey, snakeKey) {
 }
 
 export function getProfileAvatarSource(profile) {
-  return pickProfileValue(profile, 'avatarUrlCustom', 'avatar_url_custom');
+  return pickProfileValue(profile, 'avatarUrlCustom', 'avatar_url_custom')
+    || pickProfileValue(profile, 'avatarUrl', 'avatar_url');
 }
 
 export function getProfileAvatarColor(profile) {
@@ -29,6 +30,7 @@ export default function ProfileAvatar({
   border = '1px solid var(--border)',
   fontSize,
   alt,
+  ...props
 }) {
   const src = getProfileAvatarSource(profile);
   const color = getProfileAvatarColor(profile);
@@ -53,6 +55,7 @@ export default function ProfileAvatar({
         width={size}
         height={size}
         style={{ objectFit: 'cover', ...sharedStyle }}
+        {...props}
       />
     );
   }
@@ -61,6 +64,7 @@ export default function ProfileAvatar({
     <span
       className={className}
       aria-label={alt || profile?.username || 'avatar'}
+      {...props}
       style={{
         color: 'var(--text)',
         display: 'grid',

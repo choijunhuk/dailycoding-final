@@ -57,7 +57,10 @@ export async function listSeasonRanking(season = getCurrentSeason(), limit = 100
             sr.reward_granted,
             u.username,
             u.tier,
-            u.avatar_emoji
+            u.avatar_emoji,
+            u.avatar_url,
+            u.avatar_url_custom,
+            u.avatar_color
      FROM season_rankings sr
      JOIN users u ON u.id = sr.user_id
      WHERE sr.season = ?

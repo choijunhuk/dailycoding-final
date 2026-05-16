@@ -8,10 +8,69 @@ import { getCurrentSeason, getSeasonRemainingDays, listSeasonRanking } from '../
 
 const router = Router();
 
-function rankRows(rows, scoreKey = 'score') {
+export function rankRows(rows, scoreKey = 'score') {
   return rows
     .sort((a, b) => Number(b[scoreKey] || 0) - Number(a[scoreKey] || 0) || String(a.username || '').localeCompare(String(b.username || '')))
     .map((row, index) => ({ ...row, rank: index + 1 }));
+}
+
+export function normalizeRankingUser(user = {}) {
+  return {
+    id: user.id,
+    username: user.username,
+    name: user.username,
+    tier: user.tier || 'unranked',
+    rating: Number(user.rating || 0),
+    solved_count: Number(user.solved_count || 0),
+    solved: Number(user.solved_count || 0),
+    streak: Number(user.streak || 0),
+    avatarUrl: user.avatar_url || user.avatarUrl || null,
+    avatar_url: user.avatar_url || user.avatarUrl || null,
+    avatarUrlCustom: user.avatar_url_custom || user.avatarUrlCustom || null,
+    avatar_url_custom: user.avatar_url_custom || user.avatarUrlCustom || null,
+    avatarEmoji: user.avatar_emoji || user.avatarEmoji || null,
+    avatar_emoji: user.avatar_emoji || user.avatarEmoji || null,
+    avatarColor: user.avatar_color || user.avatarColor || null,
+    avatar_color: user.avatar_color || user.avatarColor || null,
+    equippedBadge: user.equipped_badge || user.equippedBadge || null,
+    equippedTitle: user.equipped_title || user.equippedTitle || null,
+    joinDate: user.join_date || user.joinDate || null,
+  };
+}
+
+export function teamAvatarEmoji(name = '') {
+  const choices = ['🏢', '🚀', '🔥', '⚡', '🧠', '🏆'];
+  const seed = String(name || 'team').split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  return choices[seed % choices.length];
+}
+
+export function normalizeTeamRankingRow(row = {}, index = 0) {
+  const memberCount = Number(row.member_count || row.memberCount || 0);
+  const avgRating = Math.round(Number(row.avg_rating || row.avgRating || 0));
+  const totalSolved = Number(row.total_solved || row.totalSolved || 0);
+  const weeklySolved = Number(row.weekly_solved || row.weeklySolved || 0);
+  const topRating = Number(row.top_rating || row.topRating || 0);
+  const teamScore = Math.round(Number(row.team_score || row.teamScore || (avgRating * 0.4 + totalSolved * 10 + weeklySolved * 30 + memberCount * 25)));
+
+  return {
+    id: row.id,
+    rank: index + 1,
+    name: row.name || '소속',
+    avatar_emoji: row.avatar_emoji || row.avatarEmoji || teamAvatarEmoji(row.name),
+    avatarEmoji: row.avatar_emoji || row.avatarEmoji || teamAvatarEmoji(row.name),
+    member_count: memberCount,
+    memberCount,
+    avg_rating: avgRating,
+    avgRating,
+    total_solved: totalSolved,
+    totalSolved,
+    weekly_solved: weeklySolved,
+    weeklySolved,
+    top_rating: topRating,
+    topRating,
+    team_score: teamScore,
+    teamScore,
+  };
 }
 
 async function hydrateUsersBatch(userIds) {
@@ -19,20 +78,16 @@ async function hydrateUsersBatch(userIds) {
   const ids = [...new Set(userIds.map(Number))];
   const placeholders = ids.map(() => '?').join(',');
   const rows = await query(
-    `SELECT id, username, tier, rating, solved_count, avatar_url, role, banned_at FROM users WHERE id IN (${placeholders})`,
+    `SELECT id, username, tier, rating, solved_count, streak,
+            avatar_url, avatar_url_custom, avatar_emoji, avatar_color,
+            equipped_badge, equipped_title, join_date, role, banned_at
+     FROM users WHERE id IN (${placeholders})`,
     ids
   );
   const map = new Map();
   for (const user of rows || []) {
     if (user.role === 'admin' || user.banned_at) continue;
-    map.set(Number(user.id), {
-      id: user.id,
-      username: user.username,
-      tier: user.tier,
-      rating: Number(user.rating || 0),
-      solved_count: Number(user.solved_count || 0),
-      avatarUrl: user.avatar_url,
-    });
+    map.set(Number(user.id), normalizeRankingUser(user));
   }
   return map;
 }
@@ -42,7 +97,7 @@ router.get('/season', auth, async (req, res) => {
     const season = typeof req.query.season === 'string' && /^\d{4}-\d{2}$/.test(req.query.season)
       ? req.query.season
       : getCurrentSeason();
-    const cacheKey = `ranking:season:${season}`;
+    const cacheKey = `ranking:v2:season:${season}`;
     const cached = await redis.getJSON(cacheKey);
     if (cached) return res.json(cached);
 
@@ -56,6 +111,13 @@ router.get('/season', auth, async (req, res) => {
         username: row.username,
         tier: row.tier,
         avatarEmoji: row.avatar_emoji,
+        avatar_emoji: row.avatar_emoji,
+        avatarUrl: row.avatar_url,
+        avatar_url: row.avatar_url,
+        avatarUrlCustom: row.avatar_url_custom,
+        avatar_url_custom: row.avatar_url_custom,
+        avatarColor: row.avatar_color,
+        avatar_color: row.avatar_color,
         seasonRating: row.season_rating,
         solvedCount: row.solved_count,
         battleWins: row.battle_wins,
@@ -73,7 +135,7 @@ router.get('/season', auth, async (req, res) => {
 
 router.get('/battle', auth, async (req, res) => {
   try {
-    const cacheKey = 'ranking:battle';
+    const cacheKey = 'ranking:v2:battle';
     const cached = await redis.getJSON(cacheKey);
     if (cached) return res.json(cached);
 
@@ -113,7 +175,7 @@ router.get('/battle', auth, async (req, res) => {
 
 router.get('/collaboration', auth, async (req, res) => {
   try {
-    const cacheKey = 'ranking:collaboration';
+    const cacheKey = 'ranking:v2:collaboration';
     const cached = await redis.getJSON(cacheKey);
     if (cached) return res.json(cached);
 
@@ -145,11 +207,14 @@ router.get('/collaboration', auth, async (req, res) => {
 
 router.get('/overall', auth, async (req, res) => {
   try {
-    const cacheKey = 'ranking:overall';
+    const cacheKey = 'ranking:v2:overall';
     const cached = await redis.getJSON(cacheKey);
     if (cached) return res.json(cached);
 
-    const users = await query('SELECT id, username, tier, rating, solved_count, banned_at FROM users WHERE role != ? ORDER BY rating DESC LIMIT 200', ['admin']);
+    const users = await query(`SELECT id, username, tier, rating, solved_count, streak, join_date,
+                                      avatar_url, avatar_url_custom, avatar_emoji, avatar_color,
+                                      equipped_badge, equipped_title, banned_at
+                               FROM users WHERE role != ? ORDER BY rating DESC LIMIT 200`, ['admin']);
     const battleRows = await query('SELECT user_id, battle_score_delta, score FROM battle_results ORDER BY created_at DESC LIMIT 2000');
     const collaborationRows = await query('SELECT user_id, review_score, suggestion_score FROM collaboration_scores ORDER BY updated_at DESC LIMIT 2000');
     const battleByUser = new Map();
@@ -168,11 +233,8 @@ router.get('/overall', auth, async (req, res) => {
         const battleScore = battleByUser.get(Number(user.id)) || 0;
         const collaborationScore = collaborationByUser.get(Number(user.id)) || 0;
         return {
-          id: user.id,
-          username: user.username,
-          tier: user.tier,
+          ...normalizeRankingUser(user),
           rating: algorithmScore,
-          solved_count: Number(user.solved_count || 0),
           algorithmScore,
           battleScore,
           collaborationScore,
@@ -196,7 +258,7 @@ router.get('/', auth, async (req, res) => {
     const VALID_TIERS = ['iron','bronze','silver','gold','platinum','emerald','diamond','master','grandmaster','challenger'];
     const tier = VALID_TIERS.includes(req.query.tier) ? req.query.tier : null;
     const sort = req.query.sort === 'solved_count' ? 'solved_count' : 'rating';
-    const cacheKey = `ranking:page:${page}:limit:${limit}:tier:${tier || 'all'}:sort:${sort}`;
+    const cacheKey = `ranking:v2:page:${page}:limit:${limit}:tier:${tier || 'all'}:sort:${sort}`;
     const cached = await redis.getJSON(cacheKey);
     if (cached) return res.json(cached);
 
@@ -252,29 +314,45 @@ router.get('/', auth, async (req, res) => {
 
 // ── 소속(팀) 랭킹 ────────────────────────────────────────────
 router.get('/teams', auth, async (req, res) => {
-  const cacheKey = 'ranking:teams';
+  const cacheKey = 'ranking:v2:teams';
   try {
     const cached = await redis.getJSON(cacheKey);
     if (cached) return res.json(cached);
     const rows = await query(`
-      SELECT t.id, t.name, t.avatar_emoji,
+      SELECT t.id, t.name,
              COUNT(DISTINCT tm.user_id) AS member_count,
-             ROUND(AVG(u.rating), 0) AS avg_rating,
-             SUM(u.solved_count) AS total_solved,
-             MAX(u.rating) AS top_rating
+             ROUND(AVG(COALESCE(u.rating, 0)), 0) AS avg_rating,
+             SUM(COALESCE(u.solved_count, 0)) AS total_solved,
+             COALESCE(SUM(COALESCE(ws.weekly_solved, 0)), 0) AS weekly_solved,
+             MAX(COALESCE(u.rating, 0)) AS top_rating,
+             ROUND(
+               AVG(COALESCE(u.rating, 0)) * 0.4 +
+               SUM(COALESCE(u.solved_count, 0)) * 10 +
+               COALESCE(SUM(COALESCE(ws.weekly_solved, 0)), 0) * 30 +
+               COUNT(DISTINCT tm.user_id) * 25
+             , 0) AS team_score
       FROM teams t
       JOIN team_members tm ON t.id = tm.team_id
       JOIN users u ON tm.user_id = u.id
-      GROUP BY t.id, t.name, t.avatar_emoji
-      ORDER BY avg_rating DESC
+      LEFT JOIN (
+        SELECT user_id, COUNT(DISTINCT problem_id) AS weekly_solved
+        FROM submissions
+        WHERE result = 'correct'
+          AND submitted_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+        GROUP BY user_id
+      ) ws ON ws.user_id = u.id
+      WHERE u.role != 'admin'
+        AND u.banned_at IS NULL
+      GROUP BY t.id, t.name
+      ORDER BY team_score DESC, avg_rating DESC, total_solved DESC, member_count DESC, t.name ASC
       LIMIT 50
     `);
-    const result = rows.map((row, i) => ({ ...row, rank: i + 1 }));
+    const result = (rows || []).map(normalizeTeamRankingRow);
     await redis.setJSON(cacheKey, result, 120);
     res.json(result);
   } catch (err) {
     console.error('[ranking/teams]', err.message);
-    res.status(500).json({ message: '서버 오류' });
+    res.status(500).json({ message: '소속 랭킹을 불러오지 못했습니다.' });
   }
 });
 
