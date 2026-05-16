@@ -49,6 +49,7 @@ const SheetDetailPage = lazy(() => import('./pages/SheetDetailPage'));
 const LearningPathPage = lazy(() => import('./pages/LearningPathPage'));
 const SubmitProblemPage = lazy(() => import('./pages/SubmitProblemPage'));
 const ProblemSetsPage = lazy(() => import('./pages/ProblemSetsPage'));
+const GameHubPage = lazy(() => import('./pages/GameHubPage'));
 
 function RouteFallback({ isJudge }) {
   if (isJudge) {
@@ -203,6 +204,7 @@ function AppInner() {
                 <Route path="/reviews"     element={<ReviewsPage />} />
                 <Route path="/reviews/:id" element={<ReviewsPage />} />
                 <Route path="/battle"      element={<AlgorithmBattlePage />} />
+                <Route path="/game"        element={<GameHubPage />} />
                 <Route path="/battle/:roomId" element={<AlgorithmBattlePage />} />
                 <Route path="/battles/history" element={<BattlePage />} />
                 <Route path="/battle/watch/:roomId" element={<BattlePage />} />

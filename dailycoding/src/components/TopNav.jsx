@@ -62,6 +62,7 @@ const NAV_GROUPS = [
     ],
   },
   { key: 'battle',  labelKey: 'battle',  Icon: Swords,        path: '/battle' },
+  { key: 'game',    label: '게임',        Icon: Sparkles,      path: '/game' },
   { key: 'ranking', labelKey: 'ranking', Icon: BarChart2,     path: '/ranking' },
   {
     key: 'community', labelKey: 'community', Icon: MessageSquare,
@@ -240,7 +241,7 @@ export default function TopNav() {
                   onMouseEnter={e=>{ if(!active){ e.currentTarget.style.color='var(--text)'; e.currentTarget.style.background='rgba(255,255,255,.04)'; }}}
                   onMouseLeave={e=>{ if(!active){ e.currentTarget.style.color='var(--text2)'; e.currentTarget.style.background='transparent'; }}}
                 >
-                  <Icon size={15} strokeWidth={2.1} />{t(group.labelKey)}
+                  <Icon size={15} strokeWidth={2.1} />{group.label || t(group.labelKey)}
                 </button>
               );
             }
@@ -253,7 +254,7 @@ export default function TopNav() {
                 onBlur={scheduleNavGroupClose}
               >
                 <button style={btnStyle}>
-                  <Icon size={15} strokeWidth={2.1} />{t(group.labelKey)}
+                  <Icon size={15} strokeWidth={2.1} />{group.label || t(group.labelKey)}
                   <ChevronDown size={11} strokeWidth={2.5} style={{ opacity:.6, marginLeft:-2, transition:'transform .15s', transform: hoveredGroup === group.key ? 'rotate(180deg)' : 'none' }} />
                 </button>
                 {hoveredGroup === group.key && (
@@ -596,13 +597,13 @@ export default function TopNav() {
           if (group.items) {
             return group.items.map(item => (
               <button key={item.path} className={`topnav-mobile-btn${currentPath===item.path||currentPath.startsWith(item.path+'/') ?' active':''}`} onClick={()=>go(item.path)}>
-                <item.Icon size={16} />{t(item.labelKey)}
+                <item.Icon size={16} />{item.label || t(item.labelKey)}
               </button>
             ));
           }
           return (
             <button key={group.key} className={`topnav-mobile-btn${currentPath===group.path||currentPath.startsWith(group.path+'/') ?' active':''}`} onClick={()=>go(group.path)}>
-              <group.Icon size={16} />{t(group.labelKey)}
+              <group.Icon size={16} />{group.label || t(group.labelKey)}
             </button>
           );
         })}

@@ -32,6 +32,7 @@ import growthRouter from './growth.js';
 import reviewsRouter from './reviews.js';
 import communityProblemsRouter from './community-problems.js';
 import problemSetsRouter from './problem-sets.js';
+import gameRouter from './game.js';
 import { getJudgeRuntime } from '../services/judge.js';
 import { getStripeOpsStatus } from './subscription.js';
 
@@ -66,6 +67,7 @@ export function registerRoutes(app) {
   app.use('/api/reviews', generalLimiter, reviewsRouter);
   app.use('/api/community-problems', generalLimiter, communityProblemsRouter);
   app.use('/api/problem-sets', generalLimiter, problemSetsRouter);
+  app.use('/api/game', generalLimiter, gameRouter);
 
   app.get('/api/stats', async (req, res) => {
     try {

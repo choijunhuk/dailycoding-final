@@ -536,3 +536,33 @@ section p { font-size: 13px; color: var(--text2); line-height: 1.7; }
     padding: 8px 10px;
   }
 }
+
+
+.judge-game-banner {
+  margin: 14px 0 16px;
+  padding: 13px 14px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(121,192,255,.12), rgba(248,81,73,.08));
+  border: 1px solid rgba(121,192,255,.24);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.judge-game-banner strong,
+.judge-game-banner small {
+  display: block;
+}
+
+.judge-game-banner small {
+  color: var(--text2);
+  margin-top: 4px;
+}
+
+@media (max-width: 760px) {
+  .judge-game-banner {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

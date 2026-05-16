@@ -54,7 +54,7 @@ const DIFFERENTIATORS = [
   {
     icon: Swords,
     title: '혼자 푸는 연습을 배틀로 확장',
-    desc: '실시간 1:1 배틀과 랭킹을 통해 짧은 압박 상황에서도 풀이 속도와 정확도를 점검합니다.',
+    desc: '실시간 1:1 배틀, 고스트 레이스, 오늘의 던전으로 짧은 압박 상황에서도 풀이 속도와 정확도를 점검합니다.',
     tag: 'Battle',
   },
   {
@@ -227,7 +227,7 @@ export default function LandingPage({ onLogin, onSignup, onPricing }) {
               </button>
             </div>
             <div style={{display:'flex',gap:10,flexWrap:'wrap',marginBottom:24}}>
-              {['⚡ 스피드', '💀 생존', '✨ 효과전', '🎒 아이템', '🏴 점령전'].map((mode) => (
+              {['⚡ 스피드', '💀 생존', '✨ 효과전', '🎒 아이템', '🏴 점령전', '👻 고스트', '🐉 던전'].map((mode) => (
                 <span key={mode} style={{padding:'7px 10px',borderRadius:999,background:'var(--bg2)',border:'1px solid var(--border)',fontSize:12,fontWeight:800,color:'var(--text2)'}}>
                   {mode}
                 </span>

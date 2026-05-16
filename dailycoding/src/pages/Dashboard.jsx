@@ -95,6 +95,7 @@ export default function Dashboard() {
   const [recoveryQueue, setRecoveryQueue] = useState({ count: 0, items: [], summary: '' });
   const [progression, setProgression] = useState(null);
   const [battleSummary, setBattleSummary] = useState({ total: 0, wins: 0, draws: 0, losses: 0, winRate: 0, recent: [] });
+  const [gameSummary, setGameSummary] = useState({ ghost: 0, dungeon: 0, territory: 0 });
   const [copiedReferral, setCopiedReferral] = useState(false);
   const loadErrorToastShownRef = useRef(false);
   const { rankingData } = useRankingData();
@@ -219,6 +220,24 @@ export default function Dashboard() {
       })
       .catch(() => {
         if (!cancelled) setProgression(null);
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    api.get('/game/summary')
+      .then(({ data }) => {
+        if (!cancelled) {
+          setGameSummary({
+            ghost: data?.ghost?.candidates || 0,
+            dungeon: data?.dungeon?.progress?.percent || 0,
+            territory: (data?.season?.territories || []).filter((item) => item.controlled).length,
+          });
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setGameSummary({ ghost: 0, dungeon: 0, territory: 0 });
       });
     return () => { cancelled = true; };
   }, []);
@@ -377,6 +396,16 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="dashboard-game-banner card card-hover" onClick={() => navigate('/game')} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter') navigate('/game'); }}>
+        <div className="dashboard-game-banner-icon"><Sparkles size={22} /></div>
+        <div className="dashboard-game-banner-body">
+          <span>NEW GAME HUB</span>
+          <strong>고스트 배틀 · 오늘의 던전 · 시즌 점령전을 한 번에 시작하세요</strong>
+          <small>고스트 {gameSummary.ghost}개 · 던전 {gameSummary.dungeon}% · 점령 {gameSummary.territory}지역</small>
+        </div>
+        <button className="btn btn-primary btn-sm" onClick={(e) => { e.stopPropagation(); navigate('/game'); }}>게임 허브</button>
       </div>
 
       {dailyFocusPlan.length > 0 && (

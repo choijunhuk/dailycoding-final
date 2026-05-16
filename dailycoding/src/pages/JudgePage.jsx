@@ -116,6 +116,9 @@ export default function JudgePage() {
   const toast = useToast();
   const allProblems    = appProblems.length > 0 ? appProblems : PROBLEMS;
   const initProblem    = location.state?.problem || allProblems.find(p => String(p.id) === id) || null;
+  const gameMode       = location.state?.gameMode || null;
+  const ghostChallenge = location.state?.ghostChallenge || null;
+  const dungeonRoom    = location.state?.dungeonRoom || null;
   const [problem,     setProblem]     = useState(initProblem);
   const [problemError,setProblemError]= useState('');
   const [leftTab,     setLeftTab]     = useState('problem');
@@ -645,6 +648,18 @@ export default function JudgePage() {
     setIsJudging(false);
   };
 
+  const showCorrectToast = (solveTimeSec) => {
+    if (ghostChallenge?.ghost?.targetTimeSec && solveTimeSec && solveTimeSec <= ghostChallenge.ghost.targetTimeSec) {
+      toast?.show('👻 고스트 기록을 이겼습니다!', 'success');
+      return;
+    }
+    if (dungeonRoom?.damage) {
+      toast?.show(`🐉 보스에게 ${dungeonRoom.damage} 피해를 입혔습니다!`, 'success');
+      return;
+    }
+    toast?.show('🎉 정답입니다!', 'success');
+  };
+
   const submitCode = async () => {
     if (isTroubleshootingProblem) {
       await runTroubleshooting({ submit: true })
@@ -658,7 +673,7 @@ export default function JudgePage() {
         const answerPayload = problemType === 'fill-blank'
           ? { answer: fillBlankAnswers, blankAnswers: fillBlankAnswers }
           : { answer: bugFixAnswer };
-      const sub = await addSubmission({
+        const sub = await addSubmission({
           problemId: problem.id,
           problemTitle: problem.title,
           solveTimeSec,
@@ -668,7 +683,7 @@ export default function JudgePage() {
         setLeftTab(sub.result === 'correct' ? 'discuss' : 'submissions');
         if (sub.result === 'correct') {
           confetti({ particleCount: 120, spread: 80, origin: { y: 0.7 } });
-          toast?.show('🎉 정답입니다!', 'success');
+          showCorrectToast(solveTimeSec);
         }
         else toast?.show('❌ 틀렸습니다', 'error');
       } catch (err) {
@@ -698,7 +713,7 @@ export default function JudgePage() {
       setLeftTab(sub.result === 'correct' ? 'discuss' : 'submissions');
       if (sub.result === 'correct') {
         confetti({ particleCount: 120, spread: 80, origin: { y: 0.7 } });
-        toast?.show('🎉 정답입니다!', 'success');
+        showCorrectToast(solveTimeSec);
       }
       else if (sub.result === 'wrong') toast?.show('❌ 틀렸습니다', 'error');
       else if (sub.result === 'timeout') toast?.show('⏱ 시간 초과', 'warning');
@@ -851,6 +866,22 @@ export default function JudgePage() {
                   <span key={t} className="tag" style={{ background: 'var(--bg3)', color: 'var(--text2)' }}>{t}</span>
                 ))}
               </div>
+
+              {gameMode && (
+                <div className="judge-game-banner">
+                  <div>
+                    <strong>{gameMode === 'ghost' ? '👻 고스트 배틀 도전 중' : gameMode === 'dungeon' ? '🐉 오늘의 던전 진행 중' : '🎮 게임 모드'}</strong>
+                    <small>
+                      {gameMode === 'ghost'
+                        ? `${ghostChallenge?.ghost?.username || '고스트'} 목표 기록 ${ghostChallenge?.ghost?.targetTimeSec ? fmtTimer(ghostChallenge.ghost.targetTimeSec) : '-'}`
+                        : dungeonRoom?.damage
+                          ? `정답 시 보스에게 ${dungeonRoom.damage} 피해`
+                          : '정답을 제출하면 게임 허브 진행도에 반영됩니다.'}
+                    </small>
+                  </div>
+                  <button className="btn btn-ghost btn-sm" onClick={() => navigate('/game')}>게임 허브</button>
+                </div>
+              )}
 
               <section><h4>문제</h4><p style={{ whiteSpace: 'pre-line' }}>{problem.desc}</p></section>
               {!isSpecialProblem && !isBuildProblem && !isTroubleshootingProblem && (
