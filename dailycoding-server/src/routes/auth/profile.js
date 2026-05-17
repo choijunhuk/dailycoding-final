@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import fs from 'fs/promises';
 import path from 'path';
+import { randomBytes } from 'crypto';
+import sharp from 'sharp';
 import multer from 'multer';
 import { fileURLToPath } from 'url';
 import { query, queryOne, run } from '../../config/mysql.js';
@@ -260,6 +262,10 @@ router.get('/profile/:id', auth, async (req, res) => {
       ? await queryOne('SELECT image_url FROM profile_backgrounds WHERE slug = ?', [normalizedBackgroundSlug])
       : null;
     const equippedBackgroundUrl = resolveProfileBackgroundCss(bgRow?.image_url || DEFAULT_PROFILE_BACKGROUND_IMAGE_URL);
+    const [badgeItem, titleItem] = await Promise.all([
+      user.equipped_badge ? queryOne('SELECT code, name, icon FROM reward_items WHERE code = ?', [user.equipped_badge]) : null,
+      user.equipped_title ? queryOne('SELECT code, name, icon FROM reward_items WHERE code = ?', [user.equipped_title]) : null,
+    ]);
 
     const base = {
       id: user.id,
@@ -277,7 +283,10 @@ router.get('/profile/:id', auth, async (req, res) => {
       avatar_emoji: user.avatar_emoji,
       avatar_source: user.avatar_source || 'site',
       equippedBadge: user.equipped_badge ?? null,
+      equippedBadgeIcon: badgeItem?.icon ?? null,
+      equippedBadgeName: badgeItem?.name ?? null,
       equippedTitle: user.equipped_title ?? null,
+      equippedTitleName: titleItem?.name ?? null,
       achievement: user.achievement ?? null,
       joinDate: user.join_date ? new Date(user.join_date).toISOString().slice(0, 10) : null,
       socialLinks: parsedSocialLinks,
@@ -436,12 +445,27 @@ router.post('/profile/avatar', auth, upload.single('avatar'), async (req, res) =
     if (!detectedType) {
       return errorResponse(res, 400, 'VALIDATION_ERROR', '유효한 JPEG, PNG, WEBP 이미지만 업로드할 수 있습니다.');
     }
+    const previousUser = await User.findById(req.user.id);
+    const safeBuffer = await sharp(req.file.buffer)
+      .rotate()
+      .resize({ width: 512, height: 512, fit: 'cover', withoutEnlargement: true })
+      .toFormat(detectedType === 'jpg' ? 'jpeg' : detectedType)
+      .toBuffer();
+
     await fs.mkdir(uploadsDir, { recursive: true });
-    const filename = `${req.user.id}.${detectedType}`;
+    const suffix = randomBytes(6).toString('hex');
+    const filename = `${req.user.id}-${suffix}.${detectedType}`;
     const filePath = path.join(uploadsDir, filename);
-    await fs.writeFile(filePath, req.file.buffer);
+    await fs.writeFile(filePath, safeBuffer);
     const avatarUrl = `/uploads/avatars/${filename}`;
     const updated = await User.update(req.user.id, { avatar_url_custom: avatarUrl, avatar_source: 'site' });
+    const previousAvatar = previousUser?.avatar_url_custom;
+    if (previousAvatar?.startsWith('/uploads/avatars/')) {
+      const previousPath = path.join(uploadsDir, path.basename(previousAvatar));
+      if (previousPath !== filePath) {
+        await fs.unlink(previousPath).catch(() => { /* 이미 삭제된 이전 아바타는 무시 */ });
+      }
+    }
     await Promise.all([
       clearAuthStatus(req.user.id),
       redis.clearPrefix('ranking:'),

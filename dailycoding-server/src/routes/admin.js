@@ -203,6 +203,40 @@ router.get('/ai-status', auth, adminOnly, async (req, res) => {
   }
 });
 
+router.get('/flagged-submissions', auth, adminOnly, async (req, res) => {
+  try {
+    const rows = await query(
+      `SELECT fs.id, fs.submission_id AS submissionId, fs.reason, fs.similarity, fs.reviewed, fs.created_at AS createdAt,
+              s.problem_id AS problemId, s.lang, s.result, s.submitted_at AS submittedAt,
+              u.id AS userId, u.username,
+              p.title AS problemTitle
+       FROM flagged_submissions fs
+       JOIN submissions s ON s.id = fs.submission_id
+       JOIN users u ON u.id = s.user_id
+       LEFT JOIN problems p ON p.id = s.problem_id
+       ORDER BY fs.reviewed ASC, fs.created_at DESC
+       LIMIT 100`
+    );
+    return res.json({ rows: rows || [] });
+  } catch (err) {
+    console.error('[admin/flagged-submissions]', err);
+    return res.status(500).json({ message: '의심 제출 목록을 불러오지 못했습니다.' });
+  }
+});
+
+router.patch('/flagged-submissions/:id/review', auth, adminOnly, async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ message: '유효하지 않은 ID입니다.' });
+  try {
+    await run('UPDATE flagged_submissions SET reviewed = 1 WHERE id = ?', [id]);
+    await logAdminAction(req, 'flagged_submission.reviewed', 'flagged_submission', id, {});
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error('[admin/flagged-submissions/review]', err);
+    return res.status(500).json({ message: '검토 처리에 실패했습니다.' });
+  }
+});
+
 // POST /api/admin/problems/:id/troubleshooting
 router.post('/problems/:id/troubleshooting', auth, adminOnly, async (req, res) => {
   const problemId = Number(req.params.id);

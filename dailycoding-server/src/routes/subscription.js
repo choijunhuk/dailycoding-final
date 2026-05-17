@@ -266,7 +266,7 @@ router.get('/status', auth, async (req, res) => {
 });
 
 // POST /api/subscription/webhook - Stripe webhook handler
-router.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+export async function stripeWebhookHandler(req, res) {
   const configError = getStripeConfigError({ requireWebhook: true });
   if (!stripe || configError) return res.status(503).json({ message: configError || '결제 시스템이 준비되지 않았습니다.' });
 
@@ -412,6 +412,8 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
     // 에러 발생 시 500을 반환하여 Stripe가 재시도하도록 유도
     res.status(500).json({ message: 'Webhook processing failed' });
   }
-});
+}
+
+router.post('/webhook', express.raw({ type: 'application/json' }), stripeWebhookHandler);
 
 export default router;

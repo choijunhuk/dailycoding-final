@@ -219,6 +219,17 @@ export function AppProvider({ children }) {
       setNotifications((prev) => [normalizeNotification(payload), ...prev]);
     });
 
+    let lastFriendToastAt = 0;
+    socket.on('feed:friend_milestone', (payload) => {
+      const now = Date.now();
+      if (now - lastFriendToastAt < 10000) return;
+      lastFriendToastAt = now;
+      setNotifications((prev) => [
+        normalizeNotification({ id: now, msg: payload?.message || '친구가 새 이정표를 달성했습니다!', link: '/community', read: false, createdAt: new Date().toISOString() }),
+        ...prev,
+      ]);
+    });
+
     socket.on('connect_error', () => {});
 
     return () => {

@@ -1,0 +1,9 @@
+FROM eclipse-temurin:21-jdk-alpine
+ARG KOTLIN_VERSION=2.1.0
+RUN apk add --no-cache curl unzip && \
+    curl -fsSL "https://github.com/JetBrains/kotlin/releases/download/v${KOTLIN_VERSION}/kotlin-compiler-${KOTLIN_VERSION}.zip" \
+         -o /tmp/kotlin.zip && \
+    unzip -q /tmp/kotlin.zip -d /opt/ && \
+    rm /tmp/kotlin.zip && \
+    apk del curl unzip
+ENV PATH="/opt/kotlinc/bin:$PATH"

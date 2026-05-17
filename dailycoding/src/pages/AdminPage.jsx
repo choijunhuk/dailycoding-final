@@ -91,12 +91,21 @@ export default function AdminPage() {
   const [communityFilter, setCommunityFilter] = useState('pending');
   const [communityDetail, setCommunityDetail] = useState(null);
   const [communityRejectNote, setCommunityRejectNote] = useState('');
+  const [flaggedSubmissions, setFlaggedSubmissions] = useState([]);
+  const [flaggedLoading, setFlaggedLoading] = useState(false);
 
   useEffect(() => { api.get('/problems').then(r=>setProblems(r.data)).catch(()=>{}); }, []);
   useEffect(() => {
     if (activeTab==='users') api.get('/auth/users').then(r=>setUsers(Array.isArray(r.data?.users) ? r.data.users : [])).catch(()=>{});
     if (activeTab==='contests') api.get('/contests').then(r=>setContests(r.data)).catch(()=>{});
     if (activeTab==='battle') api.get('/admin/battle-settings').then(r=>setBattleSettings(r.data)).catch(()=>{});
+    if (activeTab==='flagged') {
+      setFlaggedLoading(true);
+      api.get('/admin/flagged-submissions')
+        .then(r => setFlaggedSubmissions(r.data?.rows || []))
+        .catch(() => setFlaggedSubmissions([]))
+        .finally(() => setFlaggedLoading(false));
+    }
     if (activeTab==='stats') {
       setAdminStatsLoading(true);
       Promise.all([
@@ -149,6 +158,16 @@ export default function AdminPage() {
       setCommunityRejectNote('');
     } catch (err) {
       toast?.show(err.response?.data?.message || '반려 실패', 'error');
+    }
+  };
+
+  const handleFlaggedReviewed = async (id) => {
+    try {
+      await api.patch(`/admin/flagged-submissions/${id}/review`);
+      setFlaggedSubmissions(rows => rows.map(row => row.id === id ? { ...row, reviewed: 1 } : row));
+      toast?.show('검토 완료 처리했습니다.', 'success');
+    } catch (err) {
+      toast?.show(err.response?.data?.message || '검토 처리 실패', 'error');
     }
   };
 
@@ -585,7 +604,7 @@ export default function AdminPage() {
         {activeTab==='problems' && <button className="btn btn-primary" onClick={()=>{setForm(createEmptyForm());setEditTarget(null);setAiPreview(null);setView('create');}}>+ 문제 만들기</button>}
       </div>
       <div className="admin-tabs fade-up">
-        {[['problems','📝 문제'],['contests','🏆 대회'],['users','👥 유저'],['battle','⚔️ 배틀'],['stats','📊 통계'],['system','⚙️ 시스템'],['community','💡 제출 검토']].map(([k,l])=>(
+        {[['problems','📝 문제'],['contests','🏆 대회'],['users','👥 유저'],['battle','⚔️ 배틀'],['stats','📊 통계'],['flagged','🛡️ 의심 제출'],['system','⚙️ 시스템'],['community','💡 제출 검토']].map(([k,l])=>(
           <button key={k} className={`at-btn ${activeTab===k?'active':''}`} onClick={()=>setActiveTab(k)}>{l}</button>
         ))}
       </div>
@@ -939,6 +958,55 @@ export default function AdminPage() {
                 <div style={{color:'var(--text3)'}}>이번 주에 지정된 챌린지가 없습니다.</div>
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── 의심 제출 탭 */}
+      {activeTab==='flagged' && (
+        <div className="fade-up">
+          <div className="card" style={{padding:24}}>
+            <h3 style={{marginBottom:8}}>🛡️ 의심 제출 검토</h3>
+            <p style={{fontSize:13,color:'var(--text2)',marginBottom:18}}>
+              공유 풀이와 높은 유사도를 보인 정답 제출을 관리자가 확인하는 목록입니다.
+            </p>
+            {flaggedLoading ? (
+              <div style={{color:'var(--text3)',fontSize:13}}>불러오는 중...</div>
+            ) : flaggedSubmissions.length === 0 ? (
+              <div style={{padding:24,textAlign:'center',color:'var(--text3)',background:'var(--bg3)',borderRadius:12}}>
+                검토할 의심 제출이 없습니다.
+              </div>
+            ) : (
+              <div style={{display:'flex',flexDirection:'column',gap:10}}>
+                {flaggedSubmissions.map((row) => (
+                  <div key={row.id} style={{
+                    display:'grid',
+                    gridTemplateColumns:'1.5fr 1fr 120px auto',
+                    gap:12,
+                    alignItems:'center',
+                    padding:'14px 16px',
+                    background: row.reviewed ? 'var(--bg2)' : 'var(--bg3)',
+                    border:'1px solid var(--border)',
+                    borderRadius:12,
+                    opacity: row.reviewed ? 0.7 : 1,
+                  }}>
+                    <div>
+                      <div style={{fontWeight:800}}>{row.problemTitle || `문제 #${row.problemId}`}</div>
+                      <div style={{fontSize:12,color:'var(--text3)',marginTop:4}}>
+                        {row.username} · {row.lang} · {new Date(row.createdAt).toLocaleString('ko-KR')}
+                      </div>
+                    </div>
+                    <div style={{fontSize:12,color:'var(--text2)'}}>{row.reason}</div>
+                    <div className="mono" style={{fontWeight:800,color:Number(row.similarity) >= 0.9 ? 'var(--red)' : 'var(--orange)'}}>
+                      {(Number(row.similarity || 0) * 100).toFixed(1)}%
+                    </div>
+                    <button className="btn btn-ghost btn-sm" onClick={()=>handleFlaggedReviewed(row.id)} disabled={Boolean(row.reviewed)}>
+                      {row.reviewed ? '검토 완료' : '검토 완료'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -7,6 +7,7 @@ import { AiHintCache }          from '../models/AiHintCache.js';
 import { Submission }           from '../models/Submission.js';
 import { askAI, askAIWithMeta } from '../services/ai.js';
 import redis                    from '../config/redis.js';
+import { queryOne }             from '../config/mysql.js';
 import { AI_DAILY_QUOTA } from '../shared/constants.js';
 import { completeMission } from '../services/missionService.js';
 
@@ -404,6 +405,66 @@ ${code.slice(0, 1000)}
   } catch (err) {
     console.error('[ai/review]', err.message);
     res.status(500).json({ message: '코드 리뷰 실패' });
+  }
+});
+
+router.get('/walkthrough/:problemId', auth, requireVerified, async (req, res) => {
+  const problemId = Number(req.params.problemId);
+  if (!Number.isInteger(problemId) || problemId <= 0) {
+    return res.status(400).json({ message: '유효하지 않은 문제 ID입니다.' });
+  }
+
+  try {
+    const [user, solved] = await Promise.all([
+      User.findById(req.user.id),
+      queryOne(
+        'SELECT 1 FROM submissions WHERE user_id = ? AND problem_id = ? AND result = ? LIMIT 1',
+        [req.user.id, problemId, 'correct']
+      ),
+    ]);
+    if (!user) return res.status(401).json({ message: '유저를 찾을 수 없습니다.' });
+    if (!solved && (user.subscription_tier || 'free') === 'free') {
+      return res.status(403).json({ message: '문제를 먼저 풀거나 Pro 구독이 필요합니다.', requiresPro: true });
+    }
+
+    const problem = await Problem.findById(problemId, req.user.id);
+    if (!problem) return res.status(404).json({ message: '문제를 찾을 수 없습니다.' });
+
+    const desc = problem.description || problem.desc || '';
+    const contentHash = createProblemHintContentHash(problem, desc);
+    const cacheKey = `ai:walkthrough:${problemId}`;
+    const cached = await redis.getJSON(cacheKey);
+    if (cached?.contentHash === contentHash && cached.walkthrough) {
+      return res.json({ walkthrough: cached.walkthrough, source: 'cache' });
+    }
+
+    const fallback = [
+      `## 접근법\n"${problem.title}" 문제는 입력/출력 조건을 먼저 분리한 뒤 필요한 자료구조를 고르는 것이 핵심입니다.`,
+      '## 핵심 아이디어\n예제와 경계 케이스를 손으로 추적하면서 반복되는 상태나 비교 기준을 찾으세요.',
+      '## 구현 단계\n1. 입력 파싱\n2. 핵심 로직 함수화\n3. 예제/경계 케이스 검증\n4. 시간복잡도 확인',
+      '## 시간복잡도\n문제의 입력 크기에 맞춰 O(n), O(n log n), O(n²) 중 허용 가능한 범위를 검토하세요.',
+    ].join('\n\n');
+    const prompt = `다음 알고리즘 문제의 풀이 해설을 한국어 Markdown으로 작성하세요.
+구성은 반드시 접근법 → 핵심 아이디어 → 구현 단계 → 시간복잡도 순서로 작성하세요.
+정답 코드 전체를 길게 붙이지 말고, 학습자가 이해할 수 있는 설명 중심으로 작성하세요.
+
+제목: ${problem.title}
+난이도: ${problem.tier}
+태그: ${(problem.tags || []).slice?.(0, 8)?.join?.(', ') || ''}
+설명:
+${String(desc).slice(0, 2500)}`;
+
+    const aiResult = await askAIWithMeta(req.user.id, prompt, fallback, 900);
+    const walkthrough = typeof aiResult.data === 'string'
+      ? aiResult.data
+      : aiResult.data?.text || aiResult.data?.walkthrough || fallback;
+    if (aiResult.source === 'ai') {
+      await redis.setJSON(cacheKey, { contentHash, walkthrough }, 86400 * 7);
+    }
+    return res.json({ walkthrough, source: aiResult.source, reason: aiResult.reason || null });
+  } catch (err) {
+    console.error('[ai/walkthrough]', err.message);
+    return res.status(500).json({ message: '풀이 해설을 불러오지 못했습니다.' });
   }
 });
 

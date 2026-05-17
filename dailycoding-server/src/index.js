@@ -1,13 +1,13 @@
 import 'dotenv/config';
 import { createServer } from 'http';
 import { createHash } from 'crypto';
-import express from 'express';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import logger from './config/logger.js';
 import { waitForDB, isConnected as mysqlConnected, getPool, run as dbRun } from './config/mysql.js';
 import { resolveBootstrapConfig } from './config/bootstrap.js';
 import { DEFAULT_PROFILE_BACKGROUND_SLUG, LEGACY_PROFILE_BACKGROUND_SLUGS, PROFILE_BACKGROUND_SEEDS } from './config/profileBackgroundSeeds.js';
+import { REWARD_SEEDS } from './config/rewardSeeds.js';
 import { User } from './models/User.js';
 import { PROBLEMS as SHARED_PROBLEMS } from './shared/problemCatalog.js';
 import { initSocketServer } from './services/socketServer.js';
@@ -19,11 +19,8 @@ const PORT = process.env.PORT || 4000;
 const app = createApp();
 const httpServer = createServer(app);
 const io = initSocketServer(httpServer, ALLOWED_ORIGINS);
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 const bootstrapConfig = resolveBootstrapConfig();
 
-app.use('/uploads', express.static(join(__dirname, '..', 'uploads')));
 
 app.set('io', io);
 global.io = io;
@@ -118,6 +115,7 @@ async function initDatabase() {
     await runSql(join(__dir, 'migrations', '033_virtual_contests.sql'));
     await runSql(join(__dir, 'migrations', '034_battle_replay_timeline.sql'));
     await runSql(join(__dir, 'migrations', '035_tournaments.sql'));
+    await runSql(join(__dir, 'migrations', '036_platform_security_features.sql'));
     logger.info('✅ DB 스키마 초기화 완료');
   } catch (err) {
     logger.warn('⚠️  DB 초기화 스킵:', { message: err.message });
@@ -865,6 +863,21 @@ async function seedGrowthCollections() {
          is_default = VALUES(is_default),
          is_premium = VALUES(is_premium)`,
       backgroundRows
+    );
+
+    const rewardRows = REWARD_SEEDS.flatMap((item) => [
+      item.code,
+      item.type,
+      item.name,
+      item.description,
+      item.rarity,
+      item.icon,
+    ]);
+    const rewardPlaceholders = REWARD_SEEDS.map(() => '(?,?,?,?,?,?)').join(',');
+    await dbRun(
+      `INSERT IGNORE INTO reward_items (code, type, name, description, rarity, icon)
+       VALUES ${rewardPlaceholders}`,
+      rewardRows
     );
 
     // Backfill existing users that have no background equipped

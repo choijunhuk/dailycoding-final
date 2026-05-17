@@ -26,6 +26,7 @@ async function getOptionalUserId(req) {
   if (!header?.startsWith('Bearer ')) return null;
   try {
     const decoded = jwt.verify(header.slice(7), SECRET, {
+      algorithms: ['HS256'],
       issuer: 'dailycoding',
       audience: 'dailycoding-client',
     });
@@ -51,7 +52,7 @@ router.get('/weekly', async (req, res) => {
                 userId
                   ? `(SELECT 1
                       FROM submissions s
-                      WHERE s.user_id = ${Number(userId)}
+                      WHERE s.user_id = ?
                         AND s.problem_id = wc.problem_id
                         AND s.result = 'correct'
                       LIMIT 1) AS isSolved`
@@ -60,7 +61,7 @@ router.get('/weekly', async (req, res) => {
        FROM weekly_challenges wc
        JOIN problems p ON p.id = wc.problem_id
        WHERE wc.week_start = ?`,
-      [weekStart]
+      userId ? [userId, weekStart] : [weekStart]
     );
 
     if (!row) return res.json(null);

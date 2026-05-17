@@ -51,6 +51,7 @@ const SubmitProblemPage = lazy(() => import('./pages/SubmitProblemPage'));
 const ProblemSetsPage = lazy(() => import('./pages/ProblemSetsPage'));
 const GameHubPage = lazy(() => import('./pages/GameHubPage'));
 const TournamentPage = lazy(() => import('./pages/TournamentPage'));
+const RewardsPage = lazy(() => import('./pages/RewardsPage'));
 
 function RouteFallback({ isJudge }) {
   if (isJudge) {
@@ -199,6 +200,7 @@ function AppInner() {
                 <Route path="/learning/:id" element={<LearningPathPage />} />
                 <Route path="/growth"      element={<Navigate to="/learning" replace />} />
                 <Route path="/profile"     element={<ProfilePage />} />
+                <Route path="/rewards"     element={<RewardsPage />} />
                 <Route path="/user/:id"    element={<PublicProfilePage />} />
                 <Route path="/submissions" element={<SubmissionsPage />} />
                 <Route path="/submit-problem" element={<SubmitProblemPage />} />

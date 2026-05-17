@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
 import { PROBLEMS as DEFAULT_PROBLEMS, TIERS, TIER_COLORS } from '../data/problems';
 import api from '../api.js';
+import { getPushStatus, subscribePush, unsubscribePush } from '../utils/pushSubscribe.js';
 import { useToast } from '../context/ToastContext.jsx';
 import { useSubscriptionStatus } from '../hooks/useSubscriptionStatus.js';
 import { useSubscriptionCheckout } from '../hooks/useSubscriptionCheckout.js';
@@ -78,6 +79,7 @@ export default function ProfilePage() {
   const [avatarUrlCustom, setAvatarUrlCustom] = useState(user?.avatarUrlCustom || null);
   const [avatarSource, setAvatarSource] = useState(user?.avatarSource || user?.avatar_source || 'site');
   const [backgrounds, setBackgrounds] = useState([]);
+  const [pushStatus, setPushStatus] = useState({ subscribed: false, configured: false });
   const [equippedBackground, setEquippedBackground] = useState(normalizeProfileBackgroundSlug(user?.equippedBackground));
   const [rewards,       setRewards]       = useState([]);
   const [equippedBadge, setEquippedBadge] = useState(user?.equippedBadge || null);
@@ -177,6 +179,11 @@ export default function ProfilePage() {
     setAvatarSource(user?.avatarSource || user?.avatar_source || 'site');
     setEquippedBackground(normalizeProfileBackgroundSlug(user?.equippedBackground));
   }, [user?.avatarUrlCustom, user?.avatarColor, user?.avatarEmoji, user?.avatarSource, user?.avatar_source, user?.equippedBackground]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    getPushStatus().then(setPushStatus).catch(() => setPushStatus({ subscribed: false, configured: false }));
+  }, [user?.id]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -1161,6 +1168,31 @@ export default function ProfilePage() {
                     ? '아직 사이트 프로필을 꾸미지 않아 원래 프로필 사진이 자동으로 보입니다.'
                     : '원본 프로필 이미지가 없어서 이모지/색상 또는 이니셜로 표시됩니다.'}
             </div>
+            <div style={{ marginBottom:16, padding:14, border:'1px solid var(--border)', borderRadius:14, background:'var(--bg2)' }}>
+              <div style={{display:'flex',justifyContent:'space-between',gap:12,alignItems:'center'}}>
+                <div>
+                  <div style={{fontSize:13,fontWeight:800}}>푸시 알림</div>
+                  <small style={{color:'var(--text3)'}}>배틀 초대와 데일리 리셋 알림을 브라우저로 받습니다.</small>
+                </div>
+                <button className="btn btn-sm" onClick={async()=>{
+                  try {
+                    if (pushStatus.subscribed) {
+                      await unsubscribePush();
+                      setPushStatus((prev) => ({...prev, subscribed:false}));
+                      toast?.show('푸시 알림을 껐습니다.', 'info');
+                    } else {
+                      await subscribePush();
+                      setPushStatus((prev) => ({...prev, subscribed:true, configured:true}));
+                      toast?.show('푸시 알림을 켰습니다.', 'success');
+                    }
+                  } catch (err) {
+                    toast?.show(err.message || '푸시 알림 설정 실패', 'error');
+                  }
+                }}>{pushStatus.subscribed ? '끄기' : '켜기'}</button>
+              </div>
+              {!pushStatus.configured && <div style={{fontSize:11,color:'var(--yellow)',marginTop:8}}>운영 서버 VAPID 키 설정 후 사용할 수 있습니다.</div>}
+            </div>
+
             <div style={{ marginBottom:16 }}>
               <div style={{ fontSize:13, color:'var(--text3)', fontWeight:600, marginBottom:10 }}>🖼️ 프로필 배경</div>
               <div className="profile-background-grid">

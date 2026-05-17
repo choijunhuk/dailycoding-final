@@ -28,6 +28,7 @@ export async function auth(req, res, next) {
   }
   try {
     const decoded = jwt.verify(token, SECRET, {
+      algorithms: ['HS256'],
       issuer:   'dailycoding',
       audience: 'dailycoding-client',
     });

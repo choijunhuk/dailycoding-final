@@ -96,6 +96,9 @@ export default function Dashboard() {
   const [progression, setProgression] = useState(null);
   const [battleSummary, setBattleSummary] = useState({ total: 0, wins: 0, draws: 0, losses: 0, winRate: 0, recent: [] });
   const [gameSummary, setGameSummary] = useState({ ghost: 0, dungeon: 0, territory: 0 });
+  const [reviewQueue, setReviewQueue] = useState([]);
+  const [tagStats, setTagStats] = useState([]);
+  const [smartRecommendations, setSmartRecommendations] = useState([]);
   const [copiedReferral, setCopiedReferral] = useState(false);
   const loadErrorToastShownRef = useRef(false);
   const { rankingData } = useRankingData();
@@ -108,7 +111,7 @@ export default function Dashboard() {
   const recentSolved = solvedList.slice(-5).reverse();
   const unsolved   = PROBLEMS.filter(p => !solved[p.id]);
   const todayProb  = unsolved[0] || PROBLEMS[0];
-  const recommendedProblems = (unsolved.length > 0 ? unsolved : PROBLEMS).slice(0, 6);
+  const recommendedProblems = (smartRecommendations.length > 0 ? smartRecommendations : (unsolved.length > 0 ? unsolved : PROBLEMS)).slice(0, 6);
   const dailyFocusPlan = buildDailyFocusPlan({
     todayProblem: todayProb,
     recoveryQueue,
@@ -132,6 +135,16 @@ export default function Dashboard() {
     loadErrorToastShownRef.current = true;
     toast?.show(message, 'error');
   }, [toast]);
+  useEffect(() => {
+    if (!user?.id) return;
+    api.get('/submissions/review-queue').then((res) => setReviewQueue(res.data || [])).catch(() => setReviewQueue([]));
+    api.get('/submissions/tag-stats').then((res) => {
+      const stats = res.data || [];
+      setTagStats(stats);
+      const weakTags = stats.filter((item) => item.total >= 2).slice(0, 4).map((item) => item.tag);
+      return api.get('/problems/recommend', { params: weakTags.length ? { weakTags: weakTags.join(',') } : {} });
+    }).then((res) => setSmartRecommendations(res?.data || [])).catch(() => setSmartRecommendations([]));
+  }, [user?.id]);
 
   // 레이팅 진행도
   const tierBands = [800,1000,1400,2000,2800,9999];
@@ -677,6 +690,45 @@ export default function Dashboard() {
               <span>{t('dashboardHighActivity')}</span>
             </div>
           </div>
+
+          {reviewQueue.length > 0 && (
+            <div className="card card-pad card-hover">
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:12,marginBottom:12}}>
+                <div>
+                  <div style={{fontSize:11,color:'var(--orange)',fontWeight:800,letterSpacing:.5}}>REVIEW QUEUE</div>
+                  <h3 style={{fontSize:17,fontWeight:800,margin:'4px 0 0'}}>복습 큐</h3>
+                </div>
+                <span style={{fontSize:12,color:'var(--text3)'}}>{reviewQueue.length}개 대기</span>
+              </div>
+              <div style={{display:'grid',gap:8}}>
+                {reviewQueue.slice(0,5).map((item) => (
+                  <button key={item.problemId} onClick={() => navigate('/problems/'+item.problemId)} style={{border:'1px solid var(--border)',borderRadius:12,padding:'10px 12px',background:'var(--bg3)',color:'var(--text)',textAlign:'left',cursor:'pointer',display:'flex',justifyContent:'space-between',gap:10}}>
+                    <span style={{fontWeight:700}}>{item.title}</span>
+                    <span style={{fontSize:11,color:TIERS[item.tier]?.color||'var(--text3)'}}>{TIERS[item.tier]?.label||item.tier}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {tagStats.length > 0 && (
+            <div className="card card-pad card-hover">
+              <div style={{fontWeight:800,fontSize:15,marginBottom:12,display:'flex',alignItems:'center',gap:8}}><Target size={16} />태그 숙련도</div>
+              <div style={{display:'grid',gap:10}}>
+                {tagStats.slice(0,6).map((item) => (
+                  <div key={item.tag}>
+                    <div style={{display:'flex',justifyContent:'space-between',fontSize:12,marginBottom:5}}>
+                      <span style={{fontWeight:700}}>{item.tag}</span>
+                      <span style={{color:'var(--text3)'}}>{item.accuracy}% · {item.correct}/{item.total}</span>
+                    </div>
+                    <div style={{height:8,borderRadius:999,background:'var(--bg3)',overflow:'hidden'}}>
+                      <div style={{width:`${item.accuracy}%`,height:'100%',background:item.accuracy < 50 ? 'var(--red)' : item.accuracy < 75 ? 'var(--yellow)' : 'var(--green)'}} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* 추천 문제 */}
           {recommendedProblems.length > 0 && (

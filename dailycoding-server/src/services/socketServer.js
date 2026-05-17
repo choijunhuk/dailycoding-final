@@ -42,6 +42,7 @@ export function initSocketServer(httpServer, allowedOrigins) {
     if (!token) return next(new Error('Unauthorized'));
     try {
       const decoded = jwt.verify(token, SECRET, {
+        algorithms: ['HS256'],
         issuer: 'dailycoding',
         audience: 'dailycoding-client',
       });
@@ -60,6 +61,25 @@ export function initSocketServer(httpServer, allowedOrigins) {
 
     socket.on('authenticate', () => {
       socket.join(`user:${socket.data.userId}`);
+    });
+
+    socket.on('battle:spectator_chat', ({ roomId, message } = {}) => {
+      const safeRoomId = String(roomId || '').slice(0, 80);
+      if (!safeRoomId) return;
+      const safeMessage = String(message || '').slice(0, 100).replace(/[<>]/g, '').trim();
+      if (!safeMessage) return;
+      io.to(`battle:${safeRoomId}`).emit('battle:spectator_chat', {
+        username: socket.data.username || socket.user?.username || '익명',
+        message: safeMessage,
+        at: Date.now(),
+      });
+    });
+
+    socket.on('battle:spectator_react', ({ roomId, emoji } = {}) => {
+      const allowed = ['🔥', '👏', '😮', '💡', '⚡'];
+      const safeRoomId = String(roomId || '').slice(0, 80);
+      if (!safeRoomId || !allowed.includes(emoji)) return;
+      io.to(`battle:${safeRoomId}`).emit('battle:spectator_react', { emoji, at: Date.now() });
     });
 
     // ── Battle events ────────────────────────────────────────────

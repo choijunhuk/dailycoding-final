@@ -89,6 +89,7 @@ export default function TopNav() {
   const { unreadCount, notifications, markRead, loadNotifications, clearAllNotifications } = useApp();
   const { tier: subTier } = useSubscriptionStatus(user?.id);
   const [aiQuota, setAiQuota] = useState(null);
+  const [equippedTitleName, setEquippedTitleName] = useState('');
   const [showNotif,     setShowNotif]     = useState(false);
   const [showUser,      setShowUser]      = useState(false);
   const [showMobile,    setShowMobile]    = useState(false);
@@ -109,6 +110,16 @@ export default function TopNav() {
       setAiQuota(null);
     }
   }, [user, subTier, location.pathname]);
+  useEffect(() => {
+    if (!user?.id) { setEquippedTitleName(''); return; }
+    api.get('/rewards/my')
+      .then((res) => {
+        const titleCode = res.data?.equippedTitle;
+        const title = (res.data?.rewards || []).find((item) => item.code === titleCode);
+        setEquippedTitleName(title?.name || '');
+      })
+      .catch(() => setEquippedTitleName(''));
+  }, [user?.id, user?.equippedTitle]);
   const { effectiveTheme, toggleTheme } = useTheme();
   const notifRef = useRef(null);
   const userRef  = useRef(null);
@@ -549,6 +560,7 @@ export default function TopNav() {
               }}>
                 <div style={{padding:'14px 16px',borderBottom:'1px solid var(--border)'}}>
                   <div style={{fontWeight:700,fontSize:13}}>{user?.username}</div>
+                  {equippedTitleName && <div style={{fontSize:11,color:'var(--blue)',fontWeight:800,marginTop:2}}>{equippedTitleName}</div>}
                   <div style={{fontSize:11,color:'var(--text3)',marginTop:2}}>{user?.email}</div>
                   <div style={{
                     marginTop:6,fontSize:11,fontFamily:'Space Mono,monospace',
@@ -557,13 +569,14 @@ export default function TopNav() {
                 </div>
                 {[
                   {labelKey:'myProfile', Icon: UserIcon, path:'/profile'},
+                  {label:'보상 보관함', Icon: Trophy, path:'/rewards'},
                   {labelKey:'settings',  Icon: Settings, path:'/settings'},
                   {labelKey:'submissions', Icon: FileText, path:'/submissions'},
                   {labelKey:'pricing',   Icon: CreditCard, path:'/pricing'},
                   {labelKey:'ai',        Icon: Bot, path:'/ai'},
                   ...(user ? [{labelKey:'team', Icon: Users, path:'/team'}] : []),
                 ].map(item=>(
-                  <button key={item.labelKey} onClick={()=>go(item.path)} style={{
+                  <button key={item.labelKey || item.label} onClick={()=>go(item.path)} style={{
                     width:'100%',padding:'10px 16px',border:'none',
                     background:'transparent',color:'var(--text)',cursor:'pointer',
                     fontSize:13,fontFamily:'inherit',textAlign:'left',
@@ -571,7 +584,7 @@ export default function TopNav() {
                   }}
                     onMouseEnter={e=>e.currentTarget.style.background='var(--bg3)'}
                     onMouseLeave={e=>e.currentTarget.style.background='transparent'}
-                  ><item.Icon size={15} />{t(item.labelKey)}</button>
+                  ><item.Icon size={15} />{item.labelKey ? t(item.labelKey) : item.label}</button>
                 ))}
                 <div style={{borderTop:'1px solid var(--border)'}}>
                   <button onClick={logout} style={{

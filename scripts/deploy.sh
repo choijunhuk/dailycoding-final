@@ -29,9 +29,13 @@ mkdir -p "$FRONTEND_DIST"
 find "$FRONTEND_DIST" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
 cp -r "$REPO_DIR/dailycoding/dist"/* "$FRONTEND_DIST"/
 
-echo "🐳 [7/9] Docker (MySQL + Redis)..."
+echo "🐳 [7/9] Docker (MySQL + Redis + Kotlin 이미지)..."
 cd "$REPO_DIR"
 docker compose up -d
+if ! docker image inspect dailycoding-kotlin:latest >/dev/null 2>&1; then
+  echo "  ↳ Kotlin judge 이미지 빌드 중..."
+  docker build -f "$REPO_DIR/Dockerfile.kotlin" -t dailycoding-kotlin:latest "$REPO_DIR"
+fi
 
 echo "🔄 [8/9] PM2 재시작..."
 cd "$REPO_DIR/dailycoding-server"

@@ -3,7 +3,7 @@ import { Submission } from '../models/Submission.js';
 import { Notification }from '../models/Notification.js';
 import { CodeReview } from '../models/CodeReview.js';
 import { AdminLog } from '../models/AdminLog.js';
-import { queryOne }   from '../config/mysql.js';
+import { query, queryOne, run }   from '../config/mysql.js';
 import { auth, requireVerified } from '../middleware/auth.js';
 import { validateBody, runSchema } from '../middleware/validate.js';
 import redis from '../config/redis.js';
@@ -13,6 +13,7 @@ import { errorResponse, internalError } from '../middleware/errorHandler.js';
 import { handleCorrectSubmissionMissions } from '../services/missionService.js';
 import { updateSeasonRating } from '../services/seasonService.js';
 import { evaluateFillBlankAnswer, evaluateBugFixAnswer } from '../services/battleAnswerEvaluation.js';
+import { checkSimilarity } from '../services/similarityDetector.js';
 
 const router = Router();
 async function logReviewSecurityEvent(req, submissionId, reason) {
@@ -101,6 +102,70 @@ function normalizeSolveTimeSecInput(value) {
   return Math.round(parsed);
 }
 
+async function updateReviewSchedule({ userId, problemId, submissionId, result }) {
+  if (result === 'correct') {
+    await run('UPDATE submissions SET review_due_at = NULL WHERE problem_id = ? AND user_id = ?', [problemId, userId]);
+    return;
+  }
+  const dueAt = new Date(Date.now() + 86400000).toISOString().slice(0, 19).replace('T', ' ');
+  await run('UPDATE submissions SET review_due_at = ? WHERE id = ?', [dueAt, submissionId]);
+}
+
+async function flagSimilarSubmission({ submissionId, userId, problemId, code, result }) {
+  if (result !== 'correct' || !code) return;
+  const simResult = await checkSimilarity(code, problemId, userId).catch(() => ({ flagged: false }));
+  if (!simResult.flagged) return;
+  await run(
+    'INSERT INTO flagged_submissions (submission_id, reason, similarity, created_at) VALUES (?, ?, ?, NOW())',
+    [submissionId, `similarity:${simResult.matchedSlug || 'shared'}`, simResult.similarity]
+  );
+}
+
+router.get('/review-queue', auth, async (req, res) => {
+  try {
+    const rows = await query(
+      `SELECT s.problem_id AS problemId, p.title, p.tier, MIN(s.review_due_at) AS reviewDueAt
+       FROM submissions s
+       JOIN problems p ON p.id = s.problem_id
+       WHERE s.user_id = ? AND s.review_due_at IS NOT NULL AND s.review_due_at <= NOW()
+       GROUP BY s.problem_id, p.title, p.tier
+       ORDER BY reviewDueAt ASC
+       LIMIT 10`,
+      [req.user.id]
+    );
+    res.json(rows || []);
+  } catch (err) {
+    console.error('[submissions/review-queue]', err);
+    return internalError(res);
+  }
+});
+
+router.get('/tag-stats', auth, async (req, res) => {
+  try {
+    const rows = await query(
+      `SELECT pt.tag,
+              COUNT(*) AS total,
+              SUM(CASE WHEN s.result = 'correct' THEN 1 ELSE 0 END) AS correct
+       FROM submissions s
+       JOIN problem_tags pt ON pt.problem_id = s.problem_id
+       WHERE s.user_id = ?
+       GROUP BY pt.tag
+       HAVING total > 0
+       ORDER BY (correct / total) ASC, total DESC
+       LIMIT 20`,
+      [req.user.id]
+    );
+    res.json((rows || []).map((row) => {
+      const total = Number(row.total) || 0;
+      const correct = Number(row.correct) || 0;
+      return { tag: row.tag, total, correct, accuracy: total ? Math.round((correct / total) * 100) : 0 };
+    }));
+  } catch (err) {
+    console.error('[submissions/tag-stats]', err);
+    return internalError(res);
+  }
+});
+
 // POST /api/submissions
 router.post('/', auth, requireVerified, async (req, res) => {
   const { problemId, lang, code } = req.body;
@@ -143,6 +208,7 @@ router.post('/', auth, requireVerified, async (req, res) => {
       });
 
       await Problem.incrementSubmit(Number(problemId));
+      await updateReviewSchedule({ userId: req.user.id, problemId: Number(problemId), submissionId: submission.id, result: submission.result });
       if (evaluation.correct && !alreadySolved) {
         await Promise.all([
           Problem.incrementSolved(Number(problemId)),
@@ -212,6 +278,15 @@ router.post('/', auth, requireVerified, async (req, res) => {
       onSolve: User.onSolve.bind(User),
       createNotification: Notification.create,
       invalidateRanking: () => redis.clearPrefix('ranking:'),
+    });
+
+    await updateReviewSchedule({ userId: req.user.id, problemId: Number(problemId), submissionId: submission.id, result: submission.result });
+    await flagSimilarSubmission({
+      submissionId: submission.id,
+      userId: req.user.id,
+      problemId: Number(problemId),
+      code,
+      result: submission.result,
     });
 
     const timeMs = execution.time ? parseInt(execution.time, 10) : null;
@@ -405,8 +480,9 @@ router.get('/:id/code', auth, async (req, res) => {
     if (!sub) return errorResponse(res, 404, 'NOT_FOUND', '없음');
     const User = await getUserModel();
     const requester = await User.findById(req.user.id);
-    if (sub.user_id !== req.user.id && requester?.role !== 'admin')
-      return errorResponse(res, 403, 'FORBIDDEN', '권한 없음');
+    if (sub.user_id !== req.user.id && !sub.submissions_public && requester?.role !== 'admin') {
+      return errorResponse(res, 403, 'FORBIDDEN', '접근 권한이 없습니다.');
+    }
     res.json({ code: sub.code, lang: sub.lang });
   } catch { return internalError(res); }
 });

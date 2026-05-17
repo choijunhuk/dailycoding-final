@@ -4,11 +4,13 @@ import { Battle } from '../models/Battle.js';
 import { AlgorithmBattle } from '../models/AlgorithmBattle.js';
 import { Tournament } from '../models/Tournament.js';
 import { User }   from '../models/User.js';
+import { Reward } from '../models/Reward.js';
 import { errorResponse, internalError } from '../middleware/errorHandler.js';
 import { normalizeJudgeLanguage } from '../services/judge.js';
 import { getCachedJudgeRuntime } from '../services/judgeRuntimeCache.js';
 import { executeSubmissionFlow } from '../services/submissionExecution.js';
 import { completeMission } from '../services/missionService.js';
+import { pushToUser } from '../services/pushNotifier.js';
 import { recordPromotionLoss } from '../services/promotionService.js';
 import { evaluateBugFixAnswer, evaluateFillBlankAnswer } from '../services/battleAnswerEvaluation.js';
 import redis from '../config/redis.js';
@@ -97,6 +99,7 @@ async function rewardBattleWinnerMissions(room) {
   await Promise.all(winnerIds.map(async (userId) => {
     try {
       await completeMission(userId, 'battle_win');
+      await Reward.grant(userId, 'badge_battle_win');
     } catch (err) {
       console.error('[battle:mission]', err);
     }
@@ -488,6 +491,11 @@ router.post('/:id/rematch', async (req, res) => {
         from: req.user.id,
       });
     }
+    pushToUser(invited.id, {
+      title: 'DailyCoding 리매치 요청',
+      body: `${inviter.username}님이 다시 배틀을 신청했습니다.`,
+      url: `/battle?room=${room.id}`,
+    }).catch(() => {});
 
     res.json({
       roomId: room.id,
@@ -535,6 +543,11 @@ router.post('/invite', async (req, res) => {
       { id: invited.id, username: invited.username },
       { preferredLanguage: normalizedLanguage, battleMode: normalizedBattleMode }
     );
+    pushToUser(invited.id, {
+      title: 'DailyCoding 배틀 초대',
+      body: `${inviter.username}님이 배틀을 신청했습니다.`,
+      url: `/battle?room=${room.id}`,
+    }).catch(() => {});
     res.json({ roomId: room.id });
   } catch (err) {
     return internalError(res);

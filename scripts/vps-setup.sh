@@ -19,6 +19,9 @@ echo "=== [3/5] Docker ==="
 curl -fsSL https://get.docker.com | sh
 apt-get install -y docker-compose-plugin
 
+echo "=== [3.5/5] Kotlin Judge 이미지 빌드 ==="
+docker build -f /home/ubuntu/dailycoding-final/Dockerfile.kotlin -t dailycoding-kotlin:latest /home/ubuntu/dailycoding-final
+
 echo "=== [4/5] 로그 디렉토리 ==="
 mkdir -p /var/log/dailycoding /var/www/dailycoding/dist
 

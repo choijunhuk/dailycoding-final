@@ -18,11 +18,13 @@ import {
 } from './judge.js';
 
 function commandAvailable(command) {
-  return spawnSync('sh', ['-c', `command -v ${command} >/dev/null 2>&1`], {
+  return spawnSync('which', ['--', command], {
     env: { PATH: '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin' },
     stdio: 'ignore',
   }).status === 0;
 }
+
+const FULL_LANGS = ['python', 'javascript', 'typescript', 'cpp', 'c', 'java', 'go', 'kotlin'];
 
 test('getConfiguredJudgeMode normalizes supported values and defaults to auto', () => {
   assert.equal(getConfiguredJudgeMode({ JUDGE_MODE: 'native' }), 'native');
@@ -35,7 +37,7 @@ test('buildJudgeRuntime exposes full native language support in native mode', ()
   const runtime = buildJudgeRuntime({ env: { JUDGE_MODE: 'native' }, dockerAvailable: true });
 
   assert.equal(runtime.mode, 'native-subprocess');
-  assert.deepEqual(runtime.supportedLanguages, ['python', 'javascript', 'typescript', 'cpp', 'c', 'java', 'go']);
+  assert.deepEqual(runtime.supportedLanguages, FULL_LANGS);
   assert.equal(runtime.configuredMode, 'native');
 });
 
@@ -43,14 +45,14 @@ test('buildJudgeRuntime keeps full language list when docker sandbox is active',
   const runtime = buildJudgeRuntime({ env: { JUDGE_MODE: 'auto' }, dockerAvailable: true });
 
   assert.equal(runtime.mode, 'docker-sandbox');
-  assert.deepEqual(runtime.supportedLanguages, ['python', 'javascript', 'typescript', 'cpp', 'c', 'java', 'go']);
+  assert.deepEqual(runtime.supportedLanguages, FULL_LANGS);
 });
 
 test('buildJudgeRuntime falls back to native mode when docker is unavailable', () => {
   const runtime = buildJudgeRuntime({ env: { JUDGE_MODE: 'auto' }, dockerAvailable: false });
 
   assert.equal(runtime.mode, 'native-subprocess');
-  assert.deepEqual(runtime.supportedLanguages, ['python', 'javascript', 'typescript', 'cpp', 'c', 'java', 'go']);
+  assert.deepEqual(runtime.supportedLanguages, FULL_LANGS);
 });
 
 test('isNativeLanguageSupported covers all native-supported languages', () => {
@@ -61,6 +63,7 @@ test('isNativeLanguageSupported covers all native-supported languages', () => {
   assert.equal(isNativeLanguageSupported('java'), true);
   assert.equal(isNativeLanguageSupported('typescript'), true);
   assert.equal(isNativeLanguageSupported('go'), true);
+  assert.equal(isNativeLanguageSupported('kotlin'), true);
 });
 
 test('normalizeJudgeLanguage centralizes public label normalization', () => {
@@ -68,6 +71,7 @@ test('normalizeJudgeLanguage centralizes public label normalization', () => {
   assert.equal(normalizeJudgeLanguage('JavaScript (Node)'), 'javascript');
   assert.equal(normalizeJudgeLanguage('TypeScript'), 'typescript');
   assert.equal(normalizeJudgeLanguage('Go'), 'go');
+  assert.equal(normalizeJudgeLanguage('Kotlin'), 'kotlin');
   assert.equal(normalizeJudgeLanguage('C++17'), 'cpp');
   assert.equal(normalizeJudgeLanguage('Rust'), null);
 });

@@ -184,8 +184,17 @@ export default function JudgePage() {
   const [isSavingNote, setIsSavingNote] = useState(false);
   const [wrongNote, setWrongNote] = useState('');
   const [editorial, setEditorial] = useState(null)
+  const [walkthrough, setWalkthrough] = useState(null)
+  const [walkthroughLoading, setWalkthroughLoading] = useState(false)
+  const [isMobileEditor, setIsMobileEditor] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768)
   const availableLangOptions = getJudgeLanguageOptionsForSupported(judgeStatus?.supportedLanguages);
   const editorSettings = user?.settings?.editor || {};
+
+  useEffect(() => {
+    const onResize = () => setIsMobileEditor(window.innerWidth < 768)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
 
   const loadNote = async (probId) => {
     try {
@@ -318,7 +327,7 @@ export default function JudgePage() {
     timerComponentRef.current?.reset(); setShowEditorial(false);
     setResult(null); setTestResults([]); setAiReview(null);
     setVoteSubmitted(false); setMyVote(0); setDiffVote(null);
-    setSolutions([]); setWrongNote('');
+    setSolutions([]); setWrongNote(''); setWalkthrough(null);
     setFillBlankAnswers([])
     setBugFixAnswer('')
     setTroubleshootingResult(null)
@@ -401,6 +410,23 @@ export default function JudgePage() {
       }
     }
     setReviewLoading(false);
+  };
+
+  const loadWalkthrough = async () => {
+    if (!problem?.id) return;
+    setWalkthroughLoading(true);
+    try {
+      const { data } = await api.get(`/ai/walkthrough/${problem.id}`);
+      setWalkthrough(data.walkthrough || '');
+    } catch (err) {
+      if (err.response?.data?.requiresPro) {
+        toast?.show('문제를 먼저 풀거나 Pro 구독이 필요합니다.', 'warning');
+      } else {
+        toast?.show(err.response?.data?.message || '풀이 해설을 불러오지 못했습니다.', 'error');
+      }
+    } finally {
+      setWalkthroughLoading(false);
+    }
   };
 
   const postComment = async () => {
@@ -1011,6 +1037,37 @@ export default function JudgePage() {
                 </div>
               </div>
 
+              {!isSpecialProblem && !isTroubleshootingProblem && (
+                <div style={{ marginTop:16, padding:'16px 18px', background:'var(--bg3)', border:'1px solid var(--border)', borderRadius:12 }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', gap:12, alignItems:'center', flexWrap:'wrap' }}>
+                    <div>
+                      <h4 style={{ margin:'0 0 4px' }}>🧭 풀이 해설</h4>
+                      <p style={{ margin:0, fontSize:12, color:'var(--text3)' }}>
+                        정답 후 또는 Pro 이용자는 AI 해설로 접근법과 복잡도를 확인할 수 있습니다.
+                      </p>
+                    </div>
+                    <button className="btn btn-primary btn-sm" onClick={loadWalkthrough} disabled={walkthroughLoading || (!solved[problem.id] && isFreePlan)}>
+                      {walkthroughLoading ? <><span className="spinner"/> 생성 중</> : solved[problem.id] || !isFreePlan ? '풀이 해설 보기' : '🔒 정답 후 공개'}
+                    </button>
+                  </div>
+                  {walkthrough && (
+                    <div style={{
+                      marginTop:14,
+                      padding:'14px 16px',
+                      borderRadius:10,
+                      background:'var(--bg)',
+                      border:'1px solid var(--border)',
+                      whiteSpace:'pre-wrap',
+                      lineHeight:1.75,
+                      color:'var(--text2)',
+                      fontSize:13,
+                    }}>
+                      {walkthrough.replace(/^#+\s?/gm, '')}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* 난이도 투표 (풀었을 때만) */}
               {solved[problem.id] && (
                 <div style={{marginTop:16,padding:'16px 18px',background:'var(--bg3)',borderRadius:10,border:'1px solid var(--border)'}}>
@@ -1527,19 +1584,29 @@ export default function JudgePage() {
                     <pre className="io-box mono" style={{ margin:0 }}>{problem.starterCode || '// YOUR CODE HERE'}</pre>
                   </div>
                 )}
-                <Editor
-                  height="100%" language={availableLangOptions.find(o => o.value === lang)?.monaco || getJudgeLanguageOption(lang)?.monaco || 'python'}
-                  theme={isDark ? "vs-dark" : "vs"} value={code} onChange={v => setCode(v || '')}
-                  options={{ 
-                    fontSize: editorSettings.font_size || 14,
-                    minimap: { enabled: !!editorSettings.minimap },
-                    scrollBeyondLastLine: false, 
-                    tabSize: editorSettings.tab_size || 2,
-                    fontFamily: editorSettings.font_family || "'Space Mono', 'Fira Code', Consolas, monospace",
-                    lineNumbers: editorSettings.line_numbers !== false ? 'on' : 'off',
-                    wordWrap: editorSettings.word_wrap === true ? 'on' : 'off'
-                  }}
-                />
+                {isMobileEditor ? (
+                  <textarea
+                    className="mobile-code-textarea mono"
+                    value={code}
+                    onChange={(e) => setCode(e.target.value)}
+                    spellCheck={false}
+                    aria-label="모바일 코드 편집기"
+                  />
+                ) : (
+                  <Editor
+                    height="100%" language={availableLangOptions.find(o => o.value === lang)?.monaco || getJudgeLanguageOption(lang)?.monaco || 'python'}
+                    theme={isDark ? "vs-dark" : "vs"} value={code} onChange={v => setCode(v || '')}
+                    options={{
+                      fontSize: editorSettings.font_size || 14,
+                      minimap: { enabled: !!editorSettings.minimap },
+                      scrollBeyondLastLine: false,
+                      tabSize: editorSettings.tab_size || 2,
+                      fontFamily: editorSettings.font_family || "'Space Mono', 'Fira Code', Consolas, monospace",
+                      lineNumbers: editorSettings.line_numbers !== false ? 'on' : 'off',
+                      wordWrap: editorSettings.word_wrap === true ? 'on' : 'off'
+                    }}
+                  />
+                )}
               </div>
             </Suspense>
           )}

@@ -247,6 +247,12 @@ export default function PublicProfilePage() {
                 </span>
               </div>
               <div style={{ fontSize: 13, color: 'var(--text2)', marginTop: 8 }}>@{profile.username}</div>
+              {(profile.equippedBadgeIcon || profile.equippedTitleName) && (
+                <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginTop:10 }}>
+                  {profile.equippedBadgeIcon && <span style={{ fontSize:12, border:'1px solid var(--border)', borderRadius:999, padding:'4px 8px', background:'var(--bg)', color:'var(--text)' }}>{profile.equippedBadgeIcon} {profile.equippedBadgeName || '뱃지'}</span>}
+                  {profile.equippedTitleName && <span style={{ fontSize:12, border:'1px solid var(--blue)', borderRadius:999, padding:'4px 8px', background:'rgba(88,166,255,.12)', color:'var(--blue)', fontWeight:800 }}>{profile.equippedTitleName}</span>}
+                </div>
+              )}
               <div style={{ fontSize: 13, color: 'var(--text3)', marginTop: 10, lineHeight: 1.7, maxWidth: 680 }}>{profile.bio || t('publicProfileNoBio')}</div>
               {profile.techStack?.length > 0 && (
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>

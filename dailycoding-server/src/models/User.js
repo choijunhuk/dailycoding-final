@@ -70,6 +70,15 @@ function normalizeEquippedBackgroundSlug(slug) {
   return LEGACY_PROFILE_BACKGROUND_SLUG_SET.has(slug) ? DEFAULT_PROFILE_BACKGROUND_SLUG : slug;
 }
 
+async function emitFriendMilestone(userId, payload) {
+  const io = global.io;
+  if (!io) return;
+  const followers = await query('SELECT follower_id FROM follows WHERE following_id = ?', [userId]).catch(() => []);
+  for (const { follower_id: followerId } of followers || []) {
+    io.to(`user:${followerId}`).emit('feed:friend_milestone', payload);
+  }
+}
+
 function safeParseJSON(value, fallback) {
   if (typeof value !== 'string') return value ?? fallback;
   try {
@@ -88,7 +97,7 @@ export const User = {
     return queryOne('SELECT * FROM users WHERE id = ?', [id]);
   },
 
-  async findAll({ limit = 200, offset = 0, fields = '*' } = {}) {
+  async findAll({ limit = 200, offset = 0, fields = 'id,username,tier,rating,solved_count,equipped_badge,equipped_title,avatar_url,avatar_color,avatar_emoji,avatar_source' } = {}) {
     const safeLimit = Math.min(200, Math.max(1, Number(limit) || 200));
     const safeOffset = Math.max(0, Number(offset) || 0);
     const selectedFields = normalizeUserFields(fields);
@@ -139,7 +148,7 @@ export const User = {
     const emailVerified = role === 'admin' ? 1 : 0;
     const id = await insert(
       'INSERT INTO users (email,password,username,role,tier,rating,join_date,email_verified,equipped_background) VALUES (?,?,?,?,?,?,?,?,?)',
-      [email, hashed, username, role, tier, rating, today, emailVerified, 'gradient-midnight']
+      [email, hashed, username, role, tier, rating, today, emailVerified, DEFAULT_PROFILE_BACKGROUND_SLUG]
     );
     return this.findById(id);
   },
@@ -328,7 +337,7 @@ export const User = {
     const newRatingCalc = await this.calcRatingFromTop100(userId, probObj);
     await run('UPDATE users SET rating = ? WHERE id = ?', [newRatingCalc, userId]);
     // 레이팅 기반 tier 자동 업그레이드 + 보상 지급
-    const updUser = await queryOne('SELECT role, rating, tier, streak, solved_count FROM users WHERE id=?', [userId]);
+    const updUser = await queryOne('SELECT role, username, rating, tier, streak, solved_count FROM users WHERE id=?', [userId]);
     const newRating = updUser?.rating || 0;
     const oldTier   = updUser?.tier || 'unranked';
     const computedTier = this.calcTier(newRating);
@@ -349,6 +358,14 @@ export const User = {
     }
 
     await run('UPDATE users SET tier=? WHERE id=?', [nextTier, userId]);
+    if (nextTier !== oldTier) {
+      await emitFriendMilestone(userId, {
+        username: updUser?.username || '친구',
+        event: 'tier_up',
+        tier: nextTier,
+        message: `${updUser?.username || '친구'}님이 ${nextTier} 티어로 승급했습니다!`,
+      });
+    }
 
     // Update Redis Global Ranking (Sorted Set)
     if (updUser && updUser.role !== 'admin') {
@@ -364,12 +381,21 @@ export const User = {
 
     // 스트릭 보상
     const streak = updUser?.streak || 0;
+    if ([7, 30, 100].includes(streak)) {
+      await emitFriendMilestone(userId, {
+        username: updUser?.username || '친구',
+        event: 'streak',
+        streak,
+        message: `${updUser?.username || '친구'}님이 ${streak}일 연속 풀이를 달성했습니다!`,
+      });
+    }
     if (streak >= 100) await Reward.grant(userId, 'badge_streak100');
-    else if (streak >= 30) await Reward.grant(userId, 'badge_streak30');
-    else if (streak >= 7)  await Reward.grant(userId, 'badge_streak7');
+    if (streak >= 30) await Reward.grantMany(userId, ['badge_streak30', 'badge_streak_30']);
+    else if (streak >= 7)  await Reward.grantMany(userId, ['badge_streak7', 'badge_streak_7']);
 
     // 풀이 수 보상
     const solvedCount = updUser?.solved_count || 0;
+    if (solvedCount === 1) await Reward.grant(userId, 'badge_first_solve');
     if (solvedCount >= 100) await Reward.grant(userId, 'badge_solve100');
     else if (solvedCount >= 50) await Reward.grant(userId, 'badge_solve50');
     else if (solvedCount >= 10) await Reward.grant(userId, 'badge_solve10');

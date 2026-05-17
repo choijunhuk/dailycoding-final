@@ -13,7 +13,7 @@ import rewardsRouter from './rewards.js';
 import battlesRouter from './battles.js';
 import tournamentsRouter from './tournaments.js';
 import followsRouter from './follows.js';
-import subscriptionRouter from './subscription.js';
+import subscriptionRouter, { stripeWebhookHandler } from './subscription.js';
 import teamsRouter from './teams.js';
 import adminRouter from './admin.js';
 import notesRouter from './notes.js';
@@ -34,10 +34,12 @@ import reviewsRouter from './reviews.js';
 import communityProblemsRouter from './community-problems.js';
 import problemSetsRouter from './problem-sets.js';
 import gameRouter from './game.js';
+import pushRouter from './push.js';
 import { getJudgeRuntime } from '../services/judge.js';
 import { getStripeOpsStatus } from './subscription.js';
 
 export function registerRoutes(app) {
+  app.post('/api/subscription/webhook', stripeWebhookHandler);
   app.use('/api/auth', authLimiter, authRouter);
   app.use('/api/problems', generalLimiter, problemsRouter);
   app.use('/api/submissions', submitLimiter, submissionsRouter);
@@ -70,6 +72,7 @@ export function registerRoutes(app) {
   app.use('/api/community-problems', generalLimiter, communityProblemsRouter);
   app.use('/api/problem-sets', generalLimiter, problemSetsRouter);
   app.use('/api/game', generalLimiter, gameRouter);
+  app.use('/api/push', generalLimiter, pushRouter);
 
   app.get('/api/stats', async (req, res) => {
     try {

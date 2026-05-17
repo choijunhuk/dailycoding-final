@@ -398,6 +398,12 @@ router.get('/recommend', auth, async (req, res) => {
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ message: '유저 없음' });
 
+    const requestedWeakTags = String(req.query.weakTags || req.query.weakTags?.[0] || '')
+      .split(',')
+      .map((tag) => tag.trim())
+      .filter(Boolean)
+      .slice(0, 8);
+
     const weakTagRows = await query(
       `SELECT pt.tag
        FROM submissions s
@@ -411,10 +417,14 @@ router.get('/recommend', auth, async (req, res) => {
       acc[row.tag] = (acc[row.tag] || 0) + 1;
       return acc;
     }, {});
-    const weakTags = Object.entries(weakTagScores)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
-      .map(([tag]) => tag);
+    const weakTags = [...new Set([
+      ...requestedWeakTags,
+      ...Object.entries(weakTagScores)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([tag]) => tag),
+    ])].slice(0, 8);
+    requestedWeakTags.forEach((tag) => { weakTagScores[tag] = Math.max(weakTagScores[tag] || 0, 3); });
 
     const tierOrder = ['unranked', 'bronze', 'silver', 'gold', 'platinum', 'diamond'];
     const userTierIdx = tierOrder.indexOf(user.tier || 'unranked');

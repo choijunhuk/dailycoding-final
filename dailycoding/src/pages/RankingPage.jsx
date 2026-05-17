@@ -118,6 +118,7 @@ export default function RankingPage() {
   const [followingSet, setFollowingSet] = useState(new Set());
   const [followPending, setFollowPending] = useState(new Set());
   const [teamRankers, setTeamRankers] = useState([]);
+  const [rewardMeta, setRewardMeta] = useState({});
   const [teamLoading, setTeamLoading] = useState(false);
   const [teamError, setTeamError] = useState(null);
   const limit = 20;
@@ -162,6 +163,11 @@ export default function RankingPage() {
       setFollowingSet(new Set(r.data));
     }).catch(() => {});
   }, [user]);
+  useEffect(() => {
+    api.get('/rewards/all')
+      .then((res) => setRewardMeta(Object.fromEntries((res.data || []).map((item) => [item.code, item]))))
+      .catch(() => setRewardMeta({}));
+  }, []);
 
   useEffect(() => {
     if (mode !== 'season') return;
@@ -703,6 +709,7 @@ export default function RankingPage() {
                   />
                   <div>
                     <div style={{ fontWeight: 600, fontSize: 13, color: isMe ? tm.color : 'var(--text)', display: 'flex', alignItems: 'center', gap: 5 }}>
+                      {rewardMeta[r.equipped_badge || r.equippedBadge]?.icon && <span title={rewardMeta[r.equipped_badge || r.equippedBadge]?.name}>{rewardMeta[r.equipped_badge || r.equippedBadge].icon}</span>}
                       {r.name}
                       {isMe && (
                         <span style={{

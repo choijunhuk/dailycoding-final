@@ -30,8 +30,8 @@ const docker = new Docker(
     : { socketPath: '/var/run/docker.sock' }
 );
 
-export const ALL_LANGS = Object.freeze(['python', 'javascript', 'typescript', 'cpp', 'c', 'java', 'go']);
-const NATIVE_SUPPORTED_LANGS = Object.freeze(['python', 'javascript', 'typescript', 'cpp', 'c', 'java', 'go']);
+export const ALL_LANGS = Object.freeze(['python', 'javascript', 'typescript', 'cpp', 'c', 'java', 'go', 'kotlin']);
+const NATIVE_SUPPORTED_LANGS = Object.freeze(['python', 'javascript', 'typescript', 'cpp', 'c', 'java', 'go', 'kotlin']);
 const NATIVE_RUNTIME_COMMANDS = Object.freeze({
   python: ['python3'],
   javascript: ['node'],
@@ -40,6 +40,7 @@ const NATIVE_RUNTIME_COMMANDS = Object.freeze({
   c: ['gcc'],
   java: ['java', 'javac'],
   go: ['go'],
+  kotlin: ['kotlinc', 'java'],
 });
 const PUBLIC_LANGUAGE_ALIASES = Object.freeze({
   'Python 3': 'python',
@@ -64,6 +65,9 @@ const PUBLIC_LANGUAGE_ALIASES = Object.freeze({
   C99: 'c',
   C: 'c',
   c: 'c',
+  Kotlin: 'kotlin',
+  kotlin: 'kotlin',
+  kt: 'kotlin',
 });
 const CANONICAL_PUBLIC_LANGUAGE_LABELS = Object.freeze({
   python: 'Python 3',
@@ -73,6 +77,7 @@ const CANONICAL_PUBLIC_LANGUAGE_LABELS = Object.freeze({
   java: 'Java 11',
   go: 'Go',
   c: 'C99',
+  kotlin: 'Kotlin',
 });
 
 export function getConfiguredJudgeMode(env = process.env) {
@@ -133,9 +138,10 @@ const NATIVE_DIAGNOSTIC_CACHE_MS = 60_000;
 
 function detectCommandAvailability(command) {
   return new Promise((resolve) => {
-    const proc = spawn('sh', ['-c', `command -v ${command} >/dev/null 2>&1`], {
+    const proc = spawn('which', ['--', command], {
       env: { PATH: '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin' },
       stdio: 'ignore',
+      shell: false,
     });
     proc.on('close', (code) => resolve(code === 0));
     proc.on('error', () => resolve(false));
@@ -234,6 +240,15 @@ const LANG_CONFIG = {
     cmd:     ['./main'],
     compile: ['go', 'build', '-o', 'main', 'main.go'],
     minMemoryMb: 256,
+  },
+  // Custom image required: FROM eclipse-temurin:21-jdk-alpine RUN apk add --no-cache kotlin
+  // Build with: docker build -f Dockerfile.kotlin -t dailycoding-kotlin:latest .
+  kotlin: {
+    image:   'dailycoding-kotlin:latest',
+    file:    'Main.kt',
+    cmd:     ['java', '-Xmx64m', '-Xms16m', '-jar', 'main.jar'],
+    compile: ['kotlinc', 'Main.kt', '-include-runtime', '-d', 'main.jar'],
+    minMemoryMb: 512,
   },
 };
 
@@ -704,6 +719,7 @@ const NATIVE_LANG = {
   c:          { file: 'main.c',    vmKb: 131072,  run: (d) => `"${d}/main"`,                                   compile: (d) => `gcc -std=c99 -O2 -o "${d}/main" "${d}/main.c"` },
   java:       { file: 'Main.java', vmKb: 524288,  run: (d) => `java -Xmx64m -Xms16m -cp "${d}" Main`,         compile: (d) => `javac "${d}/Main.java"` },
   go:         { file: 'main.go',   vmKb: 262144,  run: (d) => `"${d}/main"`,                                   compile: (d) => `go build -o "${d}/main" "${d}/main.go"` },
+  kotlin:     { file: 'Main.kt',   vmKb: 524288,  run: (d) => `java -Xmx64m -Xms16m -jar "${d}/main.jar"`,    compile: (d) => `kotlinc "${d}/Main.kt" -include-runtime -d "${d}/main.jar"` },
 };
 
 function execShell(cmd, stdin, timeoutMs, vmKb = 131072) {

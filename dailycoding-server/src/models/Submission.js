@@ -43,9 +43,10 @@ export const Submission = {
 
   async getWithCode(id) {
     return qOne(`
-      SELECT s.*, p.title AS problem_title
+      SELECT s.*, p.title AS problem_title, COALESCE(u.submissions_public, 1) AS submissions_public
       FROM submissions s
       JOIN problems p ON s.problem_id = p.id
+      JOIN users u ON s.user_id = u.id
       WHERE s.id = ?
     `, [id]);
   },

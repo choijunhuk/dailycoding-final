@@ -187,6 +187,9 @@ export default function BattlePage() {
   const [selectedBattleLanguage, setSelectedBattleLanguage] = useState(user?.defaultLanguage || 'python');
   const [selectedDuration, setSelectedDuration] = useState(BATTLE_SEC);
   const [selectedBattleMode, setSelectedBattleMode] = useState('time');
+  const [spectatorMessages, setSpectatorMessages] = useState([]);
+  const [spectatorMessage, setSpectatorMessage] = useState('');
+  const [reactionBursts, setReactionBursts] = useState([]);
 
   const timerRef       = useRef(null);
   const typingTimerRef = useRef(null);
@@ -420,6 +423,16 @@ export default function BattlePage() {
       clearTimeout(typingTimerRef.current);
       typingTimerRef.current = setTimeout(() => setOpponentTyping(false), 2000);
     });
+    socket.on('battle:spectator_chat', (message) => {
+      setSpectatorMessages((prev) => [...prev.slice(-19), message]);
+    });
+    socket.on('battle:spectator_react', ({ emoji, at }) => {
+      const id = `${emoji}-${at || Date.now()}-${Math.random()}`;
+      setReactionBursts((prev) => [...prev.slice(-8), { id, emoji }]);
+      setTimeout(() => {
+        setReactionBursts((prev) => prev.filter((item) => item.id !== id));
+      }, 1600);
+    });
 
     return () => {
       socket.disconnect();
@@ -427,6 +440,18 @@ export default function BattlePage() {
       setSocketConnected(false);
     };
   }, [fetchRoomSnapshot, isSpectator, lobbyPhase, myTeamId, phase, room?.players, roomId, startTimer, user?.id]);
+
+  const sendSpectatorMessage = () => {
+    const text = spectatorMessage.trim();
+    if (!text || !roomId) return;
+    socketRef.current?.emit('battle:spectator_chat', { roomId, message: text });
+    setSpectatorMessage('');
+  };
+
+  const sendSpectatorReaction = (emoji) => {
+    if (!roomId) return;
+    socketRef.current?.emit('battle:spectator_react', { roomId, emoji });
+  };
 
   // ── 로비 폴링 (초대 대기)
   useEffect(() => {
@@ -1169,6 +1194,41 @@ export default function BattlePage() {
             </>
           )}
         </div>
+
+        {isSpectator && (
+          <div className="bp-spectator-panel">
+            <div className="bp-spectator-reactions">
+              {['🔥','👏','😮','💡','⚡'].map((emoji) => (
+                <button key={emoji} type="button" onClick={() => sendSpectatorReaction(emoji)}>{emoji}</button>
+              ))}
+            </div>
+            <div className="bp-reaction-stage" aria-hidden="true">
+              {reactionBursts.map((item) => <span key={item.id}>{item.emoji}</span>)}
+            </div>
+            <div className="bp-spectator-chat">
+              <div className="bp-spectator-chat-log">
+                {spectatorMessages.length === 0 ? (
+                  <div className="bp-spectator-empty">관전자 채팅이 아직 없습니다.</div>
+                ) : spectatorMessages.map((item, index) => (
+                  <div key={`${item.at}-${index}`} className="bp-spectator-message">
+                    <strong>{item.username || '익명'}</strong>
+                    <span>{item.message}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="bp-spectator-chat-input">
+                <input
+                  value={spectatorMessage}
+                  onChange={(e) => setSpectatorMessage(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') sendSpectatorMessage(); }}
+                  maxLength={100}
+                  placeholder="관전자 응원 메시지"
+                />
+                <button type="button" onClick={sendSpectatorMessage}>전송</button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
