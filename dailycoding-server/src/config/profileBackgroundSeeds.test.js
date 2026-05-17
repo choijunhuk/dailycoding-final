@@ -15,6 +15,6 @@ test('profile background defaults do not expose the old dark duplicate', () => {
     assert.equal(bySlug.get(slug)?.is_default, 0);
   }
 
-  assert.equal(bySlug.get('photo-4')?.image_url, '/backgrounds/background4.svg');
+  assert.equal(bySlug.get('photo-4')?.image_url, '/backgrounds/background4.jpg');
   assert.equal(PROFILE_BACKGROUND_SEEDS.some((item) => item.name === '기본 다크'), false);
 });
