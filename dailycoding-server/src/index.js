@@ -164,7 +164,7 @@ async function seedDefaultProblems() {
            title=VALUES(title), tier=VALUES(tier), difficulty=VALUES(difficulty),
            time_limit=VALUES(time_limit), mem_limit=VALUES(mem_limit),
            description=VALUES(description), input_desc=VALUES(input_desc),
-           output_desc=VALUES(output_desc), hint=VALUES(hint), solution=VALUES(solution), visibility='global', is_premium=VALUES(is_premium)`,
+           output_desc=VALUES(output_desc), hint=VALUES(hint), solution=CASE WHEN VALUES(solution) <> '' THEN VALUES(solution) ELSE solution END, visibility='global', is_premium=VALUES(is_premium)`,
         [prob.id, prob.title, prob.tier, prob.difficulty, prob.timeLimit, prob.memLimit, prob.desc, prob.inputDesc, prob.outputDesc, prob.hint, prob.solution || '', null, now, 'global', prob.isPremium ? 1 : 0, null]
       );
       if (!existed) patchedCount++;

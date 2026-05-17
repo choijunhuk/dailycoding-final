@@ -3,6 +3,30 @@ import { existsSync, readFileSync } from 'fs';
 const serverEnvPath = process.argv[2] || 'dailycoding-server/.env';
 const frontendEnvPath = process.argv[3] || 'dailycoding/.env.production';
 
+const truthy = new Set(['1', 'true', 'yes', 'on']);
+const options = {
+  allowLocalRedis: truthy.has(String(process.env.ALLOW_LOCAL_REDIS || '').toLowerCase()),
+  allowSameOriginFrontend: truthy.has(String(process.env.ALLOW_SAME_ORIGIN_FRONTEND || '').toLowerCase()),
+};
+
+const RUNTIME_OVERRIDE_KEYS = [
+  'NODE_ENV',
+  'PORT',
+  'JUDGE_MODE',
+  'FRONTEND_URL',
+  'ALLOWED_ORIGINS',
+  'REDIS_URL',
+  'STRIPE_SECRET_KEY',
+  'STRIPE_PRO_MONTHLY_ID',
+  'STRIPE_PRO_ANNUAL_ID',
+  'STRIPE_TEAM_MONTHLY_ID',
+  'STRIPE_TEAM_ANNUAL_ID',
+  'STRIPE_PRO_MONTHLY_URL',
+  'STRIPE_PRO_ANNUAL_URL',
+  'STRIPE_TEAM_MONTHLY_URL',
+  'STRIPE_TEAM_ANNUAL_URL',
+];
+
 function parseEnvFile(path) {
   if (!existsSync(path)) return { path, exists: false, values: {} };
   const values = {};
@@ -25,6 +49,14 @@ function parseEnvFile(path) {
   return { path, exists: true, values };
 }
 
+function applyRuntimeOverrides(envFile) {
+  const values = { ...envFile.values };
+  for (const key of RUNTIME_OVERRIDE_KEYS) {
+    if (process.env[key]) values[key] = process.env[key];
+  }
+  return { ...envFile, values };
+}
+
 function isPlaceholder(value) {
   return /your_|change_me|example\.com|랜덤|강한_|운영_|구글_|비밀번호|키/i.test(String(value || ''));
 }
@@ -43,9 +75,13 @@ function requireValue(report, values, key, { minLength = 1, noPlaceholder = true
   if (noPlaceholder && isPlaceholder(value)) report.errors.push(`${key} still looks like a placeholder`);
 }
 
-function checkNoLocalhost(report, values, key) {
+function checkNoLocalhost(report, values, key, { allow = false, reason = '' } = {}) {
   const value = values[key];
   if (value && /localhost|127\.0\.0\.1|0\.0\.0\.0/i.test(value)) {
+    if (allow) {
+      report.warnings.push(`${key} uses localhost${reason ? ` (${reason})` : ''}`);
+      return;
+    }
     report.errors.push(`${key} must not use localhost in production`);
   }
 }
@@ -76,7 +112,10 @@ function checkServerEnv(server) {
   if (!isHttpsUrl(values.FRONTEND_URL)) report.errors.push('FRONTEND_URL must be https in production');
   checkNoLocalhost(report, values, 'FRONTEND_URL');
   checkNoLocalhost(report, values, 'ALLOWED_ORIGINS');
-  checkNoLocalhost(report, values, 'REDIS_URL');
+  checkNoLocalhost(report, values, 'REDIS_URL', {
+    allow: options.allowLocalRedis,
+    reason: 'allowed for single-host Docker compose deployments',
+  });
 
   if (values.JUDGE_MODE !== 'docker') {
     report.errors.push('JUDGE_MODE should be docker for production sandbox isolation');
@@ -95,7 +134,11 @@ function checkServerEnv(server) {
   }
   for (const key of Object.keys(values).filter((name) => name.startsWith('STRIPE_') && name.endsWith('_URL'))) {
     if (/\/test_|buy\.stripe\.com\/test/i.test(values[key])) {
-      report.errors.push(`${key} still points at a test payment link`);
+      if (hasStripeSecret && hasStripePrices) {
+        report.warnings.push(`${key} still points at a test payment link; Checkout Session price ids are configured, but replace the fallback link before relying on it`);
+      } else {
+        report.errors.push(`${key} still points at a test payment link`);
+      }
     }
   }
 
@@ -111,12 +154,20 @@ function checkFrontendEnv(frontend, serverValues) {
   const values = frontend.values;
 
   if (!frontend.exists) {
+    if (options.allowSameOriginFrontend) {
+      report.warnings.push(`missing frontend env file: ${frontend.path}; using same-origin API build`);
+      return report;
+    }
     report.errors.push(`missing frontend env file: ${frontend.path}`);
     return report;
   }
 
-  requireValue(report, values, 'VITE_API_URL');
-  if (!isHttpsUrl(values.VITE_API_URL)) report.errors.push('VITE_API_URL must be https in production');
+  if (!values.VITE_API_URL && options.allowSameOriginFrontend) {
+    report.warnings.push('VITE_API_URL is empty; using same-origin API build');
+  } else if (!isHttpsUrl(values.VITE_API_URL)) {
+    requireValue(report, values, 'VITE_API_URL');
+    report.errors.push('VITE_API_URL must be https in production');
+  }
   checkNoLocalhost(report, values, 'VITE_API_URL');
 
   if (serverValues.ALLOWED_ORIGINS && values.VITE_API_URL) {
@@ -134,7 +185,7 @@ function printReport(label, report) {
   for (const warning of report.warnings) console.warn(`[${label}] WARN ${warning}`);
 }
 
-const server = parseEnvFile(serverEnvPath);
+const server = applyRuntimeOverrides(parseEnvFile(serverEnvPath));
 const frontend = parseEnvFile(frontendEnvPath);
 const serverReport = checkServerEnv(server);
 const frontendReport = checkFrontendEnv(frontend, server.values);
