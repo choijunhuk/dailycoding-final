@@ -60,7 +60,7 @@ INSERT IGNORE INTO problems (
 ),
 (
   91002,
-  '빈칸 채우기: 이진 탐색',
+  '빈칸 채우기: 이진 탐색 심화',
   'fill-blank',
   'python',
   JSON_OBJECT(
