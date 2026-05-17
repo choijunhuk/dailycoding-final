@@ -151,6 +151,7 @@ async function seedDefaultProblems() {
       const existed = existingIds.has(prob.id);
       const contentHash = createHash('md5').update(JSON.stringify({
         tags: prob.tags || [],
+        solution: prob.solution || '',
         examples: prob.examples || [],
         testcases: prob.testcases || [],
       })).digest('hex');
@@ -163,8 +164,8 @@ async function seedDefaultProblems() {
            title=VALUES(title), tier=VALUES(tier), difficulty=VALUES(difficulty),
            time_limit=VALUES(time_limit), mem_limit=VALUES(mem_limit),
            description=VALUES(description), input_desc=VALUES(input_desc),
-           output_desc=VALUES(output_desc), hint=VALUES(hint), visibility='global', is_premium=VALUES(is_premium)`,
-        [prob.id, prob.title, prob.tier, prob.difficulty, prob.timeLimit, prob.memLimit, prob.desc, prob.inputDesc, prob.outputDesc, prob.hint, '', null, now, 'global', prob.isPremium ? 1 : 0, null]
+           output_desc=VALUES(output_desc), hint=VALUES(hint), solution=VALUES(solution), visibility='global', is_premium=VALUES(is_premium)`,
+        [prob.id, prob.title, prob.tier, prob.difficulty, prob.timeLimit, prob.memLimit, prob.desc, prob.inputDesc, prob.outputDesc, prob.hint, prob.solution || '', null, now, 'global', prob.isPremium ? 1 : 0, null]
       );
       if (!existed) patchedCount++;
       const { redis } = await import('./config/redis.js');

@@ -5,7 +5,7 @@ import { auth, adminOnly, requireVerified } from '../middleware/auth.js';
 import { validateBody, problemSchema, voteSchema } from '../middleware/validate.js';
 import { askAI } from '../services/ai.js';
 import redis from '../config/redis.js';
-import { MIN_HIDDEN_TESTCASES } from '../shared/problemCatalog.js';
+import { ALGORITHM_TAG_GROUPS, COMPANY_TAG_PREFIX, COMPANY_TAGS, MIN_HIDDEN_TESTCASES } from '../shared/problemCatalog.js';
 import { errorResponse, internalError } from '../middleware/errorHandler.js';
 import { TroubleshootingProblem } from '../models/TroubleshootingProblem.js';
 import { evaluateTroubleshootingSubmission } from '../services/troubleshootingEvaluation.js';
@@ -293,6 +293,41 @@ router.get('/tags', auth, async (req, res) => {
   }
 });
 
+// GET /api/problems/taxonomy
+router.get('/taxonomy', auth, async (req, res) => {
+  try {
+    const Problem = await getProblemModel();
+    const [allTags, countRows] = await Promise.all([
+      Problem.getAllTags(),
+      query('SELECT tag, COUNT(*) AS count FROM problem_tags GROUP BY tag'),
+    ]);
+    const counts = new Map((countRows || []).map((row) => [row.tag, Number(row.count || 0)]));
+    const algorithmTags = allTags.filter((item) => !String(item).startsWith(COMPANY_TAG_PREFIX));
+    const companyTags = COMPANY_TAGS.map((name) => {
+      const tag = `${COMPANY_TAG_PREFIX}${name}`;
+      return { name, tag, count: counts.get(tag) || 0 };
+    });
+    const topTags = algorithmTags
+      .map((tag) => ({ tag, count: counts.get(tag) || 0 }))
+      .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag, 'ko'))
+      .slice(0, 24);
+
+    res.json({
+      tags: allTags,
+      algorithmTags,
+      companyTags,
+      topTags,
+      groups: ALGORITHM_TAG_GROUPS.map((group) => ({
+        ...group,
+        tags: group.tags.map((tag) => ({ tag, count: counts.get(tag) || 0 })),
+      })),
+    });
+  } catch (err) {
+    console.error('[problems/taxonomy]', err.message);
+    res.json({ tags: [], algorithmTags: [], companyTags: [], topTags: [], groups: [] });
+  }
+});
+
 // GET /api/problems/search
 router.get('/search', auth, async (req, res) => {
   const q = normalizeTextQuery(req.query.q, 100);
@@ -496,7 +531,23 @@ router.get('/:id/editorial', auth, async (req, res) => {
        WHERE pe.problem_id = ?`,
       [problemId]
     );
-    if (!editorial) return errorResponse(res, 404, 'NOT_FOUND', '해설이 없습니다.');
+    let resolvedEditorial = editorial;
+    if (!resolvedEditorial) {
+      const seedProblem = await queryOne('SELECT id, solution, created_at FROM problems WHERE id = ?', [problemId]);
+      if (seedProblem?.solution && String(seedProblem.solution).trim()) {
+        resolvedEditorial = {
+          id: null,
+          problem_id: problemId,
+          content: seedProblem.solution,
+          author_id: null,
+          created_at: seedProblem.created_at,
+          updated_at: seedProblem.created_at,
+          author_username: 'DailyCoding',
+          source: 'seed-solution',
+        };
+      }
+    }
+    if (!resolvedEditorial) return errorResponse(res, 404, 'NOT_FOUND', '해설이 없습니다.');
 
     const requester = await getUserModel();
     const user = await requester.findById(req.user.id);
@@ -507,7 +558,7 @@ router.get('/:id/editorial', auth, async (req, res) => {
     if (!solved && user?.role !== 'admin') {
       return errorResponse(res, 403, 'FORBIDDEN', '문제를 먼저 풀어야 해설을 볼 수 있습니다.');
     }
-    res.json(editorial);
+    res.json(resolvedEditorial);
   } catch (err) {
     console.error('[problems/editorial/get]', err);
     return internalError(res);

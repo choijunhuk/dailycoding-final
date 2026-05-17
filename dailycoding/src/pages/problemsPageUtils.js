@@ -1,4 +1,5 @@
-export const FALLBACK_TAGS = ['수학', '다이나믹 프로그래밍', '그래프 이론', '문자열', '구현', '소수', 'BFS', 'DFS', '입출력', '탐욕', '정렬', '이분 탐색'];
+export const COMPANY_TAG_PREFIX = '기업:';
+export const FALLBACK_TAGS = ['수학', '다이나믹 프로그래밍', '그래프 이론', '문자열', '구현', '소수', 'BFS', 'DFS', '입출력', '그리디', '정렬', '이분 탐색'];
 export const VALID_SORTS = new Set(['id', 'newest', 'difficulty', '-difficulty', 'solved']);
 export const VALID_STATUS = new Set(['all', 'solved', 'unsolved', 'bookmarked']);
 export const VALID_VIEWS = new Set(['table', 'card']);
@@ -41,4 +42,27 @@ export function sortProblems(list, sort) {
 
 export function getProblemTypeMeta(problemType = 'coding') {
   return PROBLEM_TYPE_META[problemType] || PROBLEM_TYPE_META.coding;
+}
+
+
+export function isCompanyTag(tag) {
+  return typeof tag === 'string' && tag.startsWith(COMPANY_TAG_PREFIX);
+}
+
+export function getTagLabel(tag) {
+  return isCompanyTag(tag) ? tag.slice(COMPANY_TAG_PREFIX.length) : tag;
+}
+
+export function splitDiscoveryTags(tags = []) {
+  const unique = [...new Set((tags || []).filter(Boolean))];
+  const companyTags = unique.filter(isCompanyTag).sort((a, b) => getTagLabel(a).localeCompare(getTagLabel(b), 'ko'));
+  const algorithmTags = unique.filter((tag) => !isCompanyTag(tag)).sort((a, b) => a.localeCompare(b, 'ko'));
+  return { algorithmTags, companyTags };
+}
+
+export function getAcceptanceRate(problem) {
+  if (problem?.acceptanceRate != null) return Number(problem.acceptanceRate);
+  const solved = Number(problem?.solved || problem?.solved_count || 0);
+  const submissions = Number(problem?.submissions || problem?.submit_count || 0);
+  return submissions > 0 ? Math.round((solved / submissions) * 100) : null;
 }

@@ -46,6 +46,10 @@ function normalizeProblem(p) {
     isSolved:    p.isSolved     ?? false,
     isBookmarked:p.isBookmarked ?? false,
     createdAt:   p.created_at   ?? p.createdAt,
+    hasEditorial: Boolean(p.has_editorial ?? p.hasEditorial ?? false),
+    acceptanceRate: Number(p.submit_count ?? p.submissions ?? 0) > 0
+      ? Math.round((Number(p.solved_count ?? p.solved ?? 0) / Number(p.submit_count ?? p.submissions ?? 0)) * 100)
+      : null,
   };
 }
 
@@ -102,6 +106,8 @@ export const Problem = {
                p.tier, p.difficulty, p.time_limit, p.mem_limit,
                p.visibility, p.is_premium, p.contest_id,
                (SELECT COUNT(*) FROM problem_testcases ptc WHERE ptc.problem_id = p.id) AS hidden_count,
+               (EXISTS(SELECT 1 FROM problem_editorials pe WHERE pe.problem_id = p.id)
+                OR COALESCE(NULLIF(TRIM(p.solution), ''), '') <> '') AS has_editorial,
                p.solved_count, p.submit_count, p.author_id, p.created_at,
                GROUP_CONCAT(DISTINCT pt.tag ORDER BY pt.tag) AS tags
         FROM problems p

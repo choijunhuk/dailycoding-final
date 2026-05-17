@@ -882,6 +882,7 @@ function makeProblem({
   inputDesc,
   outputDesc,
   hint,
+  solution = '',
   exampleInputs,
   hiddenInputs,
   solve,
@@ -900,6 +901,7 @@ function makeProblem({
     inputDesc,
     outputDesc,
     hint,
+    solution,
     isPremium: ['gold', 'platinum', 'diamond'].includes(tier),
     examples: exampleInputs.map((input) => ({ input, output: normalizeOutput(solve(input)) })),
     testcases: buildHiddenTestcases(hiddenInputs, solve),
@@ -986,6 +988,267 @@ const stringProblem = (config) => makeProblem({
   solve: config.solve,
   ...config,
 })
+
+
+export const COMPANY_TAG_PREFIX = '기업:'
+export const COMPANY_TAGS = ['카카오', '네이버', '삼성', '라인', '쿠팡', '토스', '당근', '우아한형제들', '현대오토에버', 'NHN']
+export const ALGORITHM_TAG_GROUPS = [
+  { label: '기초', tags: ['입출력', '구현', '수학', '문자열', '정렬'] },
+  { label: '자료구조', tags: ['자료 구조', '해시', '스택', '큐', '우선순위 큐', '세그먼트 트리'] },
+  { label: '알고리즘', tags: ['그리디', '이분 탐색', '투 포인터', '누적 합', '다이나믹 프로그래밍'] },
+  { label: '그래프', tags: ['그래프 이론', 'BFS', 'DFS', '최단 경로', '트리', '유니온-파인드'] },
+  { label: '고급', tags: ['비트마스크', '백트래킹', 'SCC', 'LCA', 'FFT'] },
+]
+
+export function isCompanyTag(tag) {
+  return typeof tag === 'string' && tag.startsWith(COMPANY_TAG_PREFIX)
+}
+
+function tierFromDifficulty(difficulty) {
+  if (difficulty <= 2) return 'bronze'
+  if (difficulty <= 4) return 'silver'
+  if (difficulty <= 6) return 'gold'
+  if (difficulty <= 8) return 'platinum'
+  return 'diamond'
+}
+
+function solveExpansionPattern(pattern, input) {
+  const lines = String(input).trim().split('\n')
+  const nums = ints(input)
+
+  if (pattern === 'range-sum') {
+    const [n, left, right] = nums
+    const arr = nums.slice(3, 3 + n)
+    return String(arr.slice(left - 1, right).reduce((sum, value) => sum + value, 0))
+  }
+
+  if (pattern === 'count-greater') {
+    const [n, target] = nums
+    const arr = nums.slice(2, 2 + n)
+    return String(arr.filter((value) => value > target).length)
+  }
+
+  if (pattern === 'pair-target') {
+    const [n, target] = nums
+    const arr = nums.slice(2, 2 + n)
+    const seen = new Set()
+    for (const value of arr) {
+      if (seen.has(target - value)) return 'YES'
+      seen.add(value)
+    }
+    return 'NO'
+  }
+
+  if (pattern === 'lower-bound-count') {
+    const [n, target] = nums
+    const arr = nums.slice(2, 2 + n)
+    let low = 0
+    let high = arr.length
+    while (low < high) {
+      const mid = Math.floor((low + high) / 2)
+      if (arr[mid] < target) low = mid + 1
+      else high = mid
+    }
+    return String(low)
+  }
+
+  if (pattern === 'grid-reach') {
+    const [n, m] = lines[0].trim().split(/\s+/).map(Number)
+    const grid = lines.slice(1, 1 + n).map((line) => line.trim().replace(/\s+/g, '').split('').map(Number))
+    if (!grid[0] || grid[0][0] !== 1) return '0'
+    const queue = [[0, 0]]
+    const visited = Array.from({ length: n }, () => Array(m).fill(false))
+    visited[0][0] = true
+    const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]]
+    for (let head = 0; head < queue.length; head += 1) {
+      const [x, y] = queue[head]
+      for (const [dx, dy] of dirs) {
+        const nx = x + dx
+        const ny = y + dy
+        if (nx < 0 || ny < 0 || nx >= n || ny >= m) continue
+        if (visited[nx][ny] || grid[nx][ny] !== 1) continue
+        visited[nx][ny] = true
+        queue.push([nx, ny])
+      }
+    }
+    return String(queue.length)
+  }
+
+  if (pattern === 'fibonacci-mod') {
+    const [n, mod] = nums
+    let a = 0
+    let b = 1 % mod
+    for (let i = 0; i < n; i += 1) {
+      const next = (a + b) % mod
+      a = b
+      b = next
+    }
+    return String(a)
+  }
+
+  if (pattern === 'string-count') {
+    const textLine = lines[0] || ''
+    const target = lines[1] || ''
+    if (!target) return '0'
+    let count = 0
+    for (let index = 0; index + target.length <= textLine.length; index += 1) {
+      if (textLine.slice(index, index + target.length) === target) count += 1
+    }
+    return String(count)
+  }
+
+  if (pattern === 'next-greater') {
+    const n = Number(lines[0])
+    const arr = lines[1].trim().split(/\s+/).map(Number).slice(0, n)
+    const answer = Array(n).fill(-1)
+    const stack = []
+    for (let index = 0; index < n; index += 1) {
+      while (stack.length && arr[stack[stack.length - 1]] < arr[index]) {
+        answer[stack.pop()] = arr[index]
+      }
+      stack.push(index)
+    }
+    return answer.join(' ')
+  }
+
+  if (pattern === 'interval-merge') {
+    const n = Number(lines[0])
+    const intervals = lines.slice(1, 1 + n).map((line) => line.trim().split(/\s+/).map(Number)).sort((a, b) => a[0] - b[0] || a[1] - b[1])
+    const merged = []
+    for (const [start, end] of intervals) {
+      const last = merged[merged.length - 1]
+      if (!last || last[1] < start) merged.push([start, end])
+      else last[1] = Math.max(last[1], end)
+    }
+    return String(merged.length)
+  }
+
+  if (pattern === 'knapsack') {
+    const [n, capacity] = lines[0].trim().split(/\s+/).map(Number)
+    const dp = Array(capacity + 1).fill(0)
+    for (let line = 1; line <= n; line += 1) {
+      const [weight, value] = lines[line].trim().split(/\s+/).map(Number)
+      for (let cap = capacity; cap >= weight; cap -= 1) {
+        dp[cap] = Math.max(dp[cap], dp[cap - weight] + value)
+      }
+    }
+    return String(dp[capacity])
+  }
+
+  return ''
+}
+
+const EXPANSION_LEVELS = [
+  { label: '입문', difficultyOffset: 0 },
+  { label: '기본', difficultyOffset: 0 },
+  { label: '실전 A', difficultyOffset: 1 },
+  { label: '실전 B', difficultyOffset: 1 },
+  { label: '기업 기출형', difficultyOffset: 2 },
+  { label: '타임어택', difficultyOffset: 2 },
+  { label: '응용', difficultyOffset: 3 },
+  { label: '심화', difficultyOffset: 3 },
+  { label: '챌린지', difficultyOffset: 4 },
+  { label: '마스터', difficultyOffset: 4 },
+]
+
+const EXPANSION_PATTERNS = [
+  {
+    key: 'range-sum', title: '구간 합 질의', baseDifficulty: 2, tags: ['누적 합', '배열'],
+    inputDesc: '첫째 줄에 N L R, 둘째 줄에 N개의 정수가 주어진다. 1-indexed 구간 [L, R]의 합을 구한다.',
+    outputDesc: '구간 합을 출력한다.', hint: 'prefix[i]를 i번째까지의 합으로 두면 prefix[R] - prefix[L-1]이 답입니다.',
+    desc: '주어진 배열에서 한 구간의 합을 빠르게 계산하는 기본 누적 합 문제입니다.',
+    examples: ['5 2 4\n1 2 3 4 5'],
+    hiddenInputs: ['5 1 5\n1 2 3 4 5','4 2 3\n10 20 30 40','6 3 6\n5 1 9 2 7 3','1 1 1\n42','5 4 4\n8 6 7 5 3','7 2 6\n1 1 2 3 5 8 13','3 1 2\n-1 -2 -3','6 2 5\n4 4 4 4 4 4','5 3 5\n9 1 2 8 7','8 1 4\n2 7 1 8 2 8 1 8'],
+  },
+  {
+    key: 'count-greater', title: '기준보다 큰 수', baseDifficulty: 1, tags: ['구현', '배열'],
+    inputDesc: '첫째 줄에 N X, 둘째 줄에 N개의 정수가 주어진다.', outputDesc: 'X보다 큰 원소의 개수를 출력한다.',
+    hint: '배열을 한 번 순회하며 조건을 만족하는 원소만 세면 됩니다.', desc: '조건 필터링과 카운팅을 연습하는 기초 구현 문제입니다.',
+    examples: ['5 3\n1 4 2 5 3'],
+    hiddenInputs: ['5 0\n1 2 3 4 5','4 10\n10 20 30 40','3 -1\n-3 -1 0','1 5\n5','6 7\n7 8 9 1 2 3','5 100\n99 100 101 102 98','4 4\n4 4 4 4','6 -5\n-10 -4 -3 -8 0 1','5 2\n2 3 2 4 1','8 6\n1 6 7 8 6 5 9 10'],
+  },
+  {
+    key: 'pair-target', title: '두 수 합 찾기', baseDifficulty: 3, tags: ['투 포인터', '해시'],
+    inputDesc: '첫째 줄에 N X, 둘째 줄에 N개의 정수가 주어진다.', outputDesc: '서로 다른 두 원소의 합이 X가 되면 YES, 아니면 NO를 출력한다.',
+    hint: '정렬 후 양끝 포인터를 움직이거나, 해시 집합으로 보수를 찾을 수 있습니다.', desc: '목표 합을 만드는 두 원소 존재 여부를 판별합니다.',
+    examples: ['5 9\n1 2 4 7 8'],
+    hiddenInputs: ['5 5\n1 2 3 4 5','4 100\n10 20 30 40','6 10\n1 9 2 8 3 7','3 4\n2 2 2','5 1\n-1 2 3 4 5','6 12\n6 6 1 2 3 4','4 0\n-3 1 3 5','7 14\n2 4 6 8 10 12 14','5 8\n1 1 2 6 7','6 15\n1 5 9 10 6 4'],
+  },
+  {
+    key: 'lower-bound-count', title: '작은 원소 개수', baseDifficulty: 3, tags: ['이분 탐색', '정렬'],
+    inputDesc: '첫째 줄에 N X, 둘째 줄에 오름차순으로 정렬된 N개의 정수가 주어진다.', outputDesc: 'X보다 작은 원소의 개수를 출력한다.',
+    hint: 'lower_bound(X)의 인덱스가 X보다 작은 원소의 개수입니다.', desc: '정렬 배열에서 이분 탐색의 경계 인덱스를 찾습니다.',
+    examples: ['5 4\n1 2 4 4 7'],
+    hiddenInputs: ['5 3\n1 2 3 4 5','6 8\n1 3 5 7 9 11','7 20\n2 4 6 8 10 12 20','4 7\n1 4 7 9','5 1\n1 2 4 8 16','5 15\n3 6 9 12 15','6 13\n2 5 7 11 13 17','5 10\n2 4 6 8 10','6 14\n1 2 4 8 16 32','7 18\n3 6 9 12 15 18 21'],
+  },
+  {
+    key: 'grid-reach', title: '격자 도달 영역', baseDifficulty: 4, tags: ['그래프 이론', 'BFS'],
+    inputDesc: '첫째 줄에 N M, 이후 N줄에 0과 1로 이루어진 격자가 주어진다. (0,0)에서 1인 칸만 이동 가능하다.', outputDesc: '시작 칸에서 도달 가능한 1의 개수를 출력한다.',
+    hint: 'BFS/DFS로 방문한 칸을 다시 방문하지 않도록 표시하세요.', desc: '격자 그래프에서 연결된 영역의 크기를 구합니다.',
+    examples: ['3 3\n111\n010\n111'],
+    hiddenInputs: ['1 1\n1','1 1\n0','3 3\n111\n010\n111','4 4\n1000\n1100\n0111\n0001','2 3\n111\n111','3 4\n1001\n1101\n0111','4 5\n11000\n11011\n00101\n00111','3 5\n11111\n00001\n11111','5 3\n111\n101\n111\n001\n111','4 4\n0000\n1111\n1111\n1111'],
+  },
+  {
+    key: 'fibonacci-mod', title: '피보나치 나머지', baseDifficulty: 2, tags: ['다이나믹 프로그래밍', '수학'],
+    inputDesc: '첫째 줄에 N M이 주어진다.', outputDesc: 'N번째 피보나치 수를 M으로 나눈 값을 출력한다.',
+    hint: '값이 커지지 않도록 매 단계에서 M으로 나눈 나머지만 저장하세요.', desc: '기본 DP를 모듈러 연산과 함께 연습합니다.',
+    examples: ['10 1000'],
+    hiddenInputs: ['1 10','2 10','5 100','10 1000','20 10007','30 100000','50 12345','7 3','15 97','25 1009'],
+  },
+  {
+    key: 'string-count', title: '문자열 패턴 세기', baseDifficulty: 3, tags: ['문자열', '구현'],
+    inputDesc: '첫째 줄에 텍스트, 둘째 줄에 패턴 문자열이 주어진다.', outputDesc: '겹치는 경우를 포함해 패턴 등장 횟수를 출력한다.',
+    hint: '각 시작 위치에서 패턴 길이만큼 잘라 비교하면 됩니다. 더 빠른 풀이로 KMP도 가능합니다.', desc: '문자열 탐색의 기본 동작을 직접 구현합니다.',
+    examples: ['ababa\naba'],
+    hiddenInputs: ['aaaaa\naa','abcabcabc\nabc','dailycoding\ncoding','mississippi\nissi','banana\nana','abcdef\ngh','levellevel\nlevel','abababab\nabab','xyzxyz\nxyz','aaaa\na'],
+  },
+  {
+    key: 'next-greater', title: '오큰수', baseDifficulty: 5, tags: ['스택', '자료 구조'],
+    inputDesc: '첫째 줄에 N, 둘째 줄에 N개의 정수가 주어진다.', outputDesc: '각 위치의 오른쪽에서 처음 만나는 더 큰 수를 공백으로 출력한다. 없으면 -1.',
+    hint: '아직 답을 찾지 못한 인덱스를 스택에 보관하고, 더 큰 수가 나오면 답을 채웁니다.', desc: '단조 스택으로 오른쪽의 다음 큰 원소를 찾습니다.',
+    examples: ['4\n3 5 2 7'],
+    hiddenInputs: ['5\n1 2 3 4 5','5\n5 4 3 2 1','6\n2 1 5 3 6 4','4\n1 1 1 1','7\n9 1 5 3 6 2 8','3\n2 3 1','6\n4 4 5 1 2 6','5\n10 9 2 5 3','8\n1 3 2 4 3 5 4 6','6\n7 7 7 8 7 9'],
+  },
+  {
+    key: 'interval-merge', title: '겹치는 구간 병합', baseDifficulty: 4, tags: ['정렬', '그리디'],
+    inputDesc: '첫째 줄에 N, 이후 N줄에 구간 l r이 주어진다.', outputDesc: '겹치는 구간을 모두 병합했을 때 남는 구간 개수를 출력한다.',
+    hint: '시작점 기준으로 정렬한 뒤 현재 병합 구간의 끝을 갱신하세요.', desc: '정렬 후 선형 스캔으로 겹치는 구간을 합칩니다.',
+    examples: ['4\n1 3\n2 4\n6 7\n7 9'],
+    hiddenInputs: ['5\n1 4\n2 3\n3 5\n0 7\n5 9','4\n1 2\n2 3\n3 4\n4 5','6\n1 10\n2 3\n3 4\n4 5\n6 7\n8 9','5\n0 1\n1 2\n1 3\n2 4\n3 5','4\n3 5\n0 6\n5 7\n8 9','5\n1 8\n2 4\n4 6\n6 8\n8 10','6\n1 2\n2 5\n4 7\n6 9\n8 10\n9 11','5\n0 3\n3 6\n6 9\n2 4\n4 8','4\n5 6\n1 2\n2 3\n3 4','5\n2 3\n3 5\n5 7\n7 8\n1 9'],
+  },
+  {
+    key: 'knapsack', title: '0/1 배낭', baseDifficulty: 5, tags: ['다이나믹 프로그래밍'],
+    inputDesc: '첫째 줄에 N W, 이후 N줄에 물건의 무게와 가치가 주어진다.', outputDesc: '담을 수 있는 최대 가치를 출력한다.',
+    hint: '용량을 큰 값에서 작은 값으로 순회해야 같은 물건을 두 번 선택하지 않습니다.', desc: '제한 용량 안에서 가치 합을 최대화하는 대표 DP 문제입니다.',
+    examples: ['4 7\n6 13\n4 8\n3 6\n5 12'],
+    hiddenInputs: ['3 10\n5 10\n4 40\n6 30','5 8\n3 4\n4 5\n5 10\n2 3\n1 2','4 5\n2 3\n1 2\n3 4\n2 2','3 9\n3 8\n4 7\n5 12','5 10\n6 13\n4 8\n3 6\n5 12\n2 4','4 12\n7 15\n5 10\n3 6\n4 7','3 6\n4 10\n2 4\n3 7','5 9\n2 3\n2 4\n4 8\n5 8\n3 5','4 11\n5 7\n6 9\n4 6\n3 5','1 3\n4 10'],
+  },
+]
+
+const PRACTICE_EXPANSION_PROBLEMS = EXPANSION_PATTERNS.flatMap((pattern, patternIndex) => (
+  EXPANSION_LEVELS.map((level, levelIndex) => {
+    const difficulty = Math.min(9, pattern.baseDifficulty + level.difficultyOffset)
+    const company = COMPANY_TAGS[(patternIndex + levelIndex) % COMPANY_TAGS.length]
+    const title = `${pattern.title} - ${level.label}`
+    return makeProblem({
+      id: 8001 + patternIndex * EXPANSION_LEVELS.length + levelIndex,
+      title,
+      tier: tierFromDifficulty(difficulty),
+      tags: [...new Set([...pattern.tags, `${COMPANY_TAG_PREFIX}${company}`, '학습팩'])],
+      difficulty,
+      timeLimit: difficulty >= 7 ? 2 : 1,
+      memLimit: difficulty >= 7 ? 256 : 128,
+      desc: `${pattern.desc}\n\n${company}·국내 코딩테스트에서 자주 등장하는 형태로 재구성한 ${level.label} 난이도 연습 문제입니다.`,
+      inputDesc: pattern.inputDesc,
+      outputDesc: pattern.outputDesc,
+      hint: pattern.hint,
+      solution: `공식 해설: ${pattern.hint}\n\n핵심 태그: ${pattern.tags.join(', ')}. 입력을 문제 조건대로 파싱한 뒤 불필요한 중복 순회를 줄이는 것이 포인트입니다.`,
+      exampleInputs: pattern.examples,
+      hiddenInputs: pattern.hiddenInputs,
+      solve: (input) => solveExpansionPattern(pattern.key, input),
+    })
+  })
+))
 
 export const PROBLEMS = [
   pairProblem({ id:1001, title:'A+B', tier:'bronze', tags:['수학','입출력'], difficulty:1, desc:'두 정수 A와 B를 입력받은 다음, A+B를 출력하는 프로그램을 작성하시오.', outputDesc:'첫째 줄에 A+B를 출력한다.', hint:'두 수를 더하면 됩니다.', examples:['1 2','100 200'], solve:(input) => { const [a,b]=ints(input); return String(a+b) } }),
@@ -1255,6 +1518,7 @@ export const PROBLEMS = [
   makeProblem({ id:5017, title:'Treap 구현', tier:'diamond', tags:['자료 구조','트립'], difficulty:9, timeLimit:1, memLimit:256, desc:'Treap을 이용해 수열에 원소 삽입, 삭제, k번째 원소 조회를 처리하시오.', inputDesc:'첫째 줄에 Q, 이후 Q줄에 명령이 주어진다. I x: x 삽입, D x: x 삭제, K k: k번째 원소.', outputDesc:'K 명령 결과를 줄마다 출력한다.', hint:'각 노드에 랜덤 우선순위와 서브트리 크기를 저장합니다. split/merge 연산으로 삽입/삭제를 구현합니다.', exampleInputs:['7\nI 3\nI 1\nI 4\nI 1\nI 5\nK 3\nK 5'], hiddenInputs:['4\nI 1\nI 2\nI 3\nK 2','5\nI 5\nI 3\nI 7\nD 3\nK 2','3\nI 10\nK 1\nD 10','6\nI 2\nI 4\nI 6\nK 1\nK 2\nK 3'], solve:(input) => { const lines=input.trim().split('\n'); const q=Number(lines[0]); const data=[]; for(let i=1;i<=q;i++){ const [cmd,arg]=lines[i].split(' '); if(cmd==='I') data.push(Number(arg)); else if(cmd==='D'){ const idx=data.indexOf(Number(arg)); if(idx!==-1) data.splice(idx,1); } else{ data.sort((a,b)=>a-b); return data.sort((a,b)=>a-b),data[Number(arg)-1]; } } const res=[]; for(let i=1;i<=q;i++){ const [cmd,arg]=lines[i].split(' '); if(cmd==='I') data.push(Number(arg)); else if(cmd==='D'){ const idx=data.indexOf(Number(arg)); if(idx!==-1) data.splice(idx,1); } else{ const sorted=[...data].sort((a,b)=>a-b); res.push(sorted[Number(arg)-1]); } } return res.join('\n'); } }),
   makeProblem({ id:5018, title:'FFT - 다항식 곱셈', tier:'diamond', tags:['수학','FFT'], difficulty:9, timeLimit:2, memLimit:512, desc:'두 다항식 A, B의 곱 A×B의 계수를 출력하시오.', inputDesc:'첫째 줄에 두 다항식 A, B의 차수 N M, 둘째 줄에 A의 계수 (낮은 차수부터), 셋째 줄에 B의 계수.', outputDesc:'A×B의 계수를 낮은 차수부터 출력한다.', hint:'FFT 없이도 N,M ≤ 1000이면 O(NM) 단순 곱셈으로 충분합니다.', exampleInputs:['2 2\n1 2 1\n1 -2 1'], hiddenInputs:['1 1\n1 1\n1 1','0 0\n3\n5','2 1\n1 0 1\n1 1','3 2\n1 2 3 4\n1 2 3','1 1\n1 -1\n1 1'], solve:(input) => { const lines=input.trim().split('\n'); const [n,m]=lines[0].split(' ').map(Number); const a=lines[1].split(' ').map(Number); const b=lines[2].split(' ').map(Number); const res=Array(n+m+1).fill(0); for(let i=0;i<=n;i++) for(let j=0;j<=m;j++) res[i+j]+=a[i]*b[j]; return res.join(' '); } }),
   makeProblem({ id:5019, title:'최적 이진 탐색 트리', tier:'diamond', tags:['다이나믹 프로그래밍'], difficulty:9, timeLimit:1, memLimit:256, desc:'N개의 키와 각 키의 탐색 빈도가 주어질 때 최적 이진 탐색 트리의 최소 탐색 비용을 구하시오.', inputDesc:'첫째 줄에 N, 둘째 줄에 N개의 빈도가 주어진다.', outputDesc:'최소 탐색 비용을 출력한다.', hint:'dp[i][j] = 키 i부터 j까지의 최적 BST 비용. 루트 k를 변화시키며 dp[i][k-1]+dp[k+1][j]+sum(freq[i..j]) 최솟값.', exampleInputs:['4\n3 3 1 1'], hiddenInputs:['1\n5','2\n3 5','3\n1 2 3','4\n1 1 1 1','5\n2 4 6 8 10','3\n10 1 1','2\n1 100','4\n5 5 5 5'], solve:(input) => { const lines=input.trim().split('\n'); const n=Number(lines[0]); const freq=lines[1].split(' ').map(Number); const pre=[0]; for(let i=0;i<n;i++) pre.push(pre[i]+freq[i]); const sum=(i,j)=>pre[j+1]-pre[i]; const INF=1e15; const dp=Array.from({length:n+1},()=>Array(n+1).fill(INF)); for(let i=0;i<n;i++) dp[i][i]=freq[i]; for(let len=2;len<=n;len++) for(let i=0;i+len-1<n;i++){ const j=i+len-1; dp[i][j]=INF; const s=sum(i,j); for(let k=i;k<=j;k++){ const left=k>i?dp[i][k-1]:0; const right=k<j?dp[k+1][j]:0; const val=left+right+s; if(val<dp[i][j]) dp[i][j]=val; } } return String(dp[0][n-1]); } }),
+  ...PRACTICE_EXPANSION_PROBLEMS,
   makeProblem({ id:5020, title:'오프라인 LCA + 쿼리', tier:'diamond', tags:['트리','LCA','오일러 투어'], difficulty:9, timeLimit:1, memLimit:256, desc:'N개 노드 트리에서 Q개의 두 노드 쌍 LCA를 구하시오. Tarjan의 오프라인 LCA 알고리즘을 사용하시오.', inputDesc:'첫째 줄에 N Q, 이후 N-1줄에 간선, 이후 Q줄에 u v.', outputDesc:'각 쿼리의 LCA를 줄마다 출력한다.', hint:'DFS 중 방문 완료 노드는 조상 방향으로 union. 쿼리 (u,v) 처리 시 v가 이미 방문됐으면 find(v)가 LCA.', exampleInputs:['7 3\n1 2\n1 3\n2 4\n2 5\n3 6\n3 7\n4 5\n4 6\n3 4'], hiddenInputs:['5 2\n1 2\n1 3\n2 4\n2 5\n4 5\n3 4','4 3\n1 2\n2 3\n3 4\n1 4\n2 4\n1 3','3 2\n1 2\n1 3\n2 3\n1 2'], solve:(input) => { const lines=input.trim().split('\n'); const [n,q]=lines[0].split(' ').map(Number); const adj=Array.from({length:n+1},()=>[]); for(let i=1;i<n;i++){ const [a,b]=lines[i].split(' ').map(Number); adj[a].push(b); adj[b].push(a); } const queries=Array.from({length:n+1},()=>[]); const ans=Array(q); for(let i=0;i<q;i++){ const [u,v]=lines[n+i].split(' ').map(Number); queries[u].push([v,i]); queries[v].push([u,i]); } const par=[...Array(n+1).keys()]; const find=(x)=>par[x]===x?x:par[x]=find(par[x]); const vis=Array(n+1).fill(false); const anc=Array(n+1).fill(0); for(let i=1;i<=n;i++) anc[i]=i; const dfs=(u,p)=>{ vis[u]=true; for(const v of adj[u]){ if(v===p) continue; dfs(v,u); par[find(v)]=find(u); anc[find(u)]=u; } for(const [v,qi] of queries[u]) if(vis[v]) ans[qi]=anc[find(v)]; }; dfs(1,-1); return ans.join('\n'); } }),
 ]
 

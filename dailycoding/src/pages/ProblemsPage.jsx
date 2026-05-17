@@ -10,10 +10,15 @@ import api from '../api.js'
 import { Bookmark, CheckCircle2, Filter, Grid, List, Search, Share2, Star, Target, X } from 'lucide-react'
 import {
   FALLBACK_TAGS,
+  getAcceptanceRate,
   getStoredView,
+  getTagLabel,
+  isCompanyTag,
+
   parsePositiveInt,
   PROBLEM_TYPE_META,
   sortProblems,
+  splitDiscoveryTags,
   VALID_SORTS,
   VALID_STATUS,
   VALID_VIEWS,
@@ -55,6 +60,7 @@ export default function ProblemsPage() {
   const [suggest, setSuggest] = useState([])
   const [showSug, setShowSug] = useState(false)
   const [availableTags, setAvailableTags] = useState(FALLBACK_TAGS)
+  const [tagTaxonomy, setTagTaxonomy] = useState({ topTags: [], companyTags: [], groups: [] })
   const [tagLoading, setTagLoading] = useState(true)
   const [loading, setLoading] = useState(true)
   const [requestError, setRequestError] = useState('')
@@ -97,14 +103,23 @@ export default function ProblemsPage() {
   useEffect(() => {
     let ignore = false
     setTagLoading(true)
-    api.get('/problems/tags')
+    api.get('/problems/taxonomy')
       .then(res => {
         if (ignore) return
-        const tags = Array.isArray(res.data) && res.data.length > 0 ? res.data : FALLBACK_TAGS
+        const payload = res.data || {}
+        const tags = Array.isArray(payload.tags) && payload.tags.length > 0 ? payload.tags : FALLBACK_TAGS
         setAvailableTags(tags)
+        setTagTaxonomy({
+          topTags: Array.isArray(payload.topTags) ? payload.topTags : [],
+          companyTags: Array.isArray(payload.companyTags) ? payload.companyTags : [],
+          groups: Array.isArray(payload.groups) ? payload.groups : [],
+        })
       })
       .catch(() => {
-        if (!ignore) setAvailableTags(FALLBACK_TAGS)
+        if (!ignore) {
+          setAvailableTags(FALLBACK_TAGS)
+          setTagTaxonomy({ topTags: [], companyTags: [], groups: [] })
+        }
       })
       .finally(() => {
         if (!ignore) setTagLoading(false)
@@ -247,6 +262,21 @@ export default function ProblemsPage() {
     }))
   }, [bookmarks, effectiveList.items, solved])
 
+  const { algorithmTags, companyTags } = useMemo(() => splitDiscoveryTags(availableTags), [availableTags])
+  const topDiscoveryTags = useMemo(() => {
+    const fromServer = (tagTaxonomy.topTags || [])
+      .map((item) => (typeof item === 'string' ? { tag: item, count: 0 } : item))
+      .filter((item) => item?.tag && !isCompanyTag(item.tag))
+      .slice(0, 18)
+    if (fromServer.length > 0) return fromServer
+    return algorithmTags.slice(0, 18).map((item) => ({ tag: item, count: 0 }))
+  }, [algorithmTags, tagTaxonomy.topTags])
+  const companyDiscoveryTags = useMemo(() => {
+    const fromServer = (tagTaxonomy.companyTags || []).filter((item) => item?.tag)
+    if (fromServer.length > 0) return fromServer
+    return companyTags.map((item) => ({ tag: item, name: getTagLabel(item), count: 0 }))
+  }, [companyTags, tagTaxonomy.companyTags])
+
   const totalPages = Math.max(1, effectiveList.totalPages || 1)
   const safePage = Math.min(effectiveList.page || page, totalPages)
   const solvedCount = Object.keys(solved).length
@@ -259,7 +289,7 @@ export default function ProblemsPage() {
     search ? { key: 'search', label: `${t('chipSearch')}${search}` } : null,
     tier !== 'all' ? { key: 'tier', label: `${t('chipTier')}${TIERS[tier]?.label || tier}` } : null,
     problemType !== 'all' ? { key: 'problemType', label: `${t('chipType')}${getTypeLabel(problemType)}` } : null,
-    tag !== 'all' ? { key: 'tag', label: `${t('chipTag')}${tag}` } : null,
+    tag !== 'all' ? { key: 'tag', label: `${isCompanyTag(tag) ? '기업: ' : t('chipTag')}${getTagLabel(tag)}` } : null,
     status !== 'all' ? { key: 'status', label: `${t('chipStatus')}${status}` } : null,
     sort !== 'id' ? { key: 'sort', label: `${t('chipSort')}${sort}` } : null,
   ].filter(Boolean)
@@ -617,7 +647,12 @@ export default function ProblemsPage() {
             color: 'var(--text)', padding: '8px 12px', fontSize: 13, fontFamily: 'inherit', outline: 'none',
           }}>
             <option value="all">{tagLoading ? t('loadingTags') : t('allTags')}</option>
-            {availableTags.map(item => <option key={item} value={item}>{item}</option>)}
+            {algorithmTags.length > 0 && <optgroup label="알고리즘 태그">
+              {algorithmTags.map(item => <option key={item} value={item}>{item}</option>)}
+            </optgroup>}
+            {companyTags.length > 0 && <optgroup label="기업 기출 태그">
+              {companyTags.map(item => <option key={item} value={item}>{getTagLabel(item)}</option>)}
+            </optgroup>}
           </select>
 
           <select value={sort} onChange={e => updateFilter('sort', e.target.value)} style={{
@@ -650,6 +685,68 @@ export default function ProblemsPage() {
                 }}
               >{label}</button>
             ))}
+          </div>
+        </div>
+
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))',
+          gap: 12,
+          padding: 14,
+          marginBottom: 12,
+          border: '1px solid var(--border)',
+          borderRadius: 14,
+          background: 'linear-gradient(135deg, rgba(88,166,255,.08), rgba(188,140,255,.06))',
+        }}>
+          <div>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:8, marginBottom:10 }}>
+              <div>
+                <div style={{ fontSize:13, fontWeight:800, color:'var(--text)' }}>알고리즘 태그로 학습 경로 찾기</div>
+                <div style={{ fontSize:11, color:'var(--text3)', marginTop:2 }}>DP·그래프·이분탐색처럼 원하는 주제만 바로 필터링합니다.</div>
+              </div>
+              <span style={{ fontSize:11, color:'var(--blue)', fontWeight:800 }}>{algorithmTags.length}개 태그</span>
+            </div>
+            <div style={{ display:'flex', gap:7, flexWrap:'wrap' }}>
+              {topDiscoveryTags.map((item) => {
+                const active = tag === item.tag
+                return (
+                  <button key={item.tag} onClick={() => updateFilter('tag', active ? null : item.tag)} style={{
+                    padding:'6px 10px', borderRadius:999,
+                    border:`1px solid ${active ? 'rgba(88,166,255,.55)' : 'var(--border)'}`,
+                    background: active ? 'rgba(88,166,255,.18)' : 'var(--bg2)',
+                    color: active ? 'var(--blue)' : 'var(--text2)',
+                    cursor:'pointer', fontSize:12, fontWeight:700, fontFamily:'inherit',
+                  }}>
+                    #{item.tag}{item.count ? <span style={{ marginLeft:5, color:'var(--text3)' }}>{item.count}</span> : null}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+          <div>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:8, marginBottom:10 }}>
+              <div>
+                <div style={{ fontSize:13, fontWeight:800, color:'var(--text)' }}>기업 기출 태그</div>
+                <div style={{ fontSize:11, color:'var(--text3)', marginTop:2 }}>카카오·네이버·삼성 등 국내 취준 타깃 문제를 묶었습니다.</div>
+              </div>
+              <span style={{ fontSize:11, color:'var(--purple)', fontWeight:800 }}>{companyDiscoveryTags.length}개 기업</span>
+            </div>
+            <div style={{ display:'flex', gap:7, flexWrap:'wrap' }}>
+              {companyDiscoveryTags.map((item) => {
+                const active = tag === item.tag
+                return (
+                  <button key={item.tag} onClick={() => updateFilter('tag', active ? null : item.tag)} style={{
+                    padding:'6px 10px', borderRadius:999,
+                    border:`1px solid ${active ? 'rgba(188,140,255,.55)' : 'var(--border)'}`,
+                    background: active ? 'rgba(188,140,255,.18)' : 'var(--bg2)',
+                    color: active ? 'var(--purple)' : 'var(--text2)',
+                    cursor:'pointer', fontSize:12, fontWeight:800, fontFamily:'inherit',
+                  }}>
+                    {item.name || getTagLabel(item.tag)}{item.count ? <span style={{ marginLeft:5, color:'var(--text3)' }}>{item.count}</span> : null}
+                  </button>
+                )
+              })}
+            </div>
           </div>
         </div>
 
@@ -825,9 +922,9 @@ export default function ProblemsPage() {
               const solvedState = Boolean(problem.isSolved)
               const bookmarkedState = Boolean(problem.isBookmarked)
               const solvedCountForProblem = problem.solved || problem.solved_count || 0
-              const submitCount = problem.submissions || problem.submit_count || 0
-              const rate = submitCount > 0 ? Math.round((solvedCountForProblem / submitCount) * 100) : 0
+              const rate = getAcceptanceRate(problem)
               const typeMeta = PROBLEM_TYPE_META[problem.problemType || 'coding'] || PROBLEM_TYPE_META.coding
+              const { algorithmTags: problemAlgorithmTags, companyTags: problemCompanyTags } = splitDiscoveryTags(problem.tags || [])
 
               return (
                 <div
@@ -852,9 +949,12 @@ export default function ProblemsPage() {
                       {(problem.problemType === 'fill-blank' || problem.problemType === 'bug-fix') && problem.preferredLanguage && (
                         <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 999, background: 'rgba(88,166,255,.1)', color: 'var(--blue)', border: '1px solid rgba(88,166,255,.2)' }}>{problem.preferredLanguage}</span>
                       )}
+                      {problem.hasEditorial && (
+                        <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 999, background: 'rgba(86,211,100,.1)', color: 'var(--green)', border: '1px solid rgba(86,211,100,.2)' }}>공식해설</span>
+                      )}
                     </div>
                     <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                      {(problem.tags || []).slice(0, 3).map(item => (
+                      {problemAlgorithmTags.slice(0, 2).map(item => (
                         <span key={item} style={{
                           fontSize: 10,
                           padding: '1px 6px',
@@ -863,6 +963,16 @@ export default function ProblemsPage() {
                           color: 'var(--text3)',
                           border: '1px solid var(--border)',
                         }}>{item}</span>
+                      ))}
+                      {problemCompanyTags.slice(0, 1).map(item => (
+                        <span key={item} style={{
+                          fontSize: 10,
+                          padding: '1px 6px',
+                          borderRadius: 4,
+                          background: 'rgba(188,140,255,.1)',
+                          color: 'var(--purple)',
+                          border: '1px solid rgba(188,140,255,.18)',
+                        }}>{getTagLabel(item)}</span>
                       ))}
                     </div>
                   </div>
@@ -886,9 +996,9 @@ export default function ProblemsPage() {
                     textAlign: 'center',
                     fontSize: 11,
                     fontWeight: 600,
-                    color: rate >= 70 ? 'var(--green)' : rate >= 40 ? 'var(--yellow)' : 'var(--red)',
+                    color: rate == null ? 'var(--text3)' : rate >= 70 ? 'var(--green)' : rate >= 40 ? 'var(--yellow)' : 'var(--red)',
                     fontFamily: 'Space Mono,monospace',
-                  }}>{rate}%</span>
+                  }}>{rate == null ? '-' : `${rate}%`}</span>
                   <div style={{ textAlign: 'center', fontSize: 16 }}>{solvedState ? '✅' : '⬜'}</div>
                   <button onClick={e => bm(e, problem.id)} style={{
                     background: 'none',
@@ -918,7 +1028,9 @@ export default function ProblemsPage() {
               const solvedState = Boolean(problem.isSolved)
               const bookmarkedState = Boolean(problem.isBookmarked)
               const solvedCountForProblem = problem.solved || problem.solved_count || 0
+              const rate = getAcceptanceRate(problem)
               const typeMeta = PROBLEM_TYPE_META[problem.problemType || 'coding'] || PROBLEM_TYPE_META.coding
+              const { algorithmTags: problemAlgorithmTags, companyTags: problemCompanyTags } = splitDiscoveryTags(problem.tags || [])
 
               return (
                 <div key={problem.id} className="problem-card" onClick={() => setPreview(problem)} style={{
@@ -959,14 +1071,24 @@ export default function ProblemsPage() {
                     <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 10, fontWeight: 700, background: tierMeta.bg, color: tierMeta.color }}>
                       ● {tierMeta.label}
                     </span>
-                    {(problem.tags || []).slice(0, 2).map(item => (
+                    {problem.hasEditorial && (
+                      <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 10, fontWeight: 700, background: 'rgba(86,211,100,.1)', color: 'var(--green)', border: '1px solid rgba(86,211,100,.2)' }}>공식해설</span>
+                    )}
+                    {problemAlgorithmTags.slice(0, 2).map(item => (
                       <span key={item} style={{ padding: '2px 7px', borderRadius: 4, fontSize: 10, background: 'var(--bg3)', color: 'var(--text3)', border: '1px solid var(--border)' }}>{item}</span>
+                    ))}
+                    {problemCompanyTags.slice(0, 1).map(item => (
+                      <span key={item} style={{ padding: '2px 7px', borderRadius: 4, fontSize: 10, background: 'rgba(188,140,255,.1)', color: 'var(--purple)', border: '1px solid rgba(188,140,255,.18)' }}>{getTagLabel(item)}</span>
                     ))}
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text3)' }}>
                     <span>{t('difficultyShort')} {problem.difficulty}/10</span>
                     <span>✅ {t('solversUnit').replace('{n}', solvedCountForProblem.toLocaleString())}</span>
                   </div>
+                  <div style={{ marginTop:8, height:5, borderRadius:999, background:'var(--bg3)', overflow:'hidden' }}>
+                    <div style={{ width: `${Math.min(100, Math.max(0, rate ?? 0))}%`, height:'100%', background: rate == null ? 'var(--border)' : rate >= 70 ? 'var(--green)' : rate >= 40 ? 'var(--yellow)' : 'var(--red)' }} />
+                  </div>
+                  <div style={{ marginTop:5, fontSize:10, color:'var(--text3)' }}>정답률 {rate == null ? '데이터 없음' : `${rate}%`}</div>
                   <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginTop:14 }}>
                     <span style={{ fontSize:11, color:'var(--text3)' }}>{t('hoverSolve')}</span>
                     <button onClick={e => { e.stopPropagation(); go(problem) }} style={{
