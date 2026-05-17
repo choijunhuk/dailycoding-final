@@ -150,7 +150,7 @@ router.get('/feed', auth, async (req, res) => {
          FROM posts p
          JOIN users u ON p.user_id = u.id
          WHERE p.user_id IN (${placeholders})
-           AND p.post_visibility = 'public'
+           AND u.post_visibility = 'public'
            AND p.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
          ORDER BY p.created_at DESC
          LIMIT 20`,
