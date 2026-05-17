@@ -300,11 +300,12 @@ export const Battle = {
 
   async persistHistory(roomId, room) {
     const rows = this.buildHistoryRows(roomId, room);
+    const timeline = JSON.stringify((room.timeline || []).slice().sort((a, b) => Number(a.ts || 0) - Number(b.ts || 0)));
     for (const row of rows) {
       await run(
         `INSERT IGNORE INTO battle_history
-         (room_id, user_id, opponent_id, opponent_name, result, score_for, score_against, solved_for, solved_against, problems_json)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         (room_id, user_id, opponent_id, opponent_name, result, score_for, score_against, solved_for, solved_against, problems_json, battle_timeline)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           row.roomId,
           row.userId,
@@ -316,6 +317,7 @@ export const Battle = {
           row.solvedFor,
           row.solvedAgainst,
           row.problemsJson,
+          timeline,
         ]
       );
     }
@@ -346,6 +348,38 @@ export const Battle = {
     }));
   },
 
+  async getReplay(roomId) {
+    const rows = await query(
+      `SELECT room_id, user_id, opponent_id, opponent_name, result, score_for, score_against, solved_for, solved_against,
+              problems_json, battle_timeline, created_at
+       FROM battle_history
+       WHERE room_id = ?
+       ORDER BY user_id ASC`,
+      [roomId]
+    );
+    if (!rows?.length) return null;
+    const first = rows[0];
+    const timeline = typeof first.battle_timeline === 'string'
+      ? JSON.parse(first.battle_timeline || '[]')
+      : (first.battle_timeline || []);
+    return {
+      roomId,
+      createdAt: first.created_at,
+      problems: typeof first.problems_json === 'string' ? JSON.parse(first.problems_json || '[]') : (first.problems_json || []),
+      players: rows.map((row) => ({
+        userId: row.user_id,
+        opponentId: row.opponent_id,
+        opponentName: row.opponent_name,
+        result: row.result,
+        scoreFor: row.score_for,
+        scoreAgainst: row.score_against,
+        solvedFor: row.solved_for,
+        solvedAgainst: row.solved_against,
+      })),
+      timeline: (timeline || []).slice().sort((a, b) => Number(a.ts || 0) - Number(b.ts || 0)),
+    };
+  },
+
   async createRoom(inviter, invited, options = {}) {
     const roomId = 'room_' + crypto.randomBytes(5).toString('hex');
     const { isTeamBattle = false, teamSize = 1, preferredLanguage = null, battleMode = 'time' } = options;
@@ -368,6 +402,7 @@ export const Battle = {
       spectators: [],
       problems: [],
       locked: {},   // { problemId: teamId } — territory capture is now team-based
+      timeline: [],
       startTime: null,
       duration: 1800,
       preferredLanguage,
@@ -437,12 +472,20 @@ export const Battle = {
     await redis.setJSON(`battle:room:${roomId}`, room, ROOM_TTL);
   },
 
-  async submitAnswer(roomId, userId, problemId, correct) {
+  async submitAnswer(roomId, userId, problemId, correct, meta = {}) {
     const room = await this.getRoom(roomId);
     if (!room || room.status !== 'active') return null;
     const player = room.players[userId];
     if (!player) return null;
     const pid = String(problemId);
+    if (!Array.isArray(room.timeline)) room.timeline = [];
+    room.timeline.push({
+      ts: Date.now(),
+      userId,
+      type: correct ? 'pass' : 'fail',
+      problemId: Number.isNaN(Number(problemId)) ? problemId : Number(problemId),
+      language: meta.language || null,
+    });
     if (!player.solved.includes(pid) && correct) {
       player.solved.push(pid);
       player.score += 1;

@@ -953,3 +953,91 @@
   color: var(--text3);
   text-align: center;
 }
+
+@media (max-width: 900px) {
+  .bp-battle-page {
+    height: auto !important;
+    min-height: calc(100dvh - 54px) !important;
+    overflow: visible !important;
+  }
+
+  .bp-lobby-main,
+  .bp-scoreboard,
+  .bp-io-grid,
+  .bp-result-scores {
+    grid-template-columns: 1fr !important;
+  }
+
+  .bp-problem-area {
+    width: 100% !important;
+    overflow: visible !important;
+    padding: 14px !important;
+    box-sizing: border-box !important;
+  }
+
+  .bp-code-editor-shell {
+    width: 100% !important;
+    min-height: 320px !important;
+  }
+
+  .bp-example-row {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+  }
+}
+
+.bp-replay-page {
+  max-width: 960px;
+}
+
+.bp-replay-progress {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin: 18px 0;
+}
+
+.bp-replay-player {
+  display: grid;
+  gap: 5px;
+  padding: 14px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.bp-replay-player small {
+  color: var(--text3);
+}
+
+.bp-replay-slider {
+  width: 100%;
+  margin: 12px 0 18px;
+}
+
+.bp-replay-events {
+  display: grid;
+  gap: 8px;
+}
+
+.bp-replay-event {
+  display: grid;
+  grid-template-columns: 110px 1fr 70px 110px 70px;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--text2);
+  font-size: 12px;
+}
+
+.bp-replay-event.pass { border-color: rgba(86,211,100,.28); }
+.bp-replay-event.fail { border-color: rgba(248,81,73,.24); }
+
+@media (max-width: 640px) {
+  .bp-replay-event {
+    grid-template-columns: 1fr 1fr !important;
+  }
+}

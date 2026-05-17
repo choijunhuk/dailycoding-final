@@ -1,1 +1,29 @@
-/* RankingPage 스타일은 인라인으로 처리됨 */
+.ranking-table-card {
+  max-width: 100%;
+}
+
+.ranking-table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ranking-table-inner {
+  min-width: 700px;
+}
+
+@media (max-width: 768px) {
+  .ranking-table-card {
+    width: 100% !important;
+    overflow: hidden !important;
+  }
+
+  .ranking-table-scroll {
+    width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  .ranking-table-inner {
+    min-width: 720px !important;
+  }
+}

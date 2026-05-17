@@ -11,6 +11,7 @@ import rankingRouter from './ranking.js';
 import aiRouter from './ai.js';
 import rewardsRouter from './rewards.js';
 import battlesRouter from './battles.js';
+import tournamentsRouter from './tournaments.js';
 import followsRouter from './follows.js';
 import subscriptionRouter from './subscription.js';
 import teamsRouter from './teams.js';
@@ -46,6 +47,7 @@ export function registerRoutes(app) {
   app.use('/api/ai', aiLimiter, aiRouter);
   app.use('/api/rewards', generalLimiter, rewardsRouter);
   app.use('/api/battles', submitLimiter, battlesRouter);
+  app.use('/api/tournaments', generalLimiter, tournamentsRouter);
   app.use('/api/follows', generalLimiter, followsRouter);
   app.use('/api/subscription', generalLimiter, subscriptionRouter);
   app.use('/api/teams', generalLimiter, teamsRouter);

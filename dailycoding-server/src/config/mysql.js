@@ -85,6 +85,8 @@ const MEM = {
   battle_rooms: [], battle_participants: [], battle_submissions: [], battle_events: [], battle_results: [],
   code_reviews: [], code_review_comments: [], code_suggestions: [], test_suggestions: [], collaboration_scores: [],
   user_problem_sets: [], ai_hint_cache: [], admin_logs: [],
+  virtual_contest_runs: [], virtual_submissions: [],
+  tournaments: [], tournament_participants: [], tournament_matches: [],
 };
 
 function memNextId(table) {

@@ -46,6 +46,104 @@ function useTypingSound() {
   }, []);
 }
 
+function BattleReplayViewer({ roomId }) {
+  const navigate = useNavigate();
+  const [replay, setReplay] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [cursor, setCursor] = useState(0);
+
+  useEffect(() => {
+    let ignore = false;
+    setLoading(true);
+    api.get(`/battles/${roomId}/replay`)
+      .then((res) => {
+        if (!ignore) {
+          setReplay(res.data);
+          setCursor(0);
+        }
+      })
+      .catch(() => {
+        if (!ignore) setReplay(null);
+      })
+      .finally(() => {
+        if (!ignore) setLoading(false);
+      });
+    return () => { ignore = true; };
+  }, [roomId]);
+
+  const timeline = replay?.timeline || [];
+  const visibleEvents = timeline.slice(0, cursor + 1);
+  const progressByUser = visibleEvents.reduce((acc, event) => {
+    const key = event.userId;
+    if (!acc[key]) acc[key] = { pass: 0, fail: 0 };
+    if (event.type === 'pass') acc[key].pass += 1;
+    if (event.type === 'fail') acc[key].fail += 1;
+    return acc;
+  }, {});
+
+  if (loading) {
+    return <div className="bp-page" style={{display:'grid',placeItems:'center'}}><div className="bp-spinner" /></div>;
+  }
+
+  if (!replay) {
+    return (
+      <div className="bp-page" style={{display:'grid',placeItems:'center'}}>
+        <div className="card card-pad-lg" style={{maxWidth:420,textAlign:'center'}}>
+          <h2>리플레이를 찾을 수 없습니다</h2>
+          <button className="btn btn-primary" onClick={() => navigate('/battle')}>배틀로 이동</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bp-page bp-replay-page">
+      <div className="bp-result">
+        <div className="bp-result-banner draw">🎬 배틀 리플레이</div>
+        <div style={{fontSize:13,color:'var(--text2)',textAlign:'center',marginBottom:16}}>
+          Room {replay.roomId} · {new Date(replay.createdAt).toLocaleString('ko-KR')}
+        </div>
+
+        <div className="bp-replay-progress">
+          {(replay.players || []).map((player) => {
+            const progress = progressByUser[player.userId] || { pass: 0, fail: 0 };
+            return (
+              <div key={player.userId} className="bp-replay-player">
+                <strong>Player {player.userId}</strong>
+                <span className="mono">{progress.pass} pass / {progress.fail} fail</span>
+                <small>{player.result?.toUpperCase?.()} · {player.scoreFor}:{player.scoreAgainst}</small>
+              </div>
+            );
+          })}
+        </div>
+
+        <input
+          className="bp-replay-slider"
+          type="range"
+          min="0"
+          max={Math.max(0, timeline.length - 1)}
+          value={cursor}
+          onChange={(e) => setCursor(Number(e.target.value))}
+          disabled={timeline.length === 0}
+        />
+
+        <div className="bp-replay-events">
+          {visibleEvents.length === 0 && <div className="bp-empty-msg">저장된 제출 이벤트가 없습니다.</div>}
+          {visibleEvents.map((event, index) => (
+            <div key={`${event.ts}-${index}`} className={`bp-replay-event ${event.type}`}>
+              <span className="mono">{new Date(event.ts).toLocaleTimeString('ko-KR')}</span>
+              <strong>User {event.userId}</strong>
+              <span>P{event.problemId}</span>
+              <span>{event.language || '-'}</span>
+              <span>{event.type === 'pass' ? '통과' : '실패'}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── 메인 컴포넌트 ─────────────────────────────────────────────────────────
 export default function BattlePage() {
   const navigate = useNavigate();
@@ -69,6 +167,7 @@ export default function BattlePage() {
   const [lobbyTab, setLobbyTab] = useState(location.pathname === '/battles/history' ? 'history' : 'active');
   const [historyRows, setHistoryRows] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const isReplayRoute = location.pathname.endsWith('/replay');
   const [rematchPending, setRematchPending] = useState(false);
 
   // ── 배틀 상태
@@ -633,6 +732,10 @@ export default function BattlePage() {
   // ─────────────────────────────────────────────────────────────────────────
   // RENDER: 이메일 인증 게이트
   // ─────────────────────────────────────────────────────────────────────────
+  if (isReplayRoute) {
+    return <BattleReplayViewer roomId={params.id || params.roomId} />;
+  }
+
   if (!user?.emailVerified) return <EmailVerifyGate feature="배틀 기능" />;
 
   // ─────────────────────────────────────────────────────────────────────────

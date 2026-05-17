@@ -19,3 +19,9 @@ int main(){
 test('keeps current language when detection is unsupported', () => {
   assert.equal(getEffectiveJudgeLanguage('console.log(1)', 'python', ['python', 'c']), 'python')
 })
+
+test('detects TypeScript and Go submissions', () => {
+  assert.equal(detectJudgeLanguageFromCode('const answer: number = 3\\nconsole.log(answer)'), 'typescript')
+  assert.equal(detectJudgeLanguageFromCode('package main\\nimport "fmt"\\nfunc main(){ fmt.Println(3) }'), 'go')
+  assert.equal(getEffectiveJudgeLanguage('package main\\nimport "fmt"\\nfunc main(){ fmt.Println(3) }', 'python', ['python', 'go']), 'go')
+})

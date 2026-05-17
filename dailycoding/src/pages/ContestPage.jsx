@@ -6,6 +6,7 @@ import { useToast } from '../context/ToastContext.jsx';
 import {} from '../data/problems';
 import EmailVerifyGate from '../components/EmailVerifyGate.jsx';
 import { useLang } from '../context/LangContext.jsx';
+import { JUDGE_LANGUAGE_OPTIONS } from '../data/judgeLanguages.js';
 import './ContestPage.css';
 
 const CONTEST_TIER_OPTIONS = ['bronze','silver','gold','platinum','diamond'];
@@ -47,6 +48,7 @@ export default function ContestPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [joined,     setJoined]     = useState({}); // contestId -> { status: 'joined' | 'pending' | 'rejected' }
   const [liveContest,setLiveContest]= useState(null);
+  const [virtualContest,setVirtualContest]= useState(null);
   const [form,       setForm]       = useState(createContestForm);
   const [creating,   setCreating]   = useState(false);
   const [busy,       setBusy]       = useState({});
@@ -217,6 +219,18 @@ export default function ContestPage() {
     }
   };
 
+  const handleVirtualStart = async (c) => {
+    setBusy(p => ({ ...p, [`virtual-${c.id}`]: true }));
+    try {
+      const res = await api.post(`/contests/${c.id}/virtual/start`);
+      setVirtualContest(res.data);
+      toast?.show('버추얼 대회를 시작했습니다.', 'success');
+    } catch (err) {
+      toast?.show(err.response?.data?.message || '버추얼 대회를 시작하지 못했습니다.', 'error');
+    }
+    setBusy(p => ({ ...p, [`virtual-${c.id}`]: false }));
+  };
+
   const handleDelete = (id) => setDeleteConfirmId(id);
 
   const openResults = async (c) => {
@@ -351,6 +365,7 @@ export default function ContestPage() {
     setCustomSaving(false);
   };
 
+  if (virtualContest) return <VirtualContestView payload={virtualContest} onExit={()=>setVirtualContest(null)} />;
   if (liveContest) return <LiveContestView contest={liveContest} onExit={()=>setLiveContest(null)} isAdmin={isAdmin} />;
 
   return (
@@ -485,7 +500,14 @@ export default function ContestPage() {
                    isLive ? t('enterNow') : t('joinContestBtn')}
                 </button>
               )}
-              {isEnded && <button className="btn btn-ghost cc-action-btn" onClick={() => openResults(c)}>{t('seeResults')}</button>}
+              {isEnded && (
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+                  <button className="btn btn-ghost cc-action-btn" onClick={() => openResults(c)}>{t('seeResults')}</button>
+                  <button className="btn btn-primary cc-action-btn" onClick={() => handleVirtualStart(c)} disabled={busy[`virtual-${c.id}`]}>
+                    {busy[`virtual-${c.id}`] ? <span className="spinner"/> : '버추얼 참여'}
+                  </button>
+                </div>
+              )}
             </div>
           );
         })}
@@ -999,6 +1021,131 @@ function LiveContestView({ contest, onExit, isAdmin }) {
               <span className="mono" style={{color:'var(--blue)',fontWeight:700}}>{p.score}문제</span>
             </div>
           ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function VirtualContestView({ payload, onExit }) {
+  const contest = payload?.contest || {};
+  const toast = useToast();
+  const [run, setRun] = useState(payload?.run || null);
+  const [probs, setProbs] = useState(payload?.problems || []);
+  const [remainingMs, setRemainingMs] = useState(payload?.run?.remainingMs || 0);
+  const [problemId, setProblemId] = useState(payload?.problems?.[0]?.id || '');
+  const [language, setLanguage] = useState('python');
+  const [code, setCode] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [lastResult, setLastResult] = useState(null);
+
+  useEffect(() => {
+    let ignore = false;
+    const refresh = () => {
+      api.get(`/contests/${contest.id}/virtual/status`)
+        .then((res) => {
+          if (ignore) return;
+          setRun(res.data?.run || null);
+          const nextProblems = res.data?.problems || [];
+          setProbs(nextProblems);
+          if (!problemId && nextProblems[0]?.id) setProblemId(nextProblems[0].id);
+          setRemainingMs(res.data?.run?.remainingMs || 0);
+        })
+        .catch(() => {});
+    };
+    refresh();
+    const poll = setInterval(refresh, 10000);
+    return () => { ignore = true; clearInterval(poll); };
+  }, [contest.id, problemId]);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setRemainingMs((value) => Math.max(0, value - 1000));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const solvedIds = new Set((run?.submissions || []).filter((item) => item.result === 'correct').map((item) => Number(item.problemId)));
+  const remainingSec = Math.ceil(remainingMs / 1000);
+  const mm = String(Math.floor(remainingSec / 60)).padStart(2, '0');
+  const ss = String(remainingSec % 60).padStart(2, '0');
+
+  const submitVirtual = async () => {
+    if (!problemId || !code.trim() || submitting || remainingSec === 0) return;
+    setSubmitting(true);
+    setLastResult(null);
+    try {
+      const { data } = await api.post(`/contests/${contest.id}/virtual/submit`, {
+        problemId,
+        language,
+        code,
+      });
+      setRun((prev) => ({ ...(prev || {}), submissions: data.submissions || prev?.submissions || [] }));
+      setLastResult(data.execution || null);
+      toast?.show(data.execution?.result === 'correct' ? '버추얼 정답입니다!' : '채점 결과를 확인하세요.', data.execution?.result === 'correct' ? 'success' : 'info');
+    } catch (err) {
+      toast?.show(err.response?.data?.message || '버추얼 제출 실패', 'error');
+    }
+    setSubmitting(false);
+  };
+
+  return (
+    <div className="live-view fade-in">
+      <div className="lv-header">
+        <div className="lv-title">⏪ 버추얼 · {contest.name}</div>
+        <div className="lv-timer mono" style={{color:remainingSec === 0 ? 'var(--text3)' : remainingSec <= 300 ? 'var(--red)' : 'var(--yellow)'}}>
+          {remainingSec === 0 ? '⏱ 시간 종료' : `⏱ 남은 시간 ${mm}:${ss}`}
+        </div>
+        <button className="btn btn-ghost btn-sm" onClick={onExit}>← 나가기</button>
+      </div>
+      <div className="lv-body">
+        <div className="lv-problems card">
+          <div className="lv-panel-title">📋 버추얼 문제 목록</div>
+          {probs.length === 0 && <div style={{padding:'12px 16px',fontSize:13,color:'var(--text3)'}}>문제가 없습니다.</div>}
+          {probs.map((p,i)=>(
+            <div key={p.id} className={`lp-row ${solvedIds.has(Number(p.id))?'solved':''}`}>
+              <span className="mono" style={{fontSize:11,color:'var(--text3)'}}>P{i+1}</span>
+              <span style={{flex:1,fontWeight:600}}>#{p.id} {p.title}</span>
+              {solvedIds.has(Number(p.id)) && <span style={{color:'var(--green)'}}>✓</span>}
+            </div>
+          ))}
+        </div>
+        <div className="lv-ranking card">
+          <div className="lv-panel-title">🏆 개인 버추얼 진행도</div>
+          <div className="lr-row me">
+            <span style={{flex:1,fontWeight:700}}>해결한 문제</span>
+            <span className="mono" style={{color:'var(--blue)',fontWeight:700}}>{solvedIds.size}/{probs.length}</span>
+          </div>
+          <div style={{padding:'12px 16px',display:'grid',gap:10}}>
+            <select value={problemId} onChange={(e) => setProblemId(e.target.value)} disabled={remainingSec === 0}>
+              {probs.map((problem, index) => <option key={problem.id} value={problem.id}>P{index + 1} · {problem.title}</option>)}
+            </select>
+            <select value={language} onChange={(e) => setLanguage(e.target.value)} disabled={remainingSec === 0}>
+              {JUDGE_LANGUAGE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+            </select>
+            <textarea
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              placeholder="버추얼 대회용 코드를 여기에 붙여넣고 제출하세요. 전역 레이팅/공식 리더보드에는 반영되지 않습니다."
+              rows={10}
+              disabled={remainingSec === 0}
+              style={{width:'100%',minHeight:180,fontFamily:'var(--font-mono)',fontSize:13,borderRadius:12,border:'1px solid var(--border)',background:'var(--bg)',color:'var(--text)',padding:12}}
+            />
+            <button className="btn btn-primary" onClick={submitVirtual} disabled={submitting || remainingSec === 0 || !code.trim() || !problemId}>
+              {submitting ? <span className="spinner"/> : '버추얼 제출'}
+            </button>
+            {lastResult && (
+              <div className="lr-row me" style={{alignItems:'flex-start'}}>
+                <span style={{flex:1,fontWeight:700}}>마지막 결과</span>
+                <span className="mono" style={{color:lastResult.result === 'correct' ? 'var(--green)' : 'var(--red)',fontWeight:700}}>
+                  {lastResult.result} · {lastResult.time || '-'} · {lastResult.mem || '-'}
+                </span>
+              </div>
+            )}
+            <div style={{fontSize:12,color:'var(--text2)',lineHeight:1.7}}>
+              버추얼 제출은 전역 레이팅과 공식 리더보드에 반영되지 않습니다.
+            </div>
+          </div>
         </div>
       </div>
     </div>

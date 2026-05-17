@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { auth, requireVerified } from '../middleware/auth.js';
 import { Battle } from '../models/Battle.js';
 import { AlgorithmBattle } from '../models/AlgorithmBattle.js';
+import { Tournament } from '../models/Tournament.js';
 import { User }   from '../models/User.js';
 import { errorResponse, internalError } from '../middleware/errorHandler.js';
 import { normalizeJudgeLanguage } from '../services/judge.js';
@@ -22,6 +23,18 @@ router.get('/public/active-count', async (req, res) => {
     res.json({ count });
   } catch {
     res.json({ count: 0 });
+  }
+});
+
+// GET /api/battles/:id/replay — public replay payload for completed legacy battles
+router.get('/:id/replay', async (req, res) => {
+  try {
+    const replay = await Battle.getReplay(req.params.id);
+    if (!replay) return errorResponse(res, 404, 'NOT_FOUND', '리플레이를 찾을 수 없습니다.');
+    res.json(replay);
+  } catch (err) {
+    console.error('[battles/replay]', err.message);
+    return internalError(res);
   }
 });
 
@@ -61,6 +74,18 @@ function resolveWinner(players) {
   const loserTeamId = winnerTeamId !== null ? sortedTeams.find(([tid]) => tid !== winnerTeamId)?.[0] : null;
   
   return { winnerTeamId, loserTeamId, teamScores };
+}
+
+async function advanceTournamentIfNeeded(roomId, room) {
+  try {
+    const { winnerTeamId } = resolveWinner(room.players, room.teams);
+    if (!winnerTeamId) return;
+    const winner = Object.values(room.players || {}).find((player) => player.teamId === winnerTeamId);
+    if (!winner?.id) return;
+    await Tournament.advanceWinnerByBattleId(roomId, winner.id);
+  } catch {
+    // 토너먼트 연결이 없는 일반 배틀 종료 흐름은 방해하지 않는다.
+  }
 }
 
 async function rewardBattleWinnerMissions(room) {
@@ -606,7 +631,9 @@ router.post('/room/:roomId/submit', async (req, res) => {
       correct = evaluateBugFixAnswer(problem, answer);
     }
 
-    const updatedRoom = await Battle.submitAnswer(req.params.roomId, req.user.id, problemId, correct);
+    const updatedRoom = await Battle.submitAnswer(req.params.roomId, req.user.id, problemId, correct, {
+      language: problem.preferredLanguage || null,
+    });
 
     // Broadcast submission result to room
     const io = req.app.get('io');
@@ -621,6 +648,7 @@ router.post('/room/:roomId/submit', async (req, res) => {
       if (updatedRoom?.status === 'ended') {
         await rewardBattleWinnerMissions(updatedRoom);
         await applyBattlePromotionLosses(updatedRoom);
+        await advanceTournamentIfNeeded(req.params.roomId, updatedRoom);
         await Promise.all([redis.del('ranking:battle'), redis.del('ranking:overall')]);
         const { winnerTeamId, loserTeamId, teamScores } = resolveWinner(updatedRoom.players, updatedRoom.teams);
         io.to(`battle:${req.params.roomId}`).emit('battle:ended', {
@@ -683,7 +711,9 @@ router.post('/room/:roomId/code-judge', async (req, res) => {
     const memoryMb = mem && /^\d+/.test(mem) ? parseInt(mem, 10) : null;
 
     const correct = result === 'correct';
-    const updatedRoom = await Battle.submitAnswer(req.params.roomId, req.user.id, problemId, correct);
+    const updatedRoom = await Battle.submitAnswer(req.params.roomId, req.user.id, problemId, correct, {
+      language: displayLang || normalizedLang || lang,
+    });
     // ★ User.onSolve() 호출 없음 — 배틀 결과는 레이팅/스트릭에 영향 없음
 
     // Broadcast code-judge result to room
@@ -699,6 +729,7 @@ router.post('/room/:roomId/code-judge', async (req, res) => {
       if (updatedRoom?.status === 'ended') {
         await rewardBattleWinnerMissions(updatedRoom);
         await applyBattlePromotionLosses(updatedRoom);
+        await advanceTournamentIfNeeded(req.params.roomId, updatedRoom);
         await Promise.all([redis.del('ranking:battle'), redis.del('ranking:overall')]);
         const { winnerTeamId, loserTeamId, teamScores } = resolveWinner(updatedRoom.players, updatedRoom.teams);
         io.to(`battle:${req.params.roomId}`).emit('battle:ended', {
@@ -726,6 +757,7 @@ router.post('/room/:roomId/end', async (req, res) => {
     if (ended?.status === 'ended') {
       await rewardBattleWinnerMissions(ended);
       await applyBattlePromotionLosses(ended);
+      await advanceTournamentIfNeeded(req.params.roomId, ended);
       await Promise.all([redis.del('ranking:battle'), redis.del('ranking:overall')]);
     }
 

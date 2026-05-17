@@ -48,6 +48,12 @@ export function detectSubmissionLanguageFromCode(code) {
   if (/\bpublic\s+class\s+Main\b/.test(source) || /\bSystem\.out\.(print|println)\s*\(/.test(source)) {
     return 'java';
   }
+  if (/\bpackage\s+main\b/.test(source) || /\bfmt\.(Print|Println|Printf|Fprint)\s*\(/.test(source)) {
+    return 'go';
+  }
+  if (/\binterface\s+\w+\s*{/.test(source) || /\btype\s+\w+\s*=/.test(source) || /:\s*(number|string|boolean)\b/.test(source)) {
+    return 'typescript';
+  }
   if (/\brequire\s*\(\s*['"]fs['"]\s*\)/.test(source) || /\breadFileSync\s*\(\s*0\b/.test(source) || /\bconsole\.log\s*\(/.test(source)) {
     return 'javascript';
   }

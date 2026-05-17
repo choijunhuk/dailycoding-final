@@ -50,6 +50,7 @@ const LearningPathPage = lazy(() => import('./pages/LearningPathPage'));
 const SubmitProblemPage = lazy(() => import('./pages/SubmitProblemPage'));
 const ProblemSetsPage = lazy(() => import('./pages/ProblemSetsPage'));
 const GameHubPage = lazy(() => import('./pages/GameHubPage'));
+const TournamentPage = lazy(() => import('./pages/TournamentPage'));
 
 function RouteFallback({ isJudge }) {
   if (isJudge) {
@@ -143,6 +144,7 @@ function AppInner() {
         <Route path="/terms"           element={<TermsPage />} />
         <Route path="/privacy"         element={<PrivacyPage />} />
         <Route path="/pricing"         element={<PricingPage />} />
+        <Route path="/battle/:id/replay" element={<BattlePage />} />
         <Route path="/login"           element={<AuthPage />} />
         <Route
           path="/"
@@ -183,6 +185,7 @@ function AppInner() {
                 <Route path="/problems"    element={<ProblemsPage />} />
                 <Route path="/problems/:id" element={<JudgePage />} />
                 <Route path="/contest"     element={<ContestPage />} />
+                <Route path="/tournaments" element={<TournamentPage />} />
                 <Route path="/ranking"     element={<RankingPage />} />
                 <Route path="/community"   element={<CommunityPage />} />
                 <Route path="/community/:board" element={<CommunityPage />} />
@@ -205,6 +208,7 @@ function AppInner() {
                 <Route path="/reviews/:id" element={<ReviewsPage />} />
                 <Route path="/battle"      element={<AlgorithmBattlePage />} />
                 <Route path="/game"        element={<GameHubPage />} />
+                <Route path="/battle/:id/replay" element={<BattlePage />} />
                 <Route path="/battle/:roomId" element={<AlgorithmBattlePage />} />
                 <Route path="/battles/history" element={<BattlePage />} />
                 <Route path="/battle/watch/:roomId" element={<BattlePage />} />

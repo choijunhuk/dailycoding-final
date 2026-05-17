@@ -115,6 +115,9 @@ async function initDatabase() {
     await runSql(join(__dir, 'migrations', '030_battle_submissions_problem_id.sql'));
     await runSql(join(__dir, 'migrations', '031_user_avatar_source.sql'));
     await runSql(join(__dir, 'migrations', '032_deduplicate_seed_problem_titles.sql'));
+    await runSql(join(__dir, 'migrations', '033_virtual_contests.sql'));
+    await runSql(join(__dir, 'migrations', '034_battle_replay_timeline.sql'));
+    await runSql(join(__dir, 'migrations', '035_tournaments.sql'));
     logger.info('✅ DB 스키마 초기화 완료');
   } catch (err) {
     logger.warn('⚠️  DB 초기화 스킵:', { message: err.message });

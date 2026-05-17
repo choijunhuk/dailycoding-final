@@ -9,7 +9,9 @@
  * 사용 이미지 (처음 실행 시 자동 pull):
  *   - python:3.12-alpine          (Python)
  *   - node:20-alpine               (JavaScript)
+ *   - mcr.microsoft.com/devcontainers/typescript-node:1-20-bookworm (TypeScript)
  *   - gcc:13                       (C / C++)
+ *   - golang:1.22-alpine           (Go)
  *   - eclipse-temurin:21-jdk-alpine (Java)
  */
 
@@ -28,14 +30,16 @@ const docker = new Docker(
     : { socketPath: '/var/run/docker.sock' }
 );
 
-export const ALL_LANGS = Object.freeze(['python', 'javascript', 'cpp', 'c', 'java']);
-const NATIVE_SUPPORTED_LANGS = Object.freeze(['python', 'javascript', 'cpp', 'c', 'java']);
+export const ALL_LANGS = Object.freeze(['python', 'javascript', 'typescript', 'cpp', 'c', 'java', 'go']);
+const NATIVE_SUPPORTED_LANGS = Object.freeze(['python', 'javascript', 'typescript', 'cpp', 'c', 'java', 'go']);
 const NATIVE_RUNTIME_COMMANDS = Object.freeze({
   python: ['python3'],
   javascript: ['node'],
+  typescript: ['node', 'npx'],
   cpp: ['g++'],
   c: ['gcc'],
   java: ['java', 'javac'],
+  go: ['go'],
 });
 const PUBLIC_LANGUAGE_ALIASES = Object.freeze({
   'Python 3': 'python',
@@ -44,12 +48,19 @@ const PUBLIC_LANGUAGE_ALIASES = Object.freeze({
   JavaScript: 'javascript',
   'JavaScript (Node)': 'javascript',
   javascript: 'javascript',
+  TypeScript: 'typescript',
+  'TypeScript (Node)': 'typescript',
+  typescript: 'typescript',
+  ts: 'typescript',
   'C++17': 'cpp',
   'C++': 'cpp',
   cpp: 'cpp',
   'Java 11': 'java',
   Java: 'java',
   java: 'java',
+  Go: 'go',
+  Golang: 'go',
+  go: 'go',
   C99: 'c',
   C: 'c',
   c: 'c',
@@ -57,8 +68,10 @@ const PUBLIC_LANGUAGE_ALIASES = Object.freeze({
 const CANONICAL_PUBLIC_LANGUAGE_LABELS = Object.freeze({
   python: 'Python 3',
   javascript: 'JavaScript',
+  typescript: 'TypeScript',
   cpp: 'C++17',
   java: 'Java 11',
+  go: 'Go',
   c: 'C99',
 });
 
@@ -185,6 +198,17 @@ const LANG_CONFIG = {
     file:    'main.js',
     cmd:     ['node', 'main.js'],
     compile: null,
+    minMemoryMb: 256,
+  },
+  typescript: {
+    image:   'mcr.microsoft.com/devcontainers/typescript-node:1-20-bookworm',
+    file:    'main.ts',
+    cmd:     ['node', 'dist/main.js'],
+    compile: ['tsc', '--target', 'ES2020', '--module', 'CommonJS', '--outDir', 'dist', 'main.ts', 'node-shim.d.ts'],
+    extraFiles: {
+      'node-shim.d.ts': "declare module 'fs' { const fs: any; export = fs; }\ndeclare function require(name: string): any;\ndeclare const process: any;\n",
+    },
+    minMemoryMb: 256,
   },
   cpp: {
     image:   'gcc:13',
@@ -203,6 +227,13 @@ const LANG_CONFIG = {
     file:    'Main.java',
     cmd:     ['java', 'Main'],
     compile: ['javac', 'Main.java'],
+  },
+  go: {
+    image:   'golang:1.22-alpine',
+    file:    'main.go',
+    cmd:     ['./main'],
+    compile: ['go', 'build', '-o', 'main', 'main.go'],
+    minMemoryMb: 256,
   },
 };
 
@@ -457,7 +488,7 @@ async function runInContainer({ image, cmd, binds, timeoutMs, memoryLimit = 128 
 // ── 메인 채점 함수 ────────────────────────────────────────────────────────────
 /**
  * @param {object} opts
- * @param {string} opts.lang       - 'python' | 'javascript' | 'cpp' | 'c' | 'java'
+ * @param {string} opts.lang       - 'python' | 'javascript' | 'typescript' | 'cpp' | 'c' | 'java' | 'go'
  * @param {string} opts.code       - 제출 코드
  * @param {Array}  opts.examples   - [{ input, output }, ...]
  * @param {number} opts.timeLimit  - 초 단위 (기본 2)
@@ -468,7 +499,8 @@ export async function judgeCode({ lang, code, examples, timeLimit = 2, userTier 
   if (!cfg) return { result: 'error', time: '-', mem: '-', detail: `지원하지 않는 언어: ${lang}` };
 
   const isPremium = userTier === 'pro' || userTier === 'team';
-  const memLimit = (isPremium ? 512 : 128) * 1024 * 1024;
+  const baseMemMb = isPremium ? 512 : 128;
+  const memLimit = Math.max(baseMemMb, cfg.minMemoryMb || 0) * 1024 * 1024;
   const compileMemLimit = Math.max(memLimit, 512 * 1024 * 1024);
   const maxTime = isPremium ? 15 : 5;
   const effectiveTimeLimit = Math.min(timeLimit, maxTime);
@@ -485,6 +517,9 @@ export async function judgeCode({ lang, code, examples, timeLimit = 2, userTier 
 
     // 코드 파일 작성
     writeFileSync(join(workDir, cfg.file), code, 'utf-8');
+    for (const [fileName, content] of Object.entries(cfg.extraFiles || {})) {
+      writeFileSync(join(workDir, fileName), content, 'utf-8');
+    }
 
     // ── 컴파일 단계 (C/C++/Java) ─────────────────────────────────
     if (cfg.compile) {
@@ -559,7 +594,8 @@ export async function runCode({ lang, code, input = '', timeLimit = 2, userTier 
   if (!cfg) return { result: 'error', time: '-', mem: '-', detail: `지원하지 않는 언어: ${lang}`, output: '' };
 
   const isPremium = userTier === 'pro' || userTier === 'team';
-  const memLimit = (isPremium ? 512 : 128) * 1024 * 1024;
+  const baseMemMb = isPremium ? 512 : 128;
+  const memLimit = Math.max(baseMemMb, cfg.minMemoryMb || 0) * 1024 * 1024;
   const compileMemLimit = Math.max(memLimit, 512 * 1024 * 1024);
   const maxTime = isPremium ? 15 : 5;
   const effectiveTimeLimit = Math.min(timeLimit, maxTime);
@@ -572,6 +608,9 @@ export async function runCode({ lang, code, input = '', timeLimit = 2, userTier 
   try {
     await ensureImage(cfg.image);
     writeFileSync(join(workDir, cfg.file), code, 'utf-8');
+    for (const [fileName, content] of Object.entries(cfg.extraFiles || {})) {
+      writeFileSync(join(workDir, fileName), content, 'utf-8');
+    }
 
     if (cfg.compile) {
       const compileResult = await runInContainer({
@@ -652,9 +691,19 @@ export async function isDockerAvailable() {
 const NATIVE_LANG = {
   python:     { file: 'main.py',   vmKb: 262144,  run: (d) => `python3 "${d}/main.py"`,                        compile: null },
   javascript: { file: 'main.js',   vmKb: 262144,  run: (d) => `node --max-old-space-size=64 "${d}/main.js"`,   compile: null },
+  typescript: {
+    file: 'main.ts',
+    vmKb: 262144,
+    run: (d) => `node --max-old-space-size=64 "${d}/dist/main.js"`,
+    compile: (d) => `npx --yes -p typescript tsc --target ES2020 --module CommonJS --outDir "${d}/dist" "${d}/main.ts" "${d}/node-shim.d.ts"`,
+    extraFiles: {
+      'node-shim.d.ts': "declare module 'fs' { const fs: any; export = fs; }\ndeclare function require(name: string): any;\ndeclare const process: any;\n",
+    },
+  },
   cpp:        { file: 'main.cpp',  vmKb: 131072,  run: (d) => `"${d}/main"`,                                   compile: (d) => `g++ -std=c++17 -O2 -o "${d}/main" "${d}/main.cpp"` },
   c:          { file: 'main.c',    vmKb: 131072,  run: (d) => `"${d}/main"`,                                   compile: (d) => `gcc -std=c99 -O2 -o "${d}/main" "${d}/main.c"` },
   java:       { file: 'Main.java', vmKb: 524288,  run: (d) => `java -Xmx64m -Xms16m -cp "${d}" Main`,         compile: (d) => `javac "${d}/Main.java"` },
+  go:         { file: 'main.go',   vmKb: 262144,  run: (d) => `"${d}/main"`,                                   compile: (d) => `go build -o "${d}/main" "${d}/main.go"` },
 };
 
 function execShell(cmd, stdin, timeoutMs, vmKb = 131072) {
@@ -727,6 +776,9 @@ export async function judgeCodeNative({ lang, code, examples, timeLimit = 2, use
 
   try {
     writeFileSync(join(workDir, cfg.file), code, 'utf-8');
+    for (const [fileName, content] of Object.entries(cfg.extraFiles || {})) {
+      writeFileSync(join(workDir, fileName), content, 'utf-8');
+    }
 
     // 컴파일 단계 (C/C++/Java) — 컴파일은 높은 vmKb로 (javac 자체가 JVM)
     if (cfg.compile) {
@@ -779,6 +831,9 @@ export async function runCodeNative({ lang, code, input = '', timeLimit = 2, use
 
   try {
     writeFileSync(join(workDir, cfg.file), code, 'utf-8');
+    for (const [fileName, content] of Object.entries(cfg.extraFiles || {})) {
+      writeFileSync(join(workDir, fileName), content, 'utf-8');
+    }
 
     if (cfg.compile) {
       const compVmKb = Math.max(effectiveVmKb, 524288);

@@ -25,6 +25,12 @@ import {
   VIEW_PAGE_SIZE,
 } from './problemsPageUtils.js'
 
+function formatAcceptanceSummary(problem, rate) {
+  const submitCount = Number(problem?.submissions ?? problem?.submit_count ?? 0)
+  const rateText = rate == null ? '데이터 없음' : `${Number(rate).toFixed(1)}%`
+  return `정답률 ${rateText} (${submitCount.toLocaleString()}명 제출)`
+}
+
 export default function ProblemsPage() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -923,6 +929,7 @@ export default function ProblemsPage() {
               const bookmarkedState = Boolean(problem.isBookmarked)
               const solvedCountForProblem = problem.solved || problem.solved_count || 0
               const rate = getAcceptanceRate(problem)
+              const rateSummary = formatAcceptanceSummary(problem, rate)
               const typeMeta = PROBLEM_TYPE_META[problem.problemType || 'coding'] || PROBLEM_TYPE_META.coding
               const { algorithmTags: problemAlgorithmTags, companyTags: problemCompanyTags } = splitDiscoveryTags(problem.tags || [])
 
@@ -998,7 +1005,7 @@ export default function ProblemsPage() {
                     fontWeight: 600,
                     color: rate == null ? 'var(--text3)' : rate >= 70 ? 'var(--green)' : rate >= 40 ? 'var(--yellow)' : 'var(--red)',
                     fontFamily: 'Space Mono,monospace',
-                  }}>{rate == null ? '-' : `${rate}%`}</span>
+                  }} title={rateSummary} aria-label={rateSummary}>{rate == null ? '-' : `${Number(rate).toFixed(1)}%`}</span>
                   <div style={{ textAlign: 'center', fontSize: 16 }}>{solvedState ? '✅' : '⬜'}</div>
                   <button onClick={e => bm(e, problem.id)} style={{
                     background: 'none',
@@ -1029,6 +1036,7 @@ export default function ProblemsPage() {
               const bookmarkedState = Boolean(problem.isBookmarked)
               const solvedCountForProblem = problem.solved || problem.solved_count || 0
               const rate = getAcceptanceRate(problem)
+              const rateSummary = formatAcceptanceSummary(problem, rate)
               const typeMeta = PROBLEM_TYPE_META[problem.problemType || 'coding'] || PROBLEM_TYPE_META.coding
               const { algorithmTags: problemAlgorithmTags, companyTags: problemCompanyTags } = splitDiscoveryTags(problem.tags || [])
 
@@ -1088,7 +1096,7 @@ export default function ProblemsPage() {
                   <div style={{ marginTop:8, height:5, borderRadius:999, background:'var(--bg3)', overflow:'hidden' }}>
                     <div style={{ width: `${Math.min(100, Math.max(0, rate ?? 0))}%`, height:'100%', background: rate == null ? 'var(--border)' : rate >= 70 ? 'var(--green)' : rate >= 40 ? 'var(--yellow)' : 'var(--red)' }} />
                   </div>
-                  <div style={{ marginTop:5, fontSize:10, color:'var(--text3)' }}>정답률 {rate == null ? '데이터 없음' : `${rate}%`}</div>
+                  <div style={{ marginTop:5, fontSize:10, color:'var(--text3)' }}>{rateSummary}</div>
                   <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginTop:14 }}>
                     <span style={{ fontSize:11, color:'var(--text3)' }}>{t('hoverSolve')}</span>
                     <button onClick={e => { e.stopPropagation(); go(problem) }} style={{

@@ -1,8 +1,10 @@
 export const JUDGE_LANGUAGE_OPTIONS = Object.freeze([
   { value: 'python', label: 'Python 3', monaco: 'python' },
   { value: 'javascript', label: 'JavaScript', monaco: 'javascript' },
+  { value: 'typescript', label: 'TypeScript', monaco: 'typescript' },
   { value: 'cpp', label: 'C++17', monaco: 'cpp' },
   { value: 'java', label: 'Java 11', monaco: 'java' },
+  { value: 'go', label: 'Go', monaco: 'go' },
   { value: 'c', label: 'C99', monaco: 'c' },
 ])
 
@@ -30,6 +32,12 @@ export function detectJudgeLanguageFromCode(code) {
   }
   if (/\bpublic\s+class\s+Main\b/.test(source) || /\bSystem\.out\.(print|println)\s*\(/.test(source)) {
     return 'java'
+  }
+  if (/\bpackage\s+main\b/.test(source) || /\bfmt\.(Print|Println|Printf|Fprint)\s*\(/.test(source)) {
+    return 'go'
+  }
+  if (/\binterface\s+\w+\s*{/.test(source) || /\btype\s+\w+\s*=/.test(source) || /:\s*(number|string|boolean)\b/.test(source)) {
+    return 'typescript'
   }
   if (/\brequire\s*\(\s*['"]fs['"]\s*\)/.test(source) || /\breadFileSync\s*\(\s*0\b/.test(source) || /\bconsole\.log\s*\(/.test(source)) {
     return 'javascript'

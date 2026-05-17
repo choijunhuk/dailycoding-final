@@ -48,6 +48,25 @@ const fmtTimer = (s) => {
   return `${m}:${ss.toString().padStart(2, '0')}`;
 };
 
+function getProblemCount(problem, camelKey, snakeKey) {
+  return Number(problem?.[camelKey] ?? problem?.[snakeKey] ?? 0);
+}
+
+function getProblemAcceptanceRate(problem) {
+  const submitCount = getProblemCount(problem, 'submissions', 'submit_count');
+  const solvedCount = getProblemCount(problem, 'solved', 'solved_count');
+  if (submitCount > 0) return (solvedCount / submitCount) * 100;
+  if (problem?.acceptanceRate != null) return Number(problem.acceptanceRate);
+  return null;
+}
+
+function formatAcceptanceStat(problem) {
+  const submitCount = getProblemCount(problem, 'submissions', 'submit_count');
+  const rate = getProblemAcceptanceRate(problem);
+  const rateText = rate == null ? '데이터 없음' : `${rate.toFixed(1)}%`;
+  return `정답률 ${rateText} (${submitCount.toLocaleString()}명 제출)`;
+}
+
 const JudgeTimer = forwardRef(({ onReset }, ref) => {
   const [timerOn, setTimerOn] = useState(false);
   const [timerSec, setTimerSec] = useState(0);
@@ -753,6 +772,9 @@ export default function JudgePage() {
     return groups;
   }, [comments]);
   const tierInfo = TIERS[problem?.tier] || {};
+  const problemSubmitCount = getProblemCount(problem, 'submissions', 'submit_count');
+  const problemSolvedCount = getProblemCount(problem, 'solved', 'solved_count');
+  const problemAcceptanceText = formatAcceptanceStat(problem);
 
   if (isProblemLoading) {
     return (
@@ -979,9 +1001,9 @@ export default function JudgePage() {
                 <h4>📈 문제 통계</h4>
                 <div className="stat-rows">
                   {[
-                    ['제출 수', (problem.submissions||0).toLocaleString()],
-                    ['정답 수', (problem.solved||0).toLocaleString()],
-                    ['정답률', problem.submissions>0?`${((problem.solved/problem.submissions)*100).toFixed(1)}%`:'0%'],
+                    ['정답률', problemAcceptanceText],
+                    ['제출 수', problemSubmitCount.toLocaleString()],
+                    ['정답 수', problemSolvedCount.toLocaleString()],
                     ['난이도',  `${problem.difficulty} / 10`],
                   ].map(([k,v])=>(
                     <div key={k} className="stat-row"><span>{k}</span><span className="mono" style={{color:'var(--blue)'}}>{v}</span></div>

@@ -6,6 +6,8 @@ import { validateBody, contestSchema } from '../middleware/validate.js';
 import { MIN_HIDDEN_TESTCASES } from '../shared/problemCatalog.js';
 import { query } from '../config/mysql.js';
 import { errorResponse, internalError } from '../middleware/errorHandler.js';
+import { getCachedJudgeRuntime } from '../services/judgeRuntimeCache.js';
+import { executeSubmissionFlow } from '../services/submissionExecution.js';
 
 const router = Router();
 
@@ -235,6 +237,81 @@ router.get('/:id/leaderboard', auth, async (req, res) => {
   try { res.json(await Contest.getLeaderboard(Number(req.params.id))); }
   catch (err) {
     console.error('[contests/leaderboard]', err.message);
+    return internalError(res);
+  }
+});
+
+router.post('/:id/virtual/start', auth, requireVerified, async (req, res) => {
+  try {
+    const payload = await Contest.startVirtualRun(req.user.id, Number(req.params.id));
+    res.status(201).json(payload);
+  } catch (err) {
+    const status = err.status || 500;
+    if (status < 500) return errorResponse(res, status, 'VALIDATION_ERROR', err.message);
+    console.error('[contests/virtual/start]', err.message);
+    return internalError(res);
+  }
+});
+
+router.get('/:id/virtual/status', auth, async (req, res) => {
+  try {
+    const payload = await Contest.getVirtualStatus(req.user.id, Number(req.params.id));
+    if (!payload) return errorResponse(res, 404, 'NOT_FOUND', '대회 없음');
+    res.json(payload);
+  } catch (err) {
+    console.error('[contests/virtual/status]', err.message);
+    return internalError(res);
+  }
+});
+
+router.post('/:id/virtual/submit', auth, requireVerified, async (req, res) => {
+  try {
+    const contestId = Number(req.params.id);
+    const problemId = Number(req.body?.problemId);
+    const code = String(req.body?.code || '');
+    if (!problemId || !code.trim()) return errorResponse(res, 400, 'VALIDATION_ERROR', 'problemId와 code가 필요합니다.');
+
+    const status = await Contest.getVirtualStatus(req.user.id, contestId);
+    if (!status?.run || status.run.expired) return errorResponse(res, 400, 'VALIDATION_ERROR', '진행 중인 버추얼 대회가 없습니다.');
+    if (!status.problems.some((problem) => Number(problem.id) === problemId)) {
+      return errorResponse(res, 400, 'VALIDATION_ERROR', '이 대회에 포함된 문제가 아닙니다.');
+    }
+
+    const Problem = await getProblemModel();
+    const problem = await Problem.findById(problemId, req.user.id);
+    if (!problem) return errorResponse(res, 404, 'NOT_FOUND', '문제 없음');
+
+    const judgeRuntime = await getCachedJudgeRuntime({ logOnRefresh: true });
+    if (judgeRuntime.mode === 'unavailable') {
+      return errorResponse(res, 503, 'JUDGE_UNAVAILABLE', '현재 서버에서 채점 런타임을 사용할 수 없습니다.');
+    }
+
+    const { execution, normalizedLang, displayLang } = await executeSubmissionFlow({
+      problem,
+      problemId,
+      userId: req.user.id,
+      rawLang: req.body?.lang || req.body?.language || 'Python 3',
+      code,
+      judgeRuntime,
+      persist: false,
+      includeHiddenCases: true,
+      customInput: null,
+      userTier: req.user.tier || 'free',
+    });
+    const submissions = await Contest.recordVirtualSubmission({
+      runId: status.run.id,
+      userId: req.user.id,
+      contestId,
+      problemId,
+      language: displayLang || normalizedLang,
+      code,
+      execution,
+    });
+    res.json({ execution, normalizedLang, displayLang, submissions });
+  } catch (err) {
+    const status = err.status || 500;
+    if (status < 500) return errorResponse(res, status, 'VALIDATION_ERROR', err.message);
+    console.error('[contests/virtual/submit]', err.message);
     return internalError(res);
   }
 });

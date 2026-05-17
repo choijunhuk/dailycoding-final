@@ -35,7 +35,7 @@ test('buildJudgeRuntime exposes full native language support in native mode', ()
   const runtime = buildJudgeRuntime({ env: { JUDGE_MODE: 'native' }, dockerAvailable: true });
 
   assert.equal(runtime.mode, 'native-subprocess');
-  assert.deepEqual(runtime.supportedLanguages, ['python', 'javascript', 'cpp', 'c', 'java']);
+  assert.deepEqual(runtime.supportedLanguages, ['python', 'javascript', 'typescript', 'cpp', 'c', 'java', 'go']);
   assert.equal(runtime.configuredMode, 'native');
 });
 
@@ -43,14 +43,14 @@ test('buildJudgeRuntime keeps full language list when docker sandbox is active',
   const runtime = buildJudgeRuntime({ env: { JUDGE_MODE: 'auto' }, dockerAvailable: true });
 
   assert.equal(runtime.mode, 'docker-sandbox');
-  assert.deepEqual(runtime.supportedLanguages, ['python', 'javascript', 'cpp', 'c', 'java']);
+  assert.deepEqual(runtime.supportedLanguages, ['python', 'javascript', 'typescript', 'cpp', 'c', 'java', 'go']);
 });
 
 test('buildJudgeRuntime falls back to native mode when docker is unavailable', () => {
   const runtime = buildJudgeRuntime({ env: { JUDGE_MODE: 'auto' }, dockerAvailable: false });
 
   assert.equal(runtime.mode, 'native-subprocess');
-  assert.deepEqual(runtime.supportedLanguages, ['python', 'javascript', 'cpp', 'c', 'java']);
+  assert.deepEqual(runtime.supportedLanguages, ['python', 'javascript', 'typescript', 'cpp', 'c', 'java', 'go']);
 });
 
 test('isNativeLanguageSupported covers all native-supported languages', () => {
@@ -59,11 +59,15 @@ test('isNativeLanguageSupported covers all native-supported languages', () => {
   assert.equal(isNativeLanguageSupported('cpp'), true);
   assert.equal(isNativeLanguageSupported('c'), true);
   assert.equal(isNativeLanguageSupported('java'), true);
+  assert.equal(isNativeLanguageSupported('typescript'), true);
+  assert.equal(isNativeLanguageSupported('go'), true);
 });
 
 test('normalizeJudgeLanguage centralizes public label normalization', () => {
   assert.equal(normalizeJudgeLanguage('Python 3'), 'python');
   assert.equal(normalizeJudgeLanguage('JavaScript (Node)'), 'javascript');
+  assert.equal(normalizeJudgeLanguage('TypeScript'), 'typescript');
+  assert.equal(normalizeJudgeLanguage('Go'), 'go');
   assert.equal(normalizeJudgeLanguage('C++17'), 'cpp');
   assert.equal(normalizeJudgeLanguage('Rust'), null);
 });
@@ -74,6 +78,8 @@ test('public language helpers expose allowlisted labels and runtime support chec
   assert.equal(isPublicJudgeLanguage('Python'), true);
   assert.equal(isPublicJudgeLanguage('Ruby'), false);
   assert.equal(getPublicJudgeLanguageLabel('python'), 'Python 3');
+  assert.equal(getPublicJudgeLanguageLabel('typescript'), 'TypeScript');
+  assert.equal(getPublicJudgeLanguageLabel('go'), 'Go');
   assert.equal(isRuntimeLanguageSupported(runtime, 'javascript'), true);
   assert.equal(isRuntimeLanguageSupported(runtime, 'java'), false);
 });
@@ -85,8 +91,8 @@ test('outputsMatch accepts harmless whitespace differences', () => {
 
 test('resolveNativeSupportedLanguages only exposes languages with installed runtimes', () => {
   assert.deepEqual(
-    resolveNativeSupportedLanguages({ python3: true, node: true, gcc: true, 'g++': false, java: true, javac: true }),
-    ['python', 'javascript', 'c', 'java']
+    resolveNativeSupportedLanguages({ python3: true, node: true, npx: true, gcc: true, 'g++': false, java: true, javac: true, go: true }),
+    ['python', 'javascript', 'typescript', 'c', 'java', 'go']
   );
 });
 
@@ -153,6 +159,11 @@ test('judgeCodeNative accepts one-line pair input across installed native langua
       code: 'const fs = require("fs");\nconst [a, b] = fs.readFileSync(0, "utf8").trim().split(/\\s+/).map(Number);\nconsole.log(a + b);',
     },
     {
+      lang: 'typescript',
+      commands: ['node', 'npx'],
+      code: 'import * as fs from "fs";\nconst [a, b]: number[] = fs.readFileSync(0, "utf8").trim().split(/\\s+/).map(Number);\nconsole.log(a + b);',
+    },
+    {
       lang: 'cpp',
       commands: ['g++'],
       code: '#include <bits/stdc++.h>\nusing namespace std;\nint main(){ int a, b; cin >> a >> b; cout << a + b << "\\n"; return 0; }',
@@ -166,6 +177,11 @@ test('judgeCodeNative accepts one-line pair input across installed native langua
       lang: 'java',
       commands: ['java', 'javac'],
       code: 'import java.util.*;\npublic class Main { public static void main(String[] args) { Scanner sc = new Scanner(System.in); int a = sc.nextInt(); int b = sc.nextInt(); System.out.println(a + b); } }',
+    },
+    {
+      lang: 'go',
+      commands: ['go'],
+      code: 'package main\nimport "fmt"\nfunc main(){ var a, b int; fmt.Scan(&a, &b); fmt.Println(a + b) }',
     },
   ];
   const installedSubmissions = submissions.filter((submission) =>

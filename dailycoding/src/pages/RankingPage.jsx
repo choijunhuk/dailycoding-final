@@ -8,6 +8,7 @@ import { getTierImageUrl, getTierGlowStyle } from '../utils/tierImage.js';
 import { useLang } from '../context/LangContext.jsx';
 import { TIER_THRESHOLDS, TIER_ORDER } from '../data/constants.js';
 import ProfileAvatar from '../components/ProfileAvatar';
+import './RankingPage.css';
 
 const TIER_META = {
   unranked:    { color:'#888888', bg:'rgba(136,136,136,.12)', label:'Unranked'    },
@@ -627,12 +628,12 @@ export default function RankingPage() {
       {/* ── RANKING TABLE ── */}
       {mode !== 'teams' && !currentLoading && (
         <div>
-          <div style={{
+          <div className="ranking-table-card" style={{
             background: 'var(--bg2)', border: '1px solid var(--border)',
             borderRadius: 16, overflow: 'hidden',
           }}>
-          <div style={{ overflowX: 'auto' }}>
-            <div style={{ minWidth: 700 }}>
+          <div className="ranking-table-scroll" style={{ overflowX: 'auto' }}>
+            <div className="ranking-table-inner" style={{ minWidth: 700 }}>
               <div style={{
                 display: 'grid',
                 gridTemplateColumns: '56px 1fr 160px 100px 70px 80px 80px',

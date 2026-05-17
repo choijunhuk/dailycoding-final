@@ -1,4 +1,4 @@
-import { nowMySQL } from '../config/dateutil.js';
+import { nowMySQL, toMySQL } from '../config/dateutil.js';
 import { query, queryOne, insert, run } from '../config/mysql.js';
 import redis from '../config/redis.js';
 import { Reward } from './Reward.js';
@@ -70,6 +70,33 @@ function norm(c) {
     hostId:       c.host_id,
     createdAt:    c.created_at,
     rewardRules:  c.reward_rules ?? c.rewardRules ?? [],
+  };
+}
+
+function safeJsonArray(value) {
+  if (Array.isArray(value)) return value;
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function normalizeVirtualRun(row) {
+  if (!row) return null;
+  const startedAt = row.started_at ?? row.startedAt;
+  const endsAt = row.ends_at ?? row.endsAt;
+  return {
+    id: row.id,
+    userId: Number(row.user_id ?? row.userId),
+    contestId: Number(row.contest_id ?? row.contestId),
+    startedAt,
+    endsAt,
+    submissions: safeJsonArray(row.submissions),
+    remainingMs: Math.max(0, new Date(endsAt).getTime() - Date.now()),
+    expired: new Date(endsAt).getTime() <= Date.now(),
   };
 }
 
@@ -410,5 +437,91 @@ export const Contest = {
       'DELETE FROM contest_problems WHERE contest_id=? AND problem_id=?',
       [contestId, problemId]
     );
+  },
+
+  async getActiveVirtualRun(userId, contestId) {
+    const row = await queryOne(
+      `SELECT *
+       FROM virtual_contest_runs
+       WHERE user_id=? AND contest_id=? AND ends_at > NOW()
+       ORDER BY started_at DESC, id DESC
+       LIMIT 1`,
+      [userId, contestId]
+    );
+    return normalizeVirtualRun(row);
+  },
+
+  async startVirtualRun(userId, contestId) {
+    const contest = await this.findById(contestId);
+    if (!contest) {
+      const err = new Error('대회를 찾을 수 없습니다.');
+      err.status = 404;
+      throw err;
+    }
+    const problems = await this.getProblems(contestId);
+    if (!problems.length) {
+      const err = new Error('버추얼 대회에 사용할 문제가 없습니다.');
+      err.status = 400;
+      throw err;
+    }
+
+    const active = await this.getActiveVirtualRun(userId, contestId);
+    if (active) return { contest, run: active, problems };
+
+    const started = new Date();
+    const ends = new Date(started.getTime() + Number(contest.duration || 60) * 60_000);
+    const runId = await insert(
+      'INSERT INTO virtual_contest_runs (user_id, contest_id, started_at, ends_at, submissions) VALUES (?,?,?,?,?)',
+      [userId, contestId, toMySQL(started), toMySQL(ends), '[]']
+    );
+    return {
+      contest,
+      run: normalizeVirtualRun({
+        id: runId,
+        user_id: userId,
+        contest_id: contestId,
+        started_at: toMySQL(started),
+        ends_at: toMySQL(ends),
+        submissions: '[]',
+      }),
+      problems,
+    };
+  },
+
+  async getVirtualStatus(userId, contestId) {
+    const contest = await this.findById(contestId);
+    if (!contest) return null;
+    const run = await this.getActiveVirtualRun(userId, contestId)
+      || normalizeVirtualRun(await queryOne(
+        `SELECT *
+         FROM virtual_contest_runs
+         WHERE user_id=? AND contest_id=?
+         ORDER BY started_at DESC, id DESC
+         LIMIT 1`,
+        [userId, contestId]
+      ));
+    const problems = await this.getProblems(contestId);
+    return { contest, run, problems };
+  },
+
+  async recordVirtualSubmission({ runId, userId, contestId, problemId, language, code, execution }) {
+    const timeMs = execution?.time && execution.time !== '-' ? Number.parseInt(execution.time, 10) || null : null;
+    await insert(
+      `INSERT INTO virtual_submissions
+       (run_id, user_id, contest_id, problem_id, language, result, time_ms, detail, code)
+       VALUES (?,?,?,?,?,?,?,?,?)`,
+      [runId, userId, contestId, problemId, language, execution.result, timeMs, execution.detail || '', code || '']
+    );
+    const runRow = await queryOne('SELECT submissions FROM virtual_contest_runs WHERE id=? AND user_id=?', [runId, userId]);
+    const submissions = safeJsonArray(runRow?.submissions);
+    submissions.push({
+      ts: Date.now(),
+      problemId,
+      language,
+      result: execution.result,
+      timeMs,
+    });
+    await run('UPDATE virtual_contest_runs SET submissions=? WHERE id=? AND user_id=?', [JSON.stringify(submissions), runId, userId]);
+    return submissions;
   },
 };
