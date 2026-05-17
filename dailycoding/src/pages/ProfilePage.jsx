@@ -547,7 +547,7 @@ export default function ProfilePage() {
       <div className="profile-learning-activity card">
         {[
           { label:'푼 문제 수', value: learningActivity?.solvedProblems ?? solvedProblemsMain.length, color:'var(--green)' },
-          { label:'트러블슈팅 해결', value: learningActivity?.troubleshootingSolved ?? 0, color:'var(--orange)' },
+          { label:'XP 레벨', value: `Lv.${learningActivity?.xpLevel ?? 1}`, color:'var(--orange)' },
           { label:'배틀 승률', value: `${learningActivity?.battleWinRate ?? 0}%`, color:'var(--red)' },
           { label:'리뷰 승인', value: learningActivity?.reviewAcceptedCount ?? 0, color:'var(--blue)' },
           { label:'협업 점수', value: learningActivity?.collaborationScore ?? 0, color:'var(--purple)' },

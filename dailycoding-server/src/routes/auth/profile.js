@@ -189,7 +189,7 @@ router.get('/profile/:id', auth, async (req, res) => {
     }
 
     const anonClause = isSelf ? '' : ' AND is_anonymous = 0';
-    const [statsRow, followStats, isFollowing, replyStatsRow, solvedTierRows, troubleshootingRow, battleRows, collaborationRow] = await Promise.all([
+    const [statsRow, followStats, isFollowing, replyStatsRow, solvedTierRows, progressionRow, battleRows, collaborationRow] = await Promise.all([
       queryOne(
         `SELECT COUNT(*) AS post_count, COALESCE(SUM(like_count),0) AS total_likes
          FROM posts WHERE user_id = ?${anonClause}`,
@@ -219,11 +219,7 @@ router.get('/profile/:id', auth, async (req, res) => {
          GROUP BY p.tier`,
         [id]
       ),
-      optionalQueryOne(
-        'SELECT COUNT(*) AS cnt FROM troubleshooting_submissions WHERE user_id = ? AND result = ?',
-        [id, 'correct'],
-        { cnt: 0 }
-      ),
+      queryOne('SELECT level, xp FROM user_progression WHERE user_id = ?', [id]).catch(() => null),
       query('SELECT * FROM battle_results WHERE user_id = ? ORDER BY created_at DESC LIMIT 500', [id]).catch(() => []),
       optionalQueryOne(
         'SELECT * FROM collaboration_scores WHERE user_id = ?',
@@ -285,7 +281,7 @@ router.get('/profile/:id', auth, async (req, res) => {
       solvedTierCounts,
       learningActivity: {
         solvedProblems: user.solved_count ?? 0,
-        troubleshootingSolved: Number(troubleshootingRow?.cnt || 0),
+        xpLevel: progressionRow?.level ?? 1,
         battleCount,
         battleWins,
         battleWinRate: battleCount > 0 ? Math.round((battleWins / battleCount) * 100) : 0,

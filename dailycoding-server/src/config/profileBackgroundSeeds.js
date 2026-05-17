@@ -14,7 +14,7 @@ export const PROFILE_BACKGROUND_SEEDS = [
   { slug: 'gradient-rose', name: '로즈', image_url: 'gradient:linear-gradient(135deg,#1a0010,#2e0020,#1a000d)' },
   { slug: 'gradient-cyber', name: '사이버', image_url: 'gradient:linear-gradient(135deg,#000d1a,#001a1a,#0a2e2a)' },
   { slug: 'gradient-lava', name: '라바', image_url: 'gradient:linear-gradient(135deg,#1a0000,#2e0a00,#1a1400)' },
-  { slug: 'solid-dark', name: '다크', image_url: 'gradient:#0d1117' },
+  { slug: 'solid-dark', name: '다크', image_url: 'gradient:linear-gradient(135deg,#1c2128 0%,#161b22 100%)' },
   { slug: 'solid-black', name: '블랙', image_url: 'gradient:#000000' },
   { slug: 'solid-navy', name: '네이비', image_url: 'gradient:#0a0e1a' },
   { slug: 'photo-1', name: '배경 1', image_url: '/backgrounds/background.avif' },

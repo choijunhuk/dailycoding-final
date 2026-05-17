@@ -1135,6 +1135,218 @@ function solveExpansionPattern(pattern, input) {
     return String(dp[capacity])
   }
 
+  if (pattern === 'max-subarray') {
+    const n = Number(lines[0])
+    const arr = lines[1].trim().split(/\s+/).map(Number).slice(0, n)
+    let maxSum = arr[0]
+    let cur = arr[0]
+    for (let i = 1; i < arr.length; i += 1) {
+      cur = Math.max(arr[i], cur + arr[i])
+      maxSum = Math.max(maxSum, cur)
+    }
+    return String(maxSum)
+  }
+
+  if (pattern === 'prime-count') {
+    const n = Number(lines[0].trim())
+    if (n < 2) return '0'
+    const sieve = Array(n + 1).fill(true)
+    sieve[0] = sieve[1] = false
+    for (let i = 2; i * i <= n; i += 1) {
+      if (sieve[i]) for (let j = i * i; j <= n; j += i) sieve[j] = false
+    }
+    return String(sieve.filter(Boolean).length)
+  }
+
+  if (pattern === 'palindrome') {
+    const s = lines[0].trim()
+    return s === s.split('').reverse().join('') ? 'YES' : 'NO'
+  }
+
+  if (pattern === 'coin-min') {
+    const [n, target] = lines[0].trim().split(/\s+/).map(Number)
+    const coins = lines[1].trim().split(/\s+/).map(Number).slice(0, n)
+    const dp = Array(target + 1).fill(Infinity)
+    dp[0] = 0
+    for (let amount = 1; amount <= target; amount += 1) {
+      for (const coin of coins) {
+        if (coin <= amount && dp[amount - coin] + 1 < dp[amount]) {
+          dp[amount] = dp[amount - coin] + 1
+        }
+      }
+    }
+    return dp[target] === Infinity ? '-1' : String(dp[target])
+  }
+
+  if (pattern === 'gcd-calc') {
+    const [a, b] = nums
+    let x = Math.abs(a)
+    let y = Math.abs(b)
+    while (y) { const t = y; y = x % y; x = t }
+    return String(x)
+  }
+
+  if (pattern === 'lis-len') {
+    const n = Number(lines[0])
+    const arr = lines[1].trim().split(/\s+/).map(Number).slice(0, n)
+    const dp = Array(n).fill(1)
+    for (let i = 1; i < n; i += 1) {
+      for (let j = 0; j < i; j += 1) {
+        if (arr[j] < arr[i]) dp[i] = Math.max(dp[i], dp[j] + 1)
+      }
+    }
+    return String(Math.max(...dp))
+  }
+
+  if (pattern === 'digit-sum') {
+    const s = lines[0].trim().replace(/^-/, '')
+    return String(s.split('').reduce((sum, c) => sum + Number(c), 0))
+  }
+
+  if (pattern === 'anagram') {
+    const a = lines[0].trim().split('').sort().join('')
+    const b = lines[1].trim().split('').sort().join('')
+    return a === b ? 'YES' : 'NO'
+  }
+
+  if (pattern === 'stock-max') {
+    const n = Number(lines[0])
+    const prices = lines[1].trim().split(/\s+/).map(Number).slice(0, n)
+    let minPrice = prices[0]
+    let maxProfit = 0
+    for (let i = 1; i < prices.length; i += 1) {
+      maxProfit = Math.max(maxProfit, prices[i] - minPrice)
+      minPrice = Math.min(minPrice, prices[i])
+    }
+    return String(maxProfit)
+  }
+
+  if (pattern === 'power-mod') {
+    let [base, exp, mod] = nums
+    let result = 1
+    base %= mod
+    while (exp > 0) {
+      if (exp & 1) result = (result * base) % mod
+      base = (base * base) % mod
+      exp >>= 1
+    }
+    return String(result)
+  }
+
+  if (pattern === 'balanced-paren') {
+    const s = lines[0].trim()
+    let depth = 0
+    for (const c of s) {
+      if (c === '(') depth += 1
+      else if (c === ')') {
+        depth -= 1
+        if (depth < 0) return 'NO'
+      }
+    }
+    return depth === 0 ? 'YES' : 'NO'
+  }
+
+  if (pattern === 'unique-count') {
+    const n = Number(lines[0])
+    const arr = lines[1].trim().split(/\s+/).map(Number).slice(0, n)
+    return String(new Set(arr).size)
+  }
+
+  if (pattern === 'diagonal-sum') {
+    const n = Number(lines[0])
+    let sum = 0
+    for (let i = 0; i < n; i += 1) {
+      const row = lines[i + 1].trim().split(/\s+/).map(Number)
+      sum += row[i]
+    }
+    return String(sum)
+  }
+
+  if (pattern === 'divisor-sum') {
+    const n = Number(lines[0].trim())
+    let sum = 0
+    for (let i = 1; i * i <= n; i += 1) {
+      if (n % i === 0) {
+        sum += i
+        if (i !== n / i) sum += n / i
+      }
+    }
+    return String(sum)
+  }
+
+  if (pattern === 'prefix-max') {
+    const n = Number(lines[0])
+    const arr = lines[1].trim().split(/\s+/).map(Number).slice(0, n)
+    let maxVal = -Infinity
+    return arr.map((v) => { maxVal = Math.max(maxVal, v); return maxVal }).join(' ')
+  }
+
+  if (pattern === 'string-compress') {
+    const s = lines[0].trim()
+    if (!s) return ''
+    const parts = []
+    let count = 1
+    for (let i = 1; i < s.length; i += 1) {
+      if (s[i] === s[i - 1]) count += 1
+      else { parts.push(s[i - 1] + count); count = 1 }
+    }
+    parts.push(s[s.length - 1] + count)
+    return parts.join('')
+  }
+
+  if (pattern === 'count-pairs-even') {
+    const n = Number(lines[0])
+    const arr = lines[1].trim().split(/\s+/).map(Number).slice(0, n)
+    const oddCount = arr.filter((v) => v % 2 !== 0).length
+    const evenCount = n - oddCount
+    return String((oddCount * (oddCount - 1) / 2) + (evenCount * (evenCount - 1) / 2))
+  }
+
+  if (pattern === 'min-in-range') {
+    const [n, left, right] = nums
+    const arr = nums.slice(3, 3 + n)
+    return String(Math.min(...arr.slice(left - 1, right)))
+  }
+
+  if (pattern === 'prime-factors') {
+    let n = Number(lines[0].trim())
+    const factors = new Set()
+    for (let d = 2; d * d <= n; d += 1) {
+      while (n % d === 0) { factors.add(d); n = Math.floor(n / d) }
+    }
+    if (n > 1) factors.add(n)
+    return String(factors.size)
+  }
+
+  if (pattern === 'subarray-zero-sum') {
+    const n = Number(lines[0])
+    const arr = lines[1].trim().split(/\s+/).map(Number).slice(0, n)
+    const prefixSums = new Set([0])
+    let sum = 0
+    for (const v of arr) {
+      sum += v
+      if (prefixSums.has(sum)) return 'YES'
+      prefixSums.add(sum)
+    }
+    return 'NO'
+  }
+
+  if (pattern === 'sort-array') {
+    const n = Number(lines[0])
+    const arr = lines[1].trim().split(/\s+/).map(Number).slice(0, n)
+    return arr.sort((a, b) => a - b).join(' ')
+  }
+
+  if (pattern === 'matrix-row-max') {
+    const [n, m] = lines[0].trim().split(/\s+/).map(Number)
+    const rowMaxes = []
+    for (let i = 1; i <= n; i += 1) {
+      const row = lines[i].trim().split(/\s+/).map(Number)
+      rowMaxes.push(Math.max(...row.slice(0, m)))
+    }
+    return String(Math.min(...rowMaxes))
+  }
+
   return ''
 }
 
@@ -1222,6 +1434,160 @@ const EXPANSION_PATTERNS = [
     hint: '용량을 큰 값에서 작은 값으로 순회해야 같은 물건을 두 번 선택하지 않습니다.', desc: '제한 용량 안에서 가치 합을 최대화하는 대표 DP 문제입니다.',
     examples: ['4 7\n6 13\n4 8\n3 6\n5 12'],
     hiddenInputs: ['3 10\n5 10\n4 40\n6 30','5 8\n3 4\n4 5\n5 10\n2 3\n1 2','4 5\n2 3\n1 2\n3 4\n2 2','3 9\n3 8\n4 7\n5 12','5 10\n6 13\n4 8\n3 6\n5 12\n2 4','4 12\n7 15\n5 10\n3 6\n4 7','3 6\n4 10\n2 4\n3 7','5 9\n2 3\n2 4\n4 8\n5 8\n3 5','4 11\n5 7\n6 9\n4 6\n3 5','1 3\n4 10'],
+  },
+  {
+    key: 'max-subarray', title: '최대 부분 배열 합', baseDifficulty: 4, tags: ['다이나믹 프로그래밍', '배열'],
+    inputDesc: '첫째 줄에 N, 둘째 줄에 N개의 정수가 주어진다.', outputDesc: '연속된 부분 배열의 최대 합을 출력한다.',
+    hint: '현재 원소를 새 시작으로 삼을지, 이전 합에 이을지 매 단계에서 선택합니다. (카데인 알고리즘)', desc: '연속 부분 배열의 합이 최대가 되도록 구간을 선택하는 대표 DP 문제입니다.',
+    examples: ['5\n-2 1 -3 4 -1'],
+    hiddenInputs: ['5\n1 2 3 4 5','5\n-5 -4 -3 -2 -1','4\n-2 3 2 -1','6\n-2 1 -3 4 -1 2','4\n1 -100 1 -100','5\n0 0 0 0 0','6\n-1 2 3 -9 3 1','7\n2 -1 2 3 4 -5 2','4\n-1 -1 -1 -1','4\n-2 3 2 -1'],
+  },
+  {
+    key: 'prime-count', title: 'N 이하 소수 개수', baseDifficulty: 3, tags: ['수학', '에라토스테네스의 체'],
+    inputDesc: '첫째 줄에 정수 N이 주어진다.', outputDesc: '1 이상 N 이하의 소수 개수를 출력한다.',
+    hint: '에라토스테네스의 체: 2부터 sqrt(N)까지 순회하며 배수를 걸러내면 O(N log log N)입니다.', desc: '소수를 효율적으로 판별하는 고전 알고리즘을 구현합니다.',
+    examples: ['10'],
+    hiddenInputs: ['1','2','7','13','20','30','50','100','0','17'],
+  },
+  {
+    key: 'palindrome', title: '팰린드롬 판별', baseDifficulty: 2, tags: ['문자열', '구현'],
+    inputDesc: '첫째 줄에 문자열이 주어진다.', outputDesc: '팰린드롬이면 YES, 아니면 NO를 출력한다.',
+    hint: '문자열을 뒤집었을 때 원래 문자열과 같으면 팰린드롬입니다.', desc: '주어진 문자열이 앞뒤가 같은 팰린드롬인지 판별합니다.',
+    examples: ['racecar'],
+    hiddenInputs: ['hello','a','ab','abcba','level','noon','madam','python','civic','abcd'],
+  },
+  {
+    key: 'coin-min', title: '최소 동전 개수', baseDifficulty: 4, tags: ['다이나믹 프로그래밍', '그리디'],
+    inputDesc: '첫째 줄에 N T, 둘째 줄에 N개의 동전 종류가 주어진다.', outputDesc: '금액 T를 만들기 위한 최소 동전 수를 출력한다. 불가능하면 -1.',
+    hint: 'dp[i] = i원을 만드는 최소 동전 수로 정의하고 각 동전으로 전이하면 됩니다.', desc: '목표 금액을 만드는 최소 동전 수를 DP로 구합니다.',
+    examples: ['3 11\n1 5 6'],
+    hiddenInputs: ['4 10\n1 2 5 10','3 7\n2 3 5','2 14\n5 7','3 15\n1 5 10','4 12\n1 3 4 5','2 4\n2 3','3 8\n1 4 6','3 6\n1 3 4','2 9\n3 5','4 20\n1 5 10 20'],
+  },
+  {
+    key: 'gcd-calc', title: '최대공약수', baseDifficulty: 2, tags: ['수학', '유클리드'],
+    inputDesc: '첫째 줄에 두 정수 A B가 주어진다.', outputDesc: 'A와 B의 최대공약수를 출력한다.',
+    hint: '유클리드 호제법: gcd(a, b) = gcd(b, a mod b)이며 b가 0이 되면 a가 GCD입니다.', desc: '두 수의 최대공약수를 유클리드 호제법으로 구합니다.',
+    examples: ['12 8'],
+    hiddenInputs: ['100 75','7 13','36 48','17 17','1000 500','99 66','14 21','5 10','49 35','24 36'],
+  },
+  {
+    key: 'lis-len', title: '최장 증가 부분 수열 길이', baseDifficulty: 5, tags: ['다이나믹 프로그래밍'],
+    inputDesc: '첫째 줄에 N, 둘째 줄에 N개의 정수가 주어진다.', outputDesc: '최장 증가 부분 수열의 길이를 출력한다.',
+    hint: 'dp[i] = arr[i]로 끝나는 LIS 길이. j < i이고 arr[j] < arr[i]인 경우 dp[i] = max(dp[i], dp[j]+1)입니다.', desc: '주어진 수열에서 순서를 유지하며 증가하는 가장 긴 부분 수열 길이를 구합니다.',
+    examples: ['6\n3 1 2 1 4 3'],
+    hiddenInputs: ['5\n1 2 3 4 5','5\n5 4 3 2 1','7\n3 5 6 2 5 4 19','4\n2 2 2 2','6\n1 3 2 4 3 5','5\n10 9 2 5 3','8\n0 8 4 12 2 10 6 14','3\n3 3 3','5\n1 5 2 4 3','4\n1 3 2 4'],
+  },
+  {
+    key: 'digit-sum', title: '자릿수 합', baseDifficulty: 1, tags: ['수학', '구현'],
+    inputDesc: '첫째 줄에 양의 정수 N이 주어진다.', outputDesc: 'N의 각 자릿수의 합을 출력한다.',
+    hint: '숫자를 문자열로 변환하면 각 자릿수를 쉽게 접근할 수 있습니다.', desc: '정수의 각 자릿수를 모두 더한 값을 구합니다.',
+    examples: ['1234'],
+    hiddenInputs: ['9999','100','0','12345','99','1000','5678','777','30','999999'],
+  },
+  {
+    key: 'anagram', title: '애너그램 판별', baseDifficulty: 3, tags: ['문자열', '정렬'],
+    inputDesc: '첫째 줄에 문자열 A, 둘째 줄에 문자열 B가 주어진다.', outputDesc: '두 문자열이 애너그램이면 YES, 아니면 NO를 출력한다.',
+    hint: '두 문자열을 정렬했을 때 같으면 애너그램입니다. 문자 빈도 배열로도 풀 수 있습니다.', desc: '두 문자열이 같은 문자로 구성된 애너그램인지 판별합니다.',
+    examples: ['listen\nsilent'],
+    hiddenInputs: ['hello\nworld','cat\nact','abc\ndef','abcd\ndcba','python\nnothyp','aab\nbba','level\nvelle','race\ncare','coding\ndigonc'],
+  },
+  {
+    key: 'stock-max', title: '주식 최대 이익', baseDifficulty: 3, tags: ['그리디', '배열'],
+    inputDesc: '첫째 줄에 N, 둘째 줄에 날짜별 주식 가격 N개가 주어진다.', outputDesc: '한 번 사고 팔 때 얻을 수 있는 최대 이익을 출력한다. 이익이 없으면 0.',
+    hint: '왼쪽부터 현재까지의 최솟값을 추적하면 현재 가격에서 팔 때의 최대 이익을 O(N)에 구할 수 있습니다.', desc: '주식을 한 번 사고 팔아서 얻을 수 있는 최대 이익을 구합니다.',
+    examples: ['6\n7 1 5 3 6 4'],
+    hiddenInputs: ['5\n7 6 4 3 1','5\n1 2 3 4 5','4\n3 2 6 5','5\n2 4 1 5 3','3\n1 1 1','6\n1 2 3 4 3 5','4\n5 1 5 1','5\n3 8 2 9 1','3\n10 1 10','4\n4 3 2 1'],
+  },
+  {
+    key: 'power-mod', title: '거듭제곱 나머지', baseDifficulty: 4, tags: ['수학', '분할 정복'],
+    inputDesc: '첫째 줄에 A B M이 주어진다.', outputDesc: 'A의 B제곱을 M으로 나눈 나머지를 출력한다.',
+    hint: '분할 정복 거듭제곱: exp가 짝수면 base^(exp/2)^2, 홀수면 base × base^(exp-1)으로 O(log B)에 계산합니다.', desc: '큰 거듭제곱을 모듈러 연산과 함께 빠르게 계산합니다.',
+    examples: ['2 10 1000'],
+    hiddenInputs: ['3 5 100','5 3 7','7 0 100','1 100 5','10 3 999','9 2 100','3 0 5','2 5 31','4 4 17','6 6 1000000007'],
+  },
+  {
+    key: 'balanced-paren', title: '올바른 괄호 판별', baseDifficulty: 3, tags: ['스택', '문자열'],
+    inputDesc: '첫째 줄에 괄호로만 이루어진 문자열이 주어진다.', outputDesc: '올바른 괄호 문자열이면 YES, 아니면 NO를 출력한다.',
+    hint: '여는 괄호는 스택에 넣고, 닫는 괄호는 꺼냅니다. 스택이 비어 있을 때 닫는 괄호가 오거나 끝에 스택이 비지 않으면 NO입니다.', desc: '괄호 문자열의 짝이 올바르게 맞춰져 있는지 스택으로 확인합니다.',
+    examples: ['(()())'],
+    hiddenInputs: ['(()','()()()',')',')(',')','(((((','((()))','()(()())','(()(()))','()'],
+  },
+  {
+    key: 'unique-count', title: '고유 원소 수', baseDifficulty: 2, tags: ['자료 구조', '배열'],
+    inputDesc: '첫째 줄에 N, 둘째 줄에 N개의 정수가 주어진다.', outputDesc: '중복을 제거한 고유 원소의 수를 출력한다.',
+    hint: '집합(Set)에 모든 원소를 넣으면 중복이 자동으로 제거됩니다.', desc: '배열에 중복 없이 몇 가지 서로 다른 값이 있는지 구합니다.',
+    examples: ['5\n1 2 2 3 3'],
+    hiddenInputs: ['4\n1 1 1 1','6\n1 2 3 4 5 6','5\n5 4 3 2 1','4\n10 20 10 20','7\n1 2 3 1 2 3 1','3\n0 0 0','6\n-1 0 1 -1 0 1','5\n100 200 300 400 500','4\n1 2 3 4','3\n5 5 5'],
+  },
+  {
+    key: 'diagonal-sum', title: '행렬 주대각선 합', baseDifficulty: 2, tags: ['구현', '행렬'],
+    inputDesc: '첫째 줄에 N, 이후 N줄에 N×N 행렬이 주어진다.', outputDesc: '주대각선 원소의 합을 출력한다.',
+    hint: '주대각선은 행 인덱스와 열 인덱스가 같은 원소들입니다.', desc: 'N×N 행렬에서 좌상단부터 우하단까지 주대각선 원소 합을 구합니다.',
+    examples: ['3\n1 2 3\n4 5 6\n7 8 9'],
+    hiddenInputs: ['2\n1 2\n3 4','3\n9 0 0\n0 9 0\n0 0 9','4\n1 2 3 4\n5 6 7 8\n9 10 11 12\n13 14 15 16','2\n0 0\n0 0','3\n5 1 1\n1 5 1\n1 1 5','1\n42','3\n-1 2 3\n4 -5 6\n7 8 -9','4\n0 1 2 3\n4 5 6 7\n8 9 10 11\n12 13 14 15','2\n5 3\n3 5','3\n0 0 7\n0 5 0\n3 0 0'],
+  },
+  {
+    key: 'divisor-sum', title: '약수의 합', baseDifficulty: 2, tags: ['수학', '구현'],
+    inputDesc: '첫째 줄에 양의 정수 N이 주어진다.', outputDesc: 'N의 모든 약수의 합을 출력한다.',
+    hint: '1부터 sqrt(N)까지만 검사하고 약수 쌍을 함께 더하면 O(sqrt(N))입니다.', desc: '자연수 N의 모든 약수를 구하고 그 합을 계산합니다.',
+    examples: ['12'],
+    hiddenInputs: ['1','6','7','15','28','100','4','9','36','24'],
+  },
+  {
+    key: 'prefix-max', title: '구간 누적 최댓값', baseDifficulty: 2, tags: ['배열', '구현'],
+    inputDesc: '첫째 줄에 N, 둘째 줄에 N개의 정수가 주어진다.', outputDesc: '각 위치까지의 최댓값을 공백으로 구분하여 출력한다.',
+    hint: '앞에서부터 순회하며 지금까지 본 최댓값을 유지하면 됩니다.', desc: '배열의 각 인덱스에서 처음부터 해당 인덱스까지의 최댓값을 구합니다.',
+    examples: ['5\n3 1 4 1 5'],
+    hiddenInputs: ['4\n1 2 3 4','4\n4 3 2 1','5\n-3 -1 -4 -1 -5','3\n0 0 0','6\n2 5 1 8 3 9','4\n10 10 10 10','5\n-5 5 -5 5 -5','3\n100 1 1','6\n1 3 2 5 4 6','5\n9 8 7 6 5'],
+  },
+  {
+    key: 'string-compress', title: '문자열 런 길이 압축', baseDifficulty: 3, tags: ['문자열', '구현'],
+    inputDesc: '첫째 줄에 소문자 알파벳으로 이루어진 문자열이 주어진다.', outputDesc: '연속된 같은 문자를 (문자)(횟수) 형식으로 압축하여 출력한다.',
+    hint: '현재 문자가 이전 문자와 같으면 카운트를 늘리고, 달라지면 (문자)(카운트)를 기록합니다.', desc: '연속 반복되는 문자를 압축해 표현하는 런 길이 부호화를 구현합니다.',
+    examples: ['aaabbc'],
+    hiddenInputs: ['abcd','aaaa','aabb','abcabc','zzz','aabbbcccc','abc','a','xxyyzz','aaaaabbbbb'],
+  },
+  {
+    key: 'count-pairs-even', title: '합이 짝수인 쌍의 수', baseDifficulty: 3, tags: ['수학', '조합론'],
+    inputDesc: '첫째 줄에 N, 둘째 줄에 N개의 정수가 주어진다.', outputDesc: '합이 짝수인 (i, j) (i < j) 쌍의 수를 출력한다.',
+    hint: '두 수의 합이 짝수가 되려면 둘 다 짝수이거나 둘 다 홀수여야 합니다. 홀수 개수와 짝수 개수로 조합 수를 계산합니다.', desc: '두 원소의 합이 짝수인 순서 없는 쌍의 수를 세는 수학 문제입니다.',
+    examples: ['5\n1 2 3 4 5'],
+    hiddenInputs: ['4\n2 4 6 8','4\n1 3 5 7','3\n1 2 3','2\n2 4','6\n1 2 3 4 5 6','5\n1 1 1 1 1','4\n1 2 3 4','3\n2 4 6','5\n10 20 30 40 50','4\n1 1 2 2'],
+  },
+  {
+    key: 'min-in-range', title: '구간 최솟값 질의', baseDifficulty: 2, tags: ['누적 합', '배열'],
+    inputDesc: '첫째 줄에 N L R, 둘째 줄에 N개의 정수가 주어진다. 1-indexed 구간 [L, R]의 최솟값을 구한다.', outputDesc: '구간 최솟값을 출력한다.',
+    hint: '구간을 slice한 뒤 Math.min을 적용하면 됩니다. N이 커지면 스파스 테이블로 O(1) 질의가 가능합니다.', desc: '주어진 배열의 구간에서 최솟값을 빠르게 구하는 문제입니다.',
+    examples: ['5 2 4\n1 2 3 4 5'],
+    hiddenInputs: ['5 1 5\n5 4 3 2 1','5 3 3\n9 8 7 6 5','4 1 2\n3 1 4 1','6 2 5\n5 3 8 1 2 9','5 4 5\n10 1 2 3 4','4 2 3\n4 2 6 8','3 1 3\n5 5 5','6 1 6\n7 3 5 1 9 2','5 2 4\n10 5 15 20 25','5 1 3\n3 1 2 4 5'],
+  },
+  {
+    key: 'prime-factors', title: '서로 다른 소인수 개수', baseDifficulty: 3, tags: ['수학', '소인수 분해'],
+    inputDesc: '첫째 줄에 양의 정수 N이 주어진다.', outputDesc: 'N의 서로 다른 소인수의 개수를 출력한다.',
+    hint: '2부터 sqrt(N)까지 나누어지면 소인수로 기록하고 N을 계속 나눕니다. 마지막에 N > 1이면 N도 소인수입니다.', desc: '정수를 소인수 분해하여 서로 다른 소인수가 몇 가지인지 구합니다.',
+    examples: ['12'],
+    hiddenInputs: ['1','7','30','100','2310','4','15','36','105','2'],
+  },
+  {
+    key: 'subarray-zero-sum', title: '합이 0인 부분 배열', baseDifficulty: 4, tags: ['해시', '누적 합'],
+    inputDesc: '첫째 줄에 N, 둘째 줄에 N개의 정수가 주어진다.', outputDesc: '합이 0인 연속 부분 배열이 존재하면 YES, 없으면 NO를 출력한다.',
+    hint: '누적 합 배열에 같은 값이 두 번 등장하면, 그 사이 구간의 합이 0입니다. 집합으로 O(N)에 확인할 수 있습니다.', desc: '누적 합의 중복 여부로 합이 0인 부분 배열 존재를 판별합니다.',
+    examples: ['5\n4 2 -3 1 6'],
+    hiddenInputs: ['3\n1 2 3','4\n1 -1 2 -2','5\n1 2 3 -6 0','3\n5 5 5','4\n-3 3 4 -4','5\n2 3 -5 1 2','4\n1 2 -1 4','6\n3 4 -7 1 2 -1','3\n1 -2 1','5\n6 -3 2 4 1'],
+  },
+  {
+    key: 'sort-array', title: '배열 오름차순 정렬', baseDifficulty: 1, tags: ['정렬', '구현'],
+    inputDesc: '첫째 줄에 N, 둘째 줄에 N개의 정수가 주어진다.', outputDesc: '오름차순으로 정렬한 배열을 공백으로 구분하여 출력한다.',
+    hint: '비교 기반 정렬은 O(N log N)입니다. 내장 sort를 쓸 때 숫자 비교 함수를 반드시 전달하세요.', desc: '주어진 정수 배열을 오름차순으로 정렬하는 기본 정렬 문제입니다.',
+    examples: ['5\n3 1 4 1 5'],
+    hiddenInputs: ['4\n4 3 2 1','6\n1 2 3 4 5 6','5\n5 -3 0 8 -1','3\n1 1 1','5\n10 9 8 7 6','6\n3 6 1 5 2 4','4\n-5 -1 -3 -2','5\n100 1 50 10 5','3\n0 0 1','6\n7 7 3 3 1 1'],
+  },
+  {
+    key: 'matrix-row-max', title: '행별 최댓값 중 최솟값', baseDifficulty: 3, tags: ['구현', '행렬'],
+    inputDesc: '첫째 줄에 N M, 이후 N줄에 M개의 정수가 주어진다.', outputDesc: '각 행의 최댓값 중 가장 작은 값을 출력한다.',
+    hint: '각 행의 최댓값을 구한 뒤, 그 값들 중 최솟값을 선택합니다.', desc: '행렬에서 각 행 최댓값 중 가장 작은 값(minimax)을 구합니다.',
+    examples: ['3 3\n3 1 2\n4 5 1\n1 2 3'],
+    hiddenInputs: ['2 2\n1 2\n3 4','3 2\n5 3\n1 4\n2 6','2 3\n1 2 3\n4 5 6','4 4\n1 2 3 4\n5 6 7 8\n9 10 11 12\n13 14 15 16','1 4\n10 20 30 40','3 3\n1 1 1\n2 2 2\n3 3 3','2 4\n9 3 5 1\n2 8 4 6','3 2\n0 0\n0 5\n3 0','2 3\n3 3 3\n3 3 3','3 3\n2 9 4\n7 5 3\n6 1 8'],
   },
 ]
 

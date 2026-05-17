@@ -350,6 +350,11 @@ export const User = {
     }
 
     // 티어 달성 보상
+    const tierBadgeMap = { bronze: 'badge_bronze', silver: 'badge_silver', gold: 'badge_gold', platinum: 'badge_platinum', diamond: 'badge_diamond' };
+    const tierTitleMap = { bronze: 'title_bronze', silver: 'title_silver', gold: 'title_gold', platinum: 'title_platinum', diamond: 'title_diamond' };
+    if (tierBadgeMap[nextTier]) await Reward.grant(userId, tierBadgeMap[nextTier]);
+    if (tierTitleMap[nextTier]) await Reward.grant(userId, tierTitleMap[nextTier]);
+
     // 스트릭 보상
     const streak = updUser?.streak || 0;
     if (streak >= 100) await Reward.grant(userId, 'badge_streak100');

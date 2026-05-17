@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   getProfileAvatarColor,
   getProfileAvatarEmoji,
@@ -26,6 +27,7 @@ export default function ProfileAvatar({
   alt,
   ...props
 }) {
+  const [imgError, setImgError] = useState(false);
   const src = getProfileAvatarSource(profile);
   const color = getProfileAvatarColor(profile);
   const emoji = getProfileAvatarEmoji(profile);
@@ -39,7 +41,7 @@ export default function ProfileAvatar({
     ...style,
   };
 
-  if (src) {
+  if (src && !imgError) {
     return (
       <img
         className={className}
@@ -49,6 +51,7 @@ export default function ProfileAvatar({
         width={size}
         height={size}
         style={{ objectFit: 'cover', ...sharedStyle }}
+        onError={() => setImgError(true)}
         {...props}
       />
     );
