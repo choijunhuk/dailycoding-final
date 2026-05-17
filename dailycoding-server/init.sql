@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS users (
   oauth_provider  VARCHAR(20)  DEFAULT NULL,
   oauth_id        VARCHAR(100) DEFAULT NULL,
   avatar_url      VARCHAR(500) DEFAULT NULL,
+  avatar_source   ENUM('site','provider') NOT NULL DEFAULT 'site',
   default_language VARCHAR(20) DEFAULT 'python',
   submissions_public TINYINT(1) NOT NULL DEFAULT 1,
   equipped_badge  VARCHAR(50)  DEFAULT NULL,

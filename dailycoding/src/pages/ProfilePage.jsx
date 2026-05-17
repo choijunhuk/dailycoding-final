@@ -66,6 +66,7 @@ export default function ProfilePage() {
   const [avatarColor,   setAvatarColor]   = useState(user?.avatarColor || null);
   const [avatarEmoji,   setAvatarEmoji]   = useState(user?.avatarEmoji || null);
   const [avatarUrlCustom, setAvatarUrlCustom] = useState(user?.avatarUrlCustom || null);
+  const [avatarSource, setAvatarSource] = useState(user?.avatarSource || user?.avatar_source || 'site');
   const [backgrounds, setBackgrounds] = useState([]);
   const [equippedBackground, setEquippedBackground] = useState(user?.equippedBackground || null);
   const [rewards,       setRewards]       = useState([]);
@@ -163,8 +164,9 @@ export default function ProfilePage() {
     setAvatarUrlCustom(user?.avatarUrlCustom || null);
     setAvatarColor(user?.avatarColor || null);
     setAvatarEmoji(user?.avatarEmoji || null);
+    setAvatarSource(user?.avatarSource || user?.avatar_source || 'site');
     setEquippedBackground(user?.equippedBackground || null);
-  }, [user?.avatarUrlCustom, user?.avatarColor, user?.avatarEmoji, user?.equippedBackground]);
+  }, [user?.avatarUrlCustom, user?.avatarColor, user?.avatarEmoji, user?.avatarSource, user?.avatar_source, user?.equippedBackground]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -222,6 +224,8 @@ export default function ProfilePage() {
   const equippedTitleMeta = equippedTitle ? rewardByCode.get(equippedTitle) : null;
   const isSettingsTab = mainTab === 'settings';
   const savedSocialLinks = user?.socialLinks || {};
+  const providerAvatarUrl = user?.avatarUrl || user?.avatar_url || null;
+  const hasCustomAvatarProfile = Boolean(avatarUrlCustom || avatarEmoji || avatarColor);
   const savedTechStack = user?.techStack || [];
   const headerDisplayName = isSettingsTab
     ? (displayName || user?.displayName || user?.username)
@@ -237,7 +241,7 @@ export default function ProfilePage() {
   );
   const profileCompletenessItems = [
     { label:'소개', done:Boolean((bio || '').trim()) },
-    { label:'아바타', done:Boolean(avatarUrlCustom || avatarEmoji || avatarColor) },
+    { label:'아바타', done:Boolean(hasCustomAvatarProfile || providerAvatarUrl) },
     { label:'배경', done:Boolean(equippedBackground) },
     { label:'기술', done:techStack.length > 0 },
     { label:'링크', done:countFilledProfileLinks(socialLinks) > 0 },
@@ -329,6 +333,20 @@ export default function ProfilePage() {
     }
   };
 
+  const handleAvatarSourceChange = async (source) => {
+    if (source === 'provider' && !providerAvatarUrl) {
+      toast?.show('연동된 원본 프로필 이미지가 없습니다.', 'info');
+      return;
+    }
+    try {
+      const updated = await updateUser({ avatar_source: source });
+      setAvatarSource(updated?.avatarSource || updated?.avatar_source || source);
+      toast?.show(source === 'provider' ? '원래 프로필 사진을 사용합니다.' : 'DailyCoding 프로필을 사용합니다.', 'success');
+    } catch (err) {
+      toast?.show(err.response?.data?.message || '프로필 사진 선택 저장 실패', 'error');
+    }
+  };
+
   const handleSavePreferences = async () => {
     setPrefsSaving(true);
     try {
@@ -393,7 +411,7 @@ export default function ProfilePage() {
 
           {/* 아바타 */}
           <ProfileAvatar
-            profile={{ ...user, avatarUrlCustom, avatarColor, avatarEmoji }}
+            profile={{ ...user, avatarUrlCustom, avatarColor, avatarEmoji, avatarSource }}
             className="profile-header-avatar"
             border={`3px solid ${tc}`}
             style={{ boxShadow: `0 0 0 4px var(--bg2), 0 6px 28px ${tc}55` }}
@@ -935,7 +953,7 @@ export default function ProfilePage() {
               <div className="profile-live-banner" style={{ background: profileBannerBackground }} />
               <div className="profile-live-body">
                 <ProfileAvatar
-                  profile={{ ...user, avatarUrlCustom, avatarColor, avatarEmoji }}
+                  profile={{ ...user, avatarUrlCustom, avatarColor, avatarEmoji, avatarSource }}
                   className="profile-live-avatar"
                   border={`3px solid ${tc}`}
                 />
@@ -1064,7 +1082,7 @@ export default function ProfilePage() {
             <div className="pp-title">🎨 아바타 꾸미기</div>
             <div style={{ display:'flex', gap:16, alignItems:'center', marginBottom:16, flexWrap:'wrap' }}>
               <ProfileAvatar
-                profile={{ ...user, avatarUrlCustom, avatarColor, avatarEmoji }}
+                profile={{ ...user, avatarUrlCustom, avatarColor, avatarEmoji, avatarSource }}
                 size={80}
                 fontSize={36}
               />
@@ -1086,6 +1104,7 @@ export default function ProfilePage() {
                           headers: { 'Content-Type': 'multipart/form-data' },
                         })
                         setAvatarUrlCustom(data.avatarUrl)
+                        setAvatarSource(data.user?.avatarSource || data.user?.avatar_source || 'site')
                         applyUser(data.user)
                         toast?.show('아바타가 업로드되었습니다.', 'success')
                       } catch (err) {
@@ -1095,6 +1114,62 @@ export default function ProfilePage() {
                   />
                 </label>
               </div>
+            </div>
+            <div style={{
+              display:'grid',
+              gridTemplateColumns:'repeat(auto-fit, minmax(220px, 1fr))',
+              gap:10,
+              marginBottom:16,
+            }}>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => handleAvatarSourceChange('site')}
+                style={{
+                  justifyContent:'flex-start',
+                  textAlign:'left',
+                  border: avatarSource !== 'provider' ? '1px solid var(--blue)' : '1px solid var(--border)',
+                  background: avatarSource !== 'provider' ? 'rgba(88,166,255,.12)' : 'var(--bg2)',
+                  padding:'12px 14px',
+                }}
+              >
+                <span style={{ display:'flex', flexDirection:'column', gap:3 }}>
+                  <strong>DailyCoding 프로필 사용</strong>
+                  <span style={{ fontSize:12, color:'var(--text3)' }}>
+                    업로드 이미지·이모지·색상을 사이트 프로필로 저장해서 보여줍니다.
+                  </span>
+                </span>
+              </button>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => handleAvatarSourceChange('provider')}
+                disabled={!providerAvatarUrl}
+                style={{
+                  justifyContent:'flex-start',
+                  textAlign:'left',
+                  border: avatarSource === 'provider' ? '1px solid var(--green)' : '1px solid var(--border)',
+                  background: avatarSource === 'provider' ? 'rgba(86,211,100,.12)' : 'var(--bg2)',
+                  opacity: providerAvatarUrl ? 1 : .55,
+                  padding:'12px 14px',
+                }}
+              >
+                <span style={{ display:'flex', flexDirection:'column', gap:3 }}>
+                  <strong>원래 프로필 사진 사용</strong>
+                  <span style={{ fontSize:12, color:'var(--text3)' }}>
+                    Google/GitHub 등 로그인 제공자의 원본 프로필로 되돌립니다.
+                  </span>
+                </span>
+              </button>
+            </div>
+            <div style={{ fontSize:12, color:'var(--text3)', lineHeight:1.6, marginBottom:16 }}>
+              {avatarSource === 'provider'
+                ? '현재 원래 프로필 사진을 사용 중입니다. 저장된 DailyCoding 프로필은 지워지지 않아 언제든 다시 켤 수 있습니다.'
+                : hasCustomAvatarProfile
+                  ? '현재 DailyCoding에 저장한 사이트 프로필을 사용 중입니다.'
+                  : providerAvatarUrl
+                    ? '아직 사이트 프로필을 꾸미지 않아 원래 프로필 사진이 자동으로 보입니다.'
+                    : '원본 프로필 이미지가 없어서 이모지/색상 또는 이니셜로 표시됩니다.'}
             </div>
             <div style={{ marginBottom:16 }}>
               <div style={{ fontSize:13, color:'var(--text3)', fontWeight:600, marginBottom:10 }}>🖼️ 프로필 배경</div>
@@ -1153,8 +1228,9 @@ export default function ProfilePage() {
                 {['#cd7f32','#c0c0c0','#ffd700','#00e5cc','#b9f2ff','#79c0ff','#56d364','#f78166','#bc8cff','#e3b341','#ff7b72','#ffffff'].map(c=>(
                   <button key={c} onClick={async()=>{
                     try {
-                      const updated = await updateUser({avatar_color:c});
+                      const updated = await updateUser({avatar_color:c, avatar_source:'site'});
                       setAvatarColor(updated?.avatarColor || null);
+                      setAvatarSource(updated?.avatarSource || updated?.avatar_source || 'site');
                     } catch {
                       toast?.show('아바타 색상 저장 실패', 'error');
                     }
@@ -1166,8 +1242,9 @@ export default function ProfilePage() {
                 ))}
                 <button onClick={async()=>{
                   try {
-                    const updated = await updateUser({avatar_color:null});
+                    const updated = await updateUser({avatar_color:null, avatar_source:'site'});
                     setAvatarColor(updated?.avatarColor || null);
+                    setAvatarSource(updated?.avatarSource || updated?.avatar_source || 'site');
                   } catch {
                     toast?.show('아바타 색상 초기화 실패', 'error');
                   }
@@ -1183,8 +1260,9 @@ export default function ProfilePage() {
                 {['🦊','🐼','🦁','🐯','🐸','🦄','🐉','🦋','🐙','🦀','🐬','⭐','🔥','💎','🎯','🚀'].map(e=>(
                   <button key={e} onClick={async()=>{
                     try {
-                      const updated = await updateUser({avatar_emoji:e});
+                      const updated = await updateUser({avatar_emoji:e, avatar_source:'site'});
                       setAvatarEmoji(updated?.avatarEmoji || null);
+                      setAvatarSource(updated?.avatarSource || updated?.avatar_source || 'site');
                     } catch {
                       toast?.show('아바타 이모지 저장 실패', 'error');
                     }
@@ -1196,8 +1274,9 @@ export default function ProfilePage() {
                 ))}
                 <button onClick={async()=>{
                   try {
-                    const updated = await updateUser({avatar_emoji:null});
+                    const updated = await updateUser({avatar_emoji:null, avatar_source:'site'});
                     setAvatarEmoji(updated?.avatarEmoji || null);
+                    setAvatarSource(updated?.avatarSource || updated?.avatar_source || 'site');
                   } catch {
                     toast?.show('아바타 이모지 초기화 실패', 'error');
                   }

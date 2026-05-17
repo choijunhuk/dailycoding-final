@@ -32,6 +32,8 @@ export function normalizeRankingUser(user = {}) {
     avatar_emoji: user.avatar_emoji || user.avatarEmoji || null,
     avatarColor: user.avatar_color || user.avatarColor || null,
     avatar_color: user.avatar_color || user.avatarColor || null,
+    avatarSource: user.avatar_source || user.avatarSource || 'site',
+    avatar_source: user.avatar_source || user.avatarSource || 'site',
     equippedBadge: user.equipped_badge || user.equippedBadge || null,
     equippedTitle: user.equipped_title || user.equippedTitle || null,
     joinDate: user.join_date || user.joinDate || null,
@@ -79,7 +81,7 @@ async function hydrateUsersBatch(userIds) {
   const placeholders = ids.map(() => '?').join(',');
   const rows = await query(
     `SELECT id, username, tier, rating, solved_count, streak,
-            avatar_url, avatar_url_custom, avatar_emoji, avatar_color,
+            avatar_url, avatar_url_custom, avatar_emoji, avatar_color, avatar_source,
             equipped_badge, equipped_title, join_date, role, banned_at
      FROM users WHERE id IN (${placeholders})`,
     ids
@@ -118,6 +120,8 @@ router.get('/season', auth, async (req, res) => {
         avatar_url_custom: row.avatar_url_custom,
         avatarColor: row.avatar_color,
         avatar_color: row.avatar_color,
+        avatarSource: row.avatar_source || 'site',
+        avatar_source: row.avatar_source || 'site',
         seasonRating: row.season_rating,
         solvedCount: row.solved_count,
         battleWins: row.battle_wins,
@@ -212,7 +216,7 @@ router.get('/overall', auth, async (req, res) => {
     if (cached) return res.json(cached);
 
     const users = await query(`SELECT id, username, tier, rating, solved_count, streak, join_date,
-                                      avatar_url, avatar_url_custom, avatar_emoji, avatar_color,
+                                      avatar_url, avatar_url_custom, avatar_emoji, avatar_color, avatar_source,
                                       equipped_badge, equipped_title, banned_at
                                FROM users WHERE role != ? ORDER BY rating DESC LIMIT 200`, ['admin']);
     const battleRows = await query('SELECT user_id, battle_score_delta, score FROM battle_results ORDER BY created_at DESC LIMIT 2000');

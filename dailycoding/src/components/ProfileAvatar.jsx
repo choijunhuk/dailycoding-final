@@ -1,25 +1,19 @@
-const FALLBACK_COLORS = ['#79c0ff', '#56d364', '#e3b341', '#f78166', '#bc8cff'];
+import {
+  getProfileAvatarColor,
+  getProfileAvatarEmoji,
+  getProfileAvatarInitials,
+  getProfileAvatarSource,
+} from './profileAvatarUtils.js';
 
-function pickProfileValue(profile, camelKey, snakeKey) {
-  return profile?.[camelKey] ?? profile?.[snakeKey] ?? null;
-}
-
-export function getProfileAvatarSource(profile) {
-  return pickProfileValue(profile, 'avatarUrlCustom', 'avatar_url_custom')
-    || pickProfileValue(profile, 'avatarUrl', 'avatar_url');
-}
-
-export function getProfileAvatarColor(profile) {
-  const configured = pickProfileValue(profile, 'avatarColor', 'avatar_color');
-  if (configured) return configured;
-  const seed = profile?.username || profile?.nickname || profile?.displayName || 'user';
-  return FALLBACK_COLORS[(seed.charCodeAt(0) || 0) % FALLBACK_COLORS.length];
-}
-
-export function getProfileAvatarInitials(profile) {
-  const seed = profile?.username || profile?.nickname || profile?.displayName || '??';
-  return seed.slice(0, 2).toUpperCase();
-}
+export {
+  getEffectiveProfileAvatarMode,
+  getProfileAvatarColor,
+  getProfileAvatarEmoji,
+  getProfileAvatarInitials,
+  getProfileAvatarPreference,
+  getProfileAvatarSource,
+  hasSiteAvatar,
+} from './profileAvatarUtils.js';
 
 export default function ProfileAvatar({
   profile,
@@ -34,7 +28,7 @@ export default function ProfileAvatar({
 }) {
   const src = getProfileAvatarSource(profile);
   const color = getProfileAvatarColor(profile);
-  const emoji = pickProfileValue(profile, 'avatarEmoji', 'avatar_emoji');
+  const emoji = getProfileAvatarEmoji(profile);
   const sharedStyle = {
     ...(size ? { width: size, height: size } : {}),
     borderRadius: radius,

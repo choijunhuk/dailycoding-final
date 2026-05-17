@@ -43,6 +43,8 @@ function toPublicFollowUser(user, followingSet) {
     avatar_url_custom: user.avatar_url_custom,
     avatar_color: user.avatar_color,
     avatar_emoji: user.avatar_emoji,
+    avatar_source: user.avatar_source || 'site',
+    avatarSource: user.avatar_source || 'site',
     isFollowing: followingSet.has(Number(user.id)),
   };
 }

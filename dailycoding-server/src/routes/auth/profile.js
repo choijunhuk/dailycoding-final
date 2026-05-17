@@ -79,16 +79,21 @@ async function optionalQueryOne(sql, params = [], fallback = null) {
 
 router.patch('/me', auth, validateBody(profileSchema), async (req, res) => {
   try {
-    const { username, bio, avatar_color, avatar_emoji, default_language, submissions_public } = req.body;
+    const { username, bio, avatar_color, avatar_emoji, avatar_source, default_language, submissions_public } = req.body;
     const updates = {};
     if (username !== undefined) updates.username = username?.trim() || '';
     if (bio !== undefined) updates.bio = bio;
     if (avatar_color !== undefined) updates.avatar_color = avatar_color;
     if (avatar_emoji !== undefined) updates.avatar_emoji = avatar_emoji;
+    if (avatar_source !== undefined) updates.avatar_source = avatar_source;
     if (default_language !== undefined) updates.default_language = default_language;
     if (submissions_public !== undefined) updates.submissions_public = submissions_public ? 1 : 0;
     const updated = await User.update(req.user.id, updates);
-    await clearAuthStatus(req.user.id);
+    await Promise.all([
+      clearAuthStatus(req.user.id),
+      redis.clearPrefix('ranking:'),
+      redis.clearPrefix('feed:'),
+    ]);
     res.json(User.safe(updated));
   } catch (err) {
     if (err.code === 'ER_DUP_ENTRY') return errorResponse(res, 409, 'VALIDATION_ERROR', '이미 사용 중인 닉네임입니다.');
@@ -262,6 +267,7 @@ router.get('/profile/:id', auth, async (req, res) => {
       avatar_url_custom: user.avatar_url_custom,
       avatar_color: user.avatar_color,
       avatar_emoji: user.avatar_emoji,
+      avatar_source: user.avatar_source || 'site',
       equippedBadge: user.equipped_badge ?? null,
       equippedTitle: user.equipped_title ?? null,
       achievement: user.achievement ?? null,
@@ -427,8 +433,12 @@ router.post('/profile/avatar', auth, upload.single('avatar'), async (req, res) =
     const filePath = path.join(uploadsDir, filename);
     await fs.writeFile(filePath, req.file.buffer);
     const avatarUrl = `/uploads/avatars/${filename}`;
-    const updated = await User.update(req.user.id, { avatar_url_custom: avatarUrl });
-    await clearAuthStatus(req.user.id);
+    const updated = await User.update(req.user.id, { avatar_url_custom: avatarUrl, avatar_source: 'site' });
+    await Promise.all([
+      clearAuthStatus(req.user.id),
+      redis.clearPrefix('ranking:'),
+      redis.clearPrefix('feed:'),
+    ]);
     res.json({ avatarUrl, user: User.safe(updated) });
   } catch (err) {
     console.error('[profile/avatar]', err);

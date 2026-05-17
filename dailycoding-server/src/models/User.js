@@ -20,6 +20,7 @@ const USER_SELECTABLE_FIELDS = new Set([
   'avatar_url',
   'avatar_emoji',
   'avatar_color',
+  'avatar_source',
   'equipped_badge',
   'equipped_title',
   'email_verified',
@@ -107,7 +108,7 @@ export const User = {
     }
 
     return query(
-      `SELECT id, username, tier, rating, solved_count, avatar_url, avatar_url_custom, avatar_emoji, avatar_color, equipped_badge, equipped_title
+      `SELECT id, username, tier, rating, solved_count, avatar_url, avatar_url_custom, avatar_emoji, avatar_color, avatar_source, equipped_badge, equipped_title
        FROM users
        ${where}
        ORDER BY ${orderBy}
@@ -138,7 +139,7 @@ export const User = {
 
   async update(id, fields) {
     // 허용된 컬럼만 업데이트 — 임의 컬럼 주입 방지
-    const ALLOWED = new Set(['username', 'bio', 'last_login', 'role', 'tier', 'rating', 'streak', 'solved_count', 'avatar_url', 'avatar_color', 'avatar_emoji', 'equipped_badge', 'equipped_title', 'email_verified', 'banned_at', 'ban_reason', 'default_language', 'submissions_public', 'nickname', 'nickname_changed_at', 'profile_visibility', 'post_visibility', 'achievement', 'display_name', 'social_links', 'tech_stack', 'equipped_background', 'avatar_url_custom']);
+    const ALLOWED = new Set(['username', 'bio', 'last_login', 'role', 'tier', 'rating', 'streak', 'solved_count', 'avatar_url', 'avatar_color', 'avatar_emoji', 'equipped_badge', 'equipped_title', 'email_verified', 'banned_at', 'ban_reason', 'default_language', 'submissions_public', 'nickname', 'nickname_changed_at', 'profile_visibility', 'post_visibility', 'achievement', 'display_name', 'social_links', 'tech_stack', 'equipped_background', 'avatar_url_custom', 'avatar_source']);
     const processed = {};
     for (const [k, v] of Object.entries(fields)) {
       if (!ALLOWED.has(k)) continue;
@@ -643,7 +644,10 @@ export const User = {
       rating:        user.rating,
       streak:        user.streak,
       bio:           user.bio,
+      avatarUrl:     user.avatar_url ?? null,
       avatar_url:    user.avatar_url,
+      avatarSource:  user.avatar_source || 'site',
+      avatar_source:  user.avatar_source || 'site',
       solvedCount:   user.solved_count ?? 0,
       joinDate:      user.join_date  ? new Date(user.join_date).toISOString().slice(0,10) : null,
       lastLogin:     user.last_login ? new Date(user.last_login).toISOString() : null,
@@ -665,6 +669,7 @@ export const User = {
       settings: safeParseJSON(user.settings, {}),
       equippedBackground: user.equipped_background ?? null,
       avatarUrlCustom: user.avatar_url_custom ?? null,
+      avatar_url_custom: user.avatar_url_custom ?? null,
     };
   },
 };

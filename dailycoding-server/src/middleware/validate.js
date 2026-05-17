@@ -84,6 +84,7 @@ export const profileSchema = {
   bio: { maxLength: 200 },
   avatar_color: { enum: ['#cd7f32','#c0c0c0','#ffd700','#00e5cc','#b9f2ff','#79c0ff','#56d364','#f78166','#bc8cff','#e3b341','#ff7b72','#ffffff', null] },
   avatar_emoji: { enum: ['🦊','🐼','🦁','🐯','🐸','🦄','🐉','🦋','🐙','🦀','🐬','⭐','🔥','💎','🎯','🚀', null] },
+  avatar_source: { enum: ['site', 'provider'] },
   default_language: { enum: ['python', 'javascript', 'cpp', 'java', 'c'] },
 };
 

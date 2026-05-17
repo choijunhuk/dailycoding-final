@@ -137,6 +137,8 @@ export default function RankingPage() {
     avatar_url_custom: item.avatar_url_custom,
     avatarColor: item.avatarColor,
     avatar_color: item.avatar_color,
+    avatarSource: item.avatarSource,
+    avatar_source: item.avatar_source,
     rank: item.rank,
     battleWins: item.battleWins,
   }));

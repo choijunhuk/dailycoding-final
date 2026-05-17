@@ -19,6 +19,7 @@ test('normalizeRankingUser preserves all avatar fields used by ranking profile U
     avatar_url_custom: 'https://cdn.example/custom.png',
     avatar_emoji: '🧑‍💻',
     avatar_color: '#123456',
+    avatar_source: 'provider',
   });
 
   assert.equal(user.name, 'Ranker');
@@ -28,6 +29,8 @@ test('normalizeRankingUser preserves all avatar fields used by ranking profile U
   assert.equal(user.avatar_url_custom, 'https://cdn.example/custom.png');
   assert.equal(user.avatarEmoji, '🧑‍💻');
   assert.equal(user.avatar_color, '#123456');
+  assert.equal(user.avatarSource, 'provider');
+  assert.equal(user.avatar_source, 'provider');
 });
 
 test('normalizeTeamRankingRow computes stable affiliation ranking fields without teams.avatar_emoji column', () => {
