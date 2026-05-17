@@ -69,6 +69,13 @@ function safeParseJSON(value, fallback) {
   }
 }
 
+function resolveProfileBackgroundCss(imageUrl) {
+  if (!imageUrl) return null;
+  if (imageUrl.startsWith('solid:')) return imageUrl.replace('solid:', '');
+  if (imageUrl.startsWith('gradient:')) return imageUrl.replace('gradient:', '');
+  return `url(${imageUrl}) center/cover`;
+}
+
 async function optionalQueryOne(sql, params = [], fallback = null) {
   try {
     return await queryOne(sql, params);
@@ -243,11 +250,7 @@ router.get('/profile/:id', auth, async (req, res) => {
     const bgRow = user.equipped_background
       ? await queryOne('SELECT image_url FROM profile_backgrounds WHERE slug = ?', [user.equipped_background])
       : null;
-    const equippedBackgroundUrl = bgRow?.image_url?.startsWith('gradient:')
-      ? bgRow.image_url.replace('gradient:', '')
-      : bgRow?.image_url
-        ? `url(${bgRow.image_url}) center/cover`
-        : null;
+    const equippedBackgroundUrl = resolveProfileBackgroundCss(bgRow?.image_url);
 
     const base = {
       id: user.id,

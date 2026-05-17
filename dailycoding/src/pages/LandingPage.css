@@ -1,3 +1,29 @@
+.landing-hero-grid {
+  position: relative;
+}
+
+.landing-hero-grid h1 {
+  letter-spacing: -0.045em !important;
+}
+
+.landing-hero-grid .card {
+  border-radius: 24px !important;
+  box-shadow: 0 28px 90px rgba(0,0,0,.28) !important;
+}
+
+.landing-hero-grid pre {
+  background: #0d131c !important;
+}
+
+.landing-hero-grid [style*="rgba(121,192,255,.1)"] {
+  background: rgba(93,168,255,.10) !important;
+}
+
+.landing-hero-grid + section,
+.landing-hero-grid ~ section {
+  position: relative;
+}
+
 /* ── Landing Mobile ── */
 
 @media (max-width: 768px) {

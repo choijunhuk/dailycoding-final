@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildYearHeatmap, formatDuration, PROFILE_TIER_LABELS, PROFILE_TIER_THRESHOLDS } from './profilePageUtils.js';
+import { buildYearHeatmap, formatDuration, profileBackgroundToCss, PROFILE_TIER_LABELS, PROFILE_TIER_THRESHOLDS } from './profilePageUtils.js';
 
 test('profile tier helpers expose expected labels and thresholds', () => {
   assert.equal(PROFILE_TIER_LABELS.gold, 'GOLD');
@@ -19,4 +19,10 @@ test('formatDuration handles empty and normal durations', () => {
   assert.equal(formatDuration(0), '기록 없음');
   assert.equal(formatDuration(45), '45초');
   assert.equal(formatDuration(125), '2분 5초');
+});
+
+test('profileBackgroundToCss supports solid, gradient, and image backgrounds', () => {
+  assert.equal(profileBackgroundToCss('solid:#10151c'), '#10151c');
+  assert.equal(profileBackgroundToCss('gradient:linear-gradient(#000,#111)'), 'linear-gradient(#000,#111)');
+  assert.equal(profileBackgroundToCss('/backgrounds/background4.jpg'), 'url(/backgrounds/background4.jpg) center/cover');
 });

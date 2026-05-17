@@ -11,7 +11,7 @@ import { JUDGE_LANGUAGE_OPTIONS } from '../data/judgeLanguages.js';
 import { TIER_POINTS, TIER_ORDER } from '../data/constants.js';
 import ProfileAvatar from '../components/ProfileAvatar.jsx';
 import FollowListModal from '../components/FollowListModal.jsx';
-import { buildYearHeatmap, formatDuration, PROFILE_TIER_LABELS, PROFILE_TIER_THRESHOLDS } from './profilePageUtils.js';
+import { buildYearHeatmap, formatDuration, profileBackgroundToCss, PROFILE_TIER_LABELS, PROFILE_TIER_THRESHOLDS } from './profilePageUtils.js';
 import { buildPaymentFeedback, formatCurrentSubscriptionLabel, getProfileUpgradePlans } from './profileSubscriptionUtils.js';
 import { DonutChart, TierBadge, YearHeatmap } from './profilePageWidgets.jsx';
 import './ProfilePage.css';
@@ -202,11 +202,8 @@ export default function ProfilePage() {
 
   const tc       = TIER_COLORS[user?.tier] || '#888';
   const equippedBgMeta = backgrounds.find((item) => item.slug === equippedBackground);
-  const profileBannerBackground = equippedBgMeta?.image_url?.startsWith('gradient:')
-    ? equippedBgMeta.image_url.replace('gradient:', '')
-    : equippedBgMeta?.image_url
-      ? `url(${equippedBgMeta.image_url}) center/cover`
-      : `linear-gradient(135deg, ${tc}28 0%, ${tc}08 50%, var(--bg2) 100%)`;
+  const profileBannerBackground = profileBackgroundToCss(equippedBgMeta?.image_url)
+    || `linear-gradient(135deg, ${tc}28 0%, ${tc}08 50%, var(--bg2) 100%)`;
   const tierIdx  = TIER_ORDER.indexOf(user?.tier || 'unranked');
   const nextTier = TIER_ORDER[tierIdx + 1];
   const curThres = PROFILE_TIER_THRESHOLDS[user?.tier || 'unranked'] || 0;
@@ -1194,7 +1191,7 @@ export default function ProfilePage() {
                       className="profile-background-preview"
                       style={{
                         border:`2px solid ${equippedBackground === bg.slug ? 'var(--blue)' : 'var(--border)'}`,
-                        background:bg.image_url?.startsWith('gradient:') ? bg.image_url.replace('gradient:', '') : `url(${bg.image_url}) center/cover`,
+                        background:profileBackgroundToCss(bg.image_url),
                         cursor:'pointer',
                         boxShadow: equippedBackground === bg.slug ? '0 0 0 3px rgba(88,166,255,0.3)' : 'none',
                       }}

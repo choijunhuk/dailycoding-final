@@ -49,3 +49,10 @@ export function formatDuration(seconds) {
   if (minutes > 0) return `${minutes}분 ${secs}초`;
   return `${secs}초`;
 }
+
+export function profileBackgroundToCss(value) {
+  if (!value) return null;
+  if (value.startsWith('solid:')) return value.replace('solid:', '');
+  if (value.startsWith('gradient:')) return value.replace('gradient:', '');
+  return `url(${value}) center/cover`;
+}
