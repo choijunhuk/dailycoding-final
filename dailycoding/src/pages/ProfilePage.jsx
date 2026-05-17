@@ -991,9 +991,12 @@ export default function ProfilePage() {
             </div>
           </div>
 
+          <div className="profile-settings-main-grid">
+            <div className="profile-settings-column">
+
           {/* 프로필 정보 */}
-          <div className="card">
-            <div className="pp-title">🧑 프로필 정보</div>
+          <div className="card profile-settings-card">
+            <div className="profile-section-head"><span>🧑</span><div><strong>프로필 정보</strong><p>상단 프로필에 보이는 이름, 소개, 링크를 한 곳에서 정리합니다.</p></div></div>
             <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
               <div className="form-group">
                 <label>표시 이름</label>
@@ -1042,8 +1045,8 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          <div className="card" style={{ width:'100%' }}>
-            <div className="pp-title">⚙️ 제출 & 기본 언어 설정</div>
+          <div className="card profile-settings-card" style={{ width:'100%' }}>
+            <div className="profile-section-head"><span>⚙️</span><div><strong>제출 & 공개 설정</strong><p>풀이 기본값과 제출 기록 공개 여부를 조정합니다.</p></div></div>
             <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
               <div className="form-group">
                 <label>기본 제출 언어</label>
@@ -1078,8 +1081,8 @@ export default function ProfilePage() {
           </div>
 
           {/* 아바타 꾸미기 */}
-          <div className="card">
-            <div className="pp-title">🎨 아바타 꾸미기</div>
+          <div className="card profile-settings-card profile-avatar-card">
+            <div className="profile-section-head"><span>🎨</span><div><strong>프로필 사진 & 배경</strong><p>사이트 프로필과 원래 OAuth 프로필을 선택하고, 배경/색상을 빠르게 꾸밉니다.</p></div></div>
             <div style={{ display:'flex', gap:16, alignItems:'center', marginBottom:16, flexWrap:'wrap' }}>
               <ProfileAvatar
                 profile={{ ...user, avatarUrlCustom, avatarColor, avatarEmoji, avatarSource }}
@@ -1115,54 +1118,34 @@ export default function ProfilePage() {
                 </label>
               </div>
             </div>
-            <div style={{
-              display:'grid',
-              gridTemplateColumns:'repeat(auto-fit, minmax(220px, 1fr))',
-              gap:10,
-              marginBottom:16,
-            }}>
+            <div className="profile-avatar-source-grid">
               <button
                 type="button"
-                className="btn btn-ghost"
+                className={`profile-avatar-source-card ${avatarSource !== 'provider' ? 'selected' : ''}`}
                 onClick={() => handleAvatarSourceChange('site')}
-                style={{
-                  justifyContent:'flex-start',
-                  textAlign:'left',
-                  border: avatarSource !== 'provider' ? '1px solid var(--blue)' : '1px solid var(--border)',
-                  background: avatarSource !== 'provider' ? 'rgba(88,166,255,.12)' : 'var(--bg2)',
-                  padding:'12px 14px',
-                }}
               >
-                <span style={{ display:'flex', flexDirection:'column', gap:3 }}>
+                <span className="avatar-source-icon">DC</span>
+                <span>
                   <strong>DailyCoding 프로필 사용</strong>
-                  <span style={{ fontSize:12, color:'var(--text3)' }}>
-                    업로드 이미지·이모지·색상을 사이트 프로필로 저장해서 보여줍니다.
-                  </span>
+                  <small>업로드 이미지·이모지·색상을 사이트 프로필로 저장해서 보여줍니다.</small>
                 </span>
+                {avatarSource !== 'provider' && <em>선택됨</em>}
               </button>
               <button
                 type="button"
-                className="btn btn-ghost"
+                className={`profile-avatar-source-card provider ${avatarSource === 'provider' ? 'selected' : ''}`}
                 onClick={() => handleAvatarSourceChange('provider')}
                 disabled={!providerAvatarUrl}
-                style={{
-                  justifyContent:'flex-start',
-                  textAlign:'left',
-                  border: avatarSource === 'provider' ? '1px solid var(--green)' : '1px solid var(--border)',
-                  background: avatarSource === 'provider' ? 'rgba(86,211,100,.12)' : 'var(--bg2)',
-                  opacity: providerAvatarUrl ? 1 : .55,
-                  padding:'12px 14px',
-                }}
               >
-                <span style={{ display:'flex', flexDirection:'column', gap:3 }}>
+                <span className="avatar-source-icon">OAuth</span>
+                <span>
                   <strong>원래 프로필 사진 사용</strong>
-                  <span style={{ fontSize:12, color:'var(--text3)' }}>
-                    Google/GitHub 등 로그인 제공자의 원본 프로필로 되돌립니다.
-                  </span>
+                  <small>Google/GitHub 등 로그인 제공자의 원본 프로필로 되돌립니다.</small>
                 </span>
+                {avatarSource === 'provider' && <em>선택됨</em>}
               </button>
             </div>
-            <div style={{ fontSize:12, color:'var(--text3)', lineHeight:1.6, marginBottom:16 }}>
+            <div className="profile-avatar-status-note">
               {avatarSource === 'provider'
                 ? '현재 원래 프로필 사진을 사용 중입니다. 저장된 DailyCoding 프로필은 지워지지 않아 언제든 다시 켤 수 있습니다.'
                 : hasCustomAvatarProfile
@@ -1288,10 +1271,13 @@ export default function ProfilePage() {
             </div>
           </div>
 
+            </div>
+            <div className="profile-settings-column profile-settings-side-column">
+
           {/* 보상 */}
           {rewards.length > 0 && (
-            <div className="card">
-              <div className="pp-title">🎁 보상 & 장착</div>
+            <div className="card profile-settings-card">
+              <div className="profile-section-head"><span>🎁</span><div><strong>보상 & 장착</strong><p>획득한 뱃지와 칭호를 프로필에 적용합니다.</p></div></div>
               {/* 현재 장착 */}
               <div style={{ display:'flex', gap:10, marginBottom:16, flexWrap:'wrap' }}>
                 {[{type:'badge',current:equippedBadge,label:'장착 뱃지'},{type:'title',current:equippedTitle,label:'장착 칭호'}].map(item=>(
@@ -1352,8 +1338,8 @@ export default function ProfilePage() {
           )}
 
           {/* 구독 */}
-          <div className="card">
-            <div className="pp-title">💳 구독 관리</div>
+          <div className="card profile-settings-card">
+            <div className="profile-section-head"><span>💳</span><div><strong>구독 관리</strong><p>현재 플랜과 업그레이드/해지 상태를 확인합니다.</p></div></div>
             {paymentFeedback && (
               <div style={{
                 marginBottom: 16,
@@ -1430,8 +1416,8 @@ export default function ProfilePage() {
           </div>
 
           {/* 비밀번호 변경 */}
-          <div className="card" style={{ maxWidth:480 }}>
-            <div className="pp-title">🔒 비밀번호 변경</div>
+          <div className="card profile-settings-card">
+            <div className="profile-section-head"><span>🔒</span><div><strong>비밀번호 변경</strong><p>비밀번호 계정에서만 사용됩니다. OAuth 계정이면 비워둘 수 있습니다.</p></div></div>
             <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
               <div className="form-group"><label>현재 비밀번호</label><input type="password" value={pwCurrent} onChange={e=>setPwCurrent(e.target.value)} placeholder="현재 비밀번호"/></div>
               <div className="form-group"><label>새 비밀번호</label><input type="password" value={pwNext} onChange={e=>setPwNext(e.target.value)} placeholder="새 비밀번호 (8자 이상)"/></div>
@@ -1440,6 +1426,8 @@ export default function ProfilePage() {
               <button className="btn btn-primary" onClick={handlePwChange} disabled={pwLoading||!pwCurrent||!pwNext||!pwConfirm} style={{ alignSelf:'flex-start', padding:'10px 24px' }}>
                 {pwLoading ? <span className="spinner"/> : '비밀번호 변경'}
               </button>
+            </div>
+          </div>
             </div>
           </div>
         </div>
