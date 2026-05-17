@@ -3,15 +3,15 @@ import { getTierImageUrl, getTierGlowStyle } from '../utils/tierImage.js';
 const TIER_BADGE_CFG = {
   unranked:    { color: '#888888' },
   iron:        { color: '#a8a8a8' },
-  bronze:      { color: '#cd7f32' },
-  silver:      { color: '#b0b8c8' },
-  gold:        { color: '#ffd700' },
-  platinum:    { color: '#00e5cc' },
-  emerald:     { color: '#00d18f' },
-  diamond:     { color: '#b9f2ff' },
-  master:      { color: '#9b59b6' },
-  grandmaster: { color: '#e74c3c' },
-  challenger:  { color: '#f1c40f' },
+  bronze:      { color: '#b87333' },
+  silver:      { color: '#94a3b8' },
+  gold:        { color: '#f4c430' },
+  platinum:    { color: '#22c7b8' },
+  emerald:     { color: '#16a34a' },
+  diamond:     { color: '#4ea8ff' },
+  master:      { color: '#a78bfa' },
+  grandmaster: { color: '#ef4444' },
+  challenger:  { color: '#f59e0b' },
 };
 
 export function TierBadge({ tier, size = 30, title = '' }) {

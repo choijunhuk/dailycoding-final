@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { TIER_COLORS } from '../data/problems.js';
 import { buildYearHeatmap, formatDuration, profileBackgroundToCss, PROFILE_TIER_LABELS, PROFILE_TIER_THRESHOLDS } from './profilePageUtils.js';
 
 test('profile tier helpers expose expected labels and thresholds', () => {
@@ -25,4 +26,11 @@ test('profileBackgroundToCss supports solid, gradient, and image backgrounds', (
   assert.equal(profileBackgroundToCss('solid:#10151c'), '#10151c');
   assert.equal(profileBackgroundToCss('gradient:linear-gradient(#000,#111)'), 'linear-gradient(#000,#111)');
   assert.equal(profileBackgroundToCss('/backgrounds/background4.jpg'), 'url(/backgrounds/background4.jpg) center/cover');
+});
+
+test('profile tier distribution colors stay visually distinct', () => {
+  const profileTiers = ['bronze', 'silver', 'gold', 'platinum', 'diamond'];
+  const colors = profileTiers.map((tier) => TIER_COLORS[tier]);
+  assert.equal(new Set(colors).size, colors.length);
+  assert.notEqual(TIER_COLORS.bronze, TIER_COLORS.gold);
 });

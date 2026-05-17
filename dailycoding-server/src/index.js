@@ -869,7 +869,7 @@ async function seedGrowthCollections() {
 
     // Backfill existing users that have no background equipped
     await dbRun(
-      "UPDATE users SET equipped_background = 'solid-ink' WHERE equipped_background IS NULL OR equipped_background = 'gradient-midnight'"
+      "UPDATE users SET equipped_background = 'solid-slate' WHERE equipped_background IS NULL OR equipped_background IN ('gradient-midnight', 'solid-ink', 'solid-dark')"
     );
 
     // Deprecated practice set cleanup: keep old DBs aligned with current seed data.

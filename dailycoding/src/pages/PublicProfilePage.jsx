@@ -8,12 +8,17 @@ import ProfileAvatar from '../components/ProfileAvatar.jsx'
 import FollowListModal from '../components/FollowListModal.jsx'
 
 const TIER_COLORS = {
-  unranked: 'var(--text3)',
-  bronze: 'var(--yellow)',
-  silver: 'var(--text2)',
-  gold: 'var(--yellow)',
-  platinum: 'var(--green)',
-  diamond: 'var(--blue)',
+  unranked: '#687789',
+  iron: '#7f8a99',
+  bronze: '#b87333',
+  silver: '#94a3b8',
+  gold: '#f4c430',
+  platinum: '#22c7b8',
+  emerald: '#16a34a',
+  diamond: '#4ea8ff',
+  master: '#a78bfa',
+  grandmaster: '#ef4444',
+  challenger: '#f59e0b',
 }
 
 const TECH_LOGO = {
@@ -25,7 +30,7 @@ const TECH_LOGO = {
   Django:'/tech/django.png', FastAPI:'/tech/fastapi.svg', Flutter:'/tech/flutter.png',
   MySQL:'/tech/mysql.png', PostgreSQL:'/tech/postgresql.png', MongoDB:'/tech/mongodb.png',
   Redis:'/tech/redis.webp', Docker:'/tech/docker.png', Kubernetes:'/tech/kubernetes.png',
-  AWS:'/tech/aws.webp', GCP:'/tech/gcp.png', Azure:'/tech/azure.svg',
+  AWS:'/tech/aws.webp', GCP:'/tech/gcp.png', Azure:'/tech/azure.svg', Git:'/tech/git.png',
 }
 
 const SOCIAL_META = {
