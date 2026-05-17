@@ -7,7 +7,7 @@ import { dirname, join } from 'path';
 import logger from './config/logger.js';
 import { waitForDB, isConnected as mysqlConnected, getPool, run as dbRun } from './config/mysql.js';
 import { resolveBootstrapConfig } from './config/bootstrap.js';
-import { PROFILE_BACKGROUND_SEEDS } from './config/profileBackgroundSeeds.js';
+import { DEFAULT_PROFILE_BACKGROUND_SLUG, LEGACY_PROFILE_BACKGROUND_SLUGS, PROFILE_BACKGROUND_SEEDS } from './config/profileBackgroundSeeds.js';
 import { User } from './models/User.js';
 import { PROBLEMS as SHARED_PROBLEMS } from './shared/problemCatalog.js';
 import { initSocketServer } from './services/socketServer.js';
@@ -869,7 +869,8 @@ async function seedGrowthCollections() {
 
     // Backfill existing users that have no background equipped
     await dbRun(
-      "UPDATE users SET equipped_background = 'solid-slate' WHERE equipped_background IS NULL OR equipped_background IN ('gradient-midnight', 'solid-ink', 'solid-dark')"
+      `UPDATE users SET equipped_background = ? WHERE equipped_background IS NULL OR equipped_background IN (${LEGACY_PROFILE_BACKGROUND_SLUGS.map(() => '?').join(',')})`,
+      [DEFAULT_PROFILE_BACKGROUND_SLUG, ...LEGACY_PROFILE_BACKGROUND_SLUGS]
     );
 
     // Deprecated practice set cleanup: keep old DBs aligned with current seed data.

@@ -4,6 +4,7 @@ import path from 'path';
 import multer from 'multer';
 import { fileURLToPath } from 'url';
 import { query, queryOne, run } from '../../config/mysql.js';
+import { DEFAULT_PROFILE_BACKGROUND_IMAGE_URL, DEFAULT_PROFILE_BACKGROUND_SLUG, LEGACY_PROFILE_BACKGROUND_SLUGS } from '../../config/profileBackgroundSeeds.js';
 import { auth } from '../../middleware/auth.js';
 import { validateBody, profileSchema, updatePasswordSchema } from '../../middleware/validate.js';
 import { User } from '../../models/User.js';
@@ -13,6 +14,12 @@ import { errorResponse, internalError } from '../../middleware/errorHandler.js';
 import { clearAuthCookies, clearAuthStatus } from './helpers.js';
 
 const router = Router();
+const LEGACY_PROFILE_BACKGROUND_SLUG_SET = new Set(LEGACY_PROFILE_BACKGROUND_SLUGS);
+
+function normalizeEquippedBackgroundSlug(slug) {
+  if (!slug) return DEFAULT_PROFILE_BACKGROUND_SLUG;
+  return LEGACY_PROFILE_BACKGROUND_SLUG_SET.has(slug) ? DEFAULT_PROFILE_BACKGROUND_SLUG : slug;
+}
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const uploadsDir = path.join(__dirname, '..', '..', '..', 'uploads', 'avatars');
@@ -146,9 +153,10 @@ router.get('/profile/backgrounds', auth, async (req, res) => {
        FROM profile_backgrounds pb
        LEFT JOIN user_backgrounds ub
          ON ub.background_slug = pb.slug AND ub.user_id = ?
-       WHERE pb.is_default = 1 OR ub.user_id = ?
+       WHERE (pb.is_default = 1 OR ub.user_id = ?)
+         AND pb.slug NOT IN (${LEGACY_PROFILE_BACKGROUND_SLUGS.map(() => '?').join(',')})
        ORDER BY pb.is_default DESC, pb.created_at ASC`,
-      [req.user.id, req.user.id]
+      [req.user.id, req.user.id, ...LEGACY_PROFILE_BACKGROUND_SLUGS]
     );
     res.json(rows);
   } catch (err) {
@@ -247,10 +255,11 @@ router.get('/profile/:id', auth, async (req, res) => {
     const battleWins = (battleRows || []).filter((row) => row.result === 'win').length;
     const collaborationScore = Number(collaborationRow?.review_score || 0) + Number(collaborationRow?.suggestion_score || 0);
 
-    const bgRow = user.equipped_background
-      ? await queryOne('SELECT image_url FROM profile_backgrounds WHERE slug = ?', [user.equipped_background])
+    const normalizedBackgroundSlug = normalizeEquippedBackgroundSlug(user.equipped_background);
+    const bgRow = normalizedBackgroundSlug
+      ? await queryOne('SELECT image_url FROM profile_backgrounds WHERE slug = ?', [normalizedBackgroundSlug])
       : null;
-    const equippedBackgroundUrl = resolveProfileBackgroundCss(bgRow?.image_url);
+    const equippedBackgroundUrl = resolveProfileBackgroundCss(bgRow?.image_url || DEFAULT_PROFILE_BACKGROUND_IMAGE_URL);
 
     const base = {
       id: user.id,

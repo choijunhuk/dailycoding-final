@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import { redis } from '../config/redis.js';
 import { Reward } from './Reward.js';
 import { TIER_ORDER, TIER_POINTS, TIER_THRESHOLDS } from '../shared/constants.js';
+import { DEFAULT_PROFILE_BACKGROUND_SLUG, LEGACY_PROFILE_BACKGROUND_SLUGS } from '../config/profileBackgroundSeeds.js';
 import { getActivePromotionSeries, getNextTier, openPromotionSeries, recordPromotionWin } from '../services/promotionService.js';
 
 const USER_SELECTABLE_FIELDS = new Set([
@@ -62,6 +63,12 @@ function normalizeUserFields(fields = '*') {
 }
 
 const SOLVED_ZSET_TTL_SEC = 86400 * 7;
+const LEGACY_PROFILE_BACKGROUND_SLUG_SET = new Set(LEGACY_PROFILE_BACKGROUND_SLUGS);
+
+function normalizeEquippedBackgroundSlug(slug) {
+  if (!slug) return null;
+  return LEGACY_PROFILE_BACKGROUND_SLUG_SET.has(slug) ? DEFAULT_PROFILE_BACKGROUND_SLUG : slug;
+}
 
 function safeParseJSON(value, fallback) {
   if (typeof value !== 'string') return value ?? fallback;
@@ -672,7 +679,7 @@ export const User = {
       socialLinks: safeParseJSON(user.social_links, {}),
       techStack: safeParseJSON(user.tech_stack, []),
       settings: safeParseJSON(user.settings, {}),
-      equippedBackground: user.equipped_background ?? null,
+      equippedBackground: normalizeEquippedBackgroundSlug(user.equipped_background),
       avatarUrlCustom: user.avatar_url_custom ?? null,
       avatar_url_custom: user.avatar_url_custom ?? null,
     };

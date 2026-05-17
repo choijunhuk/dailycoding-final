@@ -1,3 +1,7 @@
+export const DEFAULT_PROFILE_BACKGROUND_SLUG = 'solid-slate';
+export const LEGACY_PROFILE_BACKGROUND_SLUGS = ['gradient-midnight', 'solid-ink', 'solid-dark'];
+export const DEFAULT_PROFILE_BACKGROUND_IMAGE_URL = 'solid:#2d4057';
+
 export const PROFILE_BACKGROUND_SEEDS = [
   { slug: 'gradient-blue', name: '블루', image_url: 'gradient:linear-gradient(135deg,#0d1117,#0a2a4a)' },
   { slug: 'gradient-purple', name: '퍼플', image_url: 'gradient:linear-gradient(135deg,#0d1117,#1a0a2e)' },
@@ -10,7 +14,7 @@ export const PROFILE_BACKGROUND_SEEDS = [
   { slug: 'gradient-sunset', name: '선셋', image_url: 'gradient:linear-gradient(135deg,#1a0800,#2e1500,#1a0a2e)' },
   { slug: 'gradient-ocean', name: '오션', image_url: 'gradient:linear-gradient(135deg,#000d1a,#001a33,#0a2a4a)' },
   { slug: 'gradient-forest', name: '포레스트', image_url: 'gradient:linear-gradient(135deg,#001a0d,#0a2e1a,#001a0d)' },
-  { slug: 'gradient-midnight', name: '미드나잇', image_url: 'gradient:linear-gradient(135deg,#050510,#0d0d2e,#05050e)' },
+  { slug: 'gradient-midnight', name: '레거시 미드나잇', image_url: 'gradient:linear-gradient(135deg,#050510,#0d0d2e,#05050e)', is_default: 0 },
   { slug: 'gradient-rose', name: '로즈', image_url: 'gradient:linear-gradient(135deg,#1a0010,#2e0020,#1a000d)' },
   { slug: 'gradient-cyber', name: '사이버', image_url: 'gradient:linear-gradient(135deg,#000d1a,#001a1a,#0a2e2a)' },
   { slug: 'gradient-lava', name: '라바', image_url: 'gradient:linear-gradient(135deg,#1a0000,#2e0a00,#1a1400)' },
@@ -19,7 +23,7 @@ export const PROFILE_BACKGROUND_SEEDS = [
   { slug: 'solid-charcoal', name: '차콜', image_url: 'solid:#161b22' },
   { slug: 'solid-black', name: '블랙', image_url: 'solid:#050505' },
   { slug: 'solid-navy', name: '네이비', image_url: 'solid:#0a1020' },
-  { slug: 'solid-slate', name: '슬레이트', image_url: 'solid:#2d4057' },
+  { slug: DEFAULT_PROFILE_BACKGROUND_SLUG, name: '기본 슬레이트', image_url: DEFAULT_PROFILE_BACKGROUND_IMAGE_URL },
   { slug: 'solid-brown', name: '브라운', image_url: 'solid:#2b2118' },
   { slug: 'solid-olive', name: '올리브', image_url: 'solid:#1f2a1d' },
   { slug: 'solid-wine', name: '와인', image_url: 'solid:#2b1118' },
@@ -27,7 +31,7 @@ export const PROFILE_BACKGROUND_SEEDS = [
   { slug: 'photo-1', name: '배경 1', image_url: '/backgrounds/background.avif' },
   { slug: 'photo-2', name: '배경 2', image_url: '/backgrounds/background2.avif' },
   { slug: 'photo-3', name: '배경 3', image_url: '/backgrounds/background3.avif' },
-  { slug: 'photo-4', name: '배경 4', image_url: '/backgrounds/background4.jpg' },
+  { slug: 'photo-4', name: '배경 4', image_url: '/backgrounds/background4.svg' },
   { slug: 'focus-grid', name: '포커스 그리드', image_url: 'gradient:linear-gradient(135deg,#0b1220 0%,#10263d 48%,#162018 100%)', is_default: 0 },
   { slug: 'night-judge', name: '나이트 저지', image_url: 'gradient:linear-gradient(135deg,#080b10 0%,#172033 42%,#1f1a12 100%)', is_default: 0 },
 ];
