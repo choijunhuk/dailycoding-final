@@ -5,13 +5,19 @@ import logger from '../config/logger.js';
 const vapidPublicKey = process.env.VAPID_PUBLIC_KEY;
 const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
 const vapidEmail = process.env.VAPID_EMAIL || 'mailto:admin@dailycoding-final.com';
+let pushConfigured = false;
 
 if (vapidPublicKey && vapidPrivateKey) {
-  webpush.setVapidDetails(vapidEmail, vapidPublicKey, vapidPrivateKey);
+  try {
+    webpush.setVapidDetails(vapidEmail, vapidPublicKey, vapidPrivateKey);
+    pushConfigured = true;
+  } catch (err) {
+    logger.warn('Invalid VAPID configuration; push notifications disabled until keys are fixed', { message: err.message });
+  }
 }
 
 export function isPushConfigured() {
-  return Boolean(vapidPublicKey && vapidPrivateKey);
+  return pushConfigured;
 }
 
 export async function pushToUser(userId, { title, body, url = '/' }) {
