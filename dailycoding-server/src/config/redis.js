@@ -118,7 +118,9 @@ export const redis = {
   async decr(key) {
     if (connected) return await client.decr(key);
     const v = Math.max(0, Number(memGet(key) || 0) - 1);
-    memSet(key, String(v));
+    const existingExpiry = memTTL.get(key);
+    memStore.set(key, String(v));
+    if (existingExpiry) memTTL.set(key, existingExpiry);
     return v;
   },
   // Sorted Sets

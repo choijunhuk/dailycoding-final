@@ -103,7 +103,7 @@ export async function findOrCreateOAuthUser({ provider, oauthId, email, username
 
   const byEmail = await User.findByEmail(email);
   if (byEmail) {
-    throw new Error(`이 이메일(${email})로 이미 가입된 계정이 있습니다. 기존 방법(이메일/비밀번호)으로 로그인해 주세요.`);
+    throw new Error('이미 다른 방법으로 가입된 이메일입니다. 기존 로그인 방법을 이용하거나 설정에서 소셜 계정을 연결해 주세요.');
   }
 
   let finalUsername = username.replace(/[^a-zA-Z0-9_가-힣]/g, '').slice(0, 28) || 'user';

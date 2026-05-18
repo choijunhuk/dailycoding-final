@@ -49,6 +49,8 @@ export function initSocketServer(httpServer, allowedOrigins) {
         issuer: 'dailycoding',
         audience: 'dailycoding-client',
       });
+      const dbUser = await User.findById(decoded.id);
+      if (!dbUser || dbUser.banned_at) return next(new Error('Unauthorized'));
       socket.data.userId = decoded.id;
       socket.data.username = decoded.username;
       socket.user = decoded;
@@ -347,6 +349,7 @@ export function initSocketServer(httpServer, allowedOrigins) {
     // ── Disconnect ──────────────────────────────────────────────
     socket.on('disconnect', () => {
       logger.info('Socket disconnected', { userId: socket.data.userId });
+      submitRateLimits.delete(socket.data.userId);
     });
   });
 
