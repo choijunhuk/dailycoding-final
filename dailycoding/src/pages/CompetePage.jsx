@@ -1,27 +1,20 @@
 import { Link } from 'react-router-dom';
-import { Swords, Trophy, Users, Zap } from 'lucide-react';
+import { Swords, Trophy, Zap } from 'lucide-react';
 
 const COMPETE_MODES = [
   {
-    title: '1v1 배틀',
-    href: '/battles/history',
-    icon: Users,
-    accent: 'var(--green)',
-    desc: '친구와 초대 코드로 빠르게 붙는 클래식 코딩 대결입니다.',
-  },
-  {
-    title: '알고리즘 배틀',
+    title: '코딩 배틀',
     href: '/battle',
     icon: Swords,
     accent: 'var(--red)',
-    desc: 'HP, 아이템, 효과, 점령전까지 포함한 DailyCoding 대표 실시간 배틀입니다.',
+    desc: '실시간 1v1 또는 팀 대결 — HP, 아이템, 효과, 점령전 5가지 모드로 코딩 실력을 겨룹니다.',
   },
   {
     title: '토너먼트',
     href: '/tournaments',
     icon: Trophy,
     accent: 'var(--yellow)',
-    desc: '8강·16강 브라켓으로 실력을 겨루고 자동 매치로 다음 라운드에 진출합니다.',
+    desc: '8강·16강 싱글 엘리미네이션 브라켓으로 실력을 겨루고 자동 매치로 다음 라운드에 진출합니다.',
   },
   {
     title: '대회',

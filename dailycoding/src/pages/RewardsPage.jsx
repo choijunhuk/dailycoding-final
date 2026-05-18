@@ -94,7 +94,7 @@ export default function RewardsPage() {
     <div style={{ maxWidth: 1120, margin: '0 auto', padding: '32px 20px 48px' }}>
       <div style={{ marginBottom: 22 }}>
         <div style={{ fontSize: 13, color: 'var(--blue)', fontWeight: 900, marginBottom: 8 }}>COLLECTION</div>
-        <h1 style={{ margin: 0, fontSize: 34, letterSpacing: -1 }}>뱃지 & 칭호 보관함</h1>
+        <h1 style={{ margin: 0, fontSize: 34, letterSpacing: -1 }}>보상 보관함</h1>
         <p style={{ color: 'var(--text2)', marginTop: 10 }}>획득한 보상을 프로필에 장착하고 성장 기록을 보여주세요.</p>
       </div>
 

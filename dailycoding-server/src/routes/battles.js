@@ -461,6 +461,23 @@ router.post('/rooms/:roomId/finish', async (req, res) => {
   }
 });
 
+router.delete('/rooms/:roomId', async (req, res) => {
+  try {
+    const state = await AlgorithmBattle.getRoomState(req.params.roomId);
+    if (!state) return errorResponse(res, 404, 'NOT_FOUND', '방을 찾을 수 없습니다.');
+    if (state.room.createdBy !== req.user.id) return errorResponse(res, 403, 'FORBIDDEN', '방장만 삭제할 수 있습니다.');
+    if (state.room.status !== 'waiting') return errorResponse(res, 409, 'CONFLICT', '대기 중인 방만 삭제할 수 있습니다.');
+    const { run } = await import('../config/mysql.js');
+    await run("UPDATE battle_rooms SET status = 'cancelled' WHERE id = ? AND status = 'waiting'", [req.params.roomId]);
+    const io = req.app.get('io');
+    if (io) io.to(`battle:${req.params.roomId}`).emit('battle:room:deleted', { roomId: req.params.roomId });
+    res.json({ message: '방이 삭제됐습니다.' });
+  } catch (err) {
+    console.error('[algorithm-battles/delete-room]', err);
+    return internalError(res);
+  }
+});
+
 router.post('/:id/rematch', async (req, res) => {
   try {
     const historyRow = await Battle.getHistory(req.user.id, 100);

@@ -334,6 +334,7 @@ export default function AlgorithmBattlePage() {
       }
     });
     socket.on('battle:room:update', (next) => { if (next?.room?.id === roomId) setState(next); });
+    socket.on('battle:room:deleted', ({ roomId: deletedId }) => { if (deletedId === roomId) { toast?.show('방이 삭제됐습니다.', 'info'); navigate('/battle'); } });
     socket.on('battle:countdown', ({ seconds }) => setCountdown(seconds || 3));
     socket.on('battle:started', (next) => { if (next?.room?.id === roomId) setState(next); setCountdown(null); });
     socket.on('battle:submission:result', (payload) => {
@@ -526,6 +527,17 @@ export default function AlgorithmBattlePage() {
       const { data } = await api.post(`/battles/rooms/${currentRoom.id}/item`, { itemType });
       if (data.state) setState(data.state);
     } catch (err) { toast?.show(err.response?.data?.message || '아이템 사용 실패', 'error'); }
+  };
+
+  const deleteRoom = async () => {
+    if (!currentRoom || currentRoom.createdBy !== user?.id) return;
+    try {
+      await api.delete(`/battles/rooms/${currentRoom.id}`);
+      toast?.show('방이 삭제됐습니다.', 'success');
+      navigate('/battle');
+    } catch (err) {
+      toast?.show(err.response?.data?.message || '방 삭제 실패', 'error');
+    }
   };
 
   const leave = async () => {
@@ -778,6 +790,9 @@ export default function AlgorithmBattlePage() {
             <button className="btn btn-ghost btn-sm ab-invite-code" onClick={copyInviteCode} title="초대 코드 복사">
               <Copy size={13} /> {currentRoom.inviteCode}
             </button>
+          )}
+          {currentRoom?.status === 'waiting' && currentRoom?.createdBy === user?.id && (
+            <button className="btn btn-danger btn-sm" onClick={deleteRoom}>방 삭제</button>
           )}
           {currentRoom?.status === 'waiting' && (
             <button className="btn btn-success btn-sm" onClick={ready} disabled={me?.isReady || isSpectating}>

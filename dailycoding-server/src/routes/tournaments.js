@@ -14,7 +14,7 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
-router.post('/', auth, adminOnly, async (req, res) => {
+router.post('/', auth, requireVerified, async (req, res) => {
   try {
     const name = String(req.body?.name || '').trim();
     if (!name) return errorResponse(res, 400, 'VALIDATION_ERROR', '토너먼트 이름이 필요합니다.');

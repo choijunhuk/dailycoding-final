@@ -117,7 +117,7 @@ export default function TournamentPage() {
           <h1>🏟 토너먼트</h1>
           <p>8/16/32강 싱글 엘리미네이션 브라켓으로 배틀 매치를 운영합니다.</p>
         </div>
-        {isAdmin && (
+        {user && (
           <div className="tournament-create card">
             <input placeholder="토너먼트 이름" value={form.name} onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))} />
             <select value={form.size} onChange={(e) => setForm((prev) => ({ ...prev, size: e.target.value }))}>
