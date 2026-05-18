@@ -446,11 +446,11 @@ export const AlgorithmBattle = {
     if (isConnected()) {
       const result = await run(
         `UPDATE battle_rooms
-         SET status = 'finished', ended_at = NOW()
+         SET status = 'finished', ended_at = UTC_TIMESTAMP()
          WHERE status = 'waiting'
            AND (
-             (lobby_expires_at IS NOT NULL AND lobby_expires_at < NOW())
-             OR (lobby_expires_at IS NULL AND created_at < DATE_SUB(NOW(), INTERVAL 5 MINUTE))
+             (lobby_expires_at IS NOT NULL AND lobby_expires_at < UTC_TIMESTAMP())
+             OR (lobby_expires_at IS NULL AND created_at < DATE_SUB(UTC_TIMESTAMP(), INTERVAL 5 MINUTE))
            )`,
         []
       );
@@ -1095,12 +1095,12 @@ export const AlgorithmBattle = {
       if (isConnected()) {
         await run(
           `UPDATE battle_rooms
-           SET status = 'finished', ended_at = NOW()
+           SET status = 'finished', ended_at = UTC_TIMESTAMP()
            WHERE id = ?
              AND status = 'waiting'
              AND (
-               (lobby_expires_at IS NOT NULL AND lobby_expires_at < NOW())
-               OR (lobby_expires_at IS NULL AND created_at < DATE_SUB(NOW(), INTERVAL 5 MINUTE))
+               (lobby_expires_at IS NOT NULL AND lobby_expires_at < UTC_TIMESTAMP())
+               OR (lobby_expires_at IS NULL AND created_at < DATE_SUB(UTC_TIMESTAMP(), INTERVAL 5 MINUTE))
              )`,
           [roomId]
         );
