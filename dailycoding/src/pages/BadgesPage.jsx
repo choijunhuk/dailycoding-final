@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import api from '../api.js';
+import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import './BadgesPage.css';
 
@@ -179,6 +180,7 @@ function Section({ title, emoji, items, equippedBadge, equippedTitle, onEquip, s
 
 export default function BadgesPage() {
   const toast = useToast();
+  const { applyUser } = useAuth();
   const [badges, setBadges] = useState([]);
   const [titles, setTitles] = useState([]);
   const [stats, setStats] = useState({});
@@ -186,6 +188,7 @@ export default function BadgesPage() {
   const [equippedTitle, setEquippedTitle] = useState(null);
   const [earnedCount, setEarnedCount] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
+  const [progression, setProgression] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all');
 
@@ -194,8 +197,9 @@ export default function BadgesPage() {
       api.get('/badges'),
       api.get('/badges/titles'),
       api.get('/badges/stats').catch(() => ({ data: {} })),
+      api.get('/rewards/my').catch(() => ({ data: null })),
     ])
-      .then(([badgesRes, titlesRes, statsRes]) => {
+      .then(([badgesRes, titlesRes, statsRes, rewardsRes]) => {
         const badgeList = badgesRes.data?.badges || [];
         const titleList = titlesRes.data?.titles || [];
         setBadges(badgeList);
@@ -205,8 +209,9 @@ export default function BadgesPage() {
         setEquippedTitle(badgesRes.data?.equippedTitle || null);
         setEarnedCount((badgesRes.data?.earnedCount || 0) + (titlesRes.data?.earnedCount || 0));
         setTotalCount((badgesRes.data?.totalCount || 0) + (titlesRes.data?.totalCount || 0));
+        if (rewardsRes.data) setProgression(rewardsRes.data.progression || null);
       })
-      .catch(() => toast?.show('훈장 정보를 불러오지 못했습니다.', 'error'))
+      .catch(() => toast?.show('보상 정보를 불러오지 못했습니다.', 'error'))
       .finally(() => setLoading(false));
   }, []);
 
@@ -214,12 +219,13 @@ export default function BadgesPage() {
     const current = type === 'badge' ? equippedBadge : equippedTitle;
     const newCode = current === code ? null : code;
     try {
-      await api.post('/rewards/equip', { type, code: newCode });
+      const { data } = await api.post('/rewards/equip', { type, code: newCode });
       if (type === 'badge') setEquippedBadge(newCode);
       else setEquippedTitle(newCode);
-      toast?.show(newCode ? '✅ 장착됐습니다.' : '장착이 해제됐습니다.', 'success');
+      if (data?.user) applyUser(data.user);
+      toast?.show(newCode ? '장착됐습니다.' : '장착이 해제됐습니다.', 'success');
     } catch (err) {
-      toast?.show('❌ ' + (err.response?.data?.message || '장착 실패'), 'error');
+      toast?.show(err.response?.data?.message || '장착 실패', 'error');
     }
   };
 
@@ -274,14 +280,36 @@ export default function BadgesPage() {
 
   return (
     <div className="badges-page" style={{ padding: '32px 28px', maxWidth: 960, margin: '0 auto', width: '100%' }}>
-      <div style={{ marginBottom: 28 }}>
-        <h1 style={{ margin: 0, fontSize: 24, fontWeight: 900, color: 'var(--text)' }}>
-          🎖️ 훈장 & 칭호 컬렉션
-        </h1>
-        <p style={{ margin: '6px 0 0', color: 'var(--text3)', fontSize: 13 }}>
-          도전을 완료하고 훈장을 획득해 프로필에 장착해보세요.
+      <div style={{ marginBottom: 22 }}>
+        <div style={{ fontSize: 13, color: 'var(--blue)', fontWeight: 900, marginBottom: 6 }}>COLLECTION</div>
+        <h1 style={{ margin: 0, fontSize: 28, fontWeight: 900, color: 'var(--text)' }}>보상 보관함</h1>
+        <p style={{ margin: '8px 0 0', color: 'var(--text3)', fontSize: 13 }}>
+          도전을 완료하고 뱃지와 칭호를 획득해 프로필에 장착해보세요.
         </p>
       </div>
+
+      {progression && (
+        <section style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 18, padding: '16px 20px', marginBottom: 20, display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+          <div>
+            <div style={{ color: 'var(--text3)', fontSize: 11, fontWeight: 800 }}>XP LEVEL</div>
+            <div style={{ fontSize: 26, fontWeight: 900 }}>Lv. {progression.level || 1}</div>
+          </div>
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <div style={{ height: 8, background: 'var(--bg3)', borderRadius: 999, overflow: 'hidden' }}>
+              <div style={{ width: `${progression.progressPercent || 0}%`, height: '100%', background: 'linear-gradient(90deg, var(--blue), var(--purple))', transition: 'width .4s' }} />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, color: 'var(--text3)', fontSize: 11 }}>
+              <span>{(progression.xp || 0).toLocaleString()} XP</span>
+              <span>다음 레벨 {(progression.nextLevelXp || 120).toLocaleString()} XP</span>
+            </div>
+          </div>
+          {progression.nextReward && (
+            <div style={{ fontSize: 12, color: 'var(--text2)', flexShrink: 0 }}>
+              다음 보상: <b style={{ color: 'var(--text)' }}>{progression.nextReward.level}레벨</b>
+            </div>
+          )}
+        </section>
+      )}
 
       {/* Currently equipped strip */}
       {(equippedBadgeMeta || equippedTitleMeta) && (

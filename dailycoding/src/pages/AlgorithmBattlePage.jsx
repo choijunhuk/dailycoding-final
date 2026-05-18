@@ -54,7 +54,10 @@ function timeLeft(room) {
 
 function lobbyTimeLeft(room) {
   if (!room?.lobbyExpiresAt || room.status !== 'waiting') return null;
-  return Math.max(0, Math.floor((new Date(room.lobbyExpiresAt).getTime() - Date.now()) / 1000));
+  const diff = Math.floor((new Date(room.lobbyExpiresAt).getTime() - Date.now()) / 1000);
+  if (diff < 0) return 0;
+  if (diff > 600) return null; // sanity cap: >10 min means corrupted timestamp
+  return diff;
 }
 
 function getBattleObjectiveText(config, isTerritoryMode) {
@@ -537,7 +540,7 @@ export default function AlgorithmBattlePage() {
   };
 
   const deleteRoom = async () => {
-    if (!currentRoom || currentRoom.createdBy !== user?.id) return;
+    if (!currentRoom || Number(currentRoom.createdBy) !== Number(user?.id)) return;
     try {
       await api.delete(`/battles/rooms/${currentRoom.id}`);
       toast?.show('방이 삭제됐습니다.', 'success');
@@ -798,7 +801,7 @@ export default function AlgorithmBattlePage() {
               <Copy size={13} /> {currentRoom.inviteCode}
             </button>
           )}
-          {currentRoom?.status === 'waiting' && currentRoom?.createdBy === user?.id && (
+          {currentRoom?.status === 'waiting' && Number(currentRoom?.createdBy) === Number(user?.id) && (
             <button className="btn btn-danger btn-sm" onClick={deleteRoom}>방 삭제</button>
           )}
           {currentRoom?.status === 'waiting' && (

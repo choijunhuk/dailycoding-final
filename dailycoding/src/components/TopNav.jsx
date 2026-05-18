@@ -62,7 +62,6 @@ const NAV_GROUPS = [
     ],
   },
   { key: 'compete', label: '대결', Icon: Swords, path: '/compete' },
-  { key: 'battle',  labelKey: 'battle',  Icon: Swords,        path: '/battle' },
   { key: 'game',    label: '게임',        Icon: Sparkles,      path: '/game' },
   { key: 'ranking', labelKey: 'ranking', Icon: BarChart2,     path: '/ranking' },
   {
@@ -571,7 +570,6 @@ export default function TopNav() {
                 {[
                   {labelKey:'myProfile', Icon: UserIcon, path:'/profile'},
                   {label:'보상 보관함', Icon: Trophy, path:'/rewards'},
-                  {label:'훈장 컬렉션', Icon: Trophy, path:'/badges'},
                   {labelKey:'settings',  Icon: Settings, path:'/settings'},
                   {labelKey:'submissions', Icon: FileText, path:'/submissions'},
                   {labelKey:'pricing',   Icon: CreditCard, path:'/pricing'},

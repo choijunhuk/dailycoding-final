@@ -110,7 +110,11 @@ function parseJson(value, fallback) {
 
 function toIsoLike(value) {
   if (!value) return null;
-  return value instanceof Date ? value.toISOString() : value;
+  if (value instanceof Date) return value.toISOString();
+  const s = String(value);
+  // MySQL DATETIME "YYYY-MM-DD HH:MM:SS" has no timezone marker — always treat as UTC
+  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(s)) return s.replace(' ', 'T') + 'Z';
+  return s;
 }
 
 function toTimeMs(value) {

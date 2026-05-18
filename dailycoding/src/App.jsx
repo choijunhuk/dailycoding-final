@@ -50,7 +50,6 @@ const SubmitProblemPage = lazy(() => import('./pages/SubmitProblemPage'));
 const ProblemSetsPage = lazy(() => import('./pages/ProblemSetsPage'));
 const GameHubPage = lazy(() => import('./pages/GameHubPage'));
 const TournamentPage = lazy(() => import('./pages/TournamentPage'));
-const RewardsPage = lazy(() => import('./pages/RewardsPage'));
 const BadgesPage = lazy(() => import('./pages/BadgesPage'));
 const CompetePage = lazy(() => import('./pages/CompetePage'));
 
@@ -180,7 +179,7 @@ function AppInner() {
                 <Route path="/learning/:id" element={<LearningPathPage />} />
                 <Route path="/growth"      element={<Navigate to="/learning" replace />} />
                 <Route path="/profile"     element={<ProfilePage />} />
-                <Route path="/rewards"     element={<RewardsPage />} />
+                <Route path="/rewards"     element={<BadgesPage />} />
                 <Route path="/badges"      element={<BadgesPage />} />
                 <Route path="/user/:id"    element={<PublicProfilePage />} />
                 <Route path="/submissions" element={<SubmissionsPage />} />
