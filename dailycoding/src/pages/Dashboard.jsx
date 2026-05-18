@@ -9,6 +9,7 @@ import api from '../api.js';
 import { useRankingData } from '../hooks/useRankingData.js';
 import { BarChart3, BookOpen, Bot, CheckCircle2, FileText, Flame, Sparkles, Swords, Target, TrendingUp, Trophy } from 'lucide-react';
 import ProfileAvatar from '../components/ProfileAvatar';
+import OnboardingModal from '../components/OnboardingModal.jsx';
 import { useLang } from '../context/LangContext.jsx';
 import { buildDailyFocusPlan } from './dashboardPlanUtils.js';
 
@@ -84,7 +85,7 @@ const StatCard = memo(function StatCard({ icon, value, label, color, sub, delta,
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, applyUser } = useAuth();
   const { solved, grassData, problems: appProblems } = useApp();
   const toast = useToast();
   const { t, lang } = useLang();
@@ -99,6 +100,7 @@ export default function Dashboard() {
   const [reviewQueue, setReviewQueue] = useState([]);
   const [tagStats, setTagStats] = useState([]);
   const [smartRecommendations, setSmartRecommendations] = useState([]);
+  const [onboardingOpen, setOnboardingOpen] = useState(false);
   const [copiedReferral, setCopiedReferral] = useState(false);
   const loadErrorToastShownRef = useRef(false);
   const { rankingData } = useRankingData();
@@ -135,13 +137,37 @@ export default function Dashboard() {
     loadErrorToastShownRef.current = true;
     toast?.show(message, 'error');
   }, [toast]);
+
+  useEffect(() => {
+    if (!user?.id) {
+      setOnboardingOpen(false);
+      return;
+    }
+    setOnboardingOpen(Number(user.onboarding_completed ?? user.onboardingCompleted ?? 0) === 0);
+  }, [user?.id, user?.onboarding_completed, user?.onboardingCompleted]);
+
+  const completeOnboarding = useCallback(async () => {
+    setOnboardingOpen(false);
+    applyUser?.({
+      ...user,
+      onboarding_completed: 1,
+      onboardingCompleted: true,
+    });
+    try {
+      const { data } = await api.patch('/auth/onboarding/complete');
+      if (data?.user) applyUser?.(data.user);
+    } catch (err) {
+      showLoadErrorToast(err?.response?.data?.message || '온보딩 완료 상태를 저장하지 못했습니다.');
+    }
+  }, [applyUser, showLoadErrorToast, user]);
+
   useEffect(() => {
     if (!user?.id) return;
     api.get('/submissions/review-queue').then((res) => setReviewQueue(res.data || [])).catch(() => setReviewQueue([]));
     api.get('/submissions/tag-stats').then((res) => {
       const stats = res.data || [];
       setTagStats(stats);
-      const weakTags = stats.filter((item) => item.total >= 2).slice(0, 4).map((item) => item.tag);
+      const weakTags = stats.filter((item) => item.total >= 2 && Number(item.accuracy) < 50).slice(0, 4).map((item) => item.tag);
       return api.get('/problems/recommend', { params: weakTags.length ? { weakTags: weakTags.join(',') } : {} });
     }).then((res) => setSmartRecommendations(res?.data || [])).catch(() => setSmartRecommendations([]));
   }, [user?.id]);
@@ -311,6 +337,7 @@ export default function Dashboard() {
 
   return (
     <div className="dashboard-root" style={{padding:'24px 28px',overflowY:'auto',height:'100%',maxWidth:1200,margin:'0 auto'}}>
+      <OnboardingModal open={onboardingOpen} onComplete={completeOnboarding} onSkip={completeOnboarding} />
       {/* 상단 환영 */}
       <div className="dashboard-welcome" style={{
         background:`linear-gradient(135deg, ${tierMeta.bg} 0%, var(--bg2) 100%)`,
@@ -757,6 +784,20 @@ export default function Dashboard() {
                       color:TIERS[problem.tier]?.color||'var(--text2)',
                     }}>● {TIERS[problem.tier]?.label||problem.tier}</span>
                     <strong>{problem.title}</strong>
+                    {problem.reason && (
+                      <span style={{
+                        alignSelf:'flex-start',
+                        padding:'3px 8px',
+                        borderRadius:999,
+                        background:'var(--glass-bg)',
+                        border:'1px solid var(--border)',
+                        color:'var(--blue)',
+                        fontSize:'0.72rem',
+                        fontWeight:800,
+                      }}>
+                        {problem.reason}
+                      </span>
+                    )}
                     <small>{(problem.desc||problem.description||'').slice(0,72)}...</small>
                     <span className="dashboard-problem-meta">
                       {t('dashboardEstimatedTime').replace('{n}', String(problem.timeLimit||problem.time_limit||2))}

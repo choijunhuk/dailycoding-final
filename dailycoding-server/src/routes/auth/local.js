@@ -5,7 +5,7 @@ import { auth } from '../../middleware/auth.js';
 import { User } from '../../models/User.js';
 import { redis } from '../../config/redis.js';
 import { Submission } from '../../models/Submission.js';
-import { query, insert } from '../../config/mysql.js';
+import { query, insert, run } from '../../config/mysql.js';
 import logger from '../../config/logger.js';
 import { errorResponse, internalError } from '../../middleware/errorHandler.js';
 import { clearAuthCookies, clearAuthStatus, issueTokens } from './helpers.js';
@@ -140,6 +140,19 @@ router.post('/logout', async (req, res) => {
   }
   clearAuthCookies(res);
   res.status(200).json({ message: '로그아웃됐습니다.' });
+});
+
+
+router.patch('/onboarding/complete', auth, async (req, res) => {
+  try {
+    await run('UPDATE users SET onboarding_completed = 1 WHERE id = ?', [req.user.id]);
+    const user = await User.findById(req.user.id);
+    if (!user) return errorResponse(res, 404, 'NOT_FOUND', '유저 없음');
+    return res.json({ user: User.safe(user) });
+  } catch (err) {
+    console.error('[onboarding/complete]', err.message);
+    return internalError(res);
+  }
 });
 
 router.get('/top100', auth, async (req, res) => {

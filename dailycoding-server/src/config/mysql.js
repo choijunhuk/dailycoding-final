@@ -146,6 +146,7 @@ async function initMemory() {
       join_date: '2024-01-01',
       last_login: null,
       email_verified: seedUser.email_verified,
+      onboarding_completed: 0,
       avatar_source: 'site',
       created_at: new Date().toISOString(),
     });

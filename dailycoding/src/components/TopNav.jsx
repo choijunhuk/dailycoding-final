@@ -61,6 +61,7 @@ const NAV_GROUPS = [
       { path: '/exams',   labelKey: 'exams',   Icon: Trophy },
     ],
   },
+  { key: 'compete', label: '대결', Icon: Swords, path: '/compete' },
   { key: 'battle',  labelKey: 'battle',  Icon: Swords,        path: '/battle' },
   { key: 'game',    label: '게임',        Icon: Sparkles,      path: '/game' },
   { key: 'ranking', labelKey: 'ranking', Icon: BarChart2,     path: '/ranking' },
@@ -233,7 +234,7 @@ export default function TopNav() {
         <div className="topnav-desktop-nav" style={{display:'flex',alignItems:'center',gap:2,flex:1}}>
           {NAV_GROUPS.map(group => {
             const isDropdown = !!group.items;
-            const active = isDropdown
+            const active = group.matchPaths
               ? group.matchPaths.some(p => currentPath === p || currentPath.startsWith(p + '/'))
               : currentPath === group.path || currentPath.startsWith(group.path + '/');
             const Icon = group.Icon;
@@ -570,6 +571,7 @@ export default function TopNav() {
                 {[
                   {labelKey:'myProfile', Icon: UserIcon, path:'/profile'},
                   {label:'보상 보관함', Icon: Trophy, path:'/rewards'},
+                  {label:'훈장 컬렉션', Icon: Trophy, path:'/badges'},
                   {labelKey:'settings',  Icon: Settings, path:'/settings'},
                   {labelKey:'submissions', Icon: FileText, path:'/submissions'},
                   {labelKey:'pricing',   Icon: CreditCard, path:'/pricing'},

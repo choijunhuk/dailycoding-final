@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS users (
   equipped_badge  VARCHAR(50)  DEFAULT NULL,
   equipped_title  VARCHAR(50)  DEFAULT NULL,
   email_verified  TINYINT(1)   NOT NULL DEFAULT 0,
+  onboarding_completed TINYINT(1) NOT NULL DEFAULT 0,
   settings        JSON         DEFAULT NULL,
   banned_at       DATETIME     DEFAULT NULL,
   ban_reason      TEXT         DEFAULT NULL,

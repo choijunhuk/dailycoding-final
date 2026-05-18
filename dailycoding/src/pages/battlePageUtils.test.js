@@ -1,4 +1,4 @@
-import test from 'node:test';
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import { BATTLE_AD_SLOTS, BATTLE_SEC, fmtTime, getSocketUrl, POLL_MS, TYPE_LABEL } from './battlePageUtils.js';
 

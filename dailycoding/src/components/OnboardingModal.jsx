@@ -1,187 +1,114 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import api from '../api.js';
-import { useLang } from '../context/LangContext.jsx';
+import { Link } from 'react-router-dom';
 
-const GOALS = [
-  { id: 'job_hunting', labelKey: 'goalJobHunting', emoji: '🎯', descKey: 'goalJobHuntingDesc' },
-  { id: 'skill_up', labelKey: 'goalSkillUp', emoji: '📈', descKey: 'goalSkillUpDesc' },
-  { id: 'interview_prep', labelKey: 'goalInterviewPrep', emoji: '💼', descKey: 'goalInterviewPrepDesc' },
-  { id: 'fun', labelKey: 'goalFun', emoji: '🎮', descKey: 'goalFunDesc' },
+const STEPS = [
+  {
+    title: '티어 시스템',
+    badge: '01',
+    body: 'DailyCoding은 iron부터 challenger까지 11단계 티어로 성장합니다. 문제를 풀며 실력을 쌓고 승급전으로 다음 티어에 도전하세요.',
+    visual: 'iron → bronze → silver → gold → diamond → challenger',
+  },
+  {
+    title: '배틀 모드',
+    badge: '02',
+    body: '실시간 1v1 알고리즘 배틀에서 HP, 아이템, 문제 효과를 활용해 상대보다 빠르게 정답을 제출할 수 있습니다.',
+    visual: '실시간 매칭 · 코드 제출 · 즉시 판정',
+  },
+  {
+    title: '시작하기',
+    badge: '03',
+    body: '첫 문제를 풀고 대시보드 추천, 오답 복습, 태그 숙련도까지 자동으로 개인화된 학습 루틴을 만들어보세요.',
+    visual: '추천 문제에서 바로 시작',
+  },
 ];
 
-const LEVELS = [
-  { id: 'beginner', labelKey: 'onboardingBeginner', descKey: 'onboardingBeginnerDesc' },
-  { id: 'intermediate', labelKey: 'onboardingIntermediate', descKey: 'onboardingIntermediateDesc' },
-  { id: 'advanced', labelKey: 'onboardingAdvanced', descKey: 'onboardingAdvancedDesc' },
-];
-
-export default function OnboardingModal({ open, onComplete }) {
-  const { t } = useLang();
-  const [step, setStep] = useState(1);
-  const [goal, setGoal] = useState('');
-  const [experienceLevel, setExperienceLevel] = useState('');
-  const [targetCompany, setTargetCompany] = useState('');
-  const [saving, setSaving] = useState(false);
+export default function OnboardingModal({ open, onComplete, onSkip }) {
+  const [step, setStep] = useState(0);
 
   if (!open) return null;
 
-  const saveStep = async (nextStep) => {
-    setSaving(true);
-    try {
-      await api.patch('/onboarding', {
-        step: nextStep,
-        goal,
-        targetCompany,
-        experienceLevel,
-      });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleFinish = async () => {
-    setSaving(true);
-    try {
-      await api.patch('/onboarding', {
-        step: 'done',
-        goal,
-        targetCompany,
-        experienceLevel,
-      });
-      onComplete?.();
-    } finally {
-      setSaving(false);
-    }
-  };
+  const current = STEPS[step];
+  const isLast = step === STEPS.length - 1;
 
   return createPortal(
     <div style={{
       position: 'fixed',
       inset: 0,
-      background: 'rgba(0,0,0,.72)',
       zIndex: 9999,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
+      background: 'rgba(0,0,0,.68)',
+      display: 'grid',
+      placeItems: 'center',
       padding: 20,
     }}>
-      <div style={{
-        width: 'min(860px, 100%)',
+      <section role="dialog" aria-modal="true" aria-labelledby="onboarding-title" style={{
+        width: 'min(640px, 100%)',
         background: 'var(--bg)',
         border: '1px solid var(--border)',
-        borderRadius: 18,
-        padding: '32px 28px',
-        boxShadow: '0 30px 80px rgba(0,0,0,.45)',
+        borderRadius: 22,
+        boxShadow: '0 30px 90px rgba(0,0,0,.48)',
+        overflow: 'hidden',
       }}>
-        {step === 1 && (
-          <div style={{ textAlign: 'center', padding: '20px 10px' }}>
-            <h2 style={{ fontSize: 28, fontWeight: 800, marginBottom: 12 }}>{t('onboardingGoalTitle')}</h2>
-            <p style={{ color: 'var(--text2)', marginBottom: 24 }}>{t('onboardingGoalDesc')}</p>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              {GOALS.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => setGoal(item.id)}
-                  style={{
-                    padding: '20px',
-                    borderRadius: 12,
-                    border: `2px solid ${goal === item.id ? 'var(--blue)' : 'var(--border)'}`,
-                    background: goal === item.id ? 'rgba(88,166,255,.08)' : 'var(--bg2)',
-                    cursor: 'pointer',
-                    color: 'var(--text)',
-                  }}
-                >
-                  <div style={{ fontSize: 32 }}>{item.emoji}</div>
-                  <div style={{ fontWeight: 700, marginTop: 8 }}>{t(item.labelKey)}</div>
-                  <div style={{ color: 'var(--text3)', fontSize: 13 }}>{t(item.descKey)}</div>
-                </button>
-              ))}
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 20 }}>
-              <button
-                className="btn btn-primary"
-                disabled={!goal || saving}
-                onClick={async () => {
-                  await saveStep('select_level');
-                  setStep(2);
-                }}
-              >
-                {t('next')}
-              </button>
-            </div>
+        <div style={{ padding: '26px 28px', borderBottom: '1px solid var(--border)', background: 'var(--glass-bg)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
+            <span style={{
+              width: 42,
+              height: 42,
+              borderRadius: 14,
+              display: 'grid',
+              placeItems: 'center',
+              background: 'rgba(88,166,255,.12)',
+              color: 'var(--blue)',
+              border: '1px solid rgba(88,166,255,.28)',
+              fontWeight: 900,
+            }}>
+              {current.badge}
+            </span>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={onSkip}>건너뛰기</button>
           </div>
-        )}
+          <h2 id="onboarding-title" style={{ fontSize: 28, fontWeight: 900, margin: '18px 0 8px' }}>{current.title}</h2>
+          <p style={{ color: 'var(--text2)', fontSize: 14, lineHeight: 1.75, margin: 0 }}>{current.body}</p>
+        </div>
 
-        {step === 2 && (
-          <div style={{ textAlign: 'center', padding: '20px 10px' }}>
-            <h2 style={{ fontSize: 28, fontWeight: 800, marginBottom: 12 }}>{t('onboardingLevelTitle')}</h2>
-            <p style={{ color: 'var(--text2)', marginBottom: 24 }}>{t('onboardingLevelDesc')}</p>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
-              {LEVELS.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => setExperienceLevel(item.id)}
-                  style={{
-                    padding: '20px',
-                    borderRadius: 12,
-                    border: `2px solid ${experienceLevel === item.id ? 'var(--blue)' : 'var(--border)'}`,
-                    background: experienceLevel === item.id ? 'rgba(88,166,255,.08)' : 'var(--bg2)',
-                    cursor: 'pointer',
-                    color: 'var(--text)',
-                  }}
-                >
-                  <div style={{ fontWeight: 700, marginBottom: 6 }}>{t(item.labelKey)}</div>
-                  <div style={{ color: 'var(--text3)', fontSize: 13, lineHeight: 1.5 }}>{t(item.descKey)}</div>
-                </button>
-              ))}
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 20 }}>
-              <button className="btn btn-ghost" onClick={() => setStep(1)}>{t('prev')}</button>
-              <button
-                className="btn btn-primary"
-                disabled={!experienceLevel || saving}
-                onClick={async () => {
-                  await saveStep('select_company');
-                  setStep(3);
-                }}
-              >
-                {t('next')}
-              </button>
-            </div>
+        <div style={{ padding: '24px 28px 28px' }}>
+          <div style={{
+            padding: '18px 20px',
+            borderRadius: 16,
+            background: 'var(--glass-bg)',
+            border: '1px solid var(--border)',
+            color: 'var(--text)',
+            fontWeight: 800,
+            marginBottom: 20,
+          }}>
+            {current.visual}
           </div>
-        )}
-
-        {step === 3 && (
-          <div style={{ textAlign: 'center', padding: '20px 10px' }}>
-            <h2 style={{ fontSize: 28, fontWeight: 800, marginBottom: 12 }}>{t('onboardingCompanyTitle')}</h2>
-            <p style={{ color: 'var(--text2)', marginBottom: 24 }}>{t('onboardingCompanyDesc')}</p>
-            <input
-              value={targetCompany}
-              onChange={(event) => setTargetCompany(event.target.value)}
-              placeholder={t('onboardingCompanyPlaceholder')}
-              style={{
-                width: '100%',
-                padding: '14px 16px',
-                borderRadius: 12,
-                border: '1px solid var(--border)',
-                background: 'var(--bg2)',
-                color: 'var(--text)',
-                fontSize: 14,
-              }}
-            />
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 20 }}>
-              <button className="btn btn-ghost" onClick={() => setStep(2)}>{t('prev')}</button>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 22 }}>
+            {STEPS.map((item, index) => (
+              <span key={item.title} style={{
+                height: 5,
+                flex: 1,
+                borderRadius: 999,
+                background: index <= step ? 'var(--blue)' : 'var(--bg3)',
+              }} />
+            ))}
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+            <button type="button" className="btn btn-ghost" disabled={step === 0} onClick={() => setStep((prev) => Math.max(0, prev - 1))}>
+              이전
+            </button>
+            {isLast ? (
               <div style={{ display: 'flex', gap: 8 }}>
-                <button className="btn btn-ghost" disabled={saving} onClick={handleFinish}>{t('skip')}</button>
-                <button className="btn btn-primary" disabled={saving} onClick={handleFinish}>
-                  {saving ? t('saving') : t('getStarted')}
-                </button>
+                <Link to="/problems" className="btn btn-ghost" style={{ textDecoration: 'none' }} onClick={onComplete}>문제 보기</Link>
+                <Link to="/judge" className="btn btn-primary" style={{ textDecoration: 'none' }} onClick={onComplete}>시작하기</Link>
               </div>
-            </div>
+            ) : (
+              <button type="button" className="btn btn-primary" onClick={() => setStep((prev) => Math.min(STEPS.length - 1, prev + 1))}>
+                다음
+              </button>
+            )}
           </div>
-        )}
-      </div>
+        </div>
+      </section>
     </div>,
     document.body
   );

@@ -3,12 +3,12 @@ import { Notification } from '../models/Notification.js';
 import { query, queryOne, insert as dbInsert, run as dbRun } from '../config/mysql.js';
 import { auth, adminOnly, requireVerified } from '../middleware/auth.js';
 import { validateBody, problemSchema, voteSchema } from '../middleware/validate.js';
-import { askAI } from '../services/ai.js';
 import redis from '../config/redis.js';
 import { ALGORITHM_TAG_GROUPS, COMPANY_TAG_PREFIX, COMPANY_TAGS, MIN_HIDDEN_TESTCASES } from '../shared/problemCatalog.js';
 import { errorResponse, internalError } from '../middleware/errorHandler.js';
 import { TroubleshootingProblem } from '../models/TroubleshootingProblem.js';
 import { evaluateTroubleshootingSubmission } from '../services/troubleshootingEvaluation.js';
+import { TIER_ORDER } from '../shared/constants.js';
 
 const router = Router();
 const ALLOWED_TIERS = new Set(['bronze', 'silver', 'gold', 'platinum', 'diamond']);
@@ -390,7 +390,7 @@ router.get('/daily/challenge', auth, async (req, res) => {
   } catch (err) { console.error('[daily]', err.message); res.status(500).json({ message: '서버 오류' }); }
 });
 
-// GET /api/problems/recommend — AI 기반 맞춤 추천
+// GET /api/problems/recommend — 약점 태그 + 현재 티어 기반 맞춤 추천
 router.get('/recommend', auth, async (req, res) => {
   try {
     const Problem = await getProblemModel();
@@ -398,120 +398,76 @@ router.get('/recommend', auth, async (req, res) => {
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ message: '유저 없음' });
 
-    const requestedWeakTags = String(req.query.weakTags || req.query.weakTags?.[0] || '')
+    const requestedWeakTags = String(req.query.weakTags || '')
       .split(',')
       .map((tag) => tag.trim())
       .filter(Boolean)
       .slice(0, 8);
 
-    const weakTagRows = await query(
-      `SELECT pt.tag
+    const tagAttemptRows = await query(
+      `SELECT pt.tag,
+              COUNT(*) AS total,
+              SUM(CASE WHEN s.result = 'correct' THEN 1 ELSE 0 END) AS correct
        FROM submissions s
        JOIN problem_tags pt ON pt.problem_id = s.problem_id
-       WHERE s.user_id = ? AND s.result IN ('wrong', 'timeout', 'error', 'compile')
-       ORDER BY s.submitted_at DESC
-       LIMIT 25`,
+       WHERE s.user_id = ?
+       GROUP BY pt.tag`,
       [req.user.id]
     );
-    const weakTagScores = (weakTagRows || []).reduce((acc, row) => {
-      acc[row.tag] = (acc[row.tag] || 0) + 1;
-      return acc;
-    }, {});
-    const weakTags = [...new Set([
-      ...requestedWeakTags,
-      ...Object.entries(weakTagScores)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 5)
-        .map(([tag]) => tag),
-    ])].slice(0, 8);
-    requestedWeakTags.forEach((tag) => { weakTagScores[tag] = Math.max(weakTagScores[tag] || 0, 3); });
 
-    const tierOrder = ['unranked', 'bronze', 'silver', 'gold', 'platinum', 'diamond'];
-    const userTierIdx = tierOrder.indexOf(user.tier || 'unranked');
-    const targetTiers = [tierOrder[userTierIdx], tierOrder[Math.min(userTierIdx + 1, tierOrder.length - 1)]]
-      .filter(Boolean);
+    const calculatedWeakTags = (tagAttemptRows || [])
+      .map((row) => ({
+        tag: row.tag,
+        total: Number(row.total || 0),
+        correct: Number(row.correct || 0),
+        accuracy: Number(row.total || 0) > 0 ? Number(row.correct || 0) / Number(row.total || 0) : 1,
+      }))
+      .filter((row) => row.total > 0 && row.accuracy < 0.5)
+      .sort((a, b) => a.accuracy - b.accuracy || b.total - a.total)
+      .map((row) => row.tag);
 
-    const [solvedTagRows, solvedTitleRows, candidates] = await Promise.all([
-      query(
-        `SELECT DISTINCT pt.tag
-         FROM submissions s
-         JOIN problems p ON p.id = s.problem_id
-         JOIN problem_tags pt ON pt.problem_id = p.id
-         WHERE s.user_id = ? AND s.result = 'correct' AND COALESCE(p.problem_type, 'coding') = 'coding'
-         LIMIT 15`,
-        [req.user.id]
-      ),
-      query(
-        `SELECT p.title, MAX(s.submitted_at) AS last_solved
-         FROM submissions s
-         JOIN problems p ON p.id = s.problem_id
-         WHERE s.user_id = ? AND s.result = 'correct' AND COALESCE(p.problem_type, 'coding') = 'coding'
-         GROUP BY p.id, p.title
-         ORDER BY last_solved DESC
-         LIMIT 10`,
-        [req.user.id]
-      ),
-      Problem.findRecommendationCandidates(req.user.id, { tiers: targetTiers, limit: 18 }),
-    ]);
+    const weakTags = [...new Set([...calculatedWeakTags, ...requestedWeakTags])].slice(0, 8);
+    const currentTier = user.tier || 'unranked';
+    const currentTierIndex = Math.max(0, TIER_ORDER.indexOf(currentTier));
+    const maxTierIndex = Math.min(TIER_ORDER.length - 1, currentTierIndex + 1);
+    const allowedTiers = TIER_ORDER.slice(0, maxTierIndex + 1);
 
-    const onboarding = await queryOne(
-      'SELECT experience_level FROM user_onboarding WHERE user_id = ?',
-      [req.user.id]
-    );
-    const diffRange = onboarding?.experience_level === 'beginner'
-      ? [1, 4]
-      : onboarding?.experience_level === 'intermediate'
-        ? [4, 7]
-        : onboarding?.experience_level === 'advanced'
-          ? [7, 10]
-          : null;
-    const filteredCandidates = diffRange
-      ? candidates.filter((problem) => {
-          const difficulty = Number(problem.difficulty || 0);
-          return difficulty >= diffRange[0] && difficulty <= diffRange[1];
-        })
-      : candidates;
-    const finalCandidates = filteredCandidates.length > 0 ? filteredCandidates.slice(0, 6) : candidates.slice(0, 6);
+    const allCandidates = await Problem.findAll({ userId: req.user.id, problemType: 'coding' });
+    const unsolvedAllowed = allCandidates.filter((problem) => {
+      const tierIndex = TIER_ORDER.indexOf(problem.tier || 'unranked');
+      return !problem.isSolved && tierIndex >= 0 && allowedTiers.includes(problem.tier || 'unranked');
+    });
 
-    if (finalCandidates.length === 0) return res.json([]);
+    const selected = [];
+    const selectedIds = new Set();
+    const addProblem = (problem, reason) => {
+      if (!problem || selectedIds.has(problem.id) || selected.length >= 6) return;
+      selectedIds.add(problem.id);
+      selected.push({ ...problem, reason });
+    };
 
-    // AI에게 전달할 데이터 가공 (너무 많으면 압축)
-    const solvedTags = [...new Set((solvedTagRows || []).map((row) => row.tag).filter(Boolean))].slice(0, 15);
-    const solvedTitles = (solvedTitleRows || []).map((row) => row.title).filter(Boolean).slice(0, 10);
-    const candidatePayload = finalCandidates.map((problem) => ({
-      id: problem.id,
-      title: problem.title,
-      tier: problem.tier,
-      tags: problem.tags,
-    }));
+    for (const problem of unsolvedAllowed) {
+      if (selected.length >= 4) break;
+      const matchedTag = (problem.tags || []).find((tag) => weakTags.includes(tag));
+      if (matchedTag) addProblem(problem, `${matchedTag} 약점 보완`);
+    }
 
-    const prompt = `당신은 코딩 알고리즘 학습 가이드입니다. 
-유저 정보: 티어 ${user.tier}, 레이팅 ${user.rating}점.
-최근 푼 문제: ${solvedTitles.join(', ')}.
-익숙한 태그: ${solvedTags.join(', ')}.
-최근 약한 태그: ${weakTags.join(', ') || '없음'}.
+    const currentTierProblems = unsolvedAllowed.filter((problem) => (problem.tier || 'unranked') === currentTier);
+    for (const problem of currentTierProblems) {
+      if (selected.filter((item) => item.reason === '현재 티어 추천').length >= 2 && selected.length >= 6) break;
+      addProblem(problem, '현재 티어 추천');
+    }
 
-아래 후보 문제 중 유저의 실력 향상에 가장 도움될 만한 4-6개를 추천해주세요. 
-유저가 아직 접해보지 못한 태그나 현재 티어보다 약간 높은 난이도를 선호하되, 최근 약한 태그가 있다면 그 태그를 우선 보강하세요.
-JSON 형식으로 { "recommendedIds": [id1, id2, ...] } 만 반환하세요.
+    for (const problem of unsolvedAllowed) {
+      if (selected.length >= 6) break;
+      addProblem(problem, '현재 티어 추천');
+    }
 
-후보: ${JSON.stringify(candidatePayload)}`;
-
-    const fallbackIds = [...finalCandidates]
-      .sort((a, b) => {
-        const weakA = (a.tags || []).reduce((sum, tagName) => sum + (weakTagScores[tagName] || 0), 0);
-        const weakB = (b.tags || []).reduce((sum, tagName) => sum + (weakTagScores[tagName] || 0), 0);
-        if (weakB !== weakA) return weakB - weakA;
-        return (b.solved || 0) - (a.solved || 0);
-      })
-      .map((problem) => problem.id);
-
-    const result = await askAI(req.user.id, prompt, { recommendedIds: fallbackIds }, 300);
-    const finalIds = Array.isArray(result?.recommendedIds) ? result.recommendedIds : fallbackIds;
-
-    const recommended = finalCandidates.filter((problem) => finalIds.includes(problem.id));
-    res.json(recommended.length > 0 ? recommended : finalCandidates.filter((problem) => fallbackIds.includes(problem.id)));
-  } catch (err) { console.error('[recommend]', err.message); res.status(500).json({ message: '서버 오류' }); }
+    res.json(selected.slice(0, 6));
+  } catch (err) {
+    console.error('[recommend]', err.message);
+    res.status(500).json({ message: '서버 오류' });
+  }
 });
 
 // POST /api/problems (생성)

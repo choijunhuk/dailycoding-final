@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AppProvider, useApp }   from './context/AppContext';
@@ -17,7 +17,6 @@ import { ToastProvider } from './context/ToastContext.jsx';
 import { ThemeProvider } from './context/ThemeContext.jsx';
 import { LangProvider } from './context/LangContext.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
-import OnboardingModal from './components/OnboardingModal.jsx';
 import api from './api.js';
 import { applyAppTypographyPreference } from './utils/fontPreferences.js';
 import { resolvePostLoginRedirect } from './utils/redirects.js';
@@ -52,6 +51,8 @@ const ProblemSetsPage = lazy(() => import('./pages/ProblemSetsPage'));
 const GameHubPage = lazy(() => import('./pages/GameHubPage'));
 const TournamentPage = lazy(() => import('./pages/TournamentPage'));
 const RewardsPage = lazy(() => import('./pages/RewardsPage'));
+const BadgesPage = lazy(() => import('./pages/BadgesPage'));
+const CompetePage = lazy(() => import('./pages/CompetePage'));
 
 function RouteFallback({ isJudge }) {
   if (isJudge) {
@@ -76,7 +77,6 @@ function AppInner() {
   const { loadAll, loading } = useApp();
   const location = useLocation();
   const navigate = useNavigate();
-  const [onboardingOpen, setOnboardingOpen] = useState(false);
 
   useEffect(() => {
     applyAppTypographyPreference({
@@ -113,21 +113,6 @@ function AppInner() {
     }
   }, [user?.id, loadAll, navigate]);
 
-  useEffect(() => {
-    let ignore = false;
-    if (!user?.id) {
-      setOnboardingOpen(false);
-      return undefined;
-    }
-    api.get('/onboarding')
-      .then((res) => {
-        if (!ignore) setOnboardingOpen(!res.data?.completed);
-      })
-      .catch(() => {
-        if (!ignore) setOnboardingOpen(false);
-      });
-    return () => { ignore = true; };
-  }, [user?.id]);
 
   // 페이지 전환 시 스크롤 맨 위로
   useEffect(() => {
@@ -168,13 +153,6 @@ function AppInner() {
     <div style={{ display:'flex', flexDirection:'column', height:'100vh', overflow:'hidden', background:'var(--bg)' }}>
       <TopNav />
       <VerificationBanner />
-      <OnboardingModal
-        open={onboardingOpen}
-        onComplete={() => {
-          setOnboardingOpen(false);
-          navigate('/problems?recommended=true', { replace: true });
-        }}
-      />
       <div id="page-content" style={{ flex:1, overflowY:'auto', overflowX:'hidden', background:'var(--bg)', display:'flex', flexDirection:'column' }}>
         {loading && !isJudge ? (
           <RouteFallback isJudge={false} />
@@ -184,7 +162,9 @@ function AppInner() {
               <Routes>
                 <Route path="/"            element={<Dashboard />} />
                 <Route path="/problems"    element={<ProblemsPage />} />
+                <Route path="/judge"       element={<Navigate to="/problems" replace />} />
                 <Route path="/problems/:id" element={<JudgePage />} />
+                <Route path="/compete"     element={<CompetePage />} />
                 <Route path="/contest"     element={<ContestPage />} />
                 <Route path="/tournaments" element={<TournamentPage />} />
                 <Route path="/ranking"     element={<RankingPage />} />
@@ -201,6 +181,7 @@ function AppInner() {
                 <Route path="/growth"      element={<Navigate to="/learning" replace />} />
                 <Route path="/profile"     element={<ProfilePage />} />
                 <Route path="/rewards"     element={<RewardsPage />} />
+                <Route path="/badges"      element={<BadgesPage />} />
                 <Route path="/user/:id"    element={<PublicProfilePage />} />
                 <Route path="/submissions" element={<SubmissionsPage />} />
                 <Route path="/submit-problem" element={<SubmitProblemPage />} />

@@ -718,6 +718,11 @@ export default function RankingPage() {
                         }}>{t('rankingMe')}</span>
                       )}
                     </div>
+                  {(r.equipped_title || r.equippedTitle) && rewardMeta[r.equipped_title || r.equippedTitle] && (
+                    <div style={{ fontSize: 11, color: 'var(--blue)', fontWeight: 700, marginTop: 2 }}>
+                      {rewardMeta[r.equipped_title || r.equippedTitle].icon} {rewardMeta[r.equipped_title || r.equippedTitle].name}
+                    </div>
+                  )}
                   <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>
                     {mode === 'season'
                       ? t('rankingSeasonWinsScore').replace('{wins}', String(r.battleWins || 0)).replace('{score}', (r.rating || 0).toLocaleString())

@@ -12,6 +12,7 @@ import { executeSubmissionFlow } from '../services/submissionExecution.js';
 import { completeMission } from '../services/missionService.js';
 import { pushToUser } from '../services/pushNotifier.js';
 import { recordPromotionLoss } from '../services/promotionService.js';
+import { grantBattleWinBadges } from '../services/badgeService.js';
 import { evaluateBugFixAnswer, evaluateFillBlankAnswer } from '../services/battleAnswerEvaluation.js';
 import redis from '../config/redis.js';
 import { query } from '../config/mysql.js';
@@ -99,7 +100,11 @@ async function rewardBattleWinnerMissions(room) {
   await Promise.all(winnerIds.map(async (userId) => {
     try {
       await completeMission(userId, 'battle_win');
-      await Reward.grant(userId, 'badge_battle_win');
+      const rows = await query(
+        `SELECT COUNT(*) AS cnt FROM battle_results WHERE user_id = ? AND result = 'win'`,
+        [userId]
+      );
+      await grantBattleWinBadges(userId, Number(rows[0]?.cnt || 1));
     } catch (err) {
       console.error('[battle:mission]', err);
     }

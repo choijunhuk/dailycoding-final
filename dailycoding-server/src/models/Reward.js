@@ -1,11 +1,12 @@
 import { query, queryOne, run } from '../config/mysql.js';
 
 const XP_UNLOCK_REWARDS = [
-  { level: 2, code: 'badge_xp_rookie' },
-  { level: 3, code: 'title_routine_builder' },
-  { level: 5, code: 'badge_xp_climber' },
-  { level: 7, code: 'title_debug_maker' },
+  { level: 2,  code: 'badge_xp_rookie' },
+  { level: 3,  code: 'title_routine_builder' },
+  { level: 5,  code: 'badge_xp_climber' },
+  { level: 7,  code: 'title_debug_maker' },
   { level: 10, code: 'badge_xp_veteran' },
+  { level: 20, code: 'badge_xp_master' },
 ];
 
 const XP_UNLOCK_BACKGROUNDS = [

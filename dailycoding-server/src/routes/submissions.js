@@ -14,6 +14,7 @@ import { handleCorrectSubmissionMissions } from '../services/missionService.js';
 import { updateSeasonRating } from '../services/seasonService.js';
 import { evaluateFillBlankAnswer, evaluateBugFixAnswer } from '../services/battleAnswerEvaluation.js';
 import { checkSimilarity } from '../services/similarityDetector.js';
+import { grantExploreBadges, grantMultilangBadge } from '../services/badgeService.js';
 
 const router = Router();
 async function logReviewSecurityEvent(req, submissionId, reason) {
@@ -227,6 +228,11 @@ router.post('/', auth, requireVerified, async (req, res) => {
         }
       }
 
+      if (evaluation.correct) {
+        grantExploreBadges(req.user.id, { solveTimeSec: Number(solveTimeSec) || 0, problemTier: prob.tier }).catch(() => {});
+        grantMultilangBadge(req.user.id).catch(() => {});
+      }
+
       return res.json({
         id:           submission.id,
         problemId:    submission.problem_id,
@@ -279,6 +285,11 @@ router.post('/', auth, requireVerified, async (req, res) => {
       createNotification: Notification.create,
       invalidateRanking: () => redis.clearPrefix('ranking:'),
     });
+
+    if (submission.result === 'correct') {
+      grantExploreBadges(req.user.id, { solveTimeSec: Number(solveTimeSec) || 0, problemTier: prob.tier }).catch(() => {});
+      grantMultilangBadge(req.user.id).catch(() => {});
+    }
 
     await updateReviewSchedule({ userId: req.user.id, problemId: Number(problemId), submissionId: submission.id, result: submission.result });
     await flagSimilarSubmission({

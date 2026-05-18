@@ -6,12 +6,13 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "test": "node --test src/**/*.test.js",
+    "test": "vitest run",
     "preview": "vite preview",
     "start": "npx serve -s dist -l ${PORT:-3000}",
     "lint": "npx eslint src --ext .js,.jsx --max-warnings 0",
     "lint:fix": "npx eslint src --ext .js,.jsx --fix",
-    "verify": "npm run lint && npm test && npm run build"
+    "verify": "npm run lint && npm test && npm run build",
+    "test:ui": "vitest --ui"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.6.0",
@@ -26,9 +27,12 @@
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^6.0.2",
+    "@vitest/ui": "^4.1.6",
     "eslint": "^8.57.1",
     "eslint-plugin-react": "^7.37.5",
-    "vite": "^8.0.13"
+    "jsdom": "^29.1.1",
+    "vite": "^8.0.13",
+    "vitest": "^4.1.6"
   },
   "overrides": {
     "dompurify": "^3.4.0"

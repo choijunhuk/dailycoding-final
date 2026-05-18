@@ -6,6 +6,7 @@ import { Reward } from './Reward.js';
 import { TIER_ORDER, TIER_POINTS, TIER_THRESHOLDS } from '../shared/constants.js';
 import { DEFAULT_PROFILE_BACKGROUND_SLUG, LEGACY_PROFILE_BACKGROUND_SLUGS } from '../config/profileBackgroundSeeds.js';
 import { getActivePromotionSeries, getNextTier, openPromotionSeries, recordPromotionWin } from '../services/promotionService.js';
+import { grantTierBadge, grantStreakBadges, grantSolveMilestoneBadges } from '../services/badgeService.js';
 
 const USER_SELECTABLE_FIELDS = new Set([
   'id',
@@ -25,6 +26,7 @@ const USER_SELECTABLE_FIELDS = new Set([
   'equipped_badge',
   'equipped_title',
   'email_verified',
+  'onboarding_completed',
   'banned_at',
   'ban_reason',
   'subscription_tier',
@@ -373,15 +375,11 @@ export const User = {
       await redis.zAdd('ranking:global:zset', scoreForRedis, userId);
     }
 
-    // 티어 달성 보상
-    const tierBadgeMap = { bronze: 'badge_bronze', silver: 'badge_silver', gold: 'badge_gold', platinum: 'badge_platinum', diamond: 'badge_diamond' };
-    const tierTitleMap = { bronze: 'title_bronze', silver: 'title_silver', gold: 'title_gold', platinum: 'title_platinum', diamond: 'title_diamond' };
-    if (tierBadgeMap[nextTier]) await Reward.grant(userId, tierBadgeMap[nextTier]);
-    if (tierTitleMap[nextTier]) await Reward.grant(userId, tierTitleMap[nextTier]);
-
-    // 스트릭 보상
+    // 티어·스트릭·풀이 수 훈장
     const streak = updUser?.streak || 0;
-    if ([7, 30, 100].includes(streak)) {
+    const solvedCount = updUser?.solved_count || 0;
+
+    if ([7, 30, 100, 365].includes(streak)) {
       await emitFriendMilestone(userId, {
         username: updUser?.username || '친구',
         event: 'streak',
@@ -389,16 +387,12 @@ export const User = {
         message: `${updUser?.username || '친구'}님이 ${streak}일 연속 풀이를 달성했습니다!`,
       });
     }
-    if (streak >= 100) await Reward.grant(userId, 'badge_streak100');
-    if (streak >= 30) await Reward.grantMany(userId, ['badge_streak30', 'badge_streak_30']);
-    else if (streak >= 7)  await Reward.grantMany(userId, ['badge_streak7', 'badge_streak_7']);
 
-    // 풀이 수 보상
-    const solvedCount = updUser?.solved_count || 0;
-    if (solvedCount === 1) await Reward.grant(userId, 'badge_first_solve');
-    if (solvedCount >= 100) await Reward.grant(userId, 'badge_solve100');
-    else if (solvedCount >= 50) await Reward.grant(userId, 'badge_solve50');
-    else if (solvedCount >= 10) await Reward.grant(userId, 'badge_solve10');
+    await Promise.all([
+      grantTierBadge(userId, nextTier),
+      grantStreakBadges(userId, streak),
+      grantSolveMilestoneBadges(userId, solvedCount),
+    ]);
 
     // 챌린저 재조정 (상위 3명 동적 부여)
     await this.syncChallengerTiers();
@@ -693,6 +687,8 @@ export const User = {
       equippedTitle:  user.equipped_title  ?? null,
       achievement:    user.achievement ?? null,
       emailVerified:  user.email_verified  ? true : false,
+      onboardingCompleted: Boolean(user.onboarding_completed),
+      onboarding_completed: user.onboarding_completed ? 1 : 0,
       bannedAt:       user.banned_at  ?? null,
       banReason:      user.ban_reason ?? null,
       avatarColor:    user.avatar_color ?? null,
