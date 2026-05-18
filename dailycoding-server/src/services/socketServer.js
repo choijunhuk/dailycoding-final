@@ -37,7 +37,7 @@ export function initSocketServer(httpServer, allowedOrigins) {
   }
 
   // JWT auth middleware for socket connections
-  io.use((socket, next) => {
+  io.use(async (socket, next) => {
     const token =
       socket.handshake.auth?.token ||
       socket.handshake.headers?.authorization?.replace('Bearer ', '') ||
