@@ -31,14 +31,16 @@ export const CommunityProblem = {
   },
 
   async findPending({ status = 'pending', limit = 50, offset = 0 } = {}) {
+    const safeLimit = Math.min(Math.max(Number.parseInt(limit, 10) || 50, 1), 100);
+    const safeOffset = Math.max(Number.parseInt(offset, 10) || 0, 0);
     const rows = await query(
       `SELECT cp.*, u.username, u.tier AS user_tier
        FROM community_problems cp
        JOIN users u ON u.id = cp.user_id
        WHERE cp.status = ?
        ORDER BY cp.created_at ASC
-       LIMIT ? OFFSET ?`,
-      [status, limit, offset]
+       LIMIT ${safeLimit} OFFSET ${safeOffset}`,
+      [status]
     );
     return rows.map(r => this._parse(r));
   },
