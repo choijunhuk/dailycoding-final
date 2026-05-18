@@ -522,29 +522,19 @@ export const AlgorithmBattle = {
       clampInt(durationSec ?? modeConfig.durationSec, modeConfig.durationSec, 60, 1200),
       creatorId || null, isPrivate ? 1 : 0, inviteCodeVal, preferredLanguage || null,
     ];
-    if (isConnected()) {
-      await insert(
-        `INSERT INTO battle_rooms
-           (id, mode, problem_id, problem_ids, territory_claims, status, max_players, duration_sec,
-            created_by, created_at, is_private, invite_code, preferred_language, lobby_expires_at)
-         VALUES (?,?,?,?,?,?,?,?,?,NOW(),?,?,?,DATE_ADD(NOW(), INTERVAL 5 MINUTE))`,
-        roomParams
-      );
-    } else {
-      await insert(
-        `INSERT INTO battle_rooms
-           (id, mode, problem_id, problem_ids, territory_claims, status, max_players, duration_sec,
-            created_by, created_at, is_private, invite_code, preferred_language, lobby_expires_at)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-        [
-          id, normalizedMode, resolvedProblemId, problemIdsJson, '{}', 'waiting',
-          clampInt(maxPlayers ?? modeConfig.maxPlayers, modeConfig.maxPlayers, 2, MAX_PLAYERS),
-          clampInt(durationSec ?? modeConfig.durationSec, modeConfig.durationSec, 60, 1200),
-          creatorId || null, now, isPrivate ? 1 : 0, inviteCodeVal,
-          preferredLanguage || null, lobbyExpiresAt,
-        ]
-      );
-    }
+    await insert(
+      `INSERT INTO battle_rooms
+         (id, mode, problem_id, problem_ids, territory_claims, status, max_players, duration_sec,
+          created_by, created_at, is_private, invite_code, preferred_language, lobby_expires_at)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      [
+        id, normalizedMode, resolvedProblemId, problemIdsJson, '{}', 'waiting',
+        clampInt(maxPlayers ?? modeConfig.maxPlayers, modeConfig.maxPlayers, 2, MAX_PLAYERS),
+        clampInt(durationSec ?? modeConfig.durationSec, modeConfig.durationSec, 60, 1200),
+        creatorId || null, now, isPrivate ? 1 : 0, inviteCodeVal,
+        preferredLanguage || null, lobbyExpiresAt,
+      ]
+    );
     if (creatorId) await this.joinRoom(id, creatorId);
     await this.recordEvent(id, creatorId || null, 'room.config', { mode: normalizedMode, bannedTags, deferredProblemSelection: !problemId });
     return this.getRoomState(id);

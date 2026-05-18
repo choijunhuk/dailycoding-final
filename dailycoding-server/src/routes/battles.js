@@ -15,7 +15,7 @@ import { recordPromotionLoss } from '../services/promotionService.js';
 import { grantBattleWinBadges } from '../services/badgeService.js';
 import { evaluateBugFixAnswer, evaluateFillBlankAnswer } from '../services/battleAnswerEvaluation.js';
 import redis from '../config/redis.js';
-import { query } from '../config/mysql.js';
+import { query, run } from '../config/mysql.js';
 
 const router = Router();
 
@@ -461,16 +461,22 @@ router.post('/rooms/:roomId/finish', async (req, res) => {
   }
 });
 
-router.delete('/rooms/:roomId', auth, async (req, res) => {
+router.delete('/rooms/:roomId', async (req, res) => {
   try {
-    const state = await AlgorithmBattle.getRoomState(req.params.roomId);
+    const { roomId } = req.params;
+    const state = await AlgorithmBattle.getRoomState(roomId);
     if (!state) return errorResponse(res, 404, 'NOT_FOUND', '방을 찾을 수 없습니다.');
-    if (Number(state.room.createdBy) !== Number(req.user.id)) return errorResponse(res, 403, 'FORBIDDEN', '방장만 삭제할 수 있습니다.');
-    if (state.room.status !== 'waiting') return errorResponse(res, 409, 'CONFLICT', '대기 중인 방만 삭제할 수 있습니다.');
-    const { run } = await import('../config/mysql.js');
-    await run("UPDATE battle_rooms SET status = 'cancelled' WHERE id = ? AND status = 'waiting'", [req.params.roomId]);
+    if (Number(state.room.createdBy) !== Number(req.user.id)) {
+      console.warn(`[delete-room] 403 roomId=${roomId} createdBy=${state.room.createdBy} userId=${req.user.id}`);
+      return errorResponse(res, 403, 'FORBIDDEN', '방장만 삭제할 수 있습니다.');
+    }
+    if (state.room.status !== 'waiting') {
+      console.warn(`[delete-room] 409 roomId=${roomId} status=${state.room.status}`);
+      return errorResponse(res, 409, 'CONFLICT', '대기 중인 방만 삭제할 수 있습니다.');
+    }
+    await run("UPDATE battle_rooms SET status = 'cancelled' WHERE id = ? AND status = 'waiting'", [roomId]);
     const io = req.app.get('io');
-    if (io) io.to(`battle:${req.params.roomId}`).emit('battle:room:deleted', { roomId: req.params.roomId });
+    if (io) io.to(`battle:${roomId}`).emit('battle:room:deleted', { roomId });
     res.json({ message: '방이 삭제됐습니다.' });
   } catch (err) {
     console.error('[algorithm-battles/delete-room]', err);

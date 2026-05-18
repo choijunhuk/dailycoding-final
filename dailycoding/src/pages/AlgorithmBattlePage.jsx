@@ -55,9 +55,7 @@ function timeLeft(room) {
 function lobbyTimeLeft(room) {
   if (!room?.lobbyExpiresAt || room.status !== 'waiting') return null;
   const diff = Math.floor((new Date(room.lobbyExpiresAt).getTime() - Date.now()) / 1000);
-  if (diff < 0) return 0;
-  if (diff > 600) return null; // sanity cap: >10 min means corrupted timestamp
-  return diff;
+  return diff < 0 ? 0 : Math.min(diff, 300);
 }
 
 function getBattleObjectiveText(config, isTerritoryMode) {
@@ -540,12 +538,17 @@ export default function AlgorithmBattlePage() {
   };
 
   const deleteRoom = async () => {
-    if (!currentRoom || Number(currentRoom.createdBy) !== Number(user?.id)) return;
+    if (!currentRoom) return;
+    if (Number(currentRoom.createdBy) !== Number(user?.id)) {
+      console.warn('[deleteRoom] createdBy mismatch', currentRoom.createdBy, user?.id);
+      return;
+    }
     try {
       await api.delete(`/battles/rooms/${currentRoom.id}`);
       toast?.show('방이 삭제됐습니다.', 'success');
       navigate('/battle');
     } catch (err) {
+      console.error('[deleteRoom] error', err.response?.status, err.response?.data);
       toast?.show(err.response?.data?.message || '방 삭제 실패', 'error');
     }
   };
@@ -732,6 +735,20 @@ export default function AlgorithmBattlePage() {
                 <div className="ab-room-row-actions">
                   {isPlaying && (
                     <span className="ab-live-badge">LIVE</span>
+                  )}
+                  {!isPlaying && Number(item.room.createdBy) === Number(user?.id) && (
+                    <button
+                      className="btn btn-danger btn-sm"
+                      onClick={async () => {
+                        try {
+                          await api.delete(`/battles/rooms/${item.room.id}`);
+                          toast?.show('방이 삭제됐습니다.', 'success');
+                          loadRooms();
+                        } catch (err) {
+                          toast?.show(err.response?.data?.message || '방 삭제 실패', 'error');
+                        }
+                      }}
+                    >삭제</button>
                   )}
                   <button
                     className={isPlaying ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm'}
