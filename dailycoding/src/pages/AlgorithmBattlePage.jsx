@@ -346,7 +346,14 @@ export default function AlgorithmBattlePage() {
       setTimeout(() => setAttackUserId(null), 700);
     });
     socket.on('battle:finished', (next) => {
-      if (next?.room?.id === roomId) setState(next);
+      if (next?.room?.id !== roomId) return;
+      const hasAnyOpponent = (next?.participants || []).some((p) => p.userId !== user?.id);
+      if (!hasAnyOpponent) {
+        toast?.show('대기 시간이 초과됐습니다. 상대가 없어 방이 종료됐습니다.', 'warning');
+        setTimeout(() => navigate('/battle', { replace: true }), 2500);
+        return;
+      }
+      setState(next);
       toast?.show('배틀이 종료되었습니다.', 'info');
     });
     socket.on('battle:effect', (event) => { toast?.show(event?.payload?.effectLabel || '문제 효과 발동', 'info'); });

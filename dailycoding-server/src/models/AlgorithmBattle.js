@@ -1053,10 +1053,8 @@ export const AlgorithmBattle = {
     if (room.status === 'waiting') {
       await run('DELETE FROM battle_participants WHERE room_id = ? AND user_id = ?', [roomId, userId]);
       await this.recordEvent(roomId, userId, 'player.left', {});
-      const participants = await this.getParticipants(roomId);
-      if (participants.length === 0) {
-        await run('UPDATE battle_rooms SET status = ?, ended_at = ? WHERE id = ?', ['finished', nowMySQL(), roomId]);
-      }
+      // Don't auto-finish: let lobby_expires_at expiry handle empty rooms naturally.
+      // This prevents "나가기" from destroying a room that others could still join.
       return this.getRoomState(roomId);
     }
     await this.recordEvent(roomId, userId, 'player.disconnected', {});

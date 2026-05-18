@@ -461,7 +461,7 @@ router.post('/rooms/:roomId/finish', async (req, res) => {
   }
 });
 
-router.delete('/rooms/:roomId', async (req, res) => {
+router.delete('/rooms/:roomId', auth, async (req, res) => {
   try {
     const state = await AlgorithmBattle.getRoomState(req.params.roomId);
     if (!state) return errorResponse(res, 404, 'NOT_FOUND', '방을 찾을 수 없습니다.');
