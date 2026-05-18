@@ -115,7 +115,7 @@ async function getDefaultDeps() {
     getTierPoints: User.tierPoints,
     onSolve: User.onSolve.bind(User),
     createNotification: Notification.create,
-    invalidateRanking: () => redis.del('ranking:global:list'),
+    invalidateRanking: () => redis.clearPrefix('ranking:'),
     updateRedisLeaderboard: (cid, uid, score) => Contest.updateRedisLeaderboard(cid, uid, score),
     grantReward: (userId, rewardCode) => Reward.grant(userId, rewardCode),
     handleCorrectSubmissionMissions,
@@ -125,12 +125,11 @@ async function getDefaultDeps() {
 }
 
 function getCurrentWeekStartDate(date = new Date()) {
-  const base = new Date(date);
-  const day = base.getDay();
+  const d = new Date(date);
+  const day = d.getUTCDay();
   const diff = day === 0 ? -6 : 1 - day;
-  base.setHours(0, 0, 0, 0);
-  base.setDate(base.getDate() + diff);
-  return base.toISOString().slice(0, 10);
+  const monday = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + diff));
+  return monday.toISOString().slice(0, 10);
 }
 
 export async function executeSubmissionFlow({

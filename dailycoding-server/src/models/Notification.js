@@ -1,5 +1,6 @@
 import { nowMySQL } from '../config/dateutil.js';
 import { query, queryOne, insert, run } from '../config/mysql.js';
+import { pushToUser } from '../services/pushNotifier.js';
 
 
 export const Notification = {
@@ -20,6 +21,7 @@ export const Notification = {
     );
     const payload = { id, message, link, created_at: createdAt, is_read: 0 };
     global.io?.to(`user:${userId}`).emit('notification:new', payload);
+    pushToUser(userId, { title: 'DailyCoding', body: message, data: { link } }).catch(() => {});
     return payload;
   },
 

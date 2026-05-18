@@ -66,7 +66,10 @@ async function getProblemModel() {
 }
 
 // 배틀 종료 시 승자/패자 결정 헬퍼 (팀 배틀 대응)
-function resolveWinner(players) {
+function resolveWinner(players, _teams) {
+  if (!players || typeof players !== 'object') {
+    return { winnerTeamId: null, loserTeamId: null, teamScores: {} };
+  }
   const teamScores = {};
   Object.values(players).forEach(p => {
     teamScores[p.teamId] = (teamScores[p.teamId] || 0) + p.score;

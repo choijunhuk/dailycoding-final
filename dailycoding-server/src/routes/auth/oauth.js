@@ -51,8 +51,10 @@ router.get('/github/callback', async (req, res) => {
     ]);
     const ghUser = await userRes.json();
     const emails = await emailRes.json();
-    const primary = Array.isArray(emails) ? (emails.find((email) => email.primary && email.verified) || emails[0])?.email : ghUser.email;
-    if (!primary) throw new Error('이메일 정보를 가져올 수 없습니다.');
+    const primary = Array.isArray(emails)
+      ? emails.find((e) => e.primary && e.verified)?.email
+      : null;
+    if (!primary) throw new Error('GitHub에서 인증된 이메일을 찾을 수 없습니다. GitHub 계정의 이메일을 인증해주세요.');
 
     const user = await findOrCreateOAuthUser({
       provider: 'github',
@@ -112,7 +114,7 @@ router.get('/google/callback', async (req, res) => {
       headers: { Authorization: `Bearer ${tokenData.access_token}` },
     });
     const gUser = await infoRes.json();
-    if (!gUser.email) throw new Error('이메일 정보를 가져올 수 없습니다.');
+    if (!gUser.email || !gUser.email_verified) throw new Error('이메일 인증이 완료된 Google 계정이 필요합니다.');
 
     const user = await findOrCreateOAuthUser({
       provider: 'google',

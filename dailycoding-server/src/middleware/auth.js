@@ -37,6 +37,9 @@ export async function auth(req, res, next) {
     if (!dbUser) {
       return res.status(401).json({ message: '유저를 찾을 수 없습니다.' });
     }
+    if (dbUser.banned_at) {
+      return res.status(403).json({ message: '계정이 정지됐습니다.', code: 'ACCOUNT_BANNED' });
+    }
 
     if (
       dbUser.subscription_expires_at &&

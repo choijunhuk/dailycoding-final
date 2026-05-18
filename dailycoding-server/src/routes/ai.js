@@ -13,31 +13,33 @@ import { completeMission } from '../services/missionService.js';
 
 const router = Router();
 
-// AI Quota Middleware
+// AI Quota Middleware — atomically INCR first, DECR if over limit (eliminates TOCTOU race)
 const checkAiQuota = async (req, res, next) => {
   const user = await User.findById(req.user.id);
   if (!user) return res.status(401).json({ message: '유저를 찾을 수 없습니다.' });
   req.aiUser = user;
   if (user.role === 'admin') return next();
   const tier = user.subscription_tier || 'free';
-  
+
   if (tier !== 'free') return next();
 
   const today = new Date().toISOString().split('T')[0];
   const key = `quota:ai:${req.user.id}:${today}`;
-  
-  const current = await redis.get(key);
-  if (current && parseInt(current) >= AI_DAILY_QUOTA) {
-    return res.status(429).json({ 
+
+  const newCount = await redis.incr(key, 86400);
+  if (newCount > AI_DAILY_QUOTA) {
+    await redis.decr(key);
+    return res.status(429).json({
       message: `오늘 AI 사용 가능 횟수 ${AI_DAILY_QUOTA}회를 모두 소진했습니다.`,
-      code: 'QUOTA_EXCEEDED'
+      code: 'QUOTA_EXCEEDED',
     });
   }
-  
+  req.aiQuotaAlreadyIncremented = true;
   next();
 };
 
 async function incrementAiQuotaIfFree(req, userOverride = null) {
+  if (req.aiQuotaAlreadyIncremented) return null;
   const user = userOverride || req.aiUser || await User.findById(req.user.id);
   if (!user || (user.subscription_tier || 'free') !== 'free') return null;
   const today = new Date().toISOString().split('T')[0];

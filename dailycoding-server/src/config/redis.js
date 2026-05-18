@@ -115,6 +115,12 @@ export const redis = {
     memSet(key, String(v), v === 1 ? ttlSec : undefined);
     return v;
   },
+  async decr(key) {
+    if (connected) return await client.decr(key);
+    const v = Math.max(0, Number(memGet(key) || 0) - 1);
+    memSet(key, String(v));
+    return v;
+  },
   // Sorted Sets
   async zAdd(key, score, member, ttlSec) {
     if (connected) {

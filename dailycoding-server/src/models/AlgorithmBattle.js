@@ -616,10 +616,14 @@ export const AlgorithmBattle = {
 
   async getParticipants(roomId) {
     const rows = await query(
-      'SELECT * FROM battle_participants WHERE room_id = ? ORDER BY score DESC, joined_at ASC',
+      `SELECT bp.*, u.username
+       FROM battle_participants bp
+       LEFT JOIN users u ON u.id = bp.user_id
+       WHERE bp.room_id = ?
+       ORDER BY bp.score DESC, bp.joined_at ASC`,
       [roomId]
     );
-    return Promise.all((rows || []).map(async (row) => normalizeParticipant(row, await getUserById(row.user_id))));
+    return (rows || []).map((row) => normalizeParticipant(row));
   },
 
   async getEvents(roomId, { limit = 60 } = {}) {
@@ -1058,10 +1062,14 @@ export const AlgorithmBattle = {
   async finishRoom(roomId, { reason = 'timeout' } = {}) {
     const room = await this.getRoom(roomId);
     if (!room) return null;
-    if (room.status !== 'finished') {
-      await run('UPDATE battle_rooms SET status = ?, ended_at = ? WHERE id = ?', ['finished', nowMySQL(), roomId]);
-      await this.recordEvent(roomId, null, 'room.finished', { reason });
+    const result = await run(
+      "UPDATE battle_rooms SET status = 'finished', ended_at = ? WHERE id = ? AND status != 'finished'",
+      [nowMySQL(), roomId]
+    );
+    if (result.affectedRows === 0) {
+      return this.getRoomState(roomId);
     }
+    await this.recordEvent(roomId, null, 'room.finished', { reason });
 
     const participants = await this.getParticipants(roomId);
     if (participants.length < 2) {

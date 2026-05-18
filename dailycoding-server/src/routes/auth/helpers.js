@@ -103,11 +103,7 @@ export async function findOrCreateOAuthUser({ provider, oauthId, email, username
 
   const byEmail = await User.findByEmail(email);
   if (byEmail) {
-    await run(
-      'UPDATE users SET oauth_provider=?, oauth_id=?, avatar_url=? WHERE id=?',
-      [provider, oauthId, avatarUrl || null, byEmail.id]
-    );
-    return User.findById(byEmail.id);
+    throw new Error(`이 이메일(${email})로 이미 가입된 계정이 있습니다. 기존 방법(이메일/비밀번호)으로 로그인해 주세요.`);
   }
 
   let finalUsername = username.replace(/[^a-zA-Z0-9_가-힣]/g, '').slice(0, 28) || 'user';

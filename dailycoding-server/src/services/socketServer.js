@@ -16,6 +16,9 @@ try {
   logger = { info: console.log, error: console.error, warn: console.warn };
 }
 
+const submitRateLimits = new Map();
+const SUBMIT_COOLDOWN_MS = 3000;
+
 export function initSocketServer(httpServer, allowedOrigins) {
   const io = new Server(httpServer, {
     cors: {
@@ -150,6 +153,13 @@ export function initSocketServer(httpServer, allowedOrigins) {
     });
 
     socket.on('battle:submit', async ({ roomId, code, language } = {}, ack) => {
+      const now = Date.now();
+      const lastSubmit = submitRateLimits.get(socket.data.userId) || 0;
+      if (now - lastSubmit < SUBMIT_COOLDOWN_MS) {
+        if (typeof ack === 'function') ack({ ok: false, message: '잠시 후 다시 제출해주세요.' });
+        return;
+      }
+      submitRateLimits.set(socket.data.userId, now);
       try {
         const stateBefore = await AlgorithmBattle.ensureNotExpired(roomId);
         if (!stateBefore) throw new Error('방을 찾을 수 없습니다.');

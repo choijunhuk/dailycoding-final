@@ -214,6 +214,7 @@ export default function AlgorithmBattlePage() {
 
   const lastActivityRef = useRef(0);
   const lobbyExpiredRef = useRef(false);
+  const finishedRef = useRef(false);
 
   // ── 파생 상태
   const currentRoom = state?.room || null;
@@ -379,12 +380,14 @@ export default function AlgorithmBattlePage() {
   useEffect(() => {
     if (!currentRoom || currentRoom.status !== 'playing') return;
     if (timeLeft(currentRoom) <= 0) {
+      if (finishedRef.current) return;
+      finishedRef.current = true;
       api.post(`/battles/rooms/${currentRoom.id}/finish`, { reason: 'timeout' }).catch(() => { /* best-effort timeout finish */ });
     }
   }, [clock, currentRoom]);
 
   // ── 로비 만료 체크 (대기 중 방) — 한 번만 실행
-  useEffect(() => { lobbyExpiredRef.current = false; }, [roomId]);
+  useEffect(() => { lobbyExpiredRef.current = false; finishedRef.current = false; }, [roomId]);
   useEffect(() => {
     if (!currentRoom || currentRoom.status !== 'waiting' || lobbyExpiredRef.current) return;
     const ll = lobbyTimeLeft(currentRoom);
