@@ -88,13 +88,14 @@ function ItemCard({ item, isEquipped, onEquip, stats }) {
         {item.name}
       </div>
 
-      {isTitle && earned && (
+      {isTitle && (
         <div style={{
-          fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20,
-          background: `${rarity.color}22`, color: rarity.color,
-          border: `1px solid ${rarity.color}44`,
+          fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20,
+          background: earned ? `${rarity.color}22` : 'var(--bg3)',
+          color: earned ? rarity.color : 'var(--text3)',
+          border: `1px solid ${earned ? `${rarity.color}44` : 'var(--border)'}`,
         }}>
-          {item.icon} {item.name}
+          칭호
         </div>
       )}
 
