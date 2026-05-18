@@ -474,7 +474,7 @@ router.delete('/rooms/:roomId', async (req, res) => {
       console.warn(`[delete-room] 409 roomId=${roomId} status=${state.room.status}`);
       return errorResponse(res, 409, 'CONFLICT', '대기 중인 방만 삭제할 수 있습니다.');
     }
-    await run("UPDATE battle_rooms SET status = 'cancelled' WHERE id = ? AND status = 'waiting'", [roomId]);
+    await run("UPDATE battle_rooms SET status = 'finished' WHERE id = ? AND status = 'waiting'", [roomId]);
     const io = req.app.get('io');
     if (io) io.to(`battle:${roomId}`).emit('battle:room:deleted', { roomId });
     res.json({ message: '방이 삭제됐습니다.' });
