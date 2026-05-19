@@ -119,12 +119,20 @@ export const Tournament = {
     return this.getById(id);
   },
 
-  async start(id) {
+  async start(id, requesterId) {
     const tournament = await this.getById(id);
     if (!tournament) {
       const err = new Error('토너먼트를 찾을 수 없습니다.');
       err.status = 404;
       throw err;
+    }
+    if (requesterId !== undefined) {
+      const requester = await User.findById(requesterId);
+      if (requester?.role !== 'admin' && tournament.createdBy !== requesterId) {
+        const err = new Error('토너먼트 생성자만 시작할 수 있습니다.');
+        err.status = 403;
+        throw err;
+      }
     }
     if (tournament.status !== 'open') {
       const err = new Error('이미 시작된 토너먼트입니다.');

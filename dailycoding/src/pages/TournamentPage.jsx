@@ -152,7 +152,7 @@ export default function TournamentPage() {
                 </div>
                 <div className="tournament-actions">
                   {selected.status === 'open' && !isJoined && <button className="btn btn-primary btn-sm" onClick={() => join(selected.id)} disabled={busy}>참가</button>}
-                  {isAdmin && selected.status === 'open' && <button className="btn btn-danger btn-sm" onClick={() => start(selected.id)} disabled={busy}>브라켓 시작</button>}
+                  {(isAdmin || selected.createdBy === user?.id) && selected.status === 'open' && <button className="btn btn-danger btn-sm" onClick={() => start(selected.id)} disabled={busy}>브라켓 시작</button>}
                 </div>
               </div>
 

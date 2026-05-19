@@ -53,9 +53,9 @@ router.post('/:id/join', auth, requireVerified, async (req, res) => {
   }
 });
 
-router.post('/:id/start', auth, adminOnly, async (req, res) => {
+router.post('/:id/start', auth, requireVerified, async (req, res) => {
   try {
-    res.json(await Tournament.start(Number(req.params.id)));
+    res.json(await Tournament.start(Number(req.params.id), req.user.id));
   } catch (err) {
     const status = err.status || 500;
     if (status < 500) return errorResponse(res, status, 'VALIDATION_ERROR', err.message);

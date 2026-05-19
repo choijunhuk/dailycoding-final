@@ -87,8 +87,8 @@ export default function PricingPage() {
               <span className="gradient-text">한눈에 보이게</span> 정리됐습니다
             </h1>
             <p style={{ color: 'var(--text2)', fontSize: 16, lineHeight: 1.75, maxWidth: 620, marginBottom: 18 }}>
-              지금은 프로 월 $5 / 연 $50, 팀 월 $10 / 연 $100 기준입니다.
-              카드 세 장이 첫 화면에 함께 보이도록 재구성했고, 결제는 Stripe 실설정 기준으로 연결됩니다.
+              무료로 시작하고, 필요할 때 업그레이드하세요.
+              프로와 팀 플랜은 Stripe 안전 결제로 즉시 시작되며, 언제든 취소할 수 있습니다.
             </p>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
               <button className="btn btn-primary" onClick={() => handleUpgrade('pro')} disabled={loadingPlan === 'pro' || currentTier === 'pro'}>
@@ -332,12 +332,12 @@ export default function PricingPage() {
 
           <div style={{ display: 'grid', gap: 14 }}>
             <div style={{ padding: '22px 20px', borderRadius: 26, background: 'linear-gradient(145deg, rgba(121,192,255,.12), rgba(13,17,23,.96))', border: '1px solid rgba(121,192,255,.18)' }}>
-              <div style={{ fontSize: 12, color: 'var(--blue)', fontWeight: 900, letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 10 }}>Risk Control</div>
-              <div style={{ fontSize: 22, fontWeight: 900, marginBottom: 10 }}>결제 리스크도 같이 정리했습니다</div>
+              <div style={{ fontSize: 12, color: 'var(--blue)', fontWeight: 900, letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 10 }}>Security</div>
+              <div style={{ fontSize: 22, fontWeight: 900, marginBottom: 10 }}>안심하고 결제하세요</div>
               <div style={{ display: 'grid', gap: 10, color: 'var(--text2)', fontSize: 13, lineHeight: 1.7 }}>
-                <div>실제 Stripe 시크릿과 웹훅은 추적 파일이 아니라 로컬 `.env`에만 반영했습니다.</div>
-                <div>Price ID와 결제 링크 fallback을 같이 유지해서 운영/테스트 경로를 분리했습니다.</div>
-                <div>쿠키 기반 인증으로 바뀐 상태라 결제 후 프로필 복귀 흐름도 더 안정적입니다.</div>
+                <div>카드 정보는 DailyCoding 서버에 저장되지 않으며, Stripe가 직접 처리합니다.</div>
+                <div>결제 후 7일 이내 전액 환불이 보장되며 위약금이 없습니다.</div>
+                <div>구독은 언제든지 마이페이지에서 즉시 취소할 수 있습니다.</div>
               </div>
             </div>
 
