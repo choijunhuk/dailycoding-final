@@ -64,6 +64,18 @@ router.post('/:id/start', auth, requireVerified, async (req, res) => {
   }
 });
 
+router.delete('/:id', auth, requireVerified, async (req, res) => {
+  try {
+    await Tournament.delete(Number(req.params.id), req.user.id);
+    res.json({ ok: true });
+  } catch (err) {
+    const status = err.status || 500;
+    if (status < 500) return errorResponse(res, status, 'VALIDATION_ERROR', err.message);
+    console.error('[tournaments/delete]', err.message);
+    return internalError(res);
+  }
+});
+
 router.post('/:id/matches/:matchId/winner', auth, adminOnly, async (req, res) => {
   try {
     const winnerId = Number(req.body?.winnerId);

@@ -19,6 +19,7 @@ function normalize(row) {
     status: row.status || 'open',
     createdBy: row.created_by ?? row.createdBy,
     startsAt: row.starts_at ?? row.startsAt,
+    expiresAt: row.expires_at ?? row.expiresAt ?? null,
     createdAt: row.created_at ?? row.createdAt,
     participantCount: Number(row.participant_count ?? row.participantCount ?? 0),
   };
@@ -29,11 +30,19 @@ function nextPowerRound(size) {
 }
 
 export const Tournament = {
+  async expireOld() {
+    await run(
+      "UPDATE tournaments SET status='expired' WHERE status='open' AND expires_at IS NOT NULL AND expires_at < UTC_TIMESTAMP()"
+    );
+  },
+
   async list() {
+    await this.expireOld();
     const rows = await query(
       `SELECT t.*, COUNT(tp.user_id) AS participant_count
        FROM tournaments t
        LEFT JOIN tournament_participants tp ON tp.tournament_id = t.id
+       WHERE t.status != 'expired'
        GROUP BY t.id
        ORDER BY FIELD(t.status, 'open', 'in_progress', 'complete'), t.created_at DESC
        LIMIT 100`
@@ -42,11 +51,30 @@ export const Tournament = {
   },
 
   async create({ name, size, createdBy, startsAt = null }) {
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 19).replace('T', ' ');
     const id = await insert(
-      'INSERT INTO tournaments (name, size, status, created_by, starts_at) VALUES (?,?,?,?,?)',
-      [String(name || '').trim().slice(0, 120), clampSize(size), 'open', createdBy, startsAt || null]
+      'INSERT INTO tournaments (name, size, status, created_by, starts_at, expires_at) VALUES (?,?,?,?,?,?)',
+      [String(name || '').trim().slice(0, 120), clampSize(size), 'open', createdBy, startsAt || null, expiresAt]
     );
     return this.getById(id);
+  },
+
+  async delete(id, requesterId) {
+    const tournament = await this.getById(id);
+    if (!tournament) {
+      const err = new Error('토너먼트를 찾을 수 없습니다.');
+      err.status = 404;
+      throw err;
+    }
+    const requester = await User.findById(requesterId);
+    if (requester?.role !== 'admin' && tournament.createdBy !== requesterId) {
+      const err = new Error('토너먼트 생성자만 삭제할 수 있습니다.');
+      err.status = 403;
+      throw err;
+    }
+    await run('DELETE FROM tournament_matches WHERE tournament_id=?', [id]);
+    await run('DELETE FROM tournament_participants WHERE tournament_id=?', [id]);
+    await run('DELETE FROM tournaments WHERE id=?', [id]);
   },
 
   async getById(id) {

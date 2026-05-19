@@ -79,6 +79,20 @@ export default function TournamentPage() {
     setBusy(false);
   };
 
+  const deleteTournament = async (id) => {
+    if (!window.confirm('토너먼트를 삭제하시겠습니까?')) return;
+    setBusy(true);
+    try {
+      await api.delete(`/tournaments/${id}`);
+      setSelected(null);
+      await load();
+      toast?.show('토너먼트가 삭제됐습니다.', 'success');
+    } catch (err) {
+      toast?.show(err.response?.data?.message || '삭제하지 못했습니다.', 'error');
+    }
+    setBusy(false);
+  };
+
   const createMatchBattle = async (match) => {
     setBusy(true);
     try {
@@ -132,12 +146,19 @@ export default function TournamentPage() {
         <div className="tournament-list card">
           <h2>목록</h2>
           {items.length === 0 && <div className="tournament-empty">아직 토너먼트가 없습니다.</div>}
-          {items.map((item) => (
-            <button key={item.id} className={`tournament-list-item ${selected?.id === item.id ? 'active' : ''}`} onClick={() => openDetail(item.id)}>
-              <strong>{item.name}</strong>
-              <span>{item.status} · {item.participantCount || 0}/{item.size}</span>
-            </button>
-          ))}
+          {items.map((item) => {
+            const expiresAt = item.expiresAt ? new Date(item.expiresAt) : null;
+            const minsLeft = expiresAt ? Math.max(0, Math.floor((expiresAt - Date.now()) / 60000)) : null;
+            return (
+              <button key={item.id} className={`tournament-list-item ${selected?.id === item.id ? 'active' : ''}`} onClick={() => openDetail(item.id)}>
+                <strong>{item.name}</strong>
+                <span>
+                  {item.status} · {item.participantCount || 0}/{item.size}
+                  {item.status === 'open' && minsLeft !== null && <> · ⏳ {minsLeft < 60 ? `${minsLeft}분` : `${Math.floor(minsLeft / 60)}시간`} 남음</>}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
         <div className="tournament-detail card">
@@ -153,6 +174,7 @@ export default function TournamentPage() {
                 <div className="tournament-actions">
                   {selected.status === 'open' && !isJoined && <button className="btn btn-primary btn-sm" onClick={() => join(selected.id)} disabled={busy}>참가</button>}
                   {(isAdmin || selected.createdBy === user?.id) && selected.status === 'open' && <button className="btn btn-danger btn-sm" onClick={() => start(selected.id)} disabled={busy}>브라켓 시작</button>}
+                  {(isAdmin || selected.createdBy === user?.id) && selected.status === 'open' && <button className="btn btn-ghost btn-sm" onClick={() => deleteTournament(selected.id)} disabled={busy}>삭제</button>}
                 </div>
               </div>
 
@@ -177,7 +199,8 @@ export default function TournamentPage() {
                       <div key={match.id} className="tournament-match">
                         <div className={match.winnerId === match.player1Id ? 'winner' : ''}>{match.player1Id ? userById.get(match.player1Id) || `User ${match.player1Id}` : 'BYE'}</div>
                         <div className={match.winnerId === match.player2Id ? 'winner' : ''}>{match.player2Id ? userById.get(match.player2Id) || `User ${match.player2Id}` : 'BYE'}</div>
-                        {match.battleId && <a href={`/battle/watch/${match.battleId}`}>매치 입장</a>}
+                        {match.battleId && !match.winnerId && <a href={`/battle/watch/${match.battleId}`} className="btn btn-primary btn-sm" style={{ textDecoration: 'none' }}>관전하기</a>}
+                        {match.battleId && match.winnerId && <span style={{ fontSize: 12, color: 'var(--text3)' }}>종료됨</span>}
                         {canCreateBattle && <button className="btn btn-primary btn-sm" onClick={() => createMatchBattle(match)} disabled={busy}>매치 만들기</button>}
                       </div>
                     );})}

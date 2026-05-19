@@ -206,6 +206,7 @@ export default function AlgorithmBattlePage() {
   const [submissionResult, setSubmissionResult] = useState(null);
   const [mobileTab, setMobileTab] = useState('problem');
   const [chatInput, setChatInput] = useState('');
+  const [spectatorMessages, setSpectatorMessages] = useState([]);
   const [countdown, setCountdown] = useState(null);
   const [attackUserId, setAttackUserId] = useState(null);
   const [clock, setClock] = useState(0);
@@ -215,6 +216,7 @@ export default function AlgorithmBattlePage() {
   const lastActivityRef = useRef(0);
   const lobbyExpiredRef = useRef(false);
   const finishedRef = useRef(false);
+  const chatFeedRef = useRef(null);
 
   // ── 파생 상태
   const currentRoom = state?.room || null;
@@ -360,6 +362,9 @@ export default function AlgorithmBattlePage() {
     });
     socket.on('battle:effect', (event) => { toast?.show(event?.payload?.effectLabel || '문제 효과 발동', 'info'); });
     socket.on('battle:item:used', (event) => { toast?.show(event?.payload?.itemLabel || '아이템 사용', 'info'); });
+    socket.on('battle:spectator_chat', (msg) => {
+      setSpectatorMessages((prev) => [...prev.slice(-39), { ...msg, isSpectator: true }]);
+    });
     return () => { socket.disconnect(); if (socketRef.current === socket) socketRef.current = null; };
   }, [navigate, roomId, searchParams, toast, user?.id]);
 
@@ -387,7 +392,12 @@ export default function AlgorithmBattlePage() {
   }, [clock, currentRoom]);
 
   // ── 로비 만료 체크 (대기 중 방) — 한 번만 실행
-  useEffect(() => { lobbyExpiredRef.current = false; finishedRef.current = false; }, [roomId]);
+  useEffect(() => { lobbyExpiredRef.current = false; finishedRef.current = false; setSpectatorMessages([]); }, [roomId]);
+
+  // ── 채팅 자동 스크롤
+  useEffect(() => {
+    if (chatFeedRef.current) chatFeedRef.current.scrollTop = chatFeedRef.current.scrollHeight;
+  }, [socialEvents, spectatorMessages]);
   useEffect(() => {
     if (!currentRoom || currentRoom.status !== 'waiting' || lobbyExpiredRef.current) return;
     const ll = lobbyTimeLeft(currentRoom);
@@ -513,8 +523,14 @@ export default function AlgorithmBattlePage() {
   const sendChat = async (e) => {
     e.preventDefault();
     const message = chatInput.trim();
-    if (!currentRoom || isSpectating || !message) return;
+    if (!currentRoom || !message) return;
     setChatInput('');
+    if (isSpectating) {
+      if (socketRef.current?.connected) {
+        socketRef.current.emit('battle:spectator_chat', { roomId, message });
+      }
+      return;
+    }
     try {
       const { data } = await api.post(`/battles/rooms/${currentRoom.id}/chat`, { message });
       if (data.state) setState(data.state);
@@ -753,6 +769,12 @@ export default function AlgorithmBattlePage() {
                       }}
                     >삭제</button>
                   )}
+                  {!isPlaying && (
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => spectateRoom(item.room.id)}
+                    >관전</button>
+                  )}
                   <button
                     className={isPlaying ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm'}
                     onClick={() => (isPlaying ? spectateRoom(item.room.id) : joinRoom(item.room.id))}
@@ -808,7 +830,9 @@ export default function AlgorithmBattlePage() {
             {currentRoom?.status === 'waiting'
               ? lobbyLeft != null ? `대기 중 (${fmtSec(lobbyLeft)} 남음)` : '대기 중'
               : currentRoom?.status === 'playing'
-                ? `⏱ ${fmtSec(timeLeft(currentRoom))}`
+                ? config?.winCondition === 'first-correct'
+                  ? '⚡ 먼저 정답 제출 → 즉시 승리'
+                  : `⏱ ${fmtSec(timeLeft(currentRoom))}`
                 : '종료'}
           </span>
         </div>
@@ -1068,8 +1092,8 @@ export default function AlgorithmBattlePage() {
           {/* 채팅 + 이모트 */}
           <div className="ab-section-title">채팅 / 입장 알림</div>
           <div className="ab-social">
-            <div className="ab-chat-feed">
-              {socialEvents.length === 0
+            <div className="ab-chat-feed" ref={chatFeedRef}>
+              {socialEvents.length === 0 && spectatorMessages.length === 0
                 ? <div className="ab-log-empty">아직 메시지가 없습니다.</div>
                 : [...socialEvents].slice(-40).map((event) => {
                   const fmt = formatSocialEvent(event, user?.id, participantById);
@@ -1081,6 +1105,12 @@ export default function AlgorithmBattlePage() {
                     </div>
                   );
                 })}
+              {spectatorMessages.map((msg) => (
+                <div key={msg.id} className="ab-chat-line chat" style={{ opacity: 0.75 }}>
+                  <b>{msg.username} <span style={{ fontSize: 10, color: 'var(--text3)' }}>(관전)</span></b>
+                  <span>{msg.text}</span>
+                </div>
+              ))}
             </div>
             <div className="ab-emotes">
               {(config?.availableEmotes || Object.keys(EMOTE_EMOJI)).map((emote) => (
@@ -1100,10 +1130,9 @@ export default function AlgorithmBattlePage() {
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
                 maxLength={220}
-                disabled={isSpectating}
-                placeholder={isSpectating ? '관전 중에는 채팅할 수 없습니다.' : '채팅 (gg, nice, wp...)'}
+                placeholder={isSpectating ? '관전자 채팅 (gg, nice, wp...)' : '채팅 (gg, nice, wp...)'}
               />
-              <button type="submit" className="btn btn-ghost btn-sm" disabled={isSpectating}>
+              <button type="submit" className="btn btn-ghost btn-sm">
                 <MessageCircle size={14} />
               </button>
             </form>
