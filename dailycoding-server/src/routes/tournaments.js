@@ -5,7 +5,7 @@ import { errorResponse, internalError } from '../middleware/errorHandler.js';
 
 const router = Router();
 
-router.get('/', auth, async (req, res) => {
+router.get('/', async (req, res) => {
   try {
     res.json(await Tournament.list());
   } catch (err) {
@@ -31,7 +31,7 @@ router.post('/', auth, requireVerified, async (req, res) => {
   }
 });
 
-router.get('/:id', auth, async (req, res) => {
+router.get('/:id', async (req, res) => {
   try {
     const tournament = await Tournament.getById(Number(req.params.id));
     if (!tournament) return errorResponse(res, 404, 'NOT_FOUND', '토너먼트를 찾을 수 없습니다.');
@@ -42,7 +42,7 @@ router.get('/:id', auth, async (req, res) => {
   }
 });
 
-router.post('/:id/join', auth, requireVerified, async (req, res) => {
+router.post('/:id/join', auth, async (req, res) => {
   try {
     res.json(await Tournament.join(Number(req.params.id), req.user.id));
   } catch (err) {

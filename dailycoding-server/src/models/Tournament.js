@@ -31,9 +31,11 @@ function nextPowerRound(size) {
 
 export const Tournament = {
   async expireOld() {
-    await run(
-      "UPDATE tournaments SET status='expired' WHERE status='open' AND expires_at IS NOT NULL AND expires_at < UTC_TIMESTAMP()"
-    );
+    try {
+      await run(
+        "UPDATE tournaments SET status='expired' WHERE status='open' AND expires_at IS NOT NULL AND expires_at < UTC_TIMESTAMP()"
+      );
+    } catch { /* ignore if expires_at column not yet migrated */ }
   },
 
   async list() {

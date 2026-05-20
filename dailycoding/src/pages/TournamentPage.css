@@ -152,6 +152,45 @@
   outline: 1px solid rgba(86,211,100,.35);
 }
 
+.tournament-guide {
+  padding: 16px 20px;
+  margin-bottom: 20px;
+}
+
+.tournament-guide-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tournament-guide-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.step-num {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--blue);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.tournament-guide-step span {
+  color: var(--text2);
+  font-size: 12px;
+}
+
 @media (max-width: 820px) {
   .tournament-hero,
   .tournament-layout,
@@ -162,5 +201,9 @@
 
   .tournament-list {
     width: 100% !important;
+  }
+
+  .tournament-guide-steps {
+    gap: 14px;
   }
 }

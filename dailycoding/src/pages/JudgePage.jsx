@@ -140,6 +140,7 @@ export default function JudgePage() {
   const [wrongNote, setWrongNote] = useState('');
   const [editorial, setEditorial] = useState(null)
   const [walkthrough, setWalkthrough] = useState(null)
+  const [similarProblems, setSimilarProblems] = useState([])
   const [walkthroughLoading, setWalkthroughLoading] = useState(false)
   const [isMobileEditor, setIsMobileEditor] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768)
   const availableLangOptions = getJudgeLanguageOptionsForSupported(judgeStatus?.supportedLanguages);
@@ -234,6 +235,13 @@ export default function JudgePage() {
       setShowEditorial(false)
     })
   }, [problem?.id, solved[problem?.id], isAdmin])
+
+  useEffect(() => {
+    if (!problem?.id) { setSimilarProblems([]); return }
+    api.get(`/problems/${problem.id}/similar`).then((res) => {
+      setSimilarProblems(Array.isArray(res.data) ? res.data.slice(0, 5) : [])
+    }).catch(() => setSimilarProblems([]))
+  }, [problem?.id])
 
   useEffect(() => {
     if (!problem?.id || !isTroubleshootingProblem) {
@@ -881,6 +889,38 @@ export default function JudgePage() {
             />
           )}
 
+          {leftTab === 'problem' && similarProblems.length > 0 && (
+            <div className="prob-content fade-in" style={{ borderTop:'1px solid var(--border)', marginTop:0, paddingTop:16 }}>
+              <div style={{ fontSize:12, fontWeight:700, color:'var(--text2)', marginBottom:10 }}>🔗 관련 문제</div>
+              <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+                {similarProblems.slice(0,4).map(p => {
+                  const t = TIERS[p.tier] || {}
+                  return (
+                    <button
+                      key={p.id}
+                      onClick={() => navigate(`/problems/${p.id}`)}
+                      style={{
+                        display:'flex', alignItems:'center', gap:10,
+                        background:'var(--bg3)', border:'1px solid var(--border)',
+                        borderRadius:8, padding:'8px 12px', cursor:'pointer',
+                        textAlign:'left', width:'100%', transition:'border-color .15s',
+                      }}
+                      onMouseEnter={e=>e.currentTarget.style.borderColor='var(--blue)'}
+                      onMouseLeave={e=>e.currentTarget.style.borderColor='var(--border)'}
+                    >
+                      <span style={{ fontSize:10, fontWeight:700, color:t.color||'var(--text3)', minWidth:28 }}>
+                        {(p.tier||'?').slice(0,3).toUpperCase()}
+                      </span>
+                      <span style={{ fontSize:13, color:solved[p.id]?'var(--green)':'var(--text)', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                        {solved[p.id]&&'✓ '}{p.title}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
           {/* ── 풀이 공유 탭 ── */}
           {leftTab === 'editorial' && (
             <div className="prob-content fade-in">
@@ -1055,6 +1095,27 @@ export default function JudgePage() {
                 setWrongNote={setWrongNote}
                 saveWrongNote={saveWrongNote}
               />
+
+              {result?.status === 'correct' && similarProblems.length > 0 && (
+                <div style={{
+                  margin:'4px 0 16px', padding:'12px 14px',
+                  background:'rgba(86,211,100,.06)', border:'1px solid rgba(86,211,100,.2)',
+                  borderRadius:10, display:'flex', alignItems:'center', gap:12, flexWrap:'wrap',
+                }}>
+                  <div style={{ flex:1, minWidth:120 }}>
+                    <div style={{ fontSize:12, fontWeight:700, color:'var(--green)', marginBottom:2 }}>🎉 정답! 다음 문제</div>
+                    <div style={{ fontSize:12, color:'var(--text2)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                      {similarProblems[0].title}
+                    </div>
+                  </div>
+                  <button
+                    className="btn btn-success btn-sm"
+                    onClick={() => navigate(`/problems/${similarProblems[0].id}`)}
+                  >
+                    바로 풀기 →
+                  </button>
+                </div>
+              )}
 
               {/* 제출 기록 */}
               <h4>내 제출 기록</h4>

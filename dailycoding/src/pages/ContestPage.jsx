@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
 import api from '../api.js';
@@ -98,7 +99,11 @@ export default function ContestPage() {
     } catch { setContests([]); }
   };
 
-  useEffect(() => { fetchContests(); }, []);
+  useEffect(() => {
+    fetchContests();
+    const interval = setInterval(fetchContests, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     api.get('/rewards/all')
@@ -483,6 +488,7 @@ export default function ContestPage() {
                 <div className="admin-cc-btns">
                   {isUpcoming && <button className="btn btn-danger btn-sm" onClick={() => handleStart(c.id)}>🔴 시작</button>}
                   {isLive     && <button className="btn btn-ghost btn-sm"  onClick={() => handleEnd(c.id)}>⏹ 종료</button>}
+                  {isLive     && <button className="btn btn-danger btn-sm" onClick={() => setLiveContest(c)}>▶ 입장</button>}
                   <button className="btn btn-ghost btn-sm" onClick={() => openMgmt(c)}>📋 문제</button>
                   {c.joinType === 'approval' && <button className="btn btn-ghost btn-sm" onClick={() => openRequests(c)}>👥 신청</button>}
                   {!isEnded && <button className="btn btn-sm" style={{background:'rgba(248,81,73,.1)',color:'var(--red)',border:'1px solid rgba(248,81,73,.3)'}} onClick={() => handleDelete(c.id)}>🗑</button>}
@@ -950,6 +956,7 @@ export default function ContestPage() {
 
 function LiveContestView({ contest, onExit, isAdmin }) {
   const { solved } = useApp();
+  const navigate = useNavigate();
   const [elapsed,  setElapsed]  = useState(0);
 
   // 실제 카운트다운 타이머
@@ -1003,7 +1010,12 @@ function LiveContestView({ contest, onExit, isAdmin }) {
           <div className="lv-panel-title">📋 문제 목록</div>
           {probs.length === 0 && <div style={{padding:'12px 16px',fontSize:13,color:'var(--text3)'}}>문제가 없습니다.</div>}
           {probs.map((p,i)=>(
-            <div key={p.id} className={`lp-row ${mySolved[p.id]?'solved':''}`}>
+            <div
+              key={p.id}
+              className={`lp-row ${mySolved[p.id]?'solved':''}`}
+              onClick={() => navigate('/problems/' + p.id)}
+              style={{cursor:'pointer'}}
+            >
               <span className="mono" style={{fontSize:11,color:'var(--text3)'}}>P{i+1}</span>
               <span style={{flex:1,fontWeight:600}}>{p.title}</span>
               {mySolved[p.id]&&<span style={{color:'var(--green)'}}>✓</span>}

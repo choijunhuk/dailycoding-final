@@ -1174,7 +1174,7 @@ export default function ProfilePage() {
                   <div style={{fontSize:13,fontWeight:800}}>푸시 알림</div>
                   <small style={{color:'var(--text3)'}}>배틀 초대와 데일리 리셋 알림을 브라우저로 받습니다.</small>
                 </div>
-                <button className="btn btn-sm" onClick={async()=>{
+                <button className="btn btn-ghost btn-sm" onClick={async()=>{
                   try {
                     if (pushStatus.subscribed) {
                       await unsubscribePush();

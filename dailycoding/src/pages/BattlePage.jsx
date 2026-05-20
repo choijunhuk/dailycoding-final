@@ -750,9 +750,51 @@ export default function BattlePage() {
   };
 
   useEffect(() => {
-    if (!params.roomId) return;
-    spectateBattle(params.roomId);
-  }, [params.roomId]);
+    if (!params.roomId || !user?.id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await api.get(`/battles/room/${params.roomId}`);
+        if (cancelled) return;
+        const room = data?.room;
+        if (!room) { spectateBattle(params.roomId); return; }
+        if (room.playerIds?.includes(Number(user.id))) {
+          setRoom(room);
+          setRoomId(params.roomId);
+          setIsSpectator(false);
+          if (room.status === 'active' || room.status === 'ended') {
+            setPhase('battle');
+            startTimer(room.startTime, room.duration);
+          } else {
+            const isInviter = Number(room.playerIds[0]) === Number(user.id);
+            if (isInviter) {
+              setLobbyPhase('invite_sent');
+            } else {
+              try {
+                const { data: inv } = await api.get('/battles/invite');
+                if (cancelled) return;
+                const matched = inv?.invite?.roomId === params.roomId ? inv.invite : null;
+                setPendingInvite(matched || { roomId: params.roomId, inviterName: '상대방' });
+              } catch {
+                if (!cancelled) setPendingInvite({ roomId: params.roomId, inviterName: '상대방' });
+              }
+              if (!cancelled) setLobbyPhase('invite_received');
+            }
+          }
+        } else {
+          spectateBattle(params.roomId);
+        }
+      } catch (err) {
+        if (cancelled) return;
+        if (err?.response?.status === 404) {
+          toast?.show('배틀 방을 찾을 수 없습니다.', 'error');
+        } else {
+          spectateBattle(params.roomId);
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [params.roomId, user?.id]);
 
   // ─────────────────────────────────────────────────────────────────────────
   // RENDER: 이메일 인증 게이트
