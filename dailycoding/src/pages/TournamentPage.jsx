@@ -7,6 +7,20 @@ import './TournamentPage.css';
 
 const SIZE_OPTIONS = [8, 16, 32];
 
+const TIER_OPTIONS = ['iron', 'bronze', 'silver', 'gold', 'platinum', 'emerald', 'diamond', 'master', 'grandmaster', 'challenger'];
+const TIER_LABEL = {
+  iron: '아이언', bronze: '브론즈', silver: '실버', gold: '골드',
+  platinum: '플래티넘', emerald: '에메랄드', diamond: '다이아몬드',
+  master: '마스터', grandmaster: '그랜드마스터', challenger: '챌린저',
+};
+const TAG_GROUPS = [
+  { label: '기초', tags: ['입출력', '구현', '수학', '문자열', '정렬'] },
+  { label: '자료구조', tags: ['자료 구조', '해시', '스택', '큐', '우선순위 큐'] },
+  { label: '알고리즘', tags: ['그리디', '이분 탐색', '투 포인터', '누적 합', '다이나믹 프로그래밍'] },
+  { label: '그래프', tags: ['그래프 이론', 'BFS', 'DFS', '최단 경로', '트리'] },
+  { label: '고급', tags: ['비트마스크', '백트래킹', 'SCC', 'LCA', 'FFT'] },
+];
+
 const STATUS_LABEL = { open: '모집 중', in_progress: '진행 중', complete: '완료', expired: '만료' };
 const STATUS_COLOR = { open: 'var(--green)', in_progress: 'var(--blue)', complete: 'var(--text3)', expired: 'var(--text3)' };
 
@@ -16,9 +30,11 @@ export default function TournamentPage() {
   const navigate = useNavigate();
   const [items, setItems] = useState([]);
   const [selected, setSelected] = useState(null);
-  const [form, setForm] = useState({ name: '', size: 8 });
+  const [form, setForm] = useState({ name: '', size: 8, isPrivate: false, joinPassword: '', minTier: '', maxTier: '', bannedTags: [], showAdvanced: false });
   const [busy, setBusy] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
+  const [joinPasswordInput, setJoinPasswordInput] = useState('');
+  const [showJoinPassword, setShowJoinPassword] = useState(false);
   const pollRef = useRef(null);
 
   const load = useCallback(async () => {
@@ -51,6 +67,8 @@ export default function TournamentPage() {
   }, [selected?.id, selected?.status, refreshSelected]);
 
   const openDetail = async (id) => {
+    setShowJoinPassword(false);
+    setJoinPasswordInput('');
     try {
       const { data } = await api.get(`/tournaments/${id}`);
       setSelected(data);
@@ -64,10 +82,18 @@ export default function TournamentPage() {
     if (!user) { toast?.show('로그인이 필요합니다.', 'error'); return; }
     setBusy(true);
     try {
-      const { data } = await api.post('/tournaments', { name: form.name.trim(), size: Number(form.size) });
+      const { data } = await api.post('/tournaments', {
+        name: form.name.trim(),
+        size: Number(form.size),
+        isPrivate: form.isPrivate,
+        joinPassword: form.isPrivate ? form.joinPassword : null,
+        minTier: form.minTier || null,
+        maxTier: form.maxTier || null,
+        bannedTags: form.bannedTags,
+      });
       setItems((prev) => [data, ...prev]);
       setSelected(data);
-      setForm({ name: '', size: 8 });
+      setForm({ name: '', size: 8, isPrivate: false, joinPassword: '', minTier: '', maxTier: '', bannedTags: [], showAdvanced: false });
       toast?.show('토너먼트를 만들었습니다! 참가자를 모아 브라켓을 시작하세요.', 'success');
     } catch (err) {
       toast?.show(err.response?.data?.message || '토너먼트를 만들지 못했습니다.', 'error');
@@ -75,18 +101,32 @@ export default function TournamentPage() {
     setBusy(false);
   };
 
-  const join = async (id) => {
+  const join = async (id, password = null) => {
     if (!user) { toast?.show('로그인 후 참가할 수 있습니다.', 'error'); return; }
     setBusy(true);
     try {
-      const { data } = await api.post(`/tournaments/${id}/join`);
+      const { data } = await api.post(`/tournaments/${id}/join`, { password });
       setSelected(data);
+      setShowJoinPassword(false);
+      setJoinPasswordInput('');
       await load();
       toast?.show('토너먼트에 참가했습니다! 브라켓이 시작되면 알림을 확인하세요.', 'success');
     } catch (err) {
       toast?.show(err.response?.data?.message || '참가하지 못했습니다.', 'error');
     }
     setBusy(false);
+  };
+
+  const handleJoinClick = () => {
+    if (selected.isPrivate) {
+      if (showJoinPassword) {
+        join(selected.id, joinPasswordInput);
+      } else {
+        setShowJoinPassword(true);
+      }
+    } else {
+      join(selected.id, null);
+    }
   };
 
   const start = async (id) => {
@@ -129,6 +169,13 @@ export default function TournamentPage() {
     setBusy(false);
   };
 
+  const toggleBannedTag = (tag) => {
+    setForm((p) => ({
+      ...p,
+      bannedTags: p.bannedTags.includes(tag) ? p.bannedTags.filter((t) => t !== tag) : [...p.bannedTags, tag],
+    }));
+  };
+
   const rounds = useMemo(() => {
     const map = new Map();
     for (const match of selected?.matches || []) {
@@ -164,6 +211,13 @@ export default function TournamentPage() {
     );
   }, [selected, user]);
 
+  const tierConditionLabel = (t) => {
+    const parts = [];
+    if (t.minTier) parts.push(`${TIER_LABEL[t.minTier] || t.minTier} 이상`);
+    if (t.maxTier) parts.push(`${TIER_LABEL[t.maxTier] || t.maxTier} 이하`);
+    return parts.length ? parts.join(', ') : null;
+  };
+
   return (
     <div className="tournament-page page-enter">
       <div className="tournament-hero">
@@ -171,22 +225,79 @@ export default function TournamentPage() {
           <h1>🏟 토너먼트</h1>
           <p>8/16/32강 싱글 엘리미네이션 방식으로 코딩 배틀 토너먼트를 운영합니다.</p>
         </div>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-          <button className="btn btn-ghost btn-sm" onClick={() => setShowGuide((p) => !p)}>
-            {showGuide ? '📖 안내 닫기' : '📖 사용 방법'}
-          </button>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', flexWrap: 'wrap', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+            <button className="btn btn-ghost btn-sm" onClick={() => setShowGuide((p) => !p)}>
+              {showGuide ? '📖 안내 닫기' : '📖 사용 방법'}
+            </button>
+          </div>
           {user && (
             <div className="tournament-create card">
-              <input
-                placeholder="토너먼트 이름"
-                value={form.name}
-                onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-                onKeyDown={(e) => e.key === 'Enter' && create()}
-              />
-              <select value={form.size} onChange={(e) => setForm((p) => ({ ...p, size: e.target.value }))}>
-                {SIZE_OPTIONS.map((s) => <option key={s} value={s}>{s}강</option>)}
-              </select>
-              <button className="btn btn-primary btn-sm" onClick={create} disabled={busy || !form.name.trim()}>생성</button>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                <input
+                  placeholder="토너먼트 이름"
+                  value={form.name}
+                  onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+                  onKeyDown={(e) => e.key === 'Enter' && !form.showAdvanced && create()}
+                />
+                <select value={form.size} onChange={(e) => setForm((p) => ({ ...p, size: e.target.value }))}>
+                  {SIZE_OPTIONS.map((s) => <option key={s} value={s}>{s}강</option>)}
+                </select>
+                <button className="btn btn-ghost btn-sm" onClick={() => setForm((p) => ({ ...p, showAdvanced: !p.showAdvanced }))} title="고급 설정">
+                  ⚙️ {form.showAdvanced ? '▲' : '▼'}
+                </button>
+                <button className="btn btn-primary btn-sm" onClick={create} disabled={busy || !form.name.trim()}>생성</button>
+              </div>
+
+              {form.showAdvanced && (
+                <div className="tournament-advanced" style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer' }}>
+                    <input type="checkbox" checked={form.isPrivate} onChange={(e) => setForm((p) => ({ ...p, isPrivate: e.target.checked }))} />
+                    🔒 비밀 토너먼트
+                    {form.isPrivate && (
+                      <input
+                        type="password"
+                        placeholder="입장 비밀번호"
+                        value={form.joinPassword}
+                        onChange={(e) => setForm((p) => ({ ...p, joinPassword: e.target.value }))}
+                        style={{ marginLeft: 8, width: 140 }}
+                      />
+                    )}
+                  </label>
+
+                  <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', fontSize: 13 }}>
+                    <span style={{ color: 'var(--text3)' }}>티어 제한:</span>
+                    <select value={form.minTier} onChange={(e) => setForm((p) => ({ ...p, minTier: e.target.value }))} style={{ fontSize: 12 }}>
+                      <option value="">최소 없음</option>
+                      {TIER_OPTIONS.map((t) => <option key={t} value={t}>{TIER_LABEL[t]} 이상</option>)}
+                    </select>
+                    <span style={{ color: 'var(--text3)', fontSize: 11 }}>~</span>
+                    <select value={form.maxTier} onChange={(e) => setForm((p) => ({ ...p, maxTier: e.target.value }))} style={{ fontSize: 12 }}>
+                      <option value="">최대 없음</option>
+                      {TIER_OPTIONS.map((t) => <option key={t} value={t}>{TIER_LABEL[t]} 이하</option>)}
+                    </select>
+                  </div>
+
+                  <div style={{ fontSize: 13 }}>
+                    <div style={{ color: 'var(--text3)', marginBottom: 6 }}>🚫 밴할 태그 (배틀 문제에서 제외):</div>
+                    {TAG_GROUPS.map(({ label, tags }) => (
+                      <div key={label} style={{ marginBottom: 6 }}>
+                        <span style={{ fontSize: 11, color: 'var(--text3)', marginRight: 6 }}>{label}</span>
+                        {tags.map((tag) => (
+                          <label key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, marginRight: 8, cursor: 'pointer', fontSize: 12 }}>
+                            <input
+                              type="checkbox"
+                              checked={form.bannedTags.includes(tag)}
+                              onChange={() => toggleBannedTag(tag)}
+                            />
+                            {tag}
+                          </label>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -198,23 +309,23 @@ export default function TournamentPage() {
           <div className="tournament-guide-steps">
             <div className="tournament-guide-step">
               <span className="step-num">1</span>
-              <div><strong>토너먼트 생성</strong><br /><span>이름과 인원(8/16/32강)을 정해 생성합니다. 생성하면 24시간 동안 모집됩니다.</span></div>
+              <div><strong>토너먼트 생성</strong><br /><span>이름과 인원(8/16/32강)을 정해 생성합니다. 고급 설정에서 비밀번호, 티어 제한, 밴 태그를 설정할 수 있습니다.</span></div>
             </div>
             <div className="tournament-guide-step">
               <span className="step-num">2</span>
-              <div><strong>참가 신청</strong><br /><span>목록에서 원하는 토너먼트를 클릭하고 <strong>참가</strong> 버튼을 누릅니다. 로그인이 필요합니다.</span></div>
+              <div><strong>참가 신청</strong><br /><span>목록에서 원하는 토너먼트를 클릭하고 <strong>참가하기</strong> 버튼을 누릅니다. 비밀 토너먼트는 비밀번호가 필요합니다.</span></div>
             </div>
             <div className="tournament-guide-step">
               <span className="step-num">3</span>
-              <div><strong>브라켓 시작</strong><br /><span>충분한 인원이 모이면 토너먼트 생성자가 <strong>브라켓 시작</strong> 버튼을 눌러 대진표를 확정합니다.</span></div>
+              <div><strong>브라켓 시작</strong><br /><span>충분한 인원이 모이면 토너먼트 생성자가 <strong>브라켓 시작</strong> 버튼을 눌러 대진표를 확정합니다. 참가자에게 알림이 전송됩니다.</span></div>
             </div>
             <div className="tournament-guide-step">
               <span className="step-num">4</span>
-              <div><strong>매치 배틀</strong><br /><span>대진표에서 내 매치를 찾아 <strong>매치 만들기</strong>를 누르면 배틀 방이 생성됩니다. 상대방도 입장하면 배틀 시작!</span></div>
+              <div><strong>매치 배틀</strong><br /><span>대진표에서 내 매치를 찾아 <strong>매치 만들기</strong>를 누르면 배틀 방이 생성됩니다. 설정한 태그/티어 조건이 문제 선택에 반영됩니다.</span></div>
             </div>
             <div className="tournament-guide-step">
               <span className="step-num">5</span>
-              <div><strong>자동 승급</strong><br /><span>배틀이 끝나면 승자가 자동으로 다음 라운드로 올라갑니다. 최후의 1인이 우승!</span></div>
+              <div><strong>자동 승급</strong><br /><span>배틀이 끝나면 승자가 자동으로 다음 라운드로 올라갑니다. 다음 매치 배정 시 알림이 발송됩니다.</span></div>
             </div>
           </div>
         </div>
@@ -240,14 +351,20 @@ export default function TournamentPage() {
                 className={`tournament-list-item ${selected?.id === item.id ? 'active' : ''}`}
                 onClick={() => openDetail(item.id)}
               >
-                <strong>{item.name}</strong>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <strong>
+                  {item.isPrivate && <span style={{ marginRight: 4 }}>🔒</span>}
+                  {item.name}
+                </strong>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                   <span style={{ color: STATUS_COLOR[item.status], fontWeight: 600, fontSize: 11 }}>
                     ● {STATUS_LABEL[item.status]}
                   </span>
                   · {item.participantCount || 0}/{item.size}명
                   {item.status === 'open' && minsLeft !== null && (
                     <> · ⏳ {minsLeft < 60 ? `${minsLeft}분` : `${Math.floor(minsLeft / 60)}시간`}</>
+                  )}
+                  {(item.minTier || item.maxTier) && (
+                    <span style={{ fontSize: 10, color: 'var(--blue)' }}>🛡 티어 제한</span>
                   )}
                 </span>
               </button>
@@ -268,12 +385,25 @@ export default function TournamentPage() {
             <>
               <div className="tournament-detail-head">
                 <div>
-                  <h2 style={{ marginBottom: 4 }}>{selected.name}</h2>
-                  <p style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <h2 style={{ marginBottom: 4 }}>
+                    {selected.isPrivate && <span style={{ marginRight: 6, fontSize: 16 }}>🔒</span>}
+                    {selected.name}
+                  </h2>
+                  <p style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                     <span style={{ color: STATUS_COLOR[selected.status], fontWeight: 700 }}>
                       ● {STATUS_LABEL[selected.status]}
                     </span>
                     <span>· {selected.participants?.length || 0}/{selected.size}명 참가</span>
+                    {tierConditionLabel(selected) && (
+                      <span style={{ fontSize: 11, background: 'rgba(93,168,255,.15)', color: 'var(--blue)', borderRadius: 4, padding: '2px 6px' }}>
+                        🛡 {tierConditionLabel(selected)}
+                      </span>
+                    )}
+                    {selected.bannedTags?.length > 0 && (
+                      <span style={{ fontSize: 11, background: 'rgba(255,100,100,.1)', color: 'var(--red)', borderRadius: 4, padding: '2px 6px' }}>
+                        🚫 {selected.bannedTags.join(', ')}
+                      </span>
+                    )}
                   </p>
                 </div>
                 <div className="tournament-actions">
@@ -284,9 +414,25 @@ export default function TournamentPage() {
                     title="새로고침"
                   >🔄</button>
                   {selected.status === 'open' && !isJoined && (
-                    <button className="btn btn-primary btn-sm" onClick={() => join(selected.id)} disabled={busy}>
-                      참가하기
-                    </button>
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                      {showJoinPassword && selected.isPrivate && (
+                        <input
+                          type="password"
+                          placeholder="비밀번호"
+                          value={joinPasswordInput}
+                          onChange={(e) => setJoinPasswordInput(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && join(selected.id, joinPasswordInput)}
+                          style={{ width: 120, fontSize: 13 }}
+                          autoFocus
+                        />
+                      )}
+                      <button className="btn btn-primary btn-sm" onClick={handleJoinClick} disabled={busy}>
+                        {selected.isPrivate && !showJoinPassword ? '🔒 참가하기' : '참가하기'}
+                      </button>
+                      {showJoinPassword && (
+                        <button className="btn btn-ghost btn-sm" onClick={() => { setShowJoinPassword(false); setJoinPasswordInput(''); }}>취소</button>
+                      )}
+                    </div>
                   )}
                   {selected.status === 'open' && isJoined && !isCreator && (
                     <span style={{ fontSize: 12, color: 'var(--green)', fontWeight: 700 }}>✓ 참가 중</span>
@@ -313,7 +459,9 @@ export default function TournamentPage() {
                     ? `참가자가 충분히 모이면 브라켓 시작 버튼을 눌러 대진표를 만드세요. (현재 ${selected.participants?.length || 0}/${selected.size}명)`
                     : isJoined
                       ? '✓ 참가 완료! 브라켓이 시작될 때까지 기다려주세요.'
-                      : '참가하기 버튼을 눌러 토너먼트에 참가할 수 있습니다. 로그인이 필요합니다.'}
+                      : selected.isPrivate
+                        ? '🔒 비밀 토너먼트입니다. 참가하기를 눌러 비밀번호를 입력하세요.'
+                        : '참가하기 버튼을 눌러 토너먼트에 참가할 수 있습니다. 로그인이 필요합니다.'}
                 </div>
               )}
 
@@ -383,6 +531,7 @@ export default function TournamentPage() {
                     {matches.map((match) => {
                       const isMyMatch = user && (match.player1Id === user.id || match.player2Id === user.id);
                       const canCreate = !match.winnerId && !match.battleId && match.player1Id && match.player2Id && isMyMatch;
+                      const isBye = match.winnerId && (!match.player1Id || !match.player2Id);
                       return (
                         <div
                           key={match.id}
@@ -395,12 +544,15 @@ export default function TournamentPage() {
                           <div className={match.winnerId === match.player2Id ? 'winner' : ''}>
                             {match.player2Id ? userById.get(match.player2Id) || `User ${match.player2Id}` : <span style={{ color: 'var(--text3)', fontStyle: 'italic' }}>BYE</span>}
                           </div>
+                          {isBye && (
+                            <span style={{ fontSize: 11, color: 'var(--text3)', fontStyle: 'italic' }}>부전승</span>
+                          )}
                           {match.battleId && !match.winnerId && (
                             <button className="btn btn-primary btn-sm" onClick={() => navigate(`/battle/watch/${match.battleId}`)}>
                               배틀 입장 / 관전
                             </button>
                           )}
-                          {match.winnerId && (
+                          {match.winnerId && !isBye && (
                             <span style={{ fontSize: 11, color: 'var(--green)', fontWeight: 700 }}>
                               ✓ {userById.get(match.winnerId) || `User ${match.winnerId}`} 승
                             </span>

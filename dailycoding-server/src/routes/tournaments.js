@@ -18,11 +18,17 @@ router.post('/', auth, requireVerified, async (req, res) => {
   try {
     const name = String(req.body?.name || '').trim();
     if (!name) return errorResponse(res, 400, 'VALIDATION_ERROR', '토너먼트 이름이 필요합니다.');
+    const bannedTags = Array.isArray(req.body?.bannedTags) ? req.body.bannedTags.map(String) : [];
     const tournament = await Tournament.create({
       name,
       size: req.body?.size || 8,
       createdBy: req.user.id,
       startsAt: req.body?.startsAt || null,
+      isPrivate: Boolean(req.body?.isPrivate),
+      joinPassword: req.body?.joinPassword ? String(req.body.joinPassword) : null,
+      minTier: req.body?.minTier ? String(req.body.minTier) : null,
+      maxTier: req.body?.maxTier ? String(req.body.maxTier) : null,
+      bannedTags,
     });
     res.status(201).json(tournament);
   } catch (err) {
@@ -44,7 +50,8 @@ router.get('/:id', async (req, res) => {
 
 router.post('/:id/join', auth, async (req, res) => {
   try {
-    res.json(await Tournament.join(Number(req.params.id), req.user.id));
+    const password = req.body?.password ? String(req.body.password) : null;
+    res.json(await Tournament.join(Number(req.params.id), req.user.id, password));
   } catch (err) {
     const status = err.status || 500;
     if (status < 500) return errorResponse(res, status, 'VALIDATION_ERROR', err.message);

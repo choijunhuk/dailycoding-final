@@ -2,8 +2,10 @@ import { nowMySQL } from '../config/dateutil.js';
 import { insert, query, queryOne, run } from '../config/mysql.js';
 import { Battle } from './Battle.js';
 import { User } from './User.js';
+import { Notification } from './Notification.js';
 
 const VALID_SIZES = new Set([8, 16, 32]);
+const TIER_ORDER = ['unranked', 'iron', 'bronze', 'silver', 'gold', 'platinum', 'emerald', 'diamond', 'master', 'grandmaster', 'challenger'];
 
 function clampSize(size) {
   const parsed = Number(size) || 8;
@@ -22,11 +24,26 @@ function normalize(row) {
     expiresAt: row.expires_at ?? row.expiresAt ?? null,
     createdAt: row.created_at ?? row.createdAt,
     participantCount: Number(row.participant_count ?? row.participantCount ?? 0),
+    isPrivate: Boolean(row.is_private),
+    minTier: row.min_tier ?? null,
+    maxTier: row.max_tier ?? null,
+    bannedTags: row.banned_tags ? String(row.banned_tags).split(',').filter(Boolean) : [],
   };
 }
 
 function nextPowerRound(size) {
   return Math.log2(size);
+}
+
+function checkTierAccess(userTier, minTier, maxTier) {
+  const userIdx = TIER_ORDER.indexOf(userTier || 'unranked');
+  if (minTier && TIER_ORDER.includes(minTier)) {
+    if (userIdx < TIER_ORDER.indexOf(minTier)) return false;
+  }
+  if (maxTier && TIER_ORDER.includes(maxTier)) {
+    if (userIdx > TIER_ORDER.indexOf(maxTier)) return false;
+  }
+  return true;
 }
 
 export const Tournament = {
@@ -52,11 +69,16 @@ export const Tournament = {
     return (rows || []).map(normalize);
   },
 
-  async create({ name, size, createdBy, startsAt = null }) {
+  async create({ name, size, createdBy, startsAt = null, isPrivate = false, joinPassword = null, minTier = null, maxTier = null, bannedTags = [] }) {
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 19).replace('T', ' ');
+    const bannedTagsStr = Array.isArray(bannedTags) && bannedTags.length > 0 ? bannedTags.join(',') : null;
+    const safeMinTier = minTier && TIER_ORDER.includes(minTier) ? minTier : null;
+    const safeMaxTier = maxTier && TIER_ORDER.includes(maxTier) ? maxTier : null;
     const id = await insert(
-      'INSERT INTO tournaments (name, size, status, created_by, starts_at, expires_at) VALUES (?,?,?,?,?,?)',
-      [String(name || '').trim().slice(0, 120), clampSize(size), 'open', createdBy, startsAt || null, expiresAt]
+      'INSERT INTO tournaments (name, size, status, created_by, starts_at, expires_at, is_private, join_password, min_tier, max_tier, banned_tags) VALUES (?,?,?,?,?,?,?,?,?,?,?)',
+      [String(name || '').trim().slice(0, 120), clampSize(size), 'open', createdBy, startsAt || null, expiresAt,
+       isPrivate ? 1 : 0, isPrivate && joinPassword ? String(joinPassword).slice(0, 100) : null,
+       safeMinTier, safeMaxTier, bannedTagsStr]
     );
     return this.getById(id);
   },
@@ -127,7 +149,7 @@ export const Tournament = {
     );
   },
 
-  async join(id, userId) {
+  async join(id, userId, password = null) {
     const tournament = await this.getById(id);
     if (!tournament) {
       const err = new Error('토너먼트를 찾을 수 없습니다.');
@@ -144,6 +166,28 @@ export const Tournament = {
       err.status = 400;
       throw err;
     }
+
+    if (tournament.isPrivate) {
+      const raw = await queryOne('SELECT join_password FROM tournaments WHERE id=?', [id]);
+      if (raw?.join_password && raw.join_password !== (password || '')) {
+        const err = new Error('비밀번호가 틀렸습니다.');
+        err.status = 403;
+        throw err;
+      }
+    }
+
+    if (tournament.minTier || tournament.maxTier) {
+      const user = await User.findById(userId);
+      if (!checkTierAccess(user?.tier, tournament.minTier, tournament.maxTier)) {
+        const parts = [];
+        if (tournament.minTier) parts.push(`${tournament.minTier} 이상`);
+        if (tournament.maxTier) parts.push(`${tournament.maxTier} 이하`);
+        const err = new Error(`티어 조건 미충족 (${parts.join(', ')})`);
+        err.status = 403;
+        throw err;
+      }
+    }
+
     const nextSeed = tournament.participantCount + 1;
     await run('INSERT IGNORE INTO tournament_participants (tournament_id, user_id, seed) VALUES (?,?,?)', [id, userId, nextSeed]);
     return this.getById(id);
@@ -195,6 +239,12 @@ export const Tournament = {
     }
     await run('UPDATE tournaments SET status=?, starts_at=COALESCE(starts_at, ?) WHERE id=?', ['in_progress', nowMySQL(), id]);
     await this.advanceByes(id);
+
+    try {
+      const participantIds = tournament.participants.map((p) => p.userId);
+      await Notification.broadcast(participantIds, `"${tournament.name}" 토너먼트가 시작됐습니다! 대진표를 확인하세요.`, '/tournaments');
+    } catch { /* non-critical */ }
+
     return this.getById(id);
   },
 
@@ -218,9 +268,31 @@ export const Tournament = {
     if (!next) {
       await run('UPDATE tournaments SET status=? WHERE id=?', ['complete', tournamentId]);
       await run('UPDATE tournament_participants SET eliminated_at=COALESCE(eliminated_at, NOW()) WHERE tournament_id=? AND user_id<>?', [tournamentId, winnerId]);
+      try {
+        const t = await queryOne('SELECT name FROM tournaments WHERE id=?', [tournamentId]);
+        const participants = await this.getParticipants(tournamentId);
+        const allIds = participants.map((p) => p.userId);
+        if (t && allIds.length > 0) {
+          const winner = participants.find((p) => p.userId === winnerId);
+          await Notification.broadcast(allIds, `"${t.name}" 토너먼트가 종료됐습니다! 우승: ${winner?.user?.username || winnerId}`, '/tournaments');
+        }
+      } catch { /* non-critical */ }
       return this.getById(tournamentId);
     }
     await run(`UPDATE tournament_matches SET ${slot}=? WHERE id=?`, [winnerId, next.id]);
+
+    try {
+      if (next) {
+        const nextMatch = await queryOne('SELECT player1_id, player2_id FROM tournament_matches WHERE id=?', [next.id]);
+        if (nextMatch?.player1_id && nextMatch?.player2_id) {
+          const opponentId = nextMatch.player1_id === winnerId ? nextMatch.player2_id : nextMatch.player1_id;
+          const tName = await queryOne('SELECT name FROM tournaments WHERE id=?', [tournamentId]);
+          await Notification.create(winnerId, `토너먼트 다음 라운드 매치가 배정됐습니다! "${tName?.name}" Round ${nextRound}`, '/tournaments');
+          await Notification.create(opponentId, `토너먼트 다음 라운드 매치가 배정됐습니다! "${tName?.name}" Round ${nextRound}`, '/tournaments');
+        }
+      }
+    } catch { /* non-critical */ }
+
     return this.getById(tournamentId);
   },
 
@@ -254,6 +326,7 @@ export const Tournament = {
       throw err;
     }
 
+    const tournament = await this.getById(tournamentId);
     const requesterFirst = Number(requesterId) === playerIds[0] ? playerIds : [playerIds[1], playerIds[0]];
     const [inviter, invited] = await Promise.all([
       User.findById(requesterFirst[0]),
@@ -273,7 +346,12 @@ export const Tournament = {
 
     const room = await Battle.createRoom(
       { id: inviter.id, username: inviter.username },
-      { id: invited.id, username: invited.username }
+      { id: invited.id, username: invited.username },
+      {
+        minTier: tournament?.minTier || null,
+        maxTier: tournament?.maxTier || null,
+        bannedTags: tournament?.bannedTags || [],
+      }
     );
     await run('UPDATE tournament_matches SET battle_id=? WHERE id=?', [room.id, matchId]);
     return { tournament: await this.getById(tournamentId), roomId: room.id, invitedId: invited.id };

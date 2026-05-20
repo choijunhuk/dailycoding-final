@@ -591,7 +591,13 @@ router.post('/accept/:roomId', async (req, res) => {
     const { roomId } = req.params;
     const waitingRoom = await Battle.getRoom(roomId);
     if (!waitingRoom) return errorResponse(res, 404, 'NOT_FOUND', '방을 찾을 수 없습니다.');
-    const problems = await Battle.selectProblems({ preferredLanguage: waitingRoom.preferredLanguage || null });
+    const tc = waitingRoom.tournamentConfig || {};
+    const problems = await Battle.selectProblems({
+      preferredLanguage: waitingRoom.preferredLanguage || null,
+      minTier: tc.minTier || null,
+      maxTier: tc.maxTier || null,
+      bannedTags: tc.bannedTags || [],
+    });
     const room = await Battle.acceptInvite(req.user.id, roomId, problems);
     if (!room) return errorResponse(res, 400, 'VALIDATION_ERROR', '유효하지 않은 방입니다.');
 

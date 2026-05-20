@@ -133,20 +133,38 @@ export const Battle = {
     };
   },
 
-  async getBattleProblemPool({ preferredLanguage = null } = {}) {
+  async getBattleProblemPool({ preferredLanguage = null, minTier = null, maxTier = null, bannedTags = [] } = {}) {
+    const TIER_ORDER = ['unranked', 'iron', 'bronze', 'silver', 'gold', 'platinum', 'emerald', 'diamond', 'master', 'grandmaster', 'challenger'];
     const params = [];
     let sql = `
-      SELECT id, title, problem_type, preferred_language, special_config, tier,
-             difficulty, description, input_desc, output_desc, hint, time_limit, mem_limit,
-             visibility, battle_eligible
-      FROM problems
-      WHERE COALESCE(visibility, 'global') = 'global'
-        AND battle_eligible = 1
+      SELECT p.id, p.title, p.problem_type, p.preferred_language, p.special_config, p.tier,
+             p.difficulty, p.description, p.input_desc, p.output_desc, p.hint, p.time_limit, p.mem_limit,
+             p.visibility, p.battle_eligible
+      FROM problems p
+      WHERE COALESCE(p.visibility, 'global') = 'global'
+        AND p.battle_eligible = 1
     `;
 
     if (preferredLanguage) {
-      sql += ' AND (preferred_language IS NULL OR preferred_language = ?)';
+      sql += ' AND (p.preferred_language IS NULL OR p.preferred_language = ?)';
       params.push(preferredLanguage);
+    }
+
+    if (minTier && TIER_ORDER.includes(minTier)) {
+      const eligible = TIER_ORDER.slice(TIER_ORDER.indexOf(minTier));
+      sql += ` AND p.tier IN (${eligible.map(() => '?').join(',')})`;
+      params.push(...eligible);
+    }
+
+    if (maxTier && TIER_ORDER.includes(maxTier)) {
+      const eligible = TIER_ORDER.slice(0, TIER_ORDER.indexOf(maxTier) + 1);
+      sql += ` AND p.tier IN (${eligible.map(() => '?').join(',')})`;
+      params.push(...eligible);
+    }
+
+    if (Array.isArray(bannedTags) && bannedTags.length > 0) {
+      sql += ` AND NOT EXISTS (SELECT 1 FROM problem_tags pt WHERE pt.problem_id = p.id AND pt.tag IN (${bannedTags.map(() => '?').join(',')}))`;
+      params.push(...bannedTags);
     }
 
     return query(sql, params);
@@ -185,12 +203,12 @@ export const Battle = {
 
   async selectProblems(dbProblemsOrOptions = [], options = {}) {
     const resolvedOptions = Array.isArray(dbProblemsOrOptions) ? options : (dbProblemsOrOptions || {});
-    const preferredLanguage = resolvedOptions.preferredLanguage || null;
+    const { preferredLanguage = null, minTier = null, maxTier = null, bannedTags = [] } = resolvedOptions;
     const settings = await this.getBattleSettings();
 
     const dbPool = Array.isArray(dbProblemsOrOptions)
       ? dbProblemsOrOptions
-      : await this.getBattleProblemPool({ preferredLanguage });
+      : await this.getBattleProblemPool({ preferredLanguage, minTier, maxTier, bannedTags });
     const codingPool = dbPool
       .filter((p) => (p.visibility || 'global') === 'global')
       .filter((p) => Number(p.battle_eligible ?? 1) === 1)
@@ -382,7 +400,7 @@ export const Battle = {
 
   async createRoom(inviter, invited, options = {}) {
     const roomId = 'room_' + crypto.randomBytes(5).toString('hex');
-    const { isTeamBattle = false, teamSize = 1, preferredLanguage = null, battleMode = 'time' } = options;
+    const { isTeamBattle = false, teamSize = 1, preferredLanguage = null, battleMode = 'time', minTier = null, maxTier = null, bannedTags = [] } = options;
 
     const room = {
       id: roomId,
@@ -406,6 +424,7 @@ export const Battle = {
       startTime: null,
       duration: 1800,
       preferredLanguage,
+      tournamentConfig: (minTier || maxTier || bannedTags.length > 0) ? { minTier, maxTier, bannedTags } : null,
     };
     await redis.setJSON(`battle:room:${roomId}`, room, ROOM_TTL);
     await redis.setJSON(`battle:invite:${invited.id}`, {
