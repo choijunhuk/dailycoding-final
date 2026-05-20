@@ -98,8 +98,8 @@ export const Tournament = {
 
   async getParticipants(id) {
     const rows = await query(
-      `SELECT tp.tournament_id, tp.user_id, tp.seed, tp.eliminated_at, tp.joined_at, u.username, u.tier, u.rating,
-              u.avatar_url, u.profile_image_url, u.site_avatar_url, u.avatar_source, u.avatar_emoji, u.avatar_bg
+      `SELECT tp.tournament_id, tp.user_id, tp.seed, tp.eliminated_at, tp.joined_at,
+              u.username, u.tier, u.rating, u.avatar_url, u.avatar_emoji, u.avatar_source
        FROM tournament_participants tp
        JOIN users u ON u.id = tp.user_id
        WHERE tp.tournament_id = ?
