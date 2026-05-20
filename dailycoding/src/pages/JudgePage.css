@@ -4,6 +4,25 @@
   overflow: hidden;
 }
 
+.judge-layout .btn,
+.judge-layout .tag,
+.judge-layout .pmeta,
+.judge-layout .jtab,
+.judge-layout .rtab,
+.judge-layout .solve-status,
+.judge-layout .readonly-badge {
+  white-space: nowrap;
+  word-break: keep-all;
+}
+
+.judge-layout .btn {
+  line-height: 1.2;
+}
+
+.judge-layout .btn svg {
+  flex-shrink: 0;
+}
+
 /* ── LEFT ── */
 .judge-left {
   width: 46%; border-right: 1px solid var(--border);
@@ -73,7 +92,13 @@ section p { font-size: 13px; color: var(--text2); line-height: 1.7; }
 .editor-toolbar {
   background: var(--bg2); border-bottom: 1px solid var(--border);
   padding: 7px 12px; display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+  overflow-x: auto; overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
 }
+.editor-toolbar > * { flex-shrink: 0; }
+.editor-tool-group { display: flex; gap: 4px; margin-right: 8px; flex-shrink: 0; }
+.editor-key-hint { font-size: 10px; color: var(--text3); margin-left: 4px; white-space: nowrap; }
 .lang-select {
   background: var(--bg3); border: 1px solid var(--border);
   border-radius: 6px; color: var(--text);
@@ -280,6 +305,40 @@ section p { font-size: 13px; color: var(--text2); line-height: 1.7; }
 .result-panel.expanded { height: 420px; }
 
 .result-tabs { display: flex; border-bottom: 1px solid var(--border); padding: 0 12px; }
+.judge-panel-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.judge-panel-actions::-webkit-scrollbar {
+  display: none;
+}
+
+.judge-panel-action {
+  min-width: max-content;
+  flex: 1 0 max-content;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg3);
+  color: var(--text2);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  transition: all .15s;
+  white-space: nowrap;
+  word-break: keep-all;
+}
 
 /* AI Review Enhanced Styles */
 .review-content-wrapper {

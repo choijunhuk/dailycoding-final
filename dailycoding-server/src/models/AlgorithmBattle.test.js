@@ -6,7 +6,13 @@ process.env.REDIS_URL = 'redis://invalid:6379';
 process.env.JWT_SECRET = 'test_secret';
 
 import { insert, query, run, waitForDB } from '../config/mysql.js';
-import { AlgorithmBattle, calculateBattleScore, resolveBattleProblemRange } from './AlgorithmBattle.js';
+import {
+  AlgorithmBattle,
+  calculateBattleScore,
+  resolveBattleProblemFilters,
+  resolveBattleProblemRange,
+  sanitizeProblemFilters,
+} from './AlgorithmBattle.js';
 
 test('battle score rewards correctness and fast execution', () => {
   const fast = calculateBattleScore({ isCorrect: true, executionTimeMs: 100, memoryMb: 16, elapsedSec: 5 });
@@ -178,6 +184,30 @@ test('battle problem range widens for stronger ratings and longer modes', () => 
   assert.ok(advanced.tiers.includes('gold'));
   assert.ok(advanced.tiers.includes('platinum'));
   assert.ok(advanced.tiers.includes('diamond'));
+});
+
+test('battle problem filters apply tier ranges, tier bans, and tag choices', () => {
+  const base = { tiers: ['silver', 'gold', 'platinum'], minDifficulty: 3, maxDifficulty: 7 };
+  const filters = sanitizeProblemFilters({
+    tierMode: 'range',
+    minTier: 'bronze',
+    maxTier: 'gold',
+    bannedTiers: ['silver', 'invalid'],
+    requiredTags: ['그래프 이론', 'BFS', '그래프 이론'],
+    bannedTags: ['DP', ''],
+  });
+
+  assert.equal(filters.tierMode, 'range');
+  assert.deepEqual(filters.bannedTiers, ['silver']);
+  assert.deepEqual(filters.requiredTags, ['그래프 이론', 'BFS']);
+  assert.deepEqual(filters.bannedTags, ['DP']);
+
+  const resolved = resolveBattleProblemFilters(base, filters);
+  assert.deepEqual(resolved.tiers, ['bronze', 'gold']);
+  assert.equal(resolved.minDifficulty, 3);
+  assert.equal(resolved.maxDifficulty, 7);
+  assert.deepEqual(resolved.requiredTags, ['그래프 이론', 'BFS']);
+  assert.deepEqual(resolved.bannedTags, ['DP']);
 });
 
 test('algorithm battle does not award wins for abandoned single-player rooms', async () => {

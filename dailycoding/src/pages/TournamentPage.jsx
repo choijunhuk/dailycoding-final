@@ -225,15 +225,15 @@ export default function TournamentPage() {
           <h1>🏟 토너먼트</h1>
           <p>8/16/32강 싱글 엘리미네이션 방식으로 코딩 배틀 토너먼트를 운영합니다.</p>
         </div>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', flexWrap: 'wrap', flexDirection: 'column' }}>
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div className="tournament-side">
+          <div className="tournament-toolbar">
             <button className="btn btn-ghost btn-sm" onClick={() => setShowGuide((p) => !p)}>
               {showGuide ? '📖 안내 닫기' : '📖 사용 방법'}
             </button>
           </div>
           {user && (
             <div className="tournament-create card">
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+              <div className="tournament-create-row">
                 <input
                   placeholder="토너먼트 이름"
                   value={form.name}
@@ -250,8 +250,8 @@ export default function TournamentPage() {
               </div>
 
               {form.showAdvanced && (
-                <div className="tournament-advanced" style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer' }}>
+                <div className="tournament-advanced">
+                  <label className="tournament-private-row">
                     <input type="checkbox" checked={form.isPrivate} onChange={(e) => setForm((p) => ({ ...p, isPrivate: e.target.checked }))} />
                     🔒 비밀 토너먼트
                     {form.isPrivate && (
@@ -260,31 +260,30 @@ export default function TournamentPage() {
                         placeholder="입장 비밀번호"
                         value={form.joinPassword}
                         onChange={(e) => setForm((p) => ({ ...p, joinPassword: e.target.value }))}
-                        style={{ marginLeft: 8, width: 140 }}
                       />
                     )}
                   </label>
 
-                  <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', fontSize: 13 }}>
-                    <span style={{ color: 'var(--text3)' }}>티어 제한:</span>
+                  <div className="tournament-tier-row">
+                    <span>티어 제한:</span>
                     <select value={form.minTier} onChange={(e) => setForm((p) => ({ ...p, minTier: e.target.value }))} style={{ fontSize: 12 }}>
                       <option value="">최소 없음</option>
                       {TIER_OPTIONS.map((t) => <option key={t} value={t}>{TIER_LABEL[t]} 이상</option>)}
                     </select>
-                    <span style={{ color: 'var(--text3)', fontSize: 11 }}>~</span>
+                    <span>~</span>
                     <select value={form.maxTier} onChange={(e) => setForm((p) => ({ ...p, maxTier: e.target.value }))} style={{ fontSize: 12 }}>
                       <option value="">최대 없음</option>
                       {TIER_OPTIONS.map((t) => <option key={t} value={t}>{TIER_LABEL[t]} 이하</option>)}
                     </select>
                   </div>
 
-                  <div style={{ fontSize: 13 }}>
-                    <div style={{ color: 'var(--text3)', marginBottom: 6 }}>🚫 밴할 태그 (배틀 문제에서 제외):</div>
+                  <div className="tournament-ban-section">
+                    <div>🚫 밴할 태그 (배틀 문제에서 제외):</div>
                     {TAG_GROUPS.map(({ label, tags }) => (
-                      <div key={label} style={{ marginBottom: 6 }}>
-                        <span style={{ fontSize: 11, color: 'var(--text3)', marginRight: 6 }}>{label}</span>
+                      <div key={label} className="tournament-tag-row">
+                        <span>{label}</span>
                         {tags.map((tag) => (
-                          <label key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, marginRight: 8, cursor: 'pointer', fontSize: 12 }}>
+                          <label key={tag}>
                             <input
                               type="checkbox"
                               checked={form.bannedTags.includes(tag)}

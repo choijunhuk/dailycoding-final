@@ -249,7 +249,7 @@ export default function ProblemStatement({
     )}
 
     {/* 패널 열기 버튼 */}
-    <div style={{display:'flex',gap:8,marginTop:20,paddingTop:16,borderTop:'1px solid var(--border)'}}>
+    <div className="judge-panel-actions">
       {[
         ...(showEditorial ? [{ id:'editorial', icon:'📘', label:'Editorial' }] : []),
         { id:'solutions',   icon:'💡', label:'풀이' },
@@ -257,12 +257,7 @@ export default function ProblemStatement({
         { id:'notes',       icon:'🗒️', label:`노트` },
         { id:'submissions', icon:'📝', label:`제출${mySubmissions.length ? ` (${mySubmissions.length})` : ''}` },
       ].map(p => (
-        <button key={p.id} onClick={() => setLeftTab(p.id)} style={{
-          flex:1, padding:'8px 0', borderRadius:8, border:'1px solid var(--border)',
-          background:'var(--bg3)', color:'var(--text2)', cursor:'pointer',
-          fontSize:12, fontWeight:600, display:'flex', alignItems:'center',
-          justifyContent:'center', gap:5, transition:'all .15s',
-        }}
+        <button key={p.id} className="judge-panel-action" onClick={() => setLeftTab(p.id)}
           onMouseEnter={e=>{e.currentTarget.style.background='var(--bg4)';e.currentTarget.style.color='var(--text)';}}
           onMouseLeave={e=>{e.currentTarget.style.background='var(--bg3)';e.currentTarget.style.color='var(--text2)';}}
         >{p.icon} {p.label}</button>

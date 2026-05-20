@@ -86,7 +86,7 @@ export default function CodeEditor({
     <JudgeTimer ref={timerComponentRef} />
     <div style={{ flex: 1 }} />
     {/* ★ 코드 도구 */}
-    <div style={{ display:'flex', gap:4, marginRight:8 }}>
+    <div className="editor-tool-group">
       <button className="btn btn-ghost btn-sm" onClick={() => {
         navigator.clipboard.writeText(isTroubleshootingProblem ? (activeTroubleshootingFile?.content || '') : code);
         toast?.show('📋 코드가 클립보드에 복사되었습니다.', 'info');
@@ -131,7 +131,7 @@ export default function CodeEditor({
     <button className="btn btn-success btn-sm" onClick={submitCode} disabled={isJudging} title="제출 (Ctrl+Enter)">
       {isJudging ? <><span className="spinner" /> 채점 중</> : <><Send size={14} /> 제출하기</>}
     </button>
-    {!isSpecialProblem && <span style={{fontSize:10,color:'var(--text3)',marginLeft:4}}>Ctrl+Enter</span>}
+    {!isSpecialProblem && <span className="editor-key-hint">Ctrl+Enter</span>}
   </div>
 
   {judgeStatus?.mode === 'native-subprocess' && (

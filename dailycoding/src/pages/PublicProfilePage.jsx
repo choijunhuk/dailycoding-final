@@ -108,9 +108,9 @@ function DonutChart({ counts, centerLabel }) {
   )
 }
 
-const HEATMAP_LEVEL_LABELS = ['없음', '적음 (1문제)', '보통 (2-3문제)', '많음 (4-5문제)', '매우 많음 (6문제+)'];
+const SOLVED_TIER_ORDER = ['diamond', 'platinum', 'gold', 'silver', 'bronze', 'iron', 'unranked'];
 
-function Heatmap({ cells, caption }) {
+function Heatmap({ cells, caption, levelLabels, problemUnit }) {
   const [hovered, setHovered] = useState(null);
   const colorFor = (level) => (
     level === 0 ? 'var(--bg3)'
@@ -125,7 +125,7 @@ function Heatmap({ cells, caption }) {
         {cells.map((cell) => (
           <div
             key={cell.date}
-            title={`${cell.date} · ${HEATMAP_LEVEL_LABELS[cell.level]}${cell.count > 0 ? ` (${cell.count}개)` : ''}`}
+            title={`${cell.date} · ${levelLabels[cell.level]}${cell.count > 0 ? ` (${cell.count}${problemUnit})` : ''}`}
             onMouseEnter={() => cell.level > 0 && setHovered(cell)}
             onMouseLeave={() => setHovered(null)}
             style={{ aspectRatio: '1 / 1', borderRadius: 8, background: colorFor(cell.level), border: '1px solid var(--border)', cursor: cell.level > 0 ? 'pointer' : 'default' }}
@@ -134,11 +134,40 @@ function Heatmap({ cells, caption }) {
       </div>
       {hovered && (
         <div style={{ fontSize: 12, color: 'var(--text2)', background: 'var(--bg3)', borderRadius: 8, padding: '6px 10px', border: '1px solid var(--border)' }}>
-          📅 {hovered.date} — {HEATMAP_LEVEL_LABELS[hovered.level]} ({hovered.count}문제)
+          📅 {hovered.date} — {levelLabels[hovered.level]} ({hovered.count}{problemUnit})
         </div>
       )}
       <div style={{ fontSize: 11, color: 'var(--text3)' }}>{caption}</div>
     </div>
+  )
+}
+
+function getActivityTarget(item) {
+  if (!item) return null
+  if (item.type === 'solve' && item.problem_id) return `/problems/${item.problem_id}`
+  if (item.type === 'post' && item.post_id && item.board) return `/community/${item.board}/${item.post_id}`
+  if (item.type === 'battle' && item.room_id) return `/battle/${item.room_id}/replay`
+  if (item.type === 'battle') return '/battles/history'
+  return null
+}
+
+function ProblemTierPill({ tier }) {
+  const key = tier || 'unranked'
+  return (
+    <span style={{
+      minWidth: 74,
+      textAlign: 'center',
+      border: `1px solid ${(TIER_COLORS[key] || 'var(--text3)')}66`,
+      color: TIER_COLORS[key] || 'var(--text3)',
+      borderRadius: 999,
+      padding: '4px 8px',
+      fontSize: 10,
+      fontWeight: 900,
+      textTransform: 'uppercase',
+      background: `${TIER_COLORS[key] || '#687789'}16`,
+    }}>
+      {key}
+    </span>
   )
 }
 
@@ -200,10 +229,38 @@ export default function PublicProfilePage() {
     }
     loadProfile()
     return () => { cancelled = true }
-  }, [id, toast])
+  }, [id, t, toast])
 
   const tierCounts = useMemo(() => profile?.solvedTierCounts || {}, [profile?.solvedTierCounts])
+  const solvedGroups = useMemo(() => {
+    const groups = new Map()
+    for (const problem of profile?.solvedProblems || []) {
+      const key = problem.tier || 'unranked'
+      if (!groups.has(key)) groups.set(key, [])
+      groups.get(key).push(problem)
+    }
+    return [...groups.entries()]
+      .sort((a, b) => {
+        const ai = SOLVED_TIER_ORDER.indexOf(a[0])
+        const bi = SOLVED_TIER_ORDER.indexOf(b[0])
+        return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi)
+      })
+      .map(([tier, problems]) => ({ tier, problems }))
+  }, [profile?.solvedProblems])
+  const heatmapLevelLabels = [t('heatmapNone'), t('heatmapLow'), t('heatmapMedium'), t('heatmapHigh'), t('heatmapVeryHigh')]
+  const problemUnit = lang === 'ko' ? '개' : ''
   const isSelf = Number(user?.id) === Number(id)
+
+  const openSubmission = (submission) => {
+    navigate('/submissions', {
+      state: {
+        scope: 'all',
+        userId: Number(id),
+        highlightId: submission.id,
+        result: 'all',
+      },
+    })
+  }
 
   const toggleFollow = async () => {
     if (!profile || isSelf) return
@@ -249,7 +306,7 @@ export default function PublicProfilePage() {
               <div style={{ fontSize: 13, color: 'var(--text2)', marginTop: 8 }}>@{profile.username}</div>
               {(profile.equippedBadgeIcon || profile.equippedTitleName) && (
                 <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginTop:10 }}>
-                  {profile.equippedBadgeIcon && <span style={{ fontSize:12, border:'1px solid var(--border)', borderRadius:999, padding:'4px 8px', background:'var(--bg)', color:'var(--text)' }}>{profile.equippedBadgeIcon} {profile.equippedBadgeName || '뱃지'}</span>}
+                  {profile.equippedBadgeIcon && <span style={{ fontSize:12, border:'1px solid var(--border)', borderRadius:999, padding:'4px 8px', background:'var(--bg)', color:'var(--text)' }}>{profile.equippedBadgeIcon} {profile.equippedBadgeName || t('publicProfileBadgeFallback')}</span>}
                   {profile.equippedTitleName && <span style={{ fontSize:12, border:'1px solid var(--blue)', borderRadius:999, padding:'4px 8px', background:'rgba(88,166,255,.12)', color:'var(--blue)', fontWeight:800 }}>{profile.equippedTitleName}</span>}
                 </div>
               )}
@@ -347,8 +404,59 @@ export default function PublicProfilePage() {
         <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 22, padding: 20 }}>
           <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', marginBottom: 8 }}>{t('publicProfileThirtyDayActivityTitle')}</div>
           <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 18 }}>{t('publicProfileThirtyDayActivityDesc')}</div>
-          <Heatmap cells={grass} caption={t('publicProfileRecentThirtyDays')} />
+          <Heatmap cells={grass} caption={t('publicProfileRecentThirtyDays')} levelLabels={heatmapLevelLabels} problemUnit={problemUnit} />
         </div>
+      </div>
+
+      <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 22, padding: 20 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap', marginBottom: 14 }}>
+          <div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', marginBottom: 8 }}>{t('publicProfileSolvedSectionTitle')}</div>
+            <div style={{ fontSize: 12, color: 'var(--text3)' }}>{t('publicProfileSolvedSectionDesc')}</div>
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--text2)', fontWeight: 800 }}>{t('publicProfileSolvedShown').replace('{n}', String(profile.solvedProblems?.length || 0))}</div>
+        </div>
+        {!solvedGroups.length ? (
+          <div style={{ color: 'var(--text3)', fontSize: 13, padding: '18px 0' }}>{t('publicProfileNoSolvedProblems')}</div>
+        ) : (
+          <div style={{ display: 'grid', gap: 14 }}>
+            {solvedGroups.map(({ tier, problems }) => (
+              <div key={tier} style={{ border: '1px solid var(--border)', borderRadius: 16, background: 'var(--bg3)', padding: 14 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                  <ProblemTierPill tier={tier} />
+                  <span style={{ fontSize: 12, color: 'var(--text3)' }}>{t('publicProfileProblemCount').replace('{n}', String(problems.length))}</span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 8 }}>
+                  {problems.slice(0, 18).map((problem) => (
+                    <button
+                      key={problem.id}
+                      type="button"
+                      onClick={() => navigate(`/problems/${problem.id}`)}
+                      style={{
+                        border: '1px solid var(--border)',
+                        background: 'var(--bg2)',
+                        borderRadius: 12,
+                        padding: '10px 12px',
+                        color: 'inherit',
+                        fontFamily: 'inherit',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
+                        <strong style={{ color: 'var(--text)', fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{problem.title}</strong>
+                        <span style={{ color: 'var(--text3)', fontSize: 11, fontFamily: 'Space Mono, monospace', flexShrink: 0 }}>#{problem.id}</span>
+                      </div>
+                      <span style={{ color: 'var(--text3)', fontSize: 11 }}>
+                        {problem.correctCount > 1 ? t('publicProfileCorrectCount').replace('{n}', String(problem.correctCount)) : t('publicProfileCorrectOne')}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 22, padding: 20 }}>
@@ -388,7 +496,21 @@ export default function PublicProfilePage() {
           ) : (
             <div style={{ display: 'grid', gap: 10 }}>
               {submissions.map((submission) => (
-                <div key={submission.id} style={{ border: '1px solid var(--border)', background: 'var(--bg3)', borderRadius: 14, padding: '14px 16px' }}>
+                <button
+                  key={submission.id}
+                  type="button"
+                  onClick={() => openSubmission(submission)}
+                  style={{
+                    border: '1px solid var(--border)',
+                    background: 'var(--bg3)',
+                    borderRadius: 14,
+                    padding: '14px 16px',
+                    color: 'inherit',
+                    fontFamily: 'inherit',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                  }}
+                >
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 8 }}>
                     <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{submission.problemTitle || t('publicProfileProblemFallback').replace('{id}', String(submission.problemId))}</div>
                     <div style={{ fontSize: 12, color: submission.result === 'correct' ? 'var(--green)' : 'var(--red)', fontWeight: 800 }}>{submission.result}</div>
@@ -399,7 +521,7 @@ export default function PublicProfilePage() {
                     <span>{submission.mem}</span>
                     <span>{submission.date}</span>
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           )}
@@ -447,8 +569,25 @@ export default function PublicProfilePage() {
             <div style={{ color: 'var(--text3)', fontSize: 13 }}>{t('publicProfileNoActivity')}</div>
           ) : (
             <div style={{ display: 'grid', gap: 10 }}>
-              {activity.map((item, index) => (
-                <div key={`${item.type}-${item.created_at}-${index}`} style={{ border: '1px solid var(--border)', borderRadius: 14, background: 'var(--bg3)', padding: '12px 14px' }}>
+              {activity.map((item, index) => {
+                const target = getActivityTarget(item)
+                const Wrapper = target ? 'button' : 'div'
+                return (
+                <Wrapper
+                  key={`${item.type}-${item.created_at}-${index}`}
+                  type={target ? 'button' : undefined}
+                  onClick={target ? () => navigate(target) : undefined}
+                  style={{
+                    border: '1px solid var(--border)',
+                    borderRadius: 14,
+                    background: 'var(--bg3)',
+                    padding: '12px 14px',
+                    color: 'inherit',
+                    fontFamily: 'inherit',
+                    textAlign: 'left',
+                    cursor: target ? 'pointer' : 'default',
+                  }}
+                >
                   <div style={{ fontSize: 12, fontWeight: 800, color: item.type === 'solve' ? 'var(--green)' : item.type === 'post' ? 'var(--blue)' : 'var(--yellow)', marginBottom: 6 }}>
                     {item.type === 'solve' ? t('publicProfileActivitySolve') : item.type === 'post' ? t('publicProfileActivityPost') : t('battle')}
                   </div>
@@ -456,8 +595,8 @@ export default function PublicProfilePage() {
                     {item.type === 'solve' ? `${item.problem_title} · ${item.lang}` : item.type === 'post' ? `[${item.board}] ${item.title}` : `${t('battle')} ${item.result}`}
                   </div>
                   <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 8 }}>{formatDate(item.created_at, locale)}</div>
-                </div>
-              ))}
+                </Wrapper>
+              )})}
             </div>
           )}
         </div>

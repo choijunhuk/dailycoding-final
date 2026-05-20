@@ -214,6 +214,19 @@ export default function ProfilePage() {
 
   const tierCounts = { bronze:0, silver:0, gold:0, platinum:0, diamond:0 };
   solvedProblems.forEach(p => { if (p.tier && tierCounts[p.tier] !== undefined) tierCounts[p.tier]++; });
+  const solvedByTier = useMemo(() => {
+    const groups = Object.entries(TIERS).map(([tier, meta]) => ({
+      tier,
+      label: meta.label,
+      color: meta.color,
+      problems: solvedProblems.filter((problem) => problem.tier === tier),
+    }));
+    const extras = solvedProblems.filter((problem) => !TIERS[problem.tier]);
+    if (extras.length > 0) {
+      groups.push({ tier: 'unranked', label: '기타', color: 'var(--text3)', problems: extras });
+    }
+    return groups.filter((group) => group.problems.length > 0);
+  }, [solvedProblems]);
 
   const top100RatingSum = top100.reduce((s, p) => s + (TIER_POINTS[p.tier] || 20), 0);
 
@@ -625,13 +638,23 @@ export default function ProfilePage() {
             {/* 푼 문제 목록 */}
             {solvedProblems.length > 0 && (
               <div style={{ marginTop:20 }}>
-                <div className="profile-panel-subtitle">풀이 목록</div>
-                <div className="profile-solved-list">
-                  {solvedProblems.map(p=>(
-                    <div key={p.id} className="profile-solved-item">
-                      <TierBadge tier={p.tier} size={24}/>
-                      <span className="profile-solved-title">{p.title}</span>
-                      <span className="profile-solved-id">#{p.id}</span>
+                <div className="profile-panel-subtitle">맞춘 문제 정리</div>
+                <div className="profile-solved-group-list">
+                  {solvedByTier.map((group) => (
+                    <div key={group.tier} className="profile-solved-group">
+                      <div className="profile-solved-group-head">
+                        <span style={{ color: group.color }}>{group.label}</span>
+                        <strong>{group.problems.length}문제</strong>
+                      </div>
+                      <div className="profile-solved-list">
+                        {group.problems.map(p=>(
+                          <button key={p.id} type="button" className="profile-solved-item" onClick={() => navigate(`/problems/${p.id}`)}>
+                            <TierBadge tier={p.tier} size={24}/>
+                            <span className="profile-solved-title">{p.title}</span>
+                            <span className="profile-solved-id">#{p.id}</span>
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   ))}
                 </div>

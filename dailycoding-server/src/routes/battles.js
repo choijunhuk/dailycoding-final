@@ -220,6 +220,8 @@ router.post('/rooms', async (req, res) => {
       durationSec: req.body?.durationSec || null,
       isPrivate: Boolean(req.body?.isPrivate),
       preferredLanguage: req.body?.preferredLanguage || null,
+      bannedTags: Array.isArray(req.body?.bannedTags) ? req.body.bannedTags : [],
+      problemFilters: req.body?.problemFilters || null,
     });
     emitBattleRoomUpdate(req.app.get('io'), state);
     res.status(201).json(state);

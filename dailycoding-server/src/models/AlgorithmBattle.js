@@ -89,6 +89,22 @@ const BATTLE_MODES = {
     itemCooldownSec: 0,
     problemCount: 5,
   },
+  'draft-ban': {
+    key: 'draft-ban',
+    title: '🚫 밴픽전',
+    description: '호스트가 티어와 알고리즘 태그를 밴하거나 특정 범위로 제한한 뒤 시작하는 전략형 1:1 대결.',
+    winCondition: 'hp-knockout',
+    rules: ['문제 시작 전 티어/태그 조건 적용', '밴한 티어와 태그는 문제 후보에서 제외', '선택 태그만 모드에서는 해당 알고리즘 문제만 출제', '정답 제출 → 상대 HP 감소 + 문제 효과 발동'],
+    maxPlayers: 2,
+    durationSec: 600,
+    itemsEnabled: true,
+    effectsEnabled: true,
+    chatEnabled: true,
+    emotesEnabled: true,
+    activityEnabled: true,
+    itemCooldownSec: 18,
+    problemCount: 1,
+  },
 };
 
 const BATTLE_ITEMS = {
@@ -99,7 +115,13 @@ const BATTLE_ITEMS = {
 };
 
 const BATTLE_EMOTES = ['gg', 'nice', 'oops', 'focus', 'taunt'];
-const BANNABLE_TAGS = ['정렬', '수학', '문자열', '그래프', '탐색', 'DP', '구현'];
+const BANNABLE_TAGS = [
+  '입출력', '구현', '수학', '문자열', '정렬',
+  '자료 구조', '해시', '스택', '큐', '우선순위 큐',
+  '그리디', '이분 탐색', '투 포인터', '누적 합', '다이나믹 프로그래밍', 'DP',
+  '그래프 이론', '그래프', 'BFS', 'DFS', '최단 경로', '트리',
+  '백트래킹', '비트마스크', '분리 집합',
+];
 const PROBLEM_TIERS = ['bronze', 'silver', 'gold', 'platinum', 'diamond'];
 
 function parseJson(value, fallback) {
@@ -227,8 +249,13 @@ function getBattleModeConfig(mode, overrides = {}) {
 
 function getRoomConfig(room, events = []) {
   const configEvent = [...(events || [])].reverse().find((event) => event.type === 'room.config');
+  const problemFilters = sanitizeProblemFilters({
+    ...(configEvent?.payload?.problemFilters || {}),
+    bannedTags: configEvent?.payload?.problemFilters?.bannedTags || configEvent?.payload?.bannedTags || [],
+  });
   return getBattleModeConfig(room?.mode || 'sort-speed', {
-    bannedTags: Array.isArray(configEvent?.payload?.bannedTags) ? configEvent.payload.bannedTags : [],
+    bannedTags: problemFilters.bannedTags,
+    problemFilters,
   });
 }
 
@@ -273,6 +300,82 @@ function uniqueTiers(startIdx, endIdx) {
   const start = Math.max(0, Math.min(PROBLEM_TIERS.length - 1, startIdx));
   const end = Math.max(start, Math.min(PROBLEM_TIERS.length - 1, endIdx));
   return PROBLEM_TIERS.slice(start, end + 1);
+}
+
+function normalizeTagList(value, max = 12) {
+  const source = Array.isArray(value) ? value : [];
+  const seen = new Set();
+  const result = [];
+  for (const raw of source) {
+    const tag = sanitizeText(raw, 40);
+    const key = tag.toLowerCase();
+    if (!tag || seen.has(key)) continue;
+    seen.add(key);
+    result.push(tag);
+    if (result.length >= max) break;
+  }
+  return result;
+}
+
+function normalizeTierList(value) {
+  const source = Array.isArray(value) ? value : [];
+  const seen = new Set();
+  const result = [];
+  for (const raw of source) {
+    const tier = String(raw || '').toLowerCase();
+    if (!PROBLEM_TIERS.includes(tier) || seen.has(tier)) continue;
+    seen.add(tier);
+    result.push(tier);
+  }
+  return result;
+}
+
+export function sanitizeProblemFilters(value = {}) {
+  const tierMode = ['auto', 'min', 'max', 'range', 'only'].includes(value?.tierMode) ? value.tierMode : 'auto';
+  const minTier = PROBLEM_TIERS.includes(String(value?.minTier || '').toLowerCase()) ? String(value.minTier).toLowerCase() : null;
+  const maxTier = PROBLEM_TIERS.includes(String(value?.maxTier || '').toLowerCase()) ? String(value.maxTier).toLowerCase() : null;
+  return {
+    tierMode,
+    minTier,
+    maxTier,
+    allowedTiers: normalizeTierList(value?.allowedTiers),
+    bannedTiers: normalizeTierList(value?.bannedTiers),
+    requiredTags: normalizeTagList(value?.requiredTags, 8),
+    bannedTags: normalizeTagList(value?.bannedTags, 12),
+  };
+}
+
+export function resolveBattleProblemFilters(baseRange, rawFilters = {}) {
+  const filters = sanitizeProblemFilters(rawFilters);
+  let tiers = Array.isArray(baseRange?.tiers) && baseRange.tiers.length > 0
+    ? baseRange.tiers.filter((tier) => PROBLEM_TIERS.includes(tier))
+    : [...PROBLEM_TIERS];
+
+  if (filters.tierMode === 'min' && filters.minTier) {
+    tiers = PROBLEM_TIERS.slice(PROBLEM_TIERS.indexOf(filters.minTier));
+  } else if (filters.tierMode === 'max' && filters.maxTier) {
+    tiers = PROBLEM_TIERS.slice(0, PROBLEM_TIERS.indexOf(filters.maxTier) + 1);
+  } else if (filters.tierMode === 'range' && filters.minTier && filters.maxTier) {
+    const start = Math.min(PROBLEM_TIERS.indexOf(filters.minTier), PROBLEM_TIERS.indexOf(filters.maxTier));
+    const end = Math.max(PROBLEM_TIERS.indexOf(filters.minTier), PROBLEM_TIERS.indexOf(filters.maxTier));
+    tiers = PROBLEM_TIERS.slice(start, end + 1);
+  } else if (filters.tierMode === 'only' && filters.allowedTiers.length > 0) {
+    tiers = filters.allowedTiers;
+  }
+
+  const banned = new Set(filters.bannedTiers);
+  tiers = tiers.filter((tier) => !banned.has(tier));
+  if (tiers.length === 0) tiers = Array.isArray(baseRange?.tiers) && baseRange.tiers.length > 0 ? baseRange.tiers : ['bronze'];
+
+  return {
+    tiers,
+    minDifficulty: baseRange?.minDifficulty || 1,
+    maxDifficulty: baseRange?.maxDifficulty || 9,
+    bannedTags: filters.bannedTags,
+    bannedTiers: filters.bannedTiers,
+    requiredTags: filters.requiredTags,
+    problemFilters: filters,
+  };
 }
 
 export function resolveBattleProblemRange(profiles = [], room = {}) {
@@ -351,10 +454,19 @@ async function getProblemById(problemId) {
   return Problem.findById(Number(problemId));
 }
 
-async function findProblemIds(count = 1, { bannedTags = [], tiers = PROBLEM_TIERS, minDifficulty = 1, maxDifficulty = 9 } = {}) {
+async function findProblemIds(count = 1, {
+  bannedTags = [],
+  bannedTiers = [],
+  requiredTags = [],
+  tiers = PROBLEM_TIERS,
+  minDifficulty = 1,
+  maxDifficulty = 9,
+} = {}) {
   const limit = Math.max(count * 20, 200);
   const normalizedTiers = (tiers || []).map((tier) => String(tier || '').toLowerCase()).filter(Boolean);
   const normalizedBannedTags = (bannedTags || []).map((tag) => String(tag || '').toLowerCase()).filter(Boolean);
+  const normalizedBannedTiers = (bannedTiers || []).map((tier) => String(tier || '').toLowerCase()).filter(Boolean);
+  const normalizedRequiredTags = (requiredTags || []).map((tag) => String(tag || '').toLowerCase()).filter(Boolean);
   const params = [];
   let sql = `SELECT p.id, p.tier, p.difficulty FROM problems p
      WHERE COALESCE(p.visibility, 'global') = 'global'
@@ -365,6 +477,10 @@ async function findProblemIds(count = 1, { bannedTags = [], tiers = PROBLEM_TIER
     sql += ` AND LOWER(COALESCE(p.tier, '')) IN (${normalizedTiers.map(() => '?').join(',')})`;
     params.push(...normalizedTiers);
   }
+  if (normalizedBannedTiers.length > 0) {
+    sql += ` AND LOWER(COALESCE(p.tier, '')) NOT IN (${normalizedBannedTiers.map(() => '?').join(',')})`;
+    params.push(...normalizedBannedTiers);
+  }
   if (normalizedBannedTags.length > 0) {
     sql += ` AND NOT EXISTS (
        SELECT 1 FROM problem_tags pt
@@ -373,10 +489,18 @@ async function findProblemIds(count = 1, { bannedTags = [], tiers = PROBLEM_TIER
      )`;
     params.push(...normalizedBannedTags);
   }
+  if (normalizedRequiredTags.length > 0) {
+    sql += ` AND EXISTS (
+       SELECT 1 FROM problem_tags pt
+       WHERE pt.problem_id = p.id
+         AND LOWER(pt.tag) IN (${normalizedRequiredTags.map(() => '?').join(',')})
+     )`;
+    params.push(...normalizedRequiredTags);
+  }
   sql += ` ORDER BY RAND() LIMIT ${limit}`;
   const rows = await query(sql, params);
   const tagMap = new Map();
-  if (normalizedBannedTags.length > 0 && rows.length > 0) {
+  if ((normalizedBannedTags.length > 0 || normalizedRequiredTags.length > 0) && rows.length > 0) {
     const candidateIds = rows.map((row) => Number(row.id)).filter(Boolean);
     const tagRows = await query(
       `SELECT problem_id, tag FROM problem_tags
@@ -397,12 +521,14 @@ async function findProblemIds(count = 1, { bannedTags = [], tiers = PROBLEM_TIER
     if (result.length >= count) break;
     if (usedIds.has(Number(row.id))) continue;
     if (normalizedTiers.length > 0 && !normalizedTiers.includes(String(row.tier || '').toLowerCase())) continue;
+    if (normalizedBannedTiers.length > 0 && normalizedBannedTiers.includes(String(row.tier || '').toLowerCase())) continue;
     const difficulty = Number(row.difficulty || 1);
     if (difficulty < minDifficulty || difficulty > maxDifficulty) continue;
+    const tags = tagMap.get(Number(row.id)) || [];
     if (normalizedBannedTags.length > 0) {
-      const tags = tagMap.get(Number(row.id)) || [];
       if (tags.some((tag) => normalizedBannedTags.includes(tag))) continue;
     }
+    if (normalizedRequiredTags.length > 0 && !tags.some((tag) => normalizedRequiredTags.includes(tag))) continue;
     result.push(Number(row.id));
     usedIds.add(Number(row.id));
   }
@@ -439,6 +565,14 @@ export const AlgorithmBattle = {
         availableEmotes: BATTLE_EMOTES,
       })),
       bannableTags: BANNABLE_TAGS,
+      problemTiers: PROBLEM_TIERS,
+      problemFilterPresets: [
+        { key: 'auto', label: '자동 추천' },
+        { key: 'min', label: '선택 티어 이상' },
+        { key: 'max', label: '선택 티어 이하' },
+        { key: 'range', label: '티어 구간' },
+        { key: 'only', label: '선택 티어만' },
+      ],
     };
   },
 
@@ -485,6 +619,7 @@ export const AlgorithmBattle = {
     isPrivate = false,
     preferredLanguage = null,
     bannedTags = [],
+    problemFilters = null,
   } = {}) {
     if (creatorId) {
       const existingActive = await queryOne(
@@ -500,6 +635,10 @@ export const AlgorithmBattle = {
 
     const normalizedMode = normalizeMode(mode);
     const modeConfig = getBattleModeConfig(normalizedMode);
+    const normalizedProblemFilters = sanitizeProblemFilters({
+      ...(problemFilters || {}),
+      bannedTags: problemFilters?.bannedTags || bannedTags,
+    });
 
     let resolvedProblemId = null;
     let problemIdsJson = null;
@@ -516,12 +655,6 @@ export const AlgorithmBattle = {
     const inviteCodeVal = isPrivate ? crypto.randomBytes(3).toString('hex').toUpperCase() : null;
     const lobbyExpiresAt = toMySQL(new Date(Date.now() + LOBBY_TIMEOUT_MS));
 
-    const roomParams = [
-      id, normalizedMode, resolvedProblemId, problemIdsJson, '{}', 'waiting',
-      clampInt(maxPlayers ?? modeConfig.maxPlayers, modeConfig.maxPlayers, 2, MAX_PLAYERS),
-      clampInt(durationSec ?? modeConfig.durationSec, modeConfig.durationSec, 60, 1200),
-      creatorId || null, isPrivate ? 1 : 0, inviteCodeVal, preferredLanguage || null,
-    ];
     await insert(
       `INSERT INTO battle_rooms
          (id, mode, problem_id, problem_ids, territory_claims, status, max_players, duration_sec,
@@ -536,7 +669,12 @@ export const AlgorithmBattle = {
       ]
     );
     if (creatorId) await this.joinRoom(id, creatorId);
-    await this.recordEvent(id, creatorId || null, 'room.config', { mode: normalizedMode, bannedTags, deferredProblemSelection: !problemId });
+    await this.recordEvent(id, creatorId || null, 'room.config', {
+      mode: normalizedMode,
+      bannedTags: normalizedProblemFilters.bannedTags,
+      problemFilters: normalizedProblemFilters,
+      deferredProblemSelection: !problemId,
+    });
     return this.getRoomState(id);
   },
 
@@ -763,9 +901,13 @@ export const AlgorithmBattle = {
     const profiles = await Promise.all(participants.map((player) => getBattleProfile(player.userId)));
     const events = await this.getEvents(roomId);
     const configEvent = [...(events || [])].reverse().find((event) => event.type === 'room.config');
-    const bannedTags = Array.isArray(configEvent?.payload?.bannedTags) ? configEvent.payload.bannedTags : [];
-    const range = resolveBattleProblemRange(profiles, currentRoom);
-    const ids = await findProblemIds(problemCount, { ...range, bannedTags });
+    const baseRange = resolveBattleProblemRange(profiles, currentRoom);
+    const filters = sanitizeProblemFilters({
+      ...(configEvent?.payload?.problemFilters || {}),
+      bannedTags: configEvent?.payload?.problemFilters?.bannedTags || configEvent?.payload?.bannedTags || [],
+    });
+    const range = resolveBattleProblemFilters(baseRange, filters);
+    const ids = await findProblemIds(problemCount, range);
     const primaryProblemId = ids[0] || null;
     const problemIdsJson = currentRoom.mode === 'territory' ? JSON.stringify(ids) : null;
 
@@ -778,6 +920,7 @@ export const AlgorithmBattle = {
       tiers: range.tiers,
       minDifficulty: range.minDifficulty,
       maxDifficulty: range.maxDifficulty,
+      problemFilters: range.problemFilters,
     });
 
     return this.getRoom(roomId);

@@ -15,7 +15,7 @@ import MockAd             from './components/MockAd';
 import NotFoundPage    from './pages/NotFoundPage';
 import { ToastProvider } from './context/ToastContext.jsx';
 import { ThemeProvider } from './context/ThemeContext.jsx';
-import { LangProvider } from './context/LangContext.jsx';
+import { LangProvider, useLang } from './context/LangContext.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 import api from './api.js';
 import { applyAppTypographyPreference } from './utils/fontPreferences.js';
@@ -76,6 +76,7 @@ function AppInner() {
   const { loadAll, loading } = useApp();
   const location = useLocation();
   const navigate = useNavigate();
+  const { t } = useLang();
 
   useEffect(() => {
     applyAppTypographyPreference({
@@ -215,9 +216,9 @@ function AppInner() {
               <span style={{fontWeight:700}}>⚡ DailyCoding</span>
               <span style={{color:'var(--text3)'}}>© {new Date().getFullYear()}</span>
               <span style={{color:'var(--text3)'}}>·</span>
-              <a href="/pricing" style={{color:'var(--text2)',textDecoration:'none'}} onClick={e=>{e.preventDefault();navigate('/pricing');}}>요금제</a>
-              <a href="/terms"   style={{color:'var(--text2)',textDecoration:'none'}} onClick={e=>{e.preventDefault();navigate('/terms');}}>이용약관</a>
-              <a href="/privacy" style={{color:'var(--text2)',textDecoration:'none'}} onClick={e=>{e.preventDefault();navigate('/privacy');}}>개인정보처리방침</a>
+              <a href="/pricing" style={{color:'var(--text2)',textDecoration:'none'}} onClick={e=>{e.preventDefault();navigate('/pricing');}}>{t('pricing')}</a>
+              <a href="/terms"   style={{color:'var(--text2)',textDecoration:'none'}} onClick={e=>{e.preventDefault();navigate('/terms');}}>{t('authTermsLabel')}</a>
+              <a href="/privacy" style={{color:'var(--text2)',textDecoration:'none'}} onClick={e=>{e.preventDefault();navigate('/privacy');}}>{t('authPrivacyLabel')}</a>
               <span style={{color:'var(--text3)'}}>·</span>
               <span style={{fontSize:10,color:'var(--text3)'}}>React · Node.js · MySQL · Redis · Docker · Gemini AI</span>
             </div>

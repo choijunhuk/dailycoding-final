@@ -22,7 +22,8 @@ router.get('/users/:id/activity', auth, async (req, res) => {
 
     const [solveRows, postRows, battleRows] = await Promise.all([
       query(
-        `SELECT 'solve' AS type, s.submitted_at AS created_at, p.title AS problem_title, s.lang
+        `SELECT 'solve' AS type, s.submitted_at AS created_at, s.id AS submission_id,
+                s.problem_id, p.title AS problem_title, s.lang
          FROM submissions s
          JOIN problems p ON p.id = s.problem_id
          WHERE s.user_id = ? AND s.result = 'correct'
@@ -31,7 +32,7 @@ router.get('/users/:id/activity', auth, async (req, res) => {
         [userId]
       ),
       query(
-        `SELECT 'post' AS type, created_at, board_type AS board, title
+        `SELECT 'post' AS type, id AS post_id, created_at, board_type AS board, title
          FROM posts
          WHERE user_id = ? AND is_anonymous = 0
          ORDER BY created_at DESC
@@ -39,7 +40,7 @@ router.get('/users/:id/activity', auth, async (req, res) => {
         [userId]
       ),
       query(
-        `SELECT 'battle' AS type, created_at, result
+        `SELECT 'battle' AS type, room_id, created_at, result
          FROM battle_history
          WHERE user_id = ?
          ORDER BY created_at DESC

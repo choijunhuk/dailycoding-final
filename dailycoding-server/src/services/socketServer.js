@@ -97,7 +97,10 @@ export function initSocketServer(httpServer, allowedOrigins) {
           problemId: payload.problemId || null,
           maxPlayers: payload.maxPlayers || 2,
           durationSec: payload.durationSec || null,
+          isPrivate: Boolean(payload.isPrivate),
+          preferredLanguage: payload.preferredLanguage || null,
           bannedTags: payload.bannedTags || [],
+          problemFilters: payload.problemFilters || null,
         });
         socket.join(`battle:${state.room.id}`);
         io.to(`battle:${state.room.id}`).emit('battle:room:update', state);

@@ -155,7 +155,7 @@ export default function SettingsPage() {
         <div style={{ padding:'20px 16px 16px', borderBottom:'1px solid var(--border)', background:'linear-gradient(135deg, rgba(121,192,255,.04), rgba(210,168,255,.04))' }}>
           <ProfileAvatar profile={user} size={44} fontSize={18} style={{ marginBottom:10 }} />
           <div style={{ fontSize:15, fontWeight:700, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
-            {user?.nickname || user?.username || '사용자'}
+            {user?.nickname || user?.username || t('userFallback')}
           </div>
           {user?.email && (
             <div style={{ fontSize:11, color:'var(--text3)', marginTop:3, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{user.email}</div>
@@ -199,22 +199,22 @@ export default function SettingsPage() {
                 <input className="settings-input" value={nickname} onChange={e => onNicknameChange(e.target.value)}
                   placeholder={user?.nickname || t('nickname')} style={{ flex:1 }} />
                 {nicknameStatus === 'checking' && <span style={{ fontSize:12, color:'var(--text3)' }}>…</span>}
-                {nicknameStatus === 'available' && <span style={{ fontSize:12, color:'#22c55e', fontWeight:700 }}>✓ 사용 가능</span>}
-                {nicknameStatus === 'taken' && <span style={{ fontSize:12, color:'#ef4444', fontWeight:700 }}>✗ 사용 중</span>}
+                {nicknameStatus === 'available' && <span style={{ fontSize:12, color:'#22c55e', fontWeight:700 }}>{t('nicknameAvailable')}</span>}
+                {nicknameStatus === 'taken' && <span style={{ fontSize:12, color:'#ef4444', fontWeight:700 }}>{t('nicknameTaken')}</span>}
               </div>
             </Field>
 
             <SaveBtn onClick={saveProfile} saving={saving} />
 
             <div style={{ padding:'20px', borderRadius:12, background:'linear-gradient(135deg, rgba(121,192,255,.06), rgba(210,168,255,.04))', border:'1px solid rgba(121,192,255,.15)' }}>
-              <div style={{ fontSize:14, fontWeight:700, marginBottom:6 }}>프로필 상세 편집</div>
+              <div style={{ fontSize:14, fontWeight:700, marginBottom:6 }}>{t('profileDetailEditTitle')}</div>
               <div style={{ fontSize:13, color:'var(--text2)', lineHeight:1.7, marginBottom:14 }}>
-                자기소개 · 소셜 링크 · 기술 스택 등은 <strong>내 프로필</strong> 페이지에서 편집할 수 있습니다.
+                {t('profileDetailEditDesc')}
               </div>
               <a href="/profile" style={{
                 display:'inline-flex', alignItems:'center', gap:6, padding:'8px 18px', borderRadius:8, fontSize:13, fontWeight:600,
                 background:'var(--accent)', color:'#fff', textDecoration:'none',
-              }}>내 프로필 편집 →</a>
+              }}>{t('editMyProfile')}</a>
             </div>
           </div>
         )}
@@ -248,7 +248,7 @@ export default function SettingsPage() {
         {tab === 'account' && (
           <div style={{ display:'flex', flexDirection:'column', gap:24 }}>
             <div className="error-msg">
-              비밀번호는 최소 8자 이상이어야 합니다.
+              {t('passwordMinLength')}
             </div>
             <Field label={t('currentPassword')}>
               <input className="settings-input" type="password" value={pwForm.current}
@@ -428,7 +428,7 @@ function UiSettings({ data, onSave, saving, theme, setTheme, lang, setLang, t })
             <span style={{ fontSize:14, fontWeight:800, color:'var(--blue)', minWidth:44 }}>{selectedFontSize}px</span>
           </div>
           <div style={{ padding:'14px 16px', borderRadius:12, background:'var(--bg2)', border:'1px solid var(--border)', fontSize:'var(--app-font-size)', lineHeight:1.6 }}>
-            전체 UI 글자 크기 미리보기입니다. 저장하면 다음 접속 때도 유지됩니다.
+            {t('appFontSizePreview')}
           </div>
         </div>
       </Field>

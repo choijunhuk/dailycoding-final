@@ -36,7 +36,38 @@ const FALLBACK_MODES = [
   { key: 'duel-effects', title: '✨ 효과전', description: '정답 제출 시 문제 태그 기반 버프/디버프가 발동! HP 전투 + 무작위 효과로 역전 가능.', winCondition: 'hp-knockout', rules: ['정답 → 상대 HP 감소 + 문제 효과 발동', '아이템 쿨다운 20초', 'HP 0 = 패배'], itemsEnabled: true, effectsEnabled: true, problemCount: 1 },
   { key: 'chaos-items', title: '🎒 아이템 난투', description: '빠른 쿨다운 아이템으로 상대를 흔드는 HP 전투! 아이템 전략이 승패를 가릅니다.', winCondition: 'hp-knockout', rules: ['아이템 쿨다운 12초 (빠름)', '정답 → 상대 HP 감소', 'HP 0 = 패배'], itemsEnabled: true, effectsEnabled: true, problemCount: 1 },
   { key: 'territory', title: '🏴 점령전', description: '5개 문제 동시 공개! 먼저 풀면 내 영토. 더 많은 구역을 점령한 플레이어가 승리.', winCondition: 'territory', rules: ['5개 문제 동시 공개', '정답 → 해당 문제 점령', '점령 수가 많은 플레이어 승리'], itemsEnabled: false, effectsEnabled: false, problemCount: 5 },
+  { key: 'draft-ban', title: '🚫 밴픽전', description: '티어와 알고리즘 태그를 밴하거나 특정 조건으로 묶어서 시작하는 전략형 1:1 대결.', winCondition: 'hp-knockout', rules: ['티어/태그 조건을 먼저 적용', '밴한 조건은 후보에서 제외', '정답 → 상대 HP 감소 + 문제 효과'], itemsEnabled: true, effectsEnabled: true, problemCount: 1 },
 ];
+
+const FALLBACK_BANNABLE_TAGS = [
+  '구현', '수학', '문자열', '정렬', '자료 구조', '해시',
+  '그리디', '이분 탐색', '투 포인터', '누적 합', '다이나믹 프로그래밍',
+  '그래프 이론', 'BFS', 'DFS', '최단 경로', '트리', '백트래킹',
+];
+const FALLBACK_PROBLEM_TIERS = ['bronze', 'silver', 'gold', 'platinum', 'diamond'];
+const PROBLEM_TIER_LABELS = {
+  bronze: '브론즈',
+  silver: '실버',
+  gold: '골드',
+  platinum: '플래티넘',
+  diamond: '다이아몬드',
+};
+const TAG_GROUP_LABELS = [
+  { label: '기초', tags: ['입출력', '구현', '수학', '문자열', '정렬'] },
+  { label: '자료구조', tags: ['자료 구조', '해시', '스택', '큐', '우선순위 큐'] },
+  { label: '알고리즘', tags: ['그리디', '이분 탐색', '투 포인터', '누적 합', '다이나믹 프로그래밍', 'DP'] },
+  { label: '그래프', tags: ['그래프 이론', '그래프', 'BFS', 'DFS', '최단 경로', '트리'] },
+  { label: '고급', tags: ['백트래킹', '비트마스크', '분리 집합'] },
+];
+const DEFAULT_PROBLEM_FILTERS = {
+  tierMode: 'auto',
+  minTier: 'silver',
+  maxTier: 'gold',
+  allowedTiers: [],
+  bannedTiers: [],
+  requiredTags: [],
+  bannedTags: [],
+};
 
 
 function fmtSec(seconds) {
@@ -44,6 +75,37 @@ function fmtSec(seconds) {
   const m = Math.floor(sec / 60);
   const s = sec % 60;
   return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+function toggleListValue(list, value) {
+  return list.includes(value) ? list.filter((item) => item !== value) : [...list, value];
+}
+
+function sanitizeProblemFilters(filters, tiers) {
+  const allowedTierSet = new Set(tiers);
+  return {
+    tierMode: filters.tierMode || 'auto',
+    minTier: allowedTierSet.has(filters.minTier) ? filters.minTier : tiers[0],
+    maxTier: allowedTierSet.has(filters.maxTier) ? filters.maxTier : tiers[tiers.length - 1],
+    allowedTiers: (filters.allowedTiers || []).filter((tier) => allowedTierSet.has(tier)),
+    bannedTiers: (filters.bannedTiers || []).filter((tier) => allowedTierSet.has(tier)),
+    requiredTags: (filters.requiredTags || []).slice(0, 8),
+    bannedTags: (filters.bannedTags || []).slice(0, 12),
+  };
+}
+
+function getProblemFilterSummary(filters) {
+  const parts = [];
+  if (filters.tierMode === 'min') parts.push(`${PROBLEM_TIER_LABELS[filters.minTier] || filters.minTier} 이상`);
+  if (filters.tierMode === 'max') parts.push(`${PROBLEM_TIER_LABELS[filters.maxTier] || filters.maxTier} 이하`);
+  if (filters.tierMode === 'range') parts.push(`${PROBLEM_TIER_LABELS[filters.minTier] || filters.minTier}~${PROBLEM_TIER_LABELS[filters.maxTier] || filters.maxTier}`);
+  if (filters.tierMode === 'only' && filters.allowedTiers.length) {
+    parts.push(filters.allowedTiers.map((tier) => PROBLEM_TIER_LABELS[tier] || tier).join(', '));
+  }
+  if (filters.bannedTiers.length) parts.push(`밴 티어 ${filters.bannedTiers.map((tier) => PROBLEM_TIER_LABELS[tier] || tier).join(', ')}`);
+  if (filters.requiredTags.length) parts.push(`선택 태그 ${filters.requiredTags.join(', ')}`);
+  if (filters.bannedTags.length) parts.push(`밴 태그 ${filters.bannedTags.join(', ')}`);
+  return parts.length ? parts.join(' · ') : '자동 추천 조건';
 }
 
 function timeLeft(room) {
@@ -187,10 +249,13 @@ export default function AlgorithmBattlePage() {
   // ── 로비 상태
   const [rooms, setRooms] = useState([]);
   const [battleModes, setBattleModes] = useState(FALLBACK_MODES);
+  const [bannableTags, setBannableTags] = useState(FALLBACK_BANNABLE_TAGS);
+  const [problemTiers, setProblemTiers] = useState(FALLBACK_PROBLEM_TIERS);
   const [selectedMode, setSelectedMode] = useState('duel-effects');
   const [selectedDuration, setSelectedDuration] = useState(300);
   const [preferredLanguage, setPreferredLanguage] = useState(user?.defaultLanguage || 'python');
   const [isPrivate, setIsPrivate] = useState(false);
+  const [problemFilters, setProblemFilters] = useState(DEFAULT_PROBLEM_FILTERS);
   const [creating, setCreating] = useState(false);
   const [joinCode, setJoinCode] = useState('');
   const [joiningByCode, setJoiningByCode] = useState(false);
@@ -264,6 +329,19 @@ export default function AlgorithmBattlePage() {
     () => Object.values(territoryClaims).filter((uid) => uid === user?.id).length,
     [territoryClaims, user?.id]
   );
+  const tagGroups = useMemo(() => {
+    const available = new Set(bannableTags);
+    const groups = TAG_GROUP_LABELS
+      .map((group) => ({ ...group, tags: group.tags.filter((tag) => available.has(tag)) }))
+      .filter((group) => group.tags.length > 0);
+    const groupedTags = new Set(groups.flatMap((group) => group.tags));
+    const extras = bannableTags.filter((tag) => !groupedTags.has(tag));
+    return extras.length > 0 ? [...groups, { label: '기타', tags: extras }] : groups;
+  }, [bannableTags]);
+  const normalizedProblemFilters = useMemo(
+    () => sanitizeProblemFilters(problemFilters, problemTiers),
+    [problemFilters, problemTiers]
+  );
 
   // ── 방 목록 폴링
   const loadRooms = useCallback(async () => {
@@ -287,6 +365,11 @@ export default function AlgorithmBattlePage() {
     try {
       const { data } = await api.get('/battles/modes');
       if (Array.isArray(data.modes) && data.modes.length) setBattleModes(data.modes);
+      if (Array.isArray(data.bannableTags) && data.bannableTags.length) setBannableTags(data.bannableTags);
+      if (Array.isArray(data.problemTiers) && data.problemTiers.length) {
+        setProblemTiers(data.problemTiers);
+        setProblemFilters((prev) => sanitizeProblemFilters(prev, data.problemTiers));
+      }
     } catch { setBattleModes(FALLBACK_MODES); }
   }, []);
 
@@ -417,17 +500,44 @@ export default function AlgorithmBattlePage() {
     socketRef.current.emit('battle:activity', { roomId, activity, message });
   }, [roomId]);
 
+  const updateProblemFilters = (patch) => {
+    setProblemFilters((prev) => sanitizeProblemFilters({ ...prev, ...patch }, problemTiers));
+  };
+
+  const toggleFilterTier = (kind, tier) => {
+    setProblemFilters((prev) => sanitizeProblemFilters({
+      ...prev,
+      [kind]: toggleListValue(prev[kind] || [], tier),
+      ...(kind === 'bannedTiers' ? { allowedTiers: (prev.allowedTiers || []).filter((item) => item !== tier) } : {}),
+      ...(kind === 'allowedTiers' ? { bannedTiers: (prev.bannedTiers || []).filter((item) => item !== tier) } : {}),
+    }, problemTiers));
+  };
+
+  const toggleFilterTag = (kind, tag) => {
+    setProblemFilters((prev) => {
+      const otherKind = kind === 'requiredTags' ? 'bannedTags' : 'requiredTags';
+      return {
+        ...prev,
+        [kind]: toggleListValue(prev[kind] || [], tag),
+        [otherKind]: (prev[otherKind] || []).filter((item) => item !== tag),
+      };
+    });
+  };
+
   // ── 방 만들기
   const createRoom = async () => {
     setCreating(true);
     try {
       const modeConfig = battleModes.find((m) => m.key === selectedMode);
+      const safeFilters = sanitizeProblemFilters(normalizedProblemFilters, problemTiers);
       const { data } = await api.post('/battles/rooms', {
         mode: selectedMode,
         maxPlayers: 2,
         durationSec: modeConfig?.key === 'territory' ? 600 : selectedDuration,
         isPrivate,
         preferredLanguage,
+        bannedTags: safeFilters.bannedTags,
+        problemFilters: safeFilters,
       });
       if (data.room?.inviteCode && navigator?.clipboard?.writeText) {
         navigator.clipboard.writeText(data.room.inviteCode).then(() => {
@@ -592,12 +702,15 @@ export default function AlgorithmBattlePage() {
   const createAgain = async () => {
     if (!currentRoom) { navigate('/battle'); return; }
     try {
+      const previousFilters = config?.problemFilters || {};
       const { data } = await api.post('/battles/rooms', {
         mode: currentRoom.mode,
         maxPlayers: currentRoom.maxPlayers || 2,
         durationSec: currentRoom.durationSec,
         isPrivate: Boolean(currentRoom.isPrivate),
         preferredLanguage: currentRoom.preferredLanguage || language,
+        bannedTags: previousFilters.bannedTags || config?.bannedTags || [],
+        problemFilters: previousFilters,
       });
       navigate(`/battle/${data.room.id}`);
     } catch (err) {
@@ -611,6 +724,7 @@ export default function AlgorithmBattlePage() {
   // ════════════════════════════════════════════════
   if (!roomId) {
     const isTerritorySelected = selectedMode === 'territory';
+    const filterSummary = getProblemFilterSummary(normalizedProblemFilters);
     return (
       <div className="ab-page">
         <div className="ab-header">
@@ -631,7 +745,12 @@ export default function AlgorithmBattlePage() {
                 type="button"
                 key={mode.key}
                 className={`ab-mode ${selectedMode === mode.key ? 'active' : ''}`}
-                onClick={() => setSelectedMode(mode.key)}
+                onClick={() => {
+                  setSelectedMode(mode.key);
+                  if (mode.key === 'draft-ban' && normalizedProblemFilters.tierMode === 'auto') {
+                    updateProblemFilters({ tierMode: 'range' });
+                  }
+                }}
               >
                 {mode.itemsEnabled ? <Shield size={16} /> : <Swords size={16} />}
                 <div>
@@ -644,13 +763,13 @@ export default function AlgorithmBattlePage() {
 
           {/* 선택된 모드 규칙 */}
           {battleModes.find(m => m.key === selectedMode)?.rules && (
-            <div style={{ background:'var(--bg)', border:'1px solid var(--border)', borderRadius:10, padding:'10px 14px', marginTop:8 }}>
-              <div style={{ fontSize:12, fontWeight:700, color:'var(--text2)', marginBottom:6 }}>
+            <div className="ab-rules-card">
+              <div className="ab-rules-title">
                 📋 {battleModes.find(m => m.key === selectedMode)?.title} 규칙
               </div>
-              <ul style={{ margin:0, paddingLeft:18, display:'flex', flexDirection:'column', gap:3 }}>
+              <ul>
                 {(battleModes.find(m => m.key === selectedMode)?.rules || []).map((rule, i) => (
-                  <li key={i} style={{ fontSize:12, color:'var(--text2)' }}>{rule}</li>
+                  <li key={i}>{rule}</li>
                 ))}
               </ul>
             </div>
@@ -699,6 +818,137 @@ export default function AlgorithmBattlePage() {
                 {isPrivate ? <><Lock size={14} /> 비밀방 ON</> : <><Unlock size={14} /> 공개방</>}
               </button>
               {isPrivate && <p className="ab-private-hint">방 생성 후 초대 코드를 공유하세요.</p>}
+            </div>
+          </div>
+
+          <div className={`ab-filter-panel ${selectedMode === 'draft-ban' ? 'featured' : ''}`}>
+            <div className="ab-filter-head">
+              <div>
+                <strong>문제 조건</strong>
+                <span>{filterSummary}</span>
+              </div>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() => setProblemFilters(DEFAULT_PROBLEM_FILTERS)}
+              >
+                초기화
+              </button>
+            </div>
+
+            <div className="ab-filter-grid">
+              <div className="ab-filter-block">
+                <label>티어 범위</label>
+                <div className="ab-segmented">
+                  {[
+                    ['auto', '자동'],
+                    ['min', '이상'],
+                    ['max', '이하'],
+                    ['range', '구간'],
+                    ['only', '선택'],
+                  ].map(([key, label]) => (
+                    <button
+                      type="button"
+                      key={key}
+                      className={normalizedProblemFilters.tierMode === key ? 'active' : ''}
+                      onClick={() => updateProblemFilters({ tierMode: key })}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                {normalizedProblemFilters.tierMode !== 'auto' && normalizedProblemFilters.tierMode !== 'only' && (
+                  <div className="ab-tier-select-row">
+                    {['min', 'range'].includes(normalizedProblemFilters.tierMode) && (
+                      <select value={normalizedProblemFilters.minTier} onChange={(e) => updateProblemFilters({ minTier: e.target.value })}>
+                        {problemTiers.map((tier) => <option key={tier} value={tier}>{PROBLEM_TIER_LABELS[tier] || tier} 이상</option>)}
+                      </select>
+                    )}
+                    {normalizedProblemFilters.tierMode === 'range' && <span>~</span>}
+                    {['max', 'range'].includes(normalizedProblemFilters.tierMode) && (
+                      <select value={normalizedProblemFilters.maxTier} onChange={(e) => updateProblemFilters({ maxTier: e.target.value })}>
+                        {problemTiers.map((tier) => <option key={tier} value={tier}>{PROBLEM_TIER_LABELS[tier] || tier} 이하</option>)}
+                      </select>
+                    )}
+                  </div>
+                )}
+                {normalizedProblemFilters.tierMode === 'only' && (
+                  <div className="ab-chip-list">
+                    {problemTiers.map((tier) => (
+                      <button
+                        type="button"
+                        key={tier}
+                        className={normalizedProblemFilters.allowedTiers.includes(tier) ? 'active include' : ''}
+                        onClick={() => toggleFilterTier('allowedTiers', tier)}
+                      >
+                        {PROBLEM_TIER_LABELS[tier] || tier}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="ab-filter-block">
+                <label>밴 티어</label>
+                <div className="ab-chip-list">
+                  {problemTiers.map((tier) => (
+                    <button
+                      type="button"
+                      key={tier}
+                      className={normalizedProblemFilters.bannedTiers.includes(tier) ? 'active danger' : ''}
+                      onClick={() => toggleFilterTier('bannedTiers', tier)}
+                    >
+                      {PROBLEM_TIER_LABELS[tier] || tier}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="ab-filter-block wide">
+                <label>특정 알고리즘 태그만</label>
+                <div className="ab-tag-groups">
+                  {tagGroups.map((group) => (
+                    <div key={`required-${group.label}`} className="ab-tag-group">
+                      <span>{group.label}</span>
+                      <div className="ab-chip-list">
+                        {group.tags.map((tag) => (
+                          <button
+                            type="button"
+                            key={tag}
+                            className={normalizedProblemFilters.requiredTags.includes(tag) ? 'active include' : ''}
+                            onClick={() => toggleFilterTag('requiredTags', tag)}
+                          >
+                            {tag}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="ab-filter-block wide">
+                <label>밴할 알고리즘 태그</label>
+                <div className="ab-tag-groups">
+                  {tagGroups.map((group) => (
+                    <div key={`banned-${group.label}`} className="ab-tag-group">
+                      <span>{group.label}</span>
+                      <div className="ab-chip-list">
+                        {group.tags.map((tag) => (
+                          <button
+                            type="button"
+                            key={tag}
+                            className={normalizedProblemFilters.bannedTags.includes(tag) ? 'active danger' : ''}
+                            onClick={() => toggleFilterTag('bannedTags', tag)}
+                          >
+                            {tag}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
 

@@ -26,6 +26,7 @@ export default function SubmissionsPage() {
   };
   const RESULT_FILTERS = [['all',t('allOption')],['correct',t('submissionsCorrect')],['wrong',t('submissionsWrongShort')],['timeout',t('submissionsTimeoutShort')],['error',t('submissionsErrorShort')],['compile',t('submissionsCompileShort')]];
   const [scope, setScope] = useState(location.state?.scope || 'me');
+  const [targetUserId] = useState(location.state?.userId || null);
   const [query, setQuery] = useState('');
   const [resultF, setResultF] = useState(location.state?.result || 'all');
   const [langF, setLangF] = useState('all');
@@ -53,6 +54,7 @@ export default function SubmissionsPage() {
         result: resultF,
         lang: langF,
         limit: 100,
+        userId: targetUserId || undefined,
       },
     }).then((res) => {
       if (active) setRows(res.data || []);
@@ -65,7 +67,7 @@ export default function SubmissionsPage() {
       if (active) setLoading(false);
     });
     return () => { active = false; };
-  }, [scope, query, resultF, langF]);
+  }, [scope, query, resultF, langF, targetUserId]);
 
   const langs = useMemo(() => ['all', ...new Set(rows.map((row) => row.lang).filter(Boolean))], [rows]);
   const total = rows.length;
@@ -129,11 +131,11 @@ export default function SubmissionsPage() {
       const { data } = await api.post('/ai/submission-coach', { submissionId: row.id });
       setCoachById((prev) => ({ ...prev, [row.id]: data }));
     } catch (err) {
-      toast?.show(err.response?.data?.message || 'AI 오답 코치를 불러오지 못했습니다.', 'error');
+      toast?.show(err.response?.data?.message || t('submissionsCoachLoadFailed'), 'error');
     } finally {
       setCoachLoading((prev) => ({ ...prev, [row.id]: false }));
     }
-  }, [coachById, coachLoading, toast]);
+  }, [coachById, coachLoading, t, toast]);
 
   useEffect(() => {
     if (!highlightId || handledHighlightId === highlightId || rows.length === 0) return;
@@ -327,7 +329,7 @@ export default function SubmissionsPage() {
                       }}
                       disabled={coachLoading[row.id]}
                     >
-                      {coachLoading[row.id] ? '분석 중' : coach ? '코치 완료' : 'AI 오답 코치'}
+                      {coachLoading[row.id] ? t('submissionsCoachAnalyzing') : coach ? t('submissionsCoachDone') : t('submissionsCoachButton')}
                     </button>
                   )}
                 </div>
@@ -376,20 +378,20 @@ export default function SubmissionsPage() {
                               fontSize:12, fontWeight:800, fontFamily:'inherit',
                             }}
                           >
-                            AI로 재도전 방향 보기
+                            {t('submissionsCoachRetryButton')}
                           </button>
                         )}
-                        {coachLoading[row.id] && <div style={{ fontSize:13, color:'var(--text3)' }}>AI가 오답 원인을 정리하는 중입니다.</div>}
+                        {coachLoading[row.id] && <div style={{ fontSize:13, color:'var(--text3)' }}>{t('submissionsCoachLoading')}</div>}
                         {coach && (
                           <div style={{ display:'grid', gap:10 }}>
                             <div style={{ fontSize:13, fontWeight:800, color:'var(--text)' }}>{coach.summary}</div>
                             <div style={{ fontSize:12, color:'var(--text2)', lineHeight:1.7 }}>
-                              <strong style={{ color:'var(--yellow)' }}>가능성 높은 원인:</strong> {coach.likelyCause}
+                              <strong style={{ color:'var(--yellow)' }}>{t('submissionsLikelyCause')}</strong> {coach.likelyCause}
                             </div>
                             <ol style={{ margin:'0 0 0 18px', padding:0, color:'var(--text2)', fontSize:12, lineHeight:1.8 }}>
                               {(coach.nextSteps || []).slice(0, 4).map((step, index) => <li key={index}>{step}</li>)}
                             </ol>
-                            <div style={{ fontSize:12, color:'var(--text3)' }}>다음 테스트 포커스: {coach.testFocus}</div>
+                            <div style={{ fontSize:12, color:'var(--text3)' }}>{t('submissionsNextTestFocus').replace('{focus}', coach.testFocus || '-')}</div>
                             <button
                               onClick={() => navigate(`/problems/${coach.retryProblemId || row.problemId}`)}
                               style={{
@@ -398,7 +400,7 @@ export default function SubmissionsPage() {
                                 fontFamily:'inherit',
                               }}
                             >
-                              같은 문제 다시 풀기
+                              {t('submissionsRetrySameProblem')}
                             </button>
                           </div>
                         )}

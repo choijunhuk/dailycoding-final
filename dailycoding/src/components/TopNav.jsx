@@ -48,9 +48,9 @@ const NAV_GROUPS = [
     items: [
       { path: '/problems',        labelKey: 'problems',       Icon: BookOpen },
       { path: '/sheets',          labelKey: 'sheets',         Icon: BookOpen },
-      { path: '/problem-sets',    label: '내 문제 세트',       Icon: BookOpen },
+      { path: '/problem-sets',    labelKey: 'myProblemSets',  Icon: BookOpen },
       { path: '/submissions',     labelKey: 'submissions',    Icon: FileText },
-      { path: '/submit-problem',  label: '문제 제출하기',     Icon: FileText },
+      { path: '/submit-problem',  labelKey: 'submitProblemNav', Icon: FileText },
     ],
   },
   {
@@ -61,8 +61,8 @@ const NAV_GROUPS = [
       { path: '/exams',   labelKey: 'exams',   Icon: Trophy },
     ],
   },
-  { key: 'compete', label: '대결', Icon: Swords, path: '/compete' },
-  { key: 'game',    label: '게임',        Icon: Sparkles,      path: '/game' },
+  { key: 'compete', labelKey: 'compete', Icon: Swords, path: '/compete' },
+  { key: 'game',    labelKey: 'game', Icon: Sparkles, path: '/game' },
   { key: 'ranking', labelKey: 'ranking', Icon: BarChart2,     path: '/ranking' },
   {
     key: 'community', labelKey: 'community', Icon: MessageSquare,
@@ -323,7 +323,7 @@ export default function TopNav() {
               background:currentPath==='/team'?'rgba(255,215,0,.1)':'transparent',
               color:currentPath==='/team'?'#ffd700':'var(--text3)',
               transition:'all .15s',display:'flex',alignItems:'center',gap:5,
-            }}><Users size={14} />{subTier === 'team' ? t('team') : '소속'}</button>
+            }}><Users size={14} />{subTier === 'team' ? t('team') : t('affiliation')}</button>
           )}
         </div>
 
@@ -376,7 +376,7 @@ export default function TopNav() {
             <div ref={searchRef} style={{position:'relative'}}>
               <button
                 onClick={()=>{setShowSearch(p=>!p);setShowNotif(false);setShowUser(false);}}
-                aria-label="검색"
+                aria-label={t('globalSearchAria')}
                 style={{
                   width:32,height:32,borderRadius:8,border:'1px solid var(--border)',
                   background:showSearch?'var(--bg)':'var(--bg3)',cursor:'pointer',
@@ -396,7 +396,7 @@ export default function TopNav() {
                       value={searchQuery}
                       onChange={e=>setSearchQuery(e.target.value)}
                       onKeyDown={e=>{ if(e.key==='Escape'){setShowSearch(false);} }}
-                      placeholder="문제, 커뮤니티 검색..."
+                      placeholder={t('globalSearchPlaceholder')}
                       style={{
                         width:'100%',background:'var(--bg3)',border:'1px solid var(--border)',
                         borderRadius:8,padding:'7px 12px',color:'var(--text)',fontSize:13,
@@ -404,15 +404,15 @@ export default function TopNav() {
                       }}
                     />
                   </div>
-                  {searchLoading&&<div style={{padding:'16px',textAlign:'center',color:'var(--text3)',fontSize:12}}>검색 중...</div>}
+                  {searchLoading&&<div style={{padding:'16px',textAlign:'center',color:'var(--text3)',fontSize:12}}>{t('globalSearchLoading')}</div>}
                   {!searchLoading&&searchQuery&&searchResults.problems.length===0&&searchResults.posts.length===0&&(
-                    <div style={{padding:'16px',textAlign:'center',color:'var(--text3)',fontSize:12}}>결과 없음</div>
+                    <div style={{padding:'16px',textAlign:'center',color:'var(--text3)',fontSize:12}}>{t('globalSearchNoResults')}</div>
                   )}
                   {!searchLoading&&(searchResults.problems.length>0||searchResults.posts.length>0)&&(
                     <div style={{maxHeight:320,overflowY:'auto'}}>
                       {searchResults.problems.length>0&&(
                         <>
-                          <div style={{padding:'6px 12px 4px',fontSize:10,fontWeight:700,color:'var(--text3)',textTransform:'uppercase',letterSpacing:1}}>문제</div>
+                          <div style={{padding:'6px 12px 4px',fontSize:10,fontWeight:700,color:'var(--text3)',textTransform:'uppercase',letterSpacing:1}}>{t('globalSearchProblems')}</div>
                           {searchResults.problems.map(p=>(
                             <div key={p.id} onClick={()=>go(`/problems/${p.id}`)} style={{
                               padding:'9px 12px',cursor:'pointer',borderBottom:'1px solid var(--border)',transition:'background .15s',
@@ -428,7 +428,7 @@ export default function TopNav() {
                       )}
                       {searchResults.posts.length>0&&(
                         <>
-                          <div style={{padding:'6px 12px 4px',fontSize:10,fontWeight:700,color:'var(--text3)',textTransform:'uppercase',letterSpacing:1}}>커뮤니티</div>
+                          <div style={{padding:'6px 12px 4px',fontSize:10,fontWeight:700,color:'var(--text3)',textTransform:'uppercase',letterSpacing:1}}>{t('globalSearchCommunity')}</div>
                           {searchResults.posts.map(p=>(
                             <div key={p.id} onClick={()=>go(`/community/${p.board_type}/${p.id}`)} style={{
                               padding:'9px 12px',cursor:'pointer',transition:'background .15s',
@@ -445,7 +445,7 @@ export default function TopNav() {
                     </div>
                   )}
                   {!searchQuery&&(
-                    <div style={{padding:'16px',textAlign:'center',color:'var(--text3)',fontSize:12}}>문제 제목, 태그, 커뮤니티 글 검색</div>
+                    <div style={{padding:'16px',textAlign:'center',color:'var(--text3)',fontSize:12}}>{t('globalSearchEmptyHint')}</div>
                   )}
                 </div>
               )}
@@ -490,7 +490,7 @@ export default function TopNav() {
                       }} style={{fontSize:11,color:'var(--blue)',background:'none',border:'none',cursor:'pointer',padding:0}}>
                         {t('markAllRead')}
                       </button>
-                      <button onClick={clearAllNotifications} title="전체 삭제" aria-label="알림 전체 삭제" style={{
+                      <button onClick={clearAllNotifications} title={t('deleteAllNotifications')} aria-label={t('deleteAllNotifications')} style={{
                         background:'none',border:'none',cursor:'pointer',padding:0,
                         color:'var(--text3)',display:'flex',alignItems:'center',
                       }}>
@@ -569,7 +569,7 @@ export default function TopNav() {
                 </div>
                 {[
                   {labelKey:'myProfile', Icon: UserIcon, path:'/profile'},
-                  {label:'보상 보관함', Icon: Trophy, path:'/rewards'},
+                  {labelKey:'rewardInventory', Icon: Trophy, path:'/rewards'},
                   {labelKey:'settings',  Icon: Settings, path:'/settings'},
                   {labelKey:'submissions', Icon: FileText, path:'/submissions'},
                   {labelKey:'pricing',   Icon: CreditCard, path:'/pricing'},
@@ -627,7 +627,7 @@ export default function TopNav() {
         )}
         {user && (
           <button className={`topnav-mobile-btn${currentPath==='/team'?' active':''}`} onClick={()=>go('/team')}>
-            <Users size={16} />{subTier === 'team' ? t('team') : '소속'}
+            <Users size={16} />{subTier === 'team' ? t('team') : t('affiliation')}
           </button>
         )}
         <div style={{borderTop:'1px solid var(--border)',marginTop:4,paddingTop:4}}>

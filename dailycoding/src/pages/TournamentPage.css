@@ -36,6 +36,9 @@
 .tournament-create {
   padding: 12px;
   align-items: center;
+  width: min(100%, 680px);
+  flex-direction: column;
+  align-items: stretch;
 }
 
 .tournament-create input,
@@ -45,6 +48,93 @@
   color: var(--text);
   border-radius: 8px;
   padding: 8px 10px;
+}
+
+.tournament-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  min-width: min(100%, 520px);
+}
+
+.tournament-toolbar,
+.tournament-create-row,
+.tournament-tier-row,
+.tournament-private-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tournament-create-row input {
+  min-width: min(280px, 100%);
+  flex: 1 1 260px;
+}
+
+.tournament-create-row select {
+  flex: 0 0 auto;
+}
+
+.tournament-advanced {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tournament-private-row {
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.tournament-private-row input[type="password"] {
+  width: min(180px, 100%);
+}
+
+.tournament-tier-row {
+  font-size: 13px;
+}
+
+.tournament-tier-row > span,
+.tournament-ban-section > div,
+.tournament-tag-row > span {
+  color: var(--text3);
+}
+
+.tournament-ban-section {
+  display: grid;
+  gap: 8px;
+  font-size: 13px;
+  min-width: 0;
+}
+
+.tournament-tag-row {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+}
+
+.tournament-tag-row > span {
+  padding-top: 4px;
+  font-size: 11px;
+}
+
+.tournament-tag-row label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0 8px 6px 0;
+  cursor: pointer;
+  color: var(--text2);
+  font-size: 12px;
+  line-height: 1.45;
+  word-break: keep-all;
 }
 
 .tournament-layout {
@@ -201,6 +291,20 @@
 
   .tournament-list {
     width: 100% !important;
+  }
+
+  .tournament-side {
+    align-items: stretch;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .tournament-tag-row {
+    grid-template-columns: 1fr;
+  }
+
+  .tournament-tag-row > span {
+    padding-top: 0;
   }
 
   .tournament-guide-steps {

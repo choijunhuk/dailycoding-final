@@ -206,7 +206,7 @@ router.get('/profile/:id', auth, async (req, res) => {
     }
 
     const anonClause = isSelf ? '' : ' AND is_anonymous = 0';
-    const [statsRow, followStats, isFollowing, replyStatsRow, solvedTierRows, progressionRow, battleRows, collaborationRow] = await Promise.all([
+    const [statsRow, followStats, isFollowing, replyStatsRow, solvedTierRows, solvedProblemRows, progressionRow, battleRows, collaborationRow] = await Promise.all([
       queryOne(
         `SELECT COUNT(*) AS post_count, COALESCE(SUM(like_count),0) AS total_likes
          FROM posts WHERE user_id = ?${anonClause}`,
@@ -236,6 +236,18 @@ router.get('/profile/:id', auth, async (req, res) => {
          GROUP BY p.tier`,
         [id]
       ),
+      query(
+        `SELECT p.id, p.title, p.tier, p.difficulty,
+                MAX(s.submitted_at) AS solved_at,
+                COUNT(*) AS correct_count
+         FROM submissions s
+         JOIN problems p ON p.id = s.problem_id
+         WHERE s.user_id = ? AND s.result = 'correct'
+         GROUP BY p.id, p.title, p.tier, p.difficulty
+         ORDER BY solved_at DESC
+         LIMIT 120`,
+        [id]
+      ).catch(() => []),
       queryOne('SELECT level, xp FROM user_progression WHERE user_id = ?', [id]).catch(() => null),
       query('SELECT * FROM battle_results WHERE user_id = ? ORDER BY created_at DESC LIMIT 500', [id]).catch(() => []),
       optionalQueryOne(
@@ -249,6 +261,14 @@ router.get('/profile/:id', auth, async (req, res) => {
       acc[row.tier || 'unranked'] = Number(row.cnt) || 0;
       return acc;
     }, {});
+    const solvedProblems = (solvedProblemRows || []).map((row) => ({
+      id: Number(row.id),
+      title: row.title || `문제 #${row.id}`,
+      tier: row.tier || 'unranked',
+      difficulty: row.difficulty ?? null,
+      solvedAt: row.solved_at || row.solvedAt || null,
+      correctCount: Number(row.correct_count || row.correctCount || 1),
+    }));
 
     const parsedSocialLinks = safeParseJSON(user.social_links, {});
     const parsedTechStack = safeParseJSON(user.tech_stack, []);
@@ -300,6 +320,7 @@ router.get('/profile/:id', auth, async (req, res) => {
       following: followStats?.following ?? 0,
       isFollowing: isSelf ? false : !!isFollowing,
       solvedTierCounts,
+      solvedProblems,
       learningActivity: {
         solvedProblems: user.solved_count ?? 0,
         xpLevel: progressionRow?.level ?? 1,
