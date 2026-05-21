@@ -1812,7 +1812,7 @@ const STRINGS = {
 };
 
 export function LangProvider({ children }) {
-  const [lang, setLang] = useState(() => localStorage.getItem('dc_lang') || 'en');
+  const [lang, setLang] = useState(() => localStorage.getItem('dc_lang') || 'ko');
 
   const value = useMemo(() => ({
     lang,
