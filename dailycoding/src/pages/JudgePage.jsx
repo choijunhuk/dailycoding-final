@@ -800,7 +800,7 @@ export default function JudgePage() {
               maxWidth:520,
             }}>
               <div style={{ fontSize: 30, marginBottom: 10 }}>⚠️</div>
-              <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 8 }}>Cannot open problem</div>
+              <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 8 }}>문제를 열 수 없습니다</div>
               <div style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.7, marginBottom: 16 }}>
                 {problemError}
               </div>
@@ -942,12 +942,12 @@ export default function JudgePage() {
           {leftTab === 'solutions' && (
             <div className="prob-content fade-in">
               <h4>💡 Other Solutions</h4>
-              <p style={{fontSize:12,color:'var(--text3)',marginBottom:12}}>Solve this problem first to view other solutions.</p>
+              <p style={{fontSize:12,color:'var(--text3)',marginBottom:12}}>다른 풀이를 보려면 이 문제를 먼저 풀어야 합니다.</p>
               {!solutions || solutions === 'locked' ? (
                 solutions === 'locked' ? (
                   <div style={{padding:'24px',textAlign:'center',background:'var(--bg3)',borderRadius:10,border:'1px solid var(--border)'}}>
                     <div style={{fontSize:32,marginBottom:8}}>🔒</div>
-                    <p style={{fontSize:13,color:'var(--text2)'}}>Solve this problem first<br/>to view other solutions!</p>
+                    <p style={{fontSize:13,color:'var(--text2)'}}>다른 풀이를 보려면<br/>이 문제를 먼저 풀어야 합니다!</p>
                   </div>
                 ) : (
                   <button className="btn btn-primary btn-sm" onClick={loadSolutions} disabled={solLoading}>
@@ -1313,9 +1313,9 @@ export default function JudgePage() {
                   {/* Analysis Cards */}
                   <div className="analysis-grid">
                     {[
-                      { label: 'Correctness', val: aiReview.correctness, color: 'var(--blue)', bg: 'rgba(56,139,253,0.1)', border: 'rgba(56,139,253,0.15)', icon: '✓' },
-                      { label: 'Time Complexity', val: aiReview.timeComplexity, color: 'var(--purple)', bg: 'rgba(163,113,247,0.1)', border: 'rgba(163,113,247,0.15)', icon: '⏱' },
-                      { label: 'Space Complexity', val: aiReview.spaceComplexity, color: 'var(--orange)', bg: 'rgba(255,166,87,0.1)', border: 'rgba(255,166,87,0.15)', icon: '💾' },
+                      { label: '정확도', val: aiReview.correctness, color: 'var(--blue)', bg: 'rgba(56,139,253,0.1)', border: 'rgba(56,139,253,0.15)', icon: '✓' },
+                      { label: '시간 복잡도', val: aiReview.timeComplexity, color: 'var(--purple)', bg: 'rgba(163,113,247,0.1)', border: 'rgba(163,113,247,0.15)', icon: '⏱' },
+                      { label: '공간 복잡도', val: aiReview.spaceComplexity, color: 'var(--orange)', bg: 'rgba(255,166,87,0.1)', border: 'rgba(255,166,87,0.15)', icon: '💾' },
                     ].map(c => (
                       <div key={c.label} className="ai-review-card" style={{
                         background: c.bg, border: `1px solid ${c.border}`

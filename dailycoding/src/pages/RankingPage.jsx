@@ -279,7 +279,7 @@ export default function RankingPage() {
         </h1>
         <p style={{ color: 'var(--text2)', fontSize: 13, margin: 0 }}>
           {['battle', 'collaboration', 'overall'].includes(mode)
-            ? (platformLoading ? '...' : `${rankers.length.toLocaleString(locale)}players ranked in the ${mode === 'battle' ? 'Battle' : mode === 'collaboration' ? 'Collaboration' : 'Overall'} leaderboard.`)
+            ? (platformLoading ? '...' : `${mode === 'battle' ? '배틀' : mode === 'collaboration' ? '협업' : '전체'} 리더보드에 ${rankers.length.toLocaleString(locale)}명이 등록되어 있습니다.`)
             : mode === 'season'
             ? (seasonLoading ? '...' : t('rankingSeasonSummary').replace('{season}', seasonPayload.season || t('rankingThisSeason')).replace('{count}', rankers.length.toLocaleString()))
             : (loading ? '...' : t('rankingGlobalSummary').replace('{count}', rankers.length.toLocaleString()))}

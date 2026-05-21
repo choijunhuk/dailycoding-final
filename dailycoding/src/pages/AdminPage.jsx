@@ -4,18 +4,20 @@ import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
 import api from '../api.js';
 import { useToast } from '../context/ToastContext.jsx';
+import { useLang } from '../context/LangContext.jsx';
 import { MIN_HIDDEN_TESTCASES } from '../data/problems';
 import { JUDGE_LANGUAGE_OPTIONS } from '../data/judgeLanguages.js';
+import { getDateLocale, pickLangText } from '../utils/languageMode.js';
 import './AdminPage.css';
 
 const TIER_OPTIONS = ['bronze','silver','gold','platinum','diamond'];
 const PROBLEM_TYPE_OPTIONS = [
-  { value: 'coding', label: 'Coding' },
-  { value: 'fill-blank', label: 'Fill in the Blank' },
-  { value: 'bug-fix', label: 'Bug Fix' },
-  { value: 'troubleshooting', label: 'Troubleshooting' },
-  { value: 'performance-fix', label: 'Performance Fix' },
-  { value: 'refactor-fix', label: 'Refactoring' },
+  { value: 'coding', ko: '일반 풀이', label: 'Coding' },
+  { value: 'fill-blank', ko: '빈칸 채우기', label: 'Fill in the Blank' },
+  { value: 'bug-fix', ko: '틀린부분 찾기', label: 'Bug Fix' },
+  { value: 'troubleshooting', ko: '트러블슈팅', label: 'Troubleshooting' },
+  { value: 'performance-fix', ko: '성능 개선', label: 'Performance Fix' },
+  { value: 'refactor-fix', ko: '리팩터링', label: 'Refactoring' },
 ];
 const TAG_OPTIONS  = ['수학','다이나믹 프로그래밍','그래프 이론','문자열','구현','소수','BFS','DFS','입출력','탐욕','정렬','이분 탐색','트리','스택/큐'];
 const TIER_COLORS  = { bronze:'#cd7f32', silver:'#c0c0c0', gold:'#ffd700', platinum:'#00e5cc', diamond:'#b9f2ff' };
@@ -58,6 +60,9 @@ export default function AdminPage() {
   const { isAdmin } = useAuth();
   const { addNotification, problems: ctxProblems, loadProblems, contests: ctxContests, loadContests } = useApp();
   const toast = useToast();
+  const { lang } = useLang();
+  const txt = (ko, en) => pickLangText(lang, ko, en);
+  const dateLocale = getDateLocale(lang);
   const [activeTab,    setActiveTab]    = useState('problems');
   const [problems,     setProblems]     = useState([]);
   const [contests,     setContests]     = useState([]);
@@ -138,26 +143,26 @@ export default function AdminPage() {
   }, [activeTab, communityFilter]);
 
   const handleCommunityApprove = async (id) => {
-    if (!window.confirm('Approve this problem and register it as an official problem?')) return;
+    if (!window.confirm('이 문제를 승인하고 공식 문제로 등록하시겠습니까?')) return;
     try {
       await api.post(`/community-problems/admin/${id}/approve`);
-      toast?.show('✅ Problem registered.', 'success');
+      toast?.show('✅ 문제가 등록되었습니다.', 'success');
       setCommunitySubmissions(s => s.filter(x => x.id !== id));
       setCommunityDetail(null);
     } catch (err) {
-      toast?.show(err.response?.data?.message || 'Approval failed', 'error');
+      toast?.show(err.response?.data?.message || '승인 실패', 'error');
     }
   };
 
   const handleCommunityReject = async (id) => {
     try {
       await api.post(`/community-problems/admin/${id}/reject`, { note: communityRejectNote });
-      toast?.show('Rejected.', 'success');
+      toast?.show('거절되었습니다.', 'success');
       setCommunitySubmissions(s => s.filter(x => x.id !== id));
       setCommunityDetail(null);
       setCommunityRejectNote('');
     } catch (err) {
-      toast?.show(err.response?.data?.message || 'Rejection failed', 'error');
+      toast?.show(err.response?.data?.message || '거절 실패', 'error');
     }
   };
 
@@ -382,14 +387,14 @@ export default function AdminPage() {
         const res = await api.post('/problems', payload);
         savedProblem = res.data;
         setProblems(p=>[res.data,...p]);
-        toast?.show(`🆕 "${form.title}" problem registered!`, 'success');
+        toast?.show(`🆕 "${form.title}" 문제 등록 완료!`, 'success');
         loadProblems();
       }
       if (isTroubleshootingForm && savedProblem?.id) {
         await api.post(`/admin/problems/${savedProblem.id}/troubleshooting`, buildTroubleshootingPayload());
       }
       setView('list'); setEditTarget(null); setForm(createEmptyForm()); setAiPreview(null); setAiPanel(false);
-    } catch (err) { toast?.show('❌ Save failed: '+(err.response?.data?.message||''), 'error'); }
+    } catch (err) { toast?.show('❌ 저장 실패: '+(err.response?.data?.message||''), 'error'); }
     setSaving(false);
   };
 
@@ -467,23 +472,23 @@ export default function AdminPage() {
     try {
       const { data } = await api.put('/admin/battle-settings', battleSettings);
       setBattleSettings(data);
-      toast?.show('⚔️ Battle settings applied immediately.', 'success');
+      toast?.show('⚔️ 배틀 설정이 즉시 적용되었습니다.', 'success');
     } catch (err) {
-      toast?.show(err.response?.data?.message || 'Failed to save battle settings', 'error');
+      toast?.show(err.response?.data?.message || '배틀 설정 저장 실패', 'error');
     } finally {
       setBattleSettingsSaving(false);
     }
   };
 
-  const handleDelete = (id, title) => setConfirmModal({ msg:`Delete problem "${title}"?`, onConfirm: async () => { try { await api.delete(`/problems/${id}`); setProblems(p=>p.filter(pr=>pr.id!==id)); loadProblems(); toast?.show('🗑 Problem deleted', 'info'); } catch(err) { toast?.show('❌ Delete failed: '+(err.response?.data?.message||err.message), 'error'); } } });
-  const handleDeleteContest = (id, name) => setConfirmModal({ msg:`Delete contest "${name}"?`, onConfirm: async () => { try { await api.delete(`/contests/${id}`); setContests(p=>p.filter(c=>c.id!==id)); loadContests(); toast?.show('🗑 Contest deleted', 'info'); } catch(err) { toast?.show('❌ Delete failed: '+(err.response?.data?.message||err.message), 'error'); } } });
+  const handleDelete = (id, title) => setConfirmModal({ msg:`문제 "${title}"을 삭제하시겠습니까?`, onConfirm: async () => { try { await api.delete(`/problems/${id}`); setProblems(p=>p.filter(pr=>pr.id!==id)); loadProblems(); toast?.show('🗑 문제 삭제됨', 'info'); } catch(err) { toast?.show('❌ 삭제 실패: '+(err.response?.data?.message||err.message), 'error'); } } });
+  const handleDeleteContest = (id, name) => setConfirmModal({ msg:`대회 "${name}"을 삭제하시겠습니까?`, onConfirm: async () => { try { await api.delete(`/contests/${id}`); setContests(p=>p.filter(c=>c.id!==id)); loadContests(); toast?.show('🗑 대회 삭제됨', 'info'); } catch(err) { toast?.show('❌ 삭제 실패: '+(err.response?.data?.message||err.message), 'error'); } } });
   const handleContestStart = async (id) => {
     try {
       await api.patch(`/contests/${id}/start`);
       setContests(p=>p.map(c=>c.id===id?{...c,status:'live'}:c));
       toast?.show('🔴 Contest started!', 'success');
     } catch {
-      toast?.show('Failed to start contest', 'error');
+      toast?.show('대회 시작 실패', 'error');
     }
   };
   const handleContestEnd = async (id) => {
@@ -492,7 +497,7 @@ export default function AdminPage() {
       setContests(p=>p.map(c=>c.id===id?{...c,status:'ended'}:c));
       toast?.show('🏁 Contest ended', 'info');
     } catch {
-      toast?.show('Failed to end contest', 'error');
+      toast?.show('대회 종료 실패', 'error');
     }
   };
   const handleRoleChange = async (uid, role) => {
@@ -500,10 +505,10 @@ export default function AdminPage() {
       await api.patch(`/auth/users/${uid}/role`,{role});
       setUsers(p=>p.map(u=>u.id===uid?{...u,role}:u));
     } catch {
-      toast?.show('Failed to change role', 'error');
+      toast?.show('역할 변경 실패', 'error');
     }
   };
-  const handleDeleteUser = (uid, name) => setConfirmModal({ msg:`Delete user "${name}"?`, onConfirm: async () => {
+  const handleDeleteUser = (uid, name) => setConfirmModal({ msg:`사용자 "${name}"을 삭제하시겠습니까?`, onConfirm: async () => {
     try {
       await api.delete(`/auth/users/${uid}`);
       setUsers(p=>p.filter(u=>u.id!==uid));
@@ -520,7 +525,7 @@ export default function AdminPage() {
     if (!pwInput || pwInput.length < 8) return;
     try {
       await api.patch(`/auth/users/${pwModal.uid}/reset-password`, { newPassword: pwInput });
-      toast?.show(`🔒 ${pwModal.name} password reset`, 'success');
+      toast?.show(`🔒 ${pwModal.name} 비밀번호 초기화 완료`, 'success');
       setPwModal(null);
     } catch (err) {
       toast?.show('❌ ' + (err.response?.data?.message || 'Failed'), 'error');
@@ -530,11 +535,11 @@ export default function AdminPage() {
   const handleClearCache = async (target) => {
     setClearing(target);
     try {
-      const labelMap = { all: 'All', leaderboards: 'Ranking', heatmaps: 'Activity', problems: 'Problem' };
+      const labelMap = { all: '전체', leaderboards: '랭킹', heatmaps: '활동', problems: '문제' };
       await api.post('/admin/cache/clear', { target });
-      toast?.show(`✅ ${labelMap[target] || target} cache cleared.`, 'success');
+      toast?.show(`✅ ${labelMap[target] || target} 캐시가 초기화되었습니다.`, 'success');
     } catch (err) {
-      toast?.show('❌ Failed to clear cache', 'error');
+      toast?.show('❌ 캐시 초기화 실패', 'error');
     } finally {
       setClearing(null);
     }
@@ -553,9 +558,9 @@ export default function AdminPage() {
       });
       const { data } = await api.get('/weekly');
       setWeeklyChallenge(data);
-      toast?.show('🏆 Weekly challenge has been set.', 'success');
+      toast?.show('🏆 이번 주 챌린지가 설정되었습니다.', 'success');
     } catch (err) {
-      toast?.show(err.response?.data?.message || 'Failed to set weekly challenge', 'error');
+      toast?.show(err.response?.data?.message || '주간 챌린지 설정 실패', 'error');
     } finally {
       setWeeklySaving(false);
     }
@@ -593,18 +598,18 @@ export default function AdminPage() {
     </div>
   );
 
-  const STATUS_LABELS = { live:'🔴 진행중', upcoming:'📅 대기', waiting:'📅 대기', ended:'🏁 종료' };
+  const STATUS_LABELS = { live:'🔴 Live', upcoming:'📅 Upcoming', waiting:'📅 Waiting', ended:'🏁 Ended' };
   const STATUS_COLORS = { live:'var(--red)', upcoming:'var(--yellow)', waiting:'var(--yellow)', ended:'var(--text3)' };
 
   // ── 목록 뷰
   if (view==='list') return (
     <div className="admin-page">
       <div className="admin-header fade-up">
-        <div><h1>👑 관리자 패널</h1><p>문제·대회·유저를 관리합니다.</p></div>
-        {activeTab==='problems' && <button className="btn btn-primary" onClick={()=>{setForm(createEmptyForm());setEditTarget(null);setAiPreview(null);setView('create');}}>+ 문제 만들기</button>}
+        <div><h1>👑 Admin Panel</h1><p>Manage problems, contests, and users.</p></div>
+        {activeTab==='problems' && <button className="btn btn-primary" onClick={()=>{setForm(createEmptyForm());setEditTarget(null);setAiPreview(null);setView('create');}}>+ 문제 추가</button>}
       </div>
       <div className="admin-tabs fade-up">
-        {[['problems','📝 문제'],['contests','🏆 대회'],['users','👥 유저'],['battle','⚔️ 배틀'],['stats','📊 통계'],['flagged','🛡️ 의심 제출'],['system','⚙️ 시스템'],['community','💡 제출 검토']].map(([k,l])=>(
+        {[['problems','📝 Problems'],['contests','🏆 Contests'],['users','👥 Users'],['battle','⚔️ Battle'],['stats','📊 Stats'],['flagged','🛡️ Flagged'],['system','⚙️ System'],['community','💡 Submissions']].map(([k,l])=>(
           <button key={k} className={`at-btn ${activeTab===k?'active':''}`} onClick={()=>setActiveTab(k)}>{l}</button>
         ))}
       </div>
@@ -615,12 +620,12 @@ export default function AdminPage() {
           {problems.length===0 ? (
             <div className="admin-empty">
               <div style={{fontSize:40}}>📝</div>
-              <p>아직 문제가 없어요. 직접 만들거나 AI로 생성해보세요!</p>
+              <p>문제가 없습니다. 직접 만들거나 AI로 생성하세요!</p>
               <button className="btn btn-primary btn-sm" onClick={()=>setView('create')}>문제 만들기</button>
             </div>
           ) : (
             <table className="admin-table">
-              <thead><tr><th style={{width:60}}>번호</th><th>제목</th><th style={{width:90}}>유형</th><th style={{width:90}}>티어</th><th style={{width:70}}>난이도</th><th style={{width:80}}>공개 범위</th><th style={{width:90}}>히든</th><th style={{width:90}}>제출</th><th style={{width:120}}>액션</th></tr></thead>
+              <thead><tr><th style={{width:60}}>#</th><th>제목</th><th style={{width:90}}>유형</th><th style={{width:90}}>티어</th><th style={{width:70}}>난이도</th><th style={{width:80}}>공개</th><th style={{width:90}}>숨김</th><th style={{width:90}}>제출</th><th style={{width:120}}>관리</th></tr></thead>
               <tbody>
                 {problems.map(p=>(
                   <tr key={p.id} className="at-row">
@@ -629,7 +634,7 @@ export default function AdminPage() {
                     <td><span className="tag" style={{fontSize:10,background:'var(--bg3)',color:'var(--text2)'}}>{p.problemType || 'coding'}</span></td>
                     <td><span style={{fontSize:11,fontWeight:700,fontFamily:'Space Mono,monospace',color:TIER_COLORS[p.tier]}}>● {p.tier}</span></td>
                     <td className="mono" style={{fontSize:12}}>{p.difficulty}/10</td>
-                    <td><span className="tag" style={{background:p.visibility==='contest'?'var(--purple)':'var(--bg3)',color:p.visibility==='contest'?'#fff':'var(--text2)',fontSize:10}}>{p.visibility==='contest'?'🏆 대회용':'🌍 전체'}</span></td>
+                    <td><span className="tag" style={{background:p.visibility==='contest'?'var(--purple)':'var(--bg3)',color:p.visibility==='contest'?'#fff':'var(--text2)',fontSize:10}}>{p.visibility==='contest'?'🏆 Contest':'🌍 All'}</span></td>
                     <td className="mono" style={{fontSize:12,color:(p.hiddenCount||0) >= MIN_HIDDEN_TESTCASES ? 'var(--green)' : 'var(--orange)'}}>{p.hiddenCount || 0}</td>
                     <td className="mono" style={{fontSize:12,color:'var(--text2)'}}>{p.submissions||0}</td>
                     <td><div style={{display:'flex',gap:5}}>
@@ -650,11 +655,11 @@ export default function AdminPage() {
           {contests.length===0 ? (
             <div className="admin-empty">
               <div style={{fontSize:40}}>🏆</div>
-              <p>등록된 대회가 없습니다.</p>
+              <p>등록된 대회 없음</p>
             </div>
           ) : (
             <table className="admin-table">
-              <thead><tr><th style={{width:40}}>ID</th><th>대회명</th><th style={{width:90}}>상태</th><th style={{width:70}}>참가자</th><th style={{width:80}}>시간</th><th style={{width:180}}>액션</th></tr></thead>
+              <thead><tr><th style={{width:40}}>ID</th><th>이름</th><th style={{width:90}}>상태</th><th style={{width:70}}>참가자</th><th style={{width:80}}>시간</th><th style={{width:180}}>관리</th></tr></thead>
               <tbody>
                 {contests.map(c=>(
                   <tr key={c.id} className="at-row">
@@ -662,11 +667,11 @@ export default function AdminPage() {
                     <td style={{fontWeight:600}}>{c.name}</td>
                     <td><span style={{fontSize:11,fontWeight:700,color:STATUS_COLORS[c.status]||'var(--text3)'}}>{STATUS_LABELS[c.status]||c.status}</span></td>
                     <td className="mono" style={{fontSize:12}}>{c.participants||0}/{c.max||20}</td>
-                    <td className="mono" style={{fontSize:12,color:'var(--text2)'}}>{c.duration||60}분</td>
+                    <td className="mono" style={{fontSize:12,color:'var(--text2)'}}>{c.duration||60}min</td>
                     <td><div style={{display:'flex',gap:5,flexWrap:'wrap'}}>
-                      {(c.status==='upcoming'||c.status==='waiting')&&<button className="btn btn-sm" style={{background:'rgba(86,211,100,.1)',color:'var(--green)',border:'1px solid rgba(86,211,100,.3)',fontSize:11}} onClick={()=>handleContestStart(c.id)}>▶ 시작</button>}
-                      {(c.status==='live'||c.status==='running')&&<button className="btn btn-sm" style={{background:'rgba(227,179,65,.1)',color:'var(--yellow)',border:'1px solid rgba(227,179,65,.3)',fontSize:11}} onClick={()=>handleContestEnd(c.id)}>⏹ 종료</button>}
-                      <button className="btn btn-sm" style={{background:'rgba(248,81,73,.1)',color:'var(--red)',border:'1px solid rgba(248,81,73,.3)',fontSize:11}} onClick={()=>handleDeleteContest(c.id,c.name)}>🗑 삭제</button>
+                      {(c.status==='upcoming'||c.status==='waiting')&&<button className="btn btn-sm" style={{background:'rgba(86,211,100,.1)',color:'var(--green)',border:'1px solid rgba(86,211,100,.3)',fontSize:11}} onClick={()=>handleContestStart(c.id)}>▶ Start</button>}
+                      {(c.status==='live'||c.status==='running')&&<button className="btn btn-sm" style={{background:'rgba(227,179,65,.1)',color:'var(--yellow)',border:'1px solid rgba(227,179,65,.3)',fontSize:11}} onClick={()=>handleContestEnd(c.id)}>⏹ End</button>}
+                      <button className="btn btn-sm" style={{background:'rgba(248,81,73,.1)',color:'var(--red)',border:'1px solid rgba(248,81,73,.3)',fontSize:11}} onClick={()=>handleDeleteContest(c.id,c.name)}>🗑 Delete</button>
                     </div></td>
                   </tr>
                 ))}
@@ -681,15 +686,15 @@ export default function AdminPage() {
         <div className="card fade-up" style={{overflow:'hidden'}}>
           <div style={{padding:'12px 16px',borderBottom:'1px solid var(--border)'}}>
             <input
-              placeholder="🔍 닉네임 또는 이메일 검색..."
+              placeholder="🔍 Search username or email..."
               value={userSearch}
               onChange={e=>setUserSearch(e.target.value)}
               style={{width:'100%',padding:'8px 12px',fontSize:13,borderRadius:8,border:'1px solid var(--border)',background:'var(--bg3)',color:'var(--text)'}}
             />
           </div>
-          {users.length===0 ? <div className="admin-empty"><p>유저 없음</p></div> : (
+          {users.length===0 ? <div className="admin-empty"><p>사용자 없음</p></div> : (
             <table className="admin-table">
-              <thead><tr><th style={{width:40}}>ID</th><th>닉네임</th><th>이메일</th><th style={{width:80}}>티어</th><th style={{width:80}}>레이팅</th><th style={{width:80}}>권한</th><th style={{width:110}}>액션</th></tr></thead>
+              <thead><tr><th style={{width:40}}>ID</th><th>닉네임</th><th>이메일</th><th style={{width:80}}>티어</th><th style={{width:80}}>레이팅</th><th style={{width:80}}>역할</th><th style={{width:110}}>관리</th></tr></thead>
               <tbody>
                 {users.filter(u=>!userSearch||u.username?.toLowerCase().includes(userSearch.toLowerCase())||u.email?.toLowerCase().includes(userSearch.toLowerCase())).map(u=>(
                   <tr key={u.id} className="at-row">
@@ -698,10 +703,10 @@ export default function AdminPage() {
                     <td style={{fontSize:12,color:'var(--text2)'}}>{u.email}</td>
                     <td><span style={{fontSize:11,fontWeight:700,fontFamily:'Space Mono,monospace',color:TIER_COLORS[u.tier]}}>● {u.tier}</span></td>
                     <td className="mono" style={{fontSize:12,color:'var(--blue)'}}>{u.rating}</td>
-                    <td><select value={u.role} onChange={e=>handleRoleChange(u.id,e.target.value)} style={{padding:'3px 6px',fontSize:12,width:'auto'}}><option value="user">일반</option><option value="admin">관리자</option></select></td>
+                    <td><select value={u.role} onChange={e=>handleRoleChange(u.id,e.target.value)} style={{padding:'3px 6px',fontSize:12,width:'auto'}}><option value="user">User</option><option value="admin">Admin</option></select></td>
                     <td style={{display:'flex',gap:4}}>
                       <button className="btn btn-sm" style={{background:'rgba(227,179,65,.1)',color:'var(--yellow)',border:'1px solid rgba(227,179,65,.3)',fontSize:11}} onClick={()=>handleResetPw(u.id,u.username)}>PW</button>
-                      <button className="btn btn-sm" style={{background:'rgba(248,81,73,.1)',color:'var(--red)',border:'1px solid rgba(248,81,73,.3)'}} onClick={()=>handleDeleteUser(u.id,u.username)}>삭제</button>
+                      <button className="btn btn-sm" style={{background:'rgba(248,81,73,.1)',color:'var(--red)',border:'1px solid rgba(248,81,73,.3)'}} onClick={()=>handleDeleteUser(u.id,u.username)}>Delete</button>
                     </td>
                   </tr>
                 ))}
@@ -715,23 +720,23 @@ export default function AdminPage() {
       {activeTab==='battle' && (
         <div className="fade-up" style={{maxWidth:720}}>
           <div className="card" style={{padding:20}}>
-            <h3 style={{marginBottom:8}}>⚔️ 배틀 문제 출제 설정</h3>
+            <h3 style={{marginBottom:8}}>⚔️ Battle Problem Settings</h3>
             <p style={{fontSize:13,color:'var(--text2)',marginBottom:16}}>
-              저장 즉시 새로 생성되는 배틀 방부터 반영됩니다.
+              Changes apply to newly created battle rooms immediately after saving.
             </p>
             <div className="cf-row">
               <div className="form-group" style={{flex:1}}>
-                <label>코딩 문제 수</label>
+                <label>코딩 문제</label>
                 <input type="number" min="1" max="8" value={battleSettings.codingCount}
                   onChange={e=>setBattleSettings(p=>({...p,codingCount:e.target.value}))} />
               </div>
               <div className="form-group" style={{flex:1}}>
-                <label>빈칸 채우기 수</label>
+                <label>빈칸 채우기 문제</label>
                 <input type="number" min="0" max="6" value={battleSettings.fillBlankCount}
                   onChange={e=>setBattleSettings(p=>({...p,fillBlankCount:e.target.value}))} />
               </div>
               <div className="form-group" style={{flex:1}}>
-                <label>틀린부분 찾기 수</label>
+                <label>버그 수정 문제</label>
                 <input type="number" min="0" max="6" value={battleSettings.bugFixCount}
                   onChange={e=>setBattleSettings(p=>({...p,bugFixCount:e.target.value}))} />
               </div>
@@ -757,10 +762,10 @@ export default function AdminPage() {
       {activeTab==='stats' && (
         <div className="admin-stats-grid fade-up">
           {[
-            {label:'총 유저', value:adminStats?.userStats?.total ?? '—', color:'var(--blue)', sub: adminStats ? `이번 주 +${adminStats.userStats.newThisWeek}` : ''},
-            {label:'오늘 제출', value:adminStats?.submissionStats?.totalToday ?? '—', color:'var(--green)', sub: adminStats ? `정답률 ${adminStats.submissionStats.correctRate}%` : ''},
-            {label:'오늘 활성 유저', value:adminStats?.userStats?.activeToday ?? '—', color:'var(--yellow)'},
-            {label:'등록 문제', value:problems.length, color:'var(--purple)'},
+            {label:'전체 사용자', value:adminStats?.userStats?.total ?? '—', color:'var(--blue)', sub: adminStats ? `+${adminStats.userStats.newThisWeek} 이번 주` : ''},
+            {label:'오늘 제출', value:adminStats?.submissionStats?.totalToday ?? '—', color:'var(--green)', sub: adminStats ? `${adminStats.submissionStats.correctRate}% 정답` : ''},
+            {label:'오늘 활성', value:adminStats?.userStats?.activeToday ?? '—', color:'var(--yellow)'},
+            {label:'문제 수', value:problems.length, color:'var(--purple)'},
           ].map(s=>(
             <div key={s.label} className="card admin-stat-card">
               <div className="asc-value mono" style={{color:s.color}}>{s.value}</div>
@@ -769,7 +774,7 @@ export default function AdminPage() {
             </div>
           ))}
           <div className="card admin-stat-card" style={{gridColumn:'span 2'}}>
-            <div className="asc-label" style={{marginBottom:12}}>유저 티어 분포</div>
+            <div className="asc-label" style={{marginBottom:12}}>User Tier Distribution</div>
             <div style={{display:'flex',gap:16,flexWrap:'wrap'}}>
               {Object.entries({ unranked:'#666', ...TIER_COLORS }).map(([tier,color])=>{
                 const cnt = adminStats?.tierDistribution?.[tier] ?? 0;
@@ -778,15 +783,15 @@ export default function AdminPage() {
             </div>
           </div>
           <div className="card admin-stat-card" style={{gridColumn:'span 2', textAlign:'left'}}>
-            <div className="asc-label" style={{marginBottom:12}}>인기 문제 TOP 5</div>
-            {adminStatsLoading && <div style={{fontSize:12,color:'var(--text3)'}}>통계를 불러오는 중입니다.</div>}
+            <div className="asc-label" style={{marginBottom:12}}>Popular Problems TOP 5</div>
+            {adminStatsLoading && <div style={{fontSize:12,color:'var(--text3)'}}>Loading stats...</div>}
             {!adminStatsLoading && (adminStats?.popularProblems || []).map((problem, index, arr) => {
               const max = Math.max(...arr.map((item) => item.solveCount || 0), 1);
               return (
                 <div key={problem.id} style={{marginBottom:index < arr.length - 1 ? 12 : 0}}>
                   <div style={{display:'flex',justifyContent:'space-between',gap:10,fontSize:12,marginBottom:6}}>
                     <span>{problem.title}</span>
-                    <span style={{color:'var(--text3)'}}>{problem.solveCount}명 풀이</span>
+                    <span style={{color:'var(--text3)'}}>{problem.solveCount} solved</span>
                   </div>
                   <div style={{height:8,background:'var(--bg3)',borderRadius:4,overflow:'hidden'}}>
                     <div style={{width:`${(problem.solveCount / max) * 100}%`,height:'100%',background:'var(--blue)',borderRadius:4}} />
@@ -796,7 +801,7 @@ export default function AdminPage() {
             })}
           </div>
           <div className="card admin-stat-card" style={{gridColumn:'span 2', textAlign:'left'}}>
-            <div className="asc-label" style={{marginBottom:12}}>문제 타입별 개수</div>
+            <div className="asc-label" style={{marginBottom:12}}>Problems by Type</div>
             <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(130px,1fr))',gap:10}}>
               {Object.entries(adminStats?.problemTypeCounts || {}).map(([type, count]) => (
                 <div key={type} style={{padding:'10px 12px',borderRadius:12,background:'var(--bg3)',border:'1px solid var(--border)'}}>
@@ -804,15 +809,15 @@ export default function AdminPage() {
                   <div className="mono" style={{fontSize:22,fontWeight:800,color:'var(--blue)'}}>{count}</div>
                 </div>
               ))}
-              {Object.keys(adminStats?.problemTypeCounts || {}).length === 0 && <div style={{fontSize:12,color:'var(--text3)'}}>문제 타입 데이터가 없습니다.</div>}
+              {Object.keys(adminStats?.problemTypeCounts || {}).length === 0 && <div style={{fontSize:12,color:'var(--text3)'}}>No problem type data.</div>}
             </div>
           </div>
           <div className="card admin-stat-card" style={{textAlign:'left'}}>
-            <div className="asc-label" style={{marginBottom:12}}>배틀 진행 현황</div>
+            <div className="asc-label" style={{marginBottom:12}}>배틀 현황</div>
             {[
-              ['waiting', '대기'],
-              ['playing', '진행'],
-              ['finished', '종료'],
+              ['waiting', '대기 중'],
+              ['playing', '진행 중'],
+              ['finished', '완료'],
             ].map(([key, label]) => (
               <div key={key} style={{display:'flex',justifyContent:'space-between',padding:'8px 0',borderBottom:'1px solid var(--border)'}}>
                 <span style={{fontSize:12,color:'var(--text2)'}}>{label}</span>
@@ -820,49 +825,49 @@ export default function AdminPage() {
               </div>
             ))}
             <div style={{fontSize:12,color:'var(--text3)',marginTop:10}}>
-              총 {adminStats?.battleStatus?.total || 0}개 방
+              Total {adminStats?.battleStatus?.total || 0} rooms
             </div>
           </div>
           <div className="card admin-stat-card" style={{textAlign:'left'}}>
-            <div className="asc-label" style={{marginBottom:12}}>성능 문제 평균 해결 시간</div>
+            <div className="asc-label" style={{marginBottom:12}}>Avg. Solve Time (performance-fix)</div>
             <div className="asc-value mono" style={{color:'var(--orange)'}}>
               {adminStats?.performanceFixAverageSolveTimeMs ? `${adminStats.performanceFixAverageSolveTimeMs}ms` : '—'}
             </div>
             <div style={{fontSize:12,color:'var(--text3)',marginTop:8}}>
-              performance-fix 정답 제출의 실행 시간 평균입니다.
+              Average execution time of correct performance-fix submissions.
             </div>
           </div>
           <div className="card admin-stat-card" style={{gridColumn:'span 2', textAlign:'left'}}>
-            <div className="asc-label" style={{marginBottom:12}}>최근 제출</div>
+            <div className="asc-label" style={{marginBottom:12}}>Recent Submissions</div>
             {(adminStats?.recentSubmissions || []).slice(0, 6).map((item) => (
               <div key={item.id} style={{display:'flex',justifyContent:'space-between',gap:10,padding:'8px 0',borderBottom:'1px solid var(--border)',fontSize:12}}>
                 <span>{item.username} · {item.problemTitle}</span>
                 <span style={{color:item.result === 'correct' ? 'var(--green)' : 'var(--text3)'}}>{item.result}</span>
               </div>
             ))}
-            {(adminStats?.recentSubmissions || []).length === 0 && <div style={{fontSize:12,color:'var(--text3)'}}>최근 제출이 없습니다.</div>}
+            {(adminStats?.recentSubmissions || []).length === 0 && <div style={{fontSize:12,color:'var(--text3)'}}>No recent submissions.</div>}
           </div>
           <div className="card admin-stat-card" style={{gridColumn:'span 2', textAlign:'left'}}>
-            <div className="asc-label" style={{marginBottom:12}}>최근 리뷰</div>
+            <div className="asc-label" style={{marginBottom:12}}>Recent Reviews</div>
             {(adminStats?.recentReviews || []).slice(0, 6).map((item) => (
               <div key={item.id} style={{display:'flex',justifyContent:'space-between',gap:10,padding:'8px 0',borderBottom:'1px solid var(--border)',fontSize:12}}>
                 <span>{item.reviewerUsername} → {item.authorUsername} · {item.problemTitle}</span>
                 <span style={{color:item.status === 'approved' || item.status === 'merged' ? 'var(--green)' : 'var(--text3)'}}>{item.status}</span>
               </div>
             ))}
-            {(adminStats?.recentReviews || []).length === 0 && <div style={{fontSize:12,color:'var(--text3)'}}>최근 리뷰가 없습니다.</div>}
+            {(adminStats?.recentReviews || []).length === 0 && <div style={{fontSize:12,color:'var(--text3)'}}>최근 리뷰 없음.</div>}
           </div>
           <div className="card admin-stat-card" style={{gridColumn:'span 2', textAlign:'left'}}>
-            <div className="asc-label" style={{marginBottom:12}}>AI 운영 상태</div>
-            {!aiStatus && <div style={{fontSize:12,color:'var(--text3)'}}>AI 상태를 불러오지 못했습니다.</div>}
+            <div className="asc-label" style={{marginBottom:12}}>AI 상태</div>
+            {!aiStatus && <div style={{fontSize:12,color:'var(--text3)'}}>AI 상태 로드 실패.</div>}
             {aiStatus && (
               <div style={{display:'grid', gap:12}}>
                 <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(130px, 1fr))',gap:10}}>
                   {[
-                    { label:'API 설정', value: aiStatus.configured ? '정상' : '키 없음', color: aiStatus.configured ? 'var(--green)' : 'var(--red)' },
-                    { label:'현재 모델', value: aiStatus.primaryModel || '없음', color:'var(--blue)' },
+                    { label:'API 설정', value: aiStatus.configured ? 'OK' : '키 없음', color: aiStatus.configured ? 'var(--green)' : 'var(--red)' },
+                    { label:'모델', value: aiStatus.primaryModel || '없음', color:'var(--blue)' },
                     { label:'쿨다운', value: aiStatus.providerCooldown ? `${aiStatus.providerCooldownSec}s` : '없음', color: aiStatus.providerCooldown ? 'var(--yellow)' : 'var(--green)' },
-                    { label:'Fallback률', value: `${aiStatus.metricsToday?.fallbackRate || 0}%`, color: Number(aiStatus.metricsToday?.fallbackRate || 0) > 30 ? 'var(--orange)' : 'var(--green)' },
+                    { label:'폴백 비율', value: `${aiStatus.metricsToday?.fallbackRate || 0}%`, color: Number(aiStatus.metricsToday?.fallbackRate || 0) > 30 ? 'var(--orange)' : 'var(--green)' },
                   ].map(item => (
                     <div key={item.label} style={{padding:'10px 12px',borderRadius:12,background:'var(--bg3)',border:'1px solid var(--border)',minWidth:0}}>
                       <div style={{fontSize:11,color:'var(--text3)',marginBottom:4}}>{item.label}</div>
@@ -871,22 +876,22 @@ export default function AdminPage() {
                   ))}
                 </div>
                 <div style={{fontSize:12,color:'var(--text2)',lineHeight:1.8}}>
-                  오늘 성공 {aiStatus.metricsToday?.success || 0}회 · fallback {aiStatus.metricsToday?.fallback || 0}회 · provider 호출 {aiStatus.metricsToday?.providerCalls || 0}회
-                  {aiStatus.fallbackModels?.length ? <><br/>Fallback 모델: {aiStatus.fallbackModels.slice(0, 4).join(', ')}</> : null}
-                  {aiStatus.lastEvent?.at ? <><br/>최근 이벤트: {aiStatus.lastEvent.source}{aiStatus.lastEvent.reason ? ` (${aiStatus.lastEvent.reason})` : ''} · {new Date(aiStatus.lastEvent.at).toLocaleString('ko-KR')}</> : null}
+                  Today: {aiStatus.metricsToday?.success || 0} success · {aiStatus.metricsToday?.fallback || 0} fallback · {aiStatus.metricsToday?.providerCalls || 0} provider calls
+                  {aiStatus.fallbackModels?.length ? <><br/>Fallback models: {aiStatus.fallbackModels.slice(0, 4).join(', ')}</> : null}
+                  {aiStatus.lastEvent?.at ? <><br/>{txt('마지막 이벤트', 'Last event')}: {aiStatus.lastEvent.source}{aiStatus.lastEvent.reason ? ` (${aiStatus.lastEvent.reason})` : ''} · {new Date(aiStatus.lastEvent.at).toLocaleString(dateLocale)}</> : null}
                 </div>
               </div>
             )}
           </div>
           <div className="card admin-stat-card" style={{gridColumn:'span 2', textAlign:'left'}}>
-            <div className="asc-label" style={{marginBottom:12}}>Stripe 운영 상태</div>
-            {!stripeOps && <div style={{fontSize:12,color:'var(--text3)'}}>Stripe 상태를 불러오지 못했습니다.</div>}
+            <div className="asc-label" style={{marginBottom:12}}>Stripe 상태</div>
+            {!stripeOps && <div style={{fontSize:12,color:'var(--text3)'}}>Stripe 상태 로드 실패.</div>}
             {stripeOps && (
               <div style={{display:'grid', gap:12}}>
                 <div style={{display:'flex',gap:12,flexWrap:'wrap'}}>
                   {[
                     { label:'모드', value: stripeOps.mode, color:'var(--blue)' },
-                    { label:'설정', value: stripeOps.configured ? '정상' : '미완료', color: stripeOps.configured ? 'var(--green)' : 'var(--red)' },
+                    { label:'설정', value: stripeOps.configured ? 'OK' : '미완료', color: stripeOps.configured ? 'var(--green)' : 'var(--red)' },
                     { label:'Webhook', value: stripeOps.webhookConfigured ? '활성' : '없음', color: stripeOps.webhookConfigured ? 'var(--green)' : 'var(--yellow)' },
                     { label:'Secret Key', value: stripeOps.secretKeyConfigured ? '설정됨' : '없음', color: stripeOps.secretKeyConfigured ? 'var(--green)' : 'var(--yellow)' },
                   ].map((item) => (
@@ -899,42 +904,42 @@ export default function AdminPage() {
                 <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(180px, 1fr))',gap:10}}>
                   {Object.entries(stripeOps.plans || {}).map(([planKey, planValue]) => (
                     <div key={planKey} style={{padding:'12px 14px',borderRadius:12,background:'var(--bg3)',border:'1px solid var(--border)'}}>
-                      <div style={{fontWeight:800,marginBottom:8}}>{planKey === 'pro' ? '프로' : '팀'}</div>
+                      <div style={{fontWeight:800,marginBottom:8}}>{planKey === 'pro' ? 'Pro' : 'Team'}</div>
                       <div style={{fontSize:12,color:'var(--text2)',lineHeight:1.7}}>
-                        월 Price ID: {planValue.monthlyPriceId ? '있음' : '없음'}<br />
-                        연 Price ID: {planValue.annualPriceId ? '있음' : '없음'}<br />
-                        월 결제링크: {planValue.monthlyPaymentLink ? '있음' : '없음'}<br />
-                        연 결제링크: {planValue.annualPaymentLink ? '있음' : '없음'}
+                        월간 Price ID: {planValue.monthlyPriceId ? '설정됨' : '없음'}<br />
+                        연간 Price ID: {planValue.annualPriceId ? '설정됨' : '없음'}<br />
+                        월간 결제 링크: {planValue.monthlyPaymentLink ? '설정됨' : '없음'}<br />
+                        연간 결제 링크: {planValue.annualPaymentLink ? '설정됨' : '없음'}
                       </div>
                     </div>
                   ))}
                 </div>
                 <div style={{fontSize:12,color:'var(--text2)'}}>
-                  최근 이벤트: {stripeOps.lastEvent?.eventType || '없음'}
-                  {stripeOps.lastEvent?.recordedAt ? ` · ${new Date(stripeOps.lastEvent.recordedAt).toLocaleString('ko-KR')}` : ''}
+                  마지막 이벤트: {stripeOps.lastEvent?.eventType || '없음'}
+                  {stripeOps.lastEvent?.recordedAt ? ` · ${new Date(stripeOps.lastEvent.recordedAt).toLocaleString(dateLocale)}` : ''}
                 </div>
                 {stripeOps.lastError && (
                   <div style={{fontSize:12,color:'var(--red)'}}>
-                    최근 에러: {stripeOps.lastError.message}
+                    Last error: {stripeOps.lastError.message}
                   </div>
                 )}
               </div>
             )}
           </div>
           <div className="card admin-stat-card" style={{gridColumn:'span 2', textAlign:'left'}}>
-            <div className="asc-label" style={{marginBottom:12}}>주간 챌린지 설정</div>
+            <div className="asc-label" style={{marginBottom:12}}>Weekly Challenge Settings</div>
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr auto',gap:10,alignItems:'end'}}>
               <div className="form-group">
-                <label>문제 ID</label>
+                <label>Problem ID</label>
                 <input
                   type="number"
                   value={weeklyForm.problemId}
                   onChange={(e) => setWeeklyForm((prev) => ({ ...prev, problemId: e.target.value }))}
-                  placeholder="예: 12"
+                  placeholder="e.g. 12"
                 />
               </div>
               <div className="form-group">
-                <label>보상 코드</label>
+                <label>Reward Code</label>
                 <input
                   value={weeklyForm.rewardCode}
                   onChange={(e) => setWeeklyForm((prev) => ({ ...prev, rewardCode: e.target.value }))}
@@ -942,20 +947,20 @@ export default function AdminPage() {
                 />
               </div>
               <button className="btn btn-primary" onClick={handleSaveWeeklyChallenge} disabled={weeklySaving}>
-                {weeklySaving ? <span className="spinner"/> : '설정'}
+                {weeklySaving ? <span className="spinner"/> : 'Set'}
               </button>
             </div>
             <div style={{marginTop:14,padding:14,borderRadius:12,background:'var(--bg3)',border:'1px solid var(--border)',fontSize:13}}>
               {weeklyChallenge ? (
                 <>
-                  <div style={{fontWeight:700,marginBottom:4}}>현재 이번 주 챌린지</div>
-                  <div>{weeklyChallenge.problemTitle} · {weeklyChallenge.tier} · 보상 {weeklyChallenge.rewardCode}</div>
+                  <div style={{fontWeight:700,marginBottom:4}}>Current Weekly Challenge</div>
+                  <div>{weeklyChallenge.problemTitle} · {weeklyChallenge.tier} · Reward: {weeklyChallenge.rewardCode}</div>
                   <div style={{fontSize:11,color:'var(--text3)',marginTop:6}}>
                     {weeklyChallenge.weekStart} ~ {weeklyChallenge.weekEnd}
                   </div>
                 </>
               ) : (
-                <div style={{color:'var(--text3)'}}>이번 주에 지정된 챌린지가 없습니다.</div>
+                <div style={{color:'var(--text3)'}}>No challenge set for this week.</div>
               )}
             </div>
           </div>
@@ -966,15 +971,15 @@ export default function AdminPage() {
       {activeTab==='flagged' && (
         <div className="fade-up">
           <div className="card" style={{padding:24}}>
-            <h3 style={{marginBottom:8}}>🛡️ 의심 제출 검토</h3>
+            <h3 style={{marginBottom:8}}>🛡️ Flagged Submissions</h3>
             <p style={{fontSize:13,color:'var(--text2)',marginBottom:18}}>
-              공유 풀이와 높은 유사도를 보인 정답 제출을 관리자가 확인하는 목록입니다.
+              List of correct submissions with high similarity to shared solutions, flagged for admin review.
             </p>
             {flaggedLoading ? (
-              <div style={{color:'var(--text3)',fontSize:13}}>불러오는 중...</div>
+              <div style={{color:'var(--text3)',fontSize:13}}>Loading...</div>
             ) : flaggedSubmissions.length === 0 ? (
               <div style={{padding:24,textAlign:'center',color:'var(--text3)',background:'var(--bg3)',borderRadius:12}}>
-                검토할 의심 제출이 없습니다.
+                No flagged submissions to review.
               </div>
             ) : (
               <div style={{display:'flex',flexDirection:'column',gap:10}}>
@@ -991,9 +996,9 @@ export default function AdminPage() {
                     opacity: row.reviewed ? 0.7 : 1,
                   }}>
                     <div>
-                      <div style={{fontWeight:800}}>{row.problemTitle || `문제 #${row.problemId}`}</div>
+                      <div style={{fontWeight:800}}>{row.problemTitle || `Problem #${row.problemId}`}</div>
                       <div style={{fontSize:12,color:'var(--text3)',marginTop:4}}>
-                        {row.username} · {row.lang} · {new Date(row.createdAt).toLocaleString('ko-KR')}
+                        {row.username} · {row.lang} · {new Date(row.createdAt).toLocaleString(dateLocale)}
                       </div>
                     </div>
                     <div style={{fontSize:12,color:'var(--text2)'}}>{row.reason}</div>
@@ -1001,7 +1006,7 @@ export default function AdminPage() {
                       {(Number(row.similarity || 0) * 100).toFixed(1)}%
                     </div>
                     <button className="btn btn-ghost btn-sm" onClick={()=>handleFlaggedReviewed(row.id)} disabled={Boolean(row.reviewed)}>
-                      {row.reviewed ? '검토 완료' : '검토 완료'}
+                      {row.reviewed ? '검토 완료' : '검토 표시'}
                     </button>
                   </div>
                 ))}
@@ -1015,18 +1020,18 @@ export default function AdminPage() {
       {activeTab==='system' && (
         <div className="fade-up" style={{maxWidth:640}}>
           <div className="card" style={{padding:24}}>
-            <h3 style={{marginBottom:12}}>⚙️ 시스템 관리 (Maintenance)</h3>
+            <h3 style={{marginBottom:12}}>⚙️ System Maintenance</h3>
             <p style={{fontSize:13,color:'var(--text2)',marginBottom:24,lineHeight:1.6}}>
-              플랫폼의 실시간 데이터(랭킹, 잔디 등)는 성능 최적화를 위해 Redis 캐시를 사용합니다.<br/>
-              데이터 불일치나 초기화가 필요한 경우 아래 버튼을 사용하세요.
+              Real-time data (rankings, activity heatmaps, etc.) uses Redis cache for performance.<br/>
+              Use the buttons below if you need to clear stale or inconsistent cached data.
             </p>
 
             <div style={{display:'flex',flexDirection:'column',gap:12}}>
               {[
-                {id:'leaderboards', label:'🏆 랭킹 & 리더보드 캐시', desc:'대회 순위 및 전체 랭킹 데이터를 초기화합니다.'},
-                {id:'heatmaps',     label:'🌱 유저 활동 잔디 캐시', desc:'프로필의 일일 풀이 내역 캐시를 초기화합니다.'},
-                {id:'problems',     label:'📝 문제 정보 캐시',     desc:'문제 상세 및 목록 캐시를 초기화합니다.'},
-                {id:'all',          label:'🔥 전체 캐시 초기화',   desc:'시스템의 모든 캐시 데이터를 삭제합니다.', danger:true},
+                {id:'leaderboards', label:'🏆 랭킹 & 리더보드 캐시', desc:'대회 랭킹 및 전체 리더보드 데이터를 초기화합니다.'},
+                {id:'heatmaps',     label:'🌱 사용자 활동 히트맵 캐시', desc:'프로필에 사용되는 일별 풀이 기록 캐시를 초기화합니다.'},
+                {id:'problems',     label:'📝 문제 정보 캐시',           desc:'문제 상세 및 목록 캐시를 초기화합니다.'},
+                {id:'all',          label:'🔥 전체 캐시 초기화',              desc:'시스템 전체의 캐시 데이터를 삭제합니다.', danger:true},
               ].map(item => (
                 <div key={item.id} style={{
                   display:'flex',alignItems:'center',gap:16,padding:16,
@@ -1042,7 +1047,7 @@ export default function AdminPage() {
                     disabled={clearing === item.id}
                     style={{minWidth:80}}
                   >
-                    {clearing === item.id ? <span className="spinner"/> : '초기화'}
+                    {clearing === item.id ? <span className="spinner"/> : 'Clear'}
                   </button>
                 </div>
               ))}
@@ -1072,22 +1077,22 @@ export default function AdminPage() {
                 <div style={{fontWeight:700,fontSize:16}}>{communityDetail.title}</div>
               </div>
               <div style={{marginBottom:14}}>
-                <div style={{fontSize:12,color:'var(--text3)',marginBottom:4}}>문제 설명</div>
+                <div style={{fontSize:12,color:'var(--text3)',marginBottom:4}}>설명</div>
                 <pre style={{background:'var(--bg3)',padding:14,borderRadius:8,fontSize:13,whiteSpace:'pre-wrap',margin:0}}>{communityDetail.description}</pre>
               </div>
               {communityDetail.hint && (
                 <div style={{marginBottom:14}}>
-                  <div style={{fontSize:12,color:'var(--text3)',marginBottom:4}}>힌트</div>
+                  <div style={{fontSize:12,color:'var(--text3)',marginBottom:4}}>{txt('힌트', 'Hint')}</div>
                   <div style={{fontSize:13,color:'var(--text2)'}}>{communityDetail.hint}</div>
                 </div>
               )}
               {(communityDetail.examples||[]).length > 0 && (
                 <div style={{marginBottom:14}}>
-                  <div style={{fontSize:12,color:'var(--text3)',marginBottom:6}}>예제 입출력</div>
+                  <div style={{fontSize:12,color:'var(--text3)',marginBottom:6}}>Sample I/O</div>
                   {communityDetail.examples.map((ex,i) => (
                     <div key={i} style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:6}}>
-                      <pre className="io-box mono" style={{margin:0,fontSize:12}}>{ex.input||'(없음)'}</pre>
-                      <pre className="io-box mono" style={{margin:0,fontSize:12}}>{ex.output||'(없음)'}</pre>
+                      <pre className="io-box mono" style={{margin:0,fontSize:12}}>{ex.input||'(none)'}</pre>
+                      <pre className="io-box mono" style={{margin:0,fontSize:12}}>{ex.output||'(none)'}</pre>
                     </div>
                   ))}
                 </div>
@@ -1095,11 +1100,11 @@ export default function AdminPage() {
               {communityDetail.status === 'pending' && (
                 <div style={{marginTop:20,borderTop:'1px solid var(--border)',paddingTop:18}}>
                   <div style={{display:'flex',gap:10,flexWrap:'wrap',alignItems:'flex-start'}}>
-                    <button className="btn btn-success" onClick={()=>handleCommunityApprove(communityDetail.id)}>✅ 승인하고 문제 등록</button>
+                    <button className="btn btn-success" onClick={()=>handleCommunityApprove(communityDetail.id)}>✅ {txt('승인 및 문제 등록', 'Approve & Register Problem')}</button>
                     <div style={{display:'flex',flexDirection:'column',gap:6,flex:1,minWidth:200}}>
-                      <input className="input" placeholder="반려 사유 (선택)" value={communityRejectNote}
+                      <input className="input" placeholder="Rejection reason (optional)" value={communityRejectNote}
                         onChange={e=>setCommunityRejectNote(e.target.value)} />
-                      <button className="btn btn-danger btn-sm" onClick={()=>handleCommunityReject(communityDetail.id)}>❌ 반려</button>
+                      <button className="btn btn-danger btn-sm" onClick={()=>handleCommunityReject(communityDetail.id)}>❌ Reject</button>
                     </div>
                   </div>
                 </div>
@@ -1108,24 +1113,24 @@ export default function AdminPage() {
           ) : (
             <div className="card" style={{overflow:'hidden'}}>
               <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'14px 18px',borderBottom:'1px solid var(--border)'}}>
-                <h3 style={{margin:0}}>💡 유저 문제 제출 검토</h3>
+                <h3 style={{margin:0}}>💡 User Problem Submissions</h3>
                 <div style={{display:'flex',gap:6}}>
                   {['pending','approved','rejected'].map(s=>(
                     <button key={s} className={`btn btn-sm ${communityFilter===s?'btn-primary':'btn-ghost'}`}
                       onClick={()=>setCommunityFilter(s)}>
-                      {s==='pending'?'⏳ 검토 중':s==='approved'?'✅ 승인됨':'❌ 반려됨'}
+                      {s==='pending'?'⏳ 대기':s==='approved'?'✅ 승인':'❌ 거절'}
                     </button>
                   ))}
                 </div>
               </div>
               {communityLoading ? (
-                <div style={{padding:24,textAlign:'center',color:'var(--text3)'}}>불러오는 중...</div>
+                <div style={{padding:24,textAlign:'center',color:'var(--text3)'}}>Loading...</div>
               ) : communitySubmissions.length === 0 ? (
-                <div style={{padding:24,textAlign:'center',color:'var(--text3)'}}>제출된 문제가 없습니다.</div>
+                <div style={{padding:24,textAlign:'center',color:'var(--text3)'}}>No submissions found.</div>
               ) : (
                 <table className="admin-table">
                   <thead>
-                    <tr><th style={{width:40}}>ID</th><th>제목</th><th style={{width:90}}>제출자</th><th style={{width:70}}>유형</th><th style={{width:60}}>티어</th><th style={{width:70}}>난이도</th><th style={{width:100}}>제출일</th><th style={{width:80}}>액션</th></tr>
+                    <tr><th style={{width:40}}>ID</th><th>제목</th><th style={{width:90}}>제출자</th><th style={{width:70}}>유형</th><th style={{width:60}}>티어</th><th style={{width:70}}>난이도</th><th style={{width:100}}>날짜</th><th style={{width:80}}>관리</th></tr>
                   </thead>
                   <tbody>
                     {communitySubmissions.map(s=>(
@@ -1136,10 +1141,10 @@ export default function AdminPage() {
                         <td><span className="tag" style={{fontSize:10,background:'var(--bg3)',color:'var(--text2)'}}>{s.problem_type}</span></td>
                         <td style={{fontSize:12}}>{s.tier}</td>
                         <td className="mono" style={{fontSize:12}}>{s.difficulty}/10</td>
-                        <td style={{fontSize:11,color:'var(--text3)'}}>{new Date(s.created_at).toLocaleDateString('ko-KR')}</td>
+                        <td style={{fontSize:11,color:'var(--text3)'}}>{new Date(s.created_at).toLocaleDateString('en-US')}</td>
                         <td>
                           <button className="btn btn-ghost btn-sm" onClick={()=>api.get(`/community-problems/admin/${s.id}`).then(r=>setCommunityDetail(r.data)).catch(()=>{})}>
-                            상세보기
+                            View
                           </button>
                         </td>
                       </tr>
@@ -1156,12 +1161,12 @@ export default function AdminPage() {
       {confirmModal && (
         <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setConfirmModal(null)}>
           <div className="modal-box card fade-up" style={{maxWidth:380}}>
-            <h3 style={{marginBottom:8}}>⚠️ 삭제 확인</h3>
+            <h3 style={{marginBottom:8}}>⚠️ Confirm Delete</h3>
             <p style={{fontSize:13,color:'var(--text2)',marginBottom:20}}>{confirmModal.msg}</p>
             <div className="modal-actions" style={{display:'flex',gap:10,justifyContent:'flex-end'}}>
-              <button className="btn btn-ghost" onClick={()=>setConfirmModal(null)}>취소</button>
+              <button className="btn btn-ghost" onClick={()=>setConfirmModal(null)}>{txt('취소', 'Cancel')}</button>
               <button className="btn btn-primary" style={{background:'var(--red)',borderColor:'var(--red)'}}
-                onClick={async()=>{ await confirmModal.onConfirm(); setConfirmModal(null); }}>삭제</button>
+                onClick={async()=>{ await confirmModal.onConfirm(); setConfirmModal(null); }}>Delete</button>
             </div>
           </div>
         </div>
@@ -1169,23 +1174,23 @@ export default function AdminPage() {
       {pwModal && (
         <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setPwModal(null)}>
           <div className="modal-box card fade-up" style={{maxWidth:400}}>
-            <h3 style={{marginBottom:4}}>🔒 비밀번호 리셋</h3>
-            <p style={{fontSize:13,color:'var(--text2)',marginBottom:16}}>"{pwModal.name}"의 새 비밀번호를 입력하세요.</p>
+            <h3 style={{marginBottom:4}}>🔒 Reset Password</h3>
+            <p style={{fontSize:13,color:'var(--text2)',marginBottom:16}}>Enter a new password for "{pwModal.name}".</p>
             <div className="form-group">
-              <label style={{fontSize:12,fontWeight:600}}>새 비밀번호 (8자 이상)</label>
+              <label style={{fontSize:12,fontWeight:600}}>New Password (min 8 characters)</label>
               <input
                 type="password"
                 value={pwInput}
                 onChange={e=>setPwInput(e.target.value)}
                 onKeyDown={e=>e.key==='Enter'&&confirmResetPw()}
-                placeholder="새 비밀번호 입력"
+                placeholder="Enter new password"
                 autoFocus
                 style={{width:'100%',marginTop:6}}
               />
             </div>
             <div className="modal-actions" style={{marginTop:16,display:'flex',gap:10,justifyContent:'flex-end'}}>
-              <button className="btn btn-ghost" onClick={()=>setPwModal(null)}>취소</button>
-              <button className="btn btn-primary" onClick={confirmResetPw} disabled={!pwInput||pwInput.length<8}>확인</button>
+              <button className="btn btn-ghost" onClick={()=>setPwModal(null)}>{txt('취소', 'Cancel')}</button>
+              <button className="btn btn-primary" onClick={confirmResetPw} disabled={!pwInput||pwInput.length<8}>Confirm</button>
             </div>
           </div>
         </div>
@@ -1197,21 +1202,21 @@ export default function AdminPage() {
   return (
     <div className="admin-page">
       <div className="admin-header fade-up">
-        <div><h1>{editTarget!==null?'✏️ 문제 수정':'➕ 문제 만들기'}</h1><p>직접 작성하거나 AI 자동 생성을 이용하세요.</p></div>
+        <div><h1>{editTarget!==null?'✏️ Edit Problem':'➕ Create Problem'}</h1><p>Write manually or use AI auto-generation.</p></div>
         <div style={{display:'flex',gap:10}}>
-          {editTarget===null&&<button className={`btn ${aiPanel?'btn-primary':'btn-ghost'}`} onClick={()=>setAiPanel(p=>!p)}>🤖 AI 자동 생성</button>}
-          <button className="btn btn-ghost" onClick={()=>{setView('list');setEditTarget(null);setForm(createEmptyForm());setAiPreview(null);setAiPanel(false);}}>← 목록</button>
+          {editTarget===null&&<button className={`btn ${aiPanel?'btn-primary':'btn-ghost'}`} onClick={()=>setAiPanel(p=>!p)}>🤖 AI Generate</button>}
+          <button className="btn btn-ghost" onClick={()=>{setView('list');setEditTarget(null);setForm(createEmptyForm());setAiPreview(null);setAiPanel(false);}}>← List</button>
         </div>
       </div>
 
       {aiPanel && (
         <div className="card ai-gen-panel fade-up">
-          <div className="ai-gen-title">🤖 Gemini AI로 문제 자동 생성</div>
+          <div className="ai-gen-title">🤖 Auto-generate with Gemini AI</div>
           <div className="cf-row">
-            <div className="form-group" style={{flex:1}}><label>문제 유형</label><select value={aiForm.problemType} onChange={e=>setAiForm(p=>({...p,problemType:e.target.value}))}>{PROBLEM_TYPE_OPTIONS.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</select></div>
+            <div className="form-group" style={{flex:1}}><label>{txt('문제 유형', 'Problem Type')}</label><select value={aiForm.problemType} onChange={e=>setAiForm(p=>({...p,problemType:e.target.value}))}>{PROBLEM_TYPE_OPTIONS.map(o=><option key={o.value} value={o.value}>{txt(o.ko, o.label)}</option>)}</select></div>
             <div className="form-group" style={{flex:1}}><label>티어</label><select value={aiForm.tier} onChange={e=>setAiForm(p=>({...p,tier:e.target.value}))}>{TIER_OPTIONS.map(t=><option key={t} value={t}>{t}</option>)}</select></div>
             <div className="form-group" style={{flex:1}}><label>난이도</label><input type="number" min="1" max="10" value={aiForm.difficulty} onChange={e=>setAiForm(p=>({...p,difficulty:e.target.value}))} /></div>
-            <div className="form-group" style={{flex:2}}><label>주제/키워드</label><input placeholder="예: 피보나치, NameError, 중복 제거..." value={aiForm.topic} onChange={e=>setAiForm(p=>({...p,topic:e.target.value}))} /></div>
+            <div className="form-group" style={{flex:2}}><label>주제/키워드</label><input placeholder="예: fibonacci, NameError, 중복 제거..." value={aiForm.topic} onChange={e=>setAiForm(p=>({...p,topic:e.target.value}))} /></div>
           </div>
           <div className="form-group">
             <label>알고리즘 태그</label>
@@ -1219,7 +1224,7 @@ export default function AdminPage() {
           </div>
           <div style={{display:'flex',alignItems:'center',gap:12}}>
             <button className="btn btn-primary" onClick={handleAiGenerate} disabled={aiGenerating} style={{padding:'10px 24px'}}>
-              {aiGenerating?<><span className="spinner"/> 생성 중 (Gemini)...</>:'✨ 문제 자동 생성'}
+              {aiGenerating?<><span className="spinner"/> Gemini 생성 중...</>:'✨ 문제 자동 생성'}
             </button>
             {aiPreview&&<span style={{fontSize:13,color:'var(--green)'}}>✓ 생성 완료! 아래 내용 확인 후 등록하세요.</span>}
           </div>
@@ -1228,17 +1233,17 @@ export default function AdminPage() {
 
       <div className="create-form fade-up" style={{animationDelay:'.05s'}}>
         <div className="card cf-section">
-          <div className="cf-section-title">기본 정보</div>
+          <div className="cf-section-title">{txt('기본 정보', 'Basic Info')}</div>
           <div className="cf-row">
             <div className="form-group" style={{flex:3}}><label>문제 제목 *</label><input placeholder="문제 제목" value={form.title} onChange={e=>f('title',e.target.value)} /></div>
             <div className="form-group" style={{flex:1}}>
               <label>유형</label>
               <select value={form.problemType} onChange={e=>f('problemType',e.target.value)}>
-                {PROBLEM_TYPE_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+                {PROBLEM_TYPE_OPTIONS.map(option => <option key={option.value} value={option.value}>{txt(option.ko, option.label)}</option>)}
               </select>
             </div>
             <div className="form-group" style={{flex:1}}>
-              <label>권장 언어</label>
+              <label>선호 언어</label>
               <select value={form.preferredLanguage} onChange={e=>f('preferredLanguage',e.target.value)}>
                 {JUDGE_LANGUAGE_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
               </select>
@@ -1254,13 +1259,13 @@ export default function AdminPage() {
         </div>
 
         <div className="card cf-section">
-          <div className="cf-section-title">문제 내용</div>
-          <div className="form-group"><label>문제 설명 *</label><textarea rows={4} placeholder="문제를 설명하세요..." value={form.desc} onChange={e=>f('desc',e.target.value)} style={{resize:'vertical'}} /></div>
+          <div className="cf-section-title">{txt('문제 내용', 'Problem Content')}</div>
+          <div className="form-group"><label>{txt('설명', 'Description')} *</label><textarea rows={4} placeholder={txt('문제를 설명하세요...', 'Describe the problem...')} value={form.desc} onChange={e=>f('desc',e.target.value)} style={{resize:'vertical'}} /></div>
           {form.problemType === 'coding' && (
             <>
               <div className="cf-row">
-                <div className="form-group" style={{flex:1}}><label>입력 설명</label><textarea rows={3} placeholder="입력 형식..." value={form.inputDesc} onChange={e=>f('inputDesc',e.target.value)} style={{resize:'vertical'}} /></div>
-                <div className="form-group" style={{flex:1}}><label>출력 설명</label><textarea rows={3} placeholder="출력 형식..." value={form.outputDesc} onChange={e=>f('outputDesc',e.target.value)} style={{resize:'vertical'}} /></div>
+                <div className="form-group" style={{flex:1}}><label>{txt('입력 설명', 'Input Description')}</label><textarea rows={3} placeholder={txt('입력 형식...', 'Input format...')} value={form.inputDesc} onChange={e=>f('inputDesc',e.target.value)} style={{resize:'vertical'}} /></div>
+                <div className="form-group" style={{flex:1}}><label>{txt('출력 설명', 'Output Description')}</label><textarea rows={3} placeholder={txt('출력 형식...', 'Output format...')} value={form.outputDesc} onChange={e=>f('outputDesc',e.target.value)} style={{resize:'vertical'}} /></div>
               </div>
             </>
           )}
@@ -1268,12 +1273,12 @@ export default function AdminPage() {
           {form.problemType === 'fill-blank' && (
             <>
               <div className="form-group">
-                <label>빈칸 코드 템플릿</label>
-                <textarea rows={6} className="mono" placeholder={'예: if n <= ___1___:'} value={form.specialConfig.codeTemplate} onChange={e=>sf('codeTemplate',e.target.value)} style={{resize:'vertical'}} />
+                <label>Code Template with Blanks</label>
+                <textarea rows={6} className="mono" placeholder={'e.g. if n <= ___1___:'} value={form.specialConfig.codeTemplate} onChange={e=>sf('codeTemplate',e.target.value)} style={{resize:'vertical'}} />
               </div>
               <div className="form-group">
-                <label>정답 빈칸 목록 (쉼표 구분)</label>
-                <input placeholder="예: 1, 1, 2" value={form.specialConfig.blanksText} onChange={e=>sf('blanksText',e.target.value)} />
+                <label>Answer List (comma-separated)</label>
+                <input placeholder="e.g. 1, 1, 2" value={form.specialConfig.blanksText} onChange={e=>sf('blanksText',e.target.value)} />
               </div>
             </>
           )}
@@ -1281,16 +1286,16 @@ export default function AdminPage() {
           {form.problemType === 'bug-fix' && (
             <>
               <div className="form-group">
-                <label>버그 코드</label>
-                <textarea rows={6} className="mono" placeholder="버그가 있는 코드" value={form.specialConfig.buggyCode} onChange={e=>sf('buggyCode',e.target.value)} style={{resize:'vertical'}} />
+                <label>Buggy Code</label>
+                <textarea rows={6} className="mono" placeholder="Code with bugs" value={form.specialConfig.buggyCode} onChange={e=>sf('buggyCode',e.target.value)} style={{resize:'vertical'}} />
               </div>
               <div className="form-group">
-                <label>정답 키워드 (쉼표 구분)</label>
-                <input placeholder="예: n - i - 1, arr[0]" value={form.specialConfig.keywordsText} onChange={e=>sf('keywordsText',e.target.value)} />
+                <label>Answer Keywords (comma-separated)</label>
+                <input placeholder="e.g. n - i - 1, arr[0]" value={form.specialConfig.keywordsText} onChange={e=>sf('keywordsText',e.target.value)} />
               </div>
               <div className="form-group">
-                <label>해설</label>
-                <textarea rows={3} placeholder="왜 틀렸는지 설명" value={form.specialConfig.explanation} onChange={e=>sf('explanation',e.target.value)} style={{resize:'vertical'}} />
+                <label>Explanation</label>
+                <textarea rows={3} placeholder="Explain what was wrong" value={form.specialConfig.explanation} onChange={e=>sf('explanation',e.target.value)} style={{resize:'vertical'}} />
               </div>
             </>
           )}
@@ -1299,72 +1304,72 @@ export default function AdminPage() {
             <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
               <div className="cf-row">
                 <div className="form-group" style={{ flex:1 }}>
-                  <label>시나리오 제목</label>
-                  <input value={form.specialConfig.scenarioTitle} onChange={e=>sf('scenarioTitle', e.target.value)} placeholder="예: 느린 API 응답 시간 개선" />
+                  <label>Scenario Title</label>
+                  <input value={form.specialConfig.scenarioTitle} onChange={e=>sf('scenarioTitle', e.target.value)} placeholder="e.g. Slow API Response Time" />
                 </div>
                 <div className="form-group" style={{ flex:1 }}>
-                  <label>평가 모드</label>
+                  <label>Evaluation Mode</label>
                   <select value={form.specialConfig.evaluationMode} onChange={e=>sf('evaluationMode', e.target.value)}>
                     <option value="command">command</option>
                   </select>
                 </div>
               </div>
               <div className="form-group">
-                <label>문제 상황 설명</label>
-                <textarea rows={4} value={form.specialConfig.scenarioDescription} onChange={e=>sf('scenarioDescription', e.target.value)} placeholder="장애 상황, 목표, 제약 조건을 작성하세요." style={{ resize:'vertical' }} />
+                <label>Scenario Description</label>
+                <textarea rows={4} value={form.specialConfig.scenarioDescription} onChange={e=>sf('scenarioDescription', e.target.value)} placeholder="Describe the issue, goals, and constraints." style={{ resize:'vertical' }} />
               </div>
 
               <div>
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
-                  <div className="cf-section-title" style={{ margin:0 }}>파일 목록</div>
-                  <button type="button" className="btn btn-ghost btn-sm" onClick={addTroubleshootingFile}>파일 추가</button>
+                  <div className="cf-section-title" style={{ margin:0 }}>Files</div>
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={addTroubleshootingFile}>Add File</button>
                 </div>
                 {(form.specialConfig.initialFiles || []).map((file, index) => (
                   <div key={`${file.path}-${index}`} style={{ border:'1px solid var(--border)', borderRadius:10, padding:12, marginBottom:10, background:'var(--bg3)' }}>
                     <div className="cf-row">
                       <div className="form-group" style={{ flex:2 }}>
-                        <label>경로</label>
+                        <label>Path</label>
                         <input value={file.path} onChange={e=>updateTroubleshootingFile(index, { path:e.target.value })} placeholder="server.js" />
                       </div>
                       <label style={{ display:'flex', alignItems:'center', gap:8, fontSize:12, color:'var(--text2)', marginTop:22 }}>
                         <input type="checkbox" checked={file.editable !== false} onChange={e=>updateTroubleshootingFile(index, { editable:e.target.checked })} />
-                        유저 수정 가능
+                        User Editable
                       </label>
-                      <button type="button" className="btn btn-ghost btn-sm" onClick={()=>removeTroubleshootingFile(index)} style={{ alignSelf:'flex-end' }}>삭제</button>
+                      <button type="button" className="btn btn-ghost btn-sm" onClick={()=>removeTroubleshootingFile(index)} style={{ alignSelf:'flex-end' }}>Delete</button>
                     </div>
-                    <textarea className="mono" rows={8} value={file.content} onChange={e=>updateTroubleshootingFile(index, { content:e.target.value })} placeholder="파일 내용" style={{ resize:'vertical' }} />
+                    <textarea className="mono" rows={8} value={file.content} onChange={e=>updateTroubleshootingFile(index, { content:e.target.value })} placeholder="File content" style={{ resize:'vertical' }} />
                   </div>
                 ))}
               </div>
 
               {[
-                ['visibleTests', 'Visible 테스트'],
-                ['hiddenTests', 'Hidden 테스트'],
+                ['visibleTests', 'Visible Tests'],
+                ['hiddenTests', 'Hidden Tests'],
               ].map(([field, label]) => (
                 <div key={field}>
                   <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
                     <div className="cf-section-title" style={{ margin:0 }}>{label}</div>
-                    <button type="button" className="btn btn-ghost btn-sm" onClick={()=>addTroubleshootingTest(field)}>테스트 추가</button>
+                    <button type="button" className="btn btn-ghost btn-sm" onClick={()=>addTroubleshootingTest(field)}>Add Test</button>
                   </div>
                   {(form.specialConfig[field] || []).map((test, index) => (
                     <div key={`${field}-${index}`} className="cf-row" style={{ alignItems:'flex-end', marginBottom:8 }}>
                       <div className="form-group" style={{ flex:1 }}>
-                        <label>이름</label>
+                        <label>Name</label>
                         <input value={test.name || ''} onChange={e=>updateTroubleshootingTest(field, index, { name:e.target.value })} />
                       </div>
                       <div className="form-group" style={{ flex:2 }}>
-                        <label>명령</label>
+                        <label>Command</label>
                         <input className="mono" value={test.commandText || ''} onChange={e=>updateTroubleshootingTest(field, index, { commandText:e.target.value })} placeholder="node test.js" />
                       </div>
                       <div className="form-group" style={{ flex:2 }}>
-                        <label>기대 출력</label>
+                        <label>Expected Output</label>
                         <input className="mono" value={test.expectedOutput || ''} onChange={e=>updateTroubleshootingTest(field, index, { expectedOutput:e.target.value })} />
                       </div>
                       <div className="form-group" style={{ flex:1 }}>
                         <label>timeout ms</label>
                         <input type="number" value={test.timeoutMs || ''} onChange={e=>updateTroubleshootingTest(field, index, { timeoutMs:e.target.value })} />
                       </div>
-                      <button type="button" className="btn btn-ghost btn-sm" onClick={()=>removeTroubleshootingTest(field, index)}>삭제</button>
+                      <button type="button" className="btn btn-ghost btn-sm" onClick={()=>removeTroubleshootingTest(field, index)}>Delete</button>
                     </div>
                   ))}
                 </div>
@@ -1377,8 +1382,8 @@ export default function AdminPage() {
                 <div className="form-group" style={{ flex:1 }}><label>memoryLimitMb</label><input type="number" value={form.specialConfig.memoryLimitMb} onChange={e=>sf('memoryLimitMb', e.target.value)} /></div>
               </div>
               <div className="cf-row">
-                <div className="form-group" style={{ flex:1 }}><label>수정 허용 파일</label><textarea rows={2} value={form.specialConfig.allowedFilesText} onChange={e=>sf('allowedFilesText', e.target.value)} placeholder="server.js, db.js" style={{ resize:'vertical' }} /></div>
-                <div className="form-group" style={{ flex:1 }}><label>금지 패턴</label><textarea rows={2} value={form.specialConfig.forbiddenPatternsText} onChange={e=>sf('forbiddenPatternsText', e.target.value)} placeholder="eval\\(, child_process" style={{ resize:'vertical' }} /></div>
+                <div className="form-group" style={{ flex:1 }}><label>Allowed Files</label><textarea rows={2} value={form.specialConfig.allowedFilesText} onChange={e=>sf('allowedFilesText', e.target.value)} placeholder="server.js, db.js" style={{ resize:'vertical' }} /></div>
+                <div className="form-group" style={{ flex:1 }}><label>Forbidden Patterns</label><textarea rows={2} value={form.specialConfig.forbiddenPatternsText} onChange={e=>sf('forbiddenPatternsText', e.target.value)} placeholder="eval\\(, child_process" style={{ resize:'vertical' }} /></div>
               </div>
               <div className="form-group">
                 <label>scoring_rules JSON</label>
@@ -1388,29 +1393,29 @@ export default function AdminPage() {
           )}
 
           {/* ★ 예제 테스트케이스 (유저에게 보임) */}
-          {!isTroubleshootingForm && renderCaseEditor('예제 테스트케이스', '📋', form.examples, 'examples', 'var(--blue)')}
+          {!isTroubleshootingForm && renderCaseEditor(txt('예제 테스트케이스', 'Sample Testcases'), '📋', form.examples, 'examples', 'var(--blue)')}
 
           {/* ★ 히든 테스트케이스 (채점용 + 공개 표시) */}
           {form.problemType === 'coding' && <div style={{borderTop:'2px dashed var(--border)',paddingTop:16,marginTop:8}}>
-            <div style={{fontSize:12,color:'var(--orange)',fontWeight:700,marginBottom:4}}>🔒 일반 코딩 문제는 히든 테스트케이스가 최소 {MIN_HIDDEN_TESTCASES}개 필요합니다.</div>
-            {renderCaseEditor('히든 테스트케이스 (채점용)', '🔒', form.testcases, 'testcases', 'var(--orange)')}
+            <div style={{fontSize:12,color:'var(--orange)',fontWeight:700,marginBottom:4}}>🔒 {txt(`일반 코딩 문제는 히든 테스트케이스가 최소 ${MIN_HIDDEN_TESTCASES}개 필요합니다.`, `Coding problems require at least ${MIN_HIDDEN_TESTCASES} hidden testcases.`)}</div>
+            {renderCaseEditor(txt('히든 테스트케이스 (채점용)', 'Hidden Testcases (for grading)'), '🔒', form.testcases, 'testcases', 'var(--orange)')}
           </div>}
           {form.problemType !== 'coding' && !isTroubleshootingForm && (
             <div style={{marginTop:12,padding:'12px 14px',borderRadius:10,background:'var(--bg3)',border:'1px solid var(--border)',fontSize:12,color:'var(--text2)',lineHeight:1.6}}>
               {form.problemType === 'fill-blank'
-                ? '빈칸 채우기 문제는 코드 템플릿 + 정답 목록으로 채점합니다. 히든 테스트케이스는 저장하지 않습니다.'
-                : '틀린부분 찾기 문제는 버그 코드 + 정답 키워드로 채점합니다. 히든 테스트케이스는 저장하지 않습니다.'}
+                ? txt('빈칸 채우기 문제는 코드 템플릿 + 정답 목록으로 채점합니다. 히든 테스트케이스는 저장하지 않습니다.', 'Fill-blank problems are graded using the code template + answer list. Hidden testcases are not saved.')
+                : txt('틀린부분 찾기 문제는 버그 코드 + 정답 키워드로 채점합니다. 히든 테스트케이스는 저장하지 않습니다.', 'Bug-fix problems are graded using the buggy code + answer keywords. Hidden testcases are not saved.')}
             </div>
           )}
 
-          <div className="form-group"><label>힌트</label><textarea rows={2} placeholder="풀이 힌트..." value={form.hint} onChange={e=>f('hint',e.target.value)} style={{resize:'vertical'}} /></div>
-          <div className="form-group"><label>모범 답안 (관리자만 표시)</label><textarea rows={4} className="mono" placeholder="# 모범 답안 코드..." value={form.solution} onChange={e=>f('solution',e.target.value)} style={{resize:'vertical',color:'var(--green)'}} /></div>
+          <div className="form-group"><label>{txt('힌트', 'Hint')}</label><textarea rows={2} placeholder={txt('풀이 힌트...', 'Solving hint...')} value={form.hint} onChange={e=>f('hint',e.target.value)} style={{resize:'vertical'}} /></div>
+          <div className="form-group"><label>{txt('모범 답안 (관리자만 표시)', 'Model Solution (admin only)')}</label><textarea rows={4} className="mono" placeholder={txt('# 모범 답안 코드...', '# Model solution code...')} value={form.solution} onChange={e=>f('solution',e.target.value)} style={{resize:'vertical',color:'var(--green)'}} /></div>
         </div>
 
         <div className="cf-actions">
-          <button className="btn btn-ghost" onClick={()=>{setView('list');setEditTarget(null);setForm(createEmptyForm());setAiPreview(null);setAiPanel(false);}}>취소</button>
+          <button className="btn btn-ghost" onClick={()=>{setView('list');setEditTarget(null);setForm(createEmptyForm());setAiPreview(null);setAiPanel(false);}}>{txt('취소', 'Cancel')}</button>
           <button className="btn btn-primary" onClick={handleSave} disabled={saving||!form.title.trim()||!form.desc.trim()}>
-            {saving?<span className="spinner"/>:editTarget!==null?'수정 저장':'문제 등록 →'}
+            {saving?<span className="spinner"/>:editTarget!==null?txt('수정 저장', 'Save Changes'):txt('문제 등록 →', 'Register Problem →')}
           </button>
         </div>
       </div>

@@ -6,6 +6,7 @@ import { PROBLEMS as DEFAULT_PROBLEMS, TIERS, TIER_COLORS } from '../data/proble
 import api from '../api.js';
 import { getPushStatus, subscribePush, unsubscribePush } from '../utils/pushSubscribe.js';
 import { useToast } from '../context/ToastContext.jsx';
+import { useLang } from '../context/LangContext.jsx';
 import { useSubscriptionStatus } from '../hooks/useSubscriptionStatus.js';
 import { useSubscriptionCheckout } from '../hooks/useSubscriptionCheckout.js';
 import { JUDGE_LANGUAGE_OPTIONS } from '../data/judgeLanguages.js';
@@ -63,6 +64,7 @@ export default function ProfilePage() {
   const location = useLocation();
   const { user, updateUser, applyUser } = useAuth();
   const toast = useToast();
+  const { lang } = useLang();
   const { solved, submissions, problems: appProblems } = useApp();
   const {
     subscriptionStatus: subPlan,
@@ -161,12 +163,12 @@ export default function ProfilePage() {
     if (params.get('payment') === 'success') {
       invalidateSubscriptionStatus();
       refreshSubscriptionStatus().then(() => {
-        setPaymentFeedback(buildPaymentFeedback('success'));
+        setPaymentFeedback(buildPaymentFeedback('success', lang));
         toast?.show('🎉 Subscription complete! Your plan has been activated.', 'success', 5000);
         navigate('/profile', { replace: true });
       });
     } else if (params.get('payment') === 'cancelled') {
-      setPaymentFeedback(buildPaymentFeedback('cancelled'));
+      setPaymentFeedback(buildPaymentFeedback('cancelled', lang));
       toast?.show('Payment was cancelled.', 'info');
       navigate('/profile', { replace: true });
     }
@@ -223,7 +225,7 @@ export default function ProfilePage() {
     }));
     const extras = solvedProblems.filter((problem) => !TIERS[problem.tier]);
     if (extras.length > 0) {
-      groups.push({ tier: 'unranked', label: 'Other', color: 'var(--text3)', problems: extras });
+      groups.push({ tier: 'unranked', label: '기타', color: 'var(--text3)', problems: extras });
     }
     return groups.filter((group) => group.problems.length > 0);
   }, [solvedProblems]);
@@ -267,12 +269,12 @@ export default function ProfilePage() {
     JSON.stringify(techStack || []) !== JSON.stringify(savedTechStack || [])
   );
   const profileCompletenessItems = [
-    { label:'Bio', done:Boolean((bio || '').trim()) },
-    { label:'Avatar', done:Boolean(hasCustomAvatarProfile || providerAvatarUrl) },
-    { label:'Background', done:Boolean(equippedBackground) },
-    { label:'Tech', done:techStack.length > 0 },
-    { label:'Links', done:countFilledProfileLinks(socialLinks) > 0 },
-    { label:'Rewards', done:Boolean(equippedBadge || equippedTitle) },
+    { label:'소개', done:Boolean((bio || '').trim()) },
+    { label:'아바타', done:Boolean(hasCustomAvatarProfile || providerAvatarUrl) },
+    { label:'배경', done:Boolean(equippedBackground) },
+    { label:'기술', done:techStack.length > 0 },
+    { label:'링크', done:countFilledProfileLinks(socialLinks) > 0 },
+    { label:'보상', done:Boolean(equippedBadge || equippedTitle) },
   ];
   const profileCompleteness = Math.round(
     profileCompletenessItems.filter((item) => item.done).length / profileCompletenessItems.length * 100
@@ -306,7 +308,7 @@ export default function ProfilePage() {
     });
     return map;
   }, [yearCorrectSubs, submissions]);
-  const upgradePlans = getProfileUpgradePlans();
+  const upgradePlans = getProfileUpgradePlans(lang);
 
   const handlePwChange = async () => {
     if (pwNext !== pwConfirm) { setPwMsg('New passwords do not match.'); return; }
@@ -407,11 +409,11 @@ export default function ProfilePage() {
   };
 
   const TABS = [
-    ['solved',   'Solved'],
+    ['solved',   '풀이'],
     ['top100',   'Top 100'],
-    ['stats',    'Statistics'],
-    ['streak',   'Streak'],
-    ['settings', 'Settings'],
+    ['stats',    '통계'],
+    ['streak',   '스트릭'],
+    ['settings', '설정'],
   ];
 
   return (
@@ -426,13 +428,13 @@ export default function ProfilePage() {
         <div className="profile-header-content">
           <div className="profile-header-mode-row">
             <span className={`profile-mode-pill ${isSettingsTab ? 'editing' : ''}`}>
-              {isSettingsTab ? 'Edit Preview' : 'Public Profile'}
+              {isSettingsTab ? '편집 미리보기' : '공개 프로필'}
             </span>
             <button
               className="btn btn-ghost btn-sm"
               onClick={() => setMainTab(isSettingsTab ? 'solved' : 'settings')}
             >
-              {isSettingsTab ? 'View Profile' : 'Profile Settings'}
+              {isSettingsTab ? '프로필 보기' : '프로필 설정'}
             </button>
           </div>
 
@@ -508,12 +510,12 @@ export default function ProfilePage() {
             {/* 스탯 */}
             <div className="profile-header-stats">
               {[
-                { v: user?.rating||0,         l:'Rating',    c:tc,              mono:true },
-                { v: solvedProblemsMain.length, l:'Solved',   c:'var(--green)'          },
-                { v: `🔥${user?.streak||0}`,  l:'Streak',    c:'var(--yellow)'             },
-                { v: `${accuracy}%`,           l:'Accuracy',  c:'var(--orange)'             },
-                { v: followStats.followers,    l:'Followers', c:'var(--blue)', action:'followers' },
-                { v: followStats.following,    l:'Following', c:'var(--purple)', action:'following' },
+                { v: user?.rating||0,         l:'레이팅',   c:tc,              mono:true },
+                { v: solvedProblemsMain.length, l:'풀이',    c:'var(--green)'          },
+                { v: `🔥${user?.streak||0}`,  l:'스트릭',   c:'var(--yellow)'             },
+                { v: `${accuracy}%`,           l:'정확도',   c:'var(--orange)'             },
+                { v: followStats.followers,    l:'팔로워',   c:'var(--blue)', action:'followers' },
+                { v: followStats.following,    l:'팔로잉',   c:'var(--purple)', action:'following' },
               ].map(s=> s.action ? (
                 <button key={s.l} type="button" className="profile-stat-item clickable" onClick={() => setFollowModalType(s.action)}>
                   <div className="profile-stat-value" style={{ color:s.c, fontFamily:s.mono?'Space Mono,monospace':undefined }}>{s.v}</div>
@@ -612,11 +614,11 @@ export default function ProfilePage() {
 
           <div className="card">
             <div className="profile-panel-header">
-              Difficulty Distribution
+              난이도 분포
             </div>
             {/* header */}
             <div className="profile-dist-header">
-              {['Level','','Problems','Rate'].map((h,i)=>(
+              {['레벨','','문제','비율'].map((h,i)=>(
                 <span key={i} className={`dist-h-${i}`}>{h}</span>
               ))}
             </div>
@@ -638,13 +640,13 @@ export default function ProfilePage() {
             {/* 푼 문제 목록 */}
             {solvedProblems.length > 0 && (
               <div style={{ marginTop:20 }}>
-                <div className="profile-panel-subtitle">Solved Problems</div>
+                <div className="profile-panel-subtitle">푼 문제</div>
                 <div className="profile-solved-group-list">
                   {solvedByTier.map((group) => (
                     <div key={group.tier} className="profile-solved-group">
                       <div className="profile-solved-group-head">
                         <span style={{ color: group.color }}>{group.label}</span>
-                        <strong>{group.problems.length} problems</strong>
+                        <strong>{group.problems.length}문제</strong>
                       </div>
                       <div className="profile-solved-list">
                         {group.problems.map(p=>(
@@ -688,7 +690,7 @@ export default function ProfilePage() {
             {/* 티어 배지 격자 */}
             <div className="profile-top100-grid">
               {top100.map(p=>(
-                <div key={p.id} title={`#${p.id} ${p.title}\n+${TIER_POINTS[p.tier]||20}점 (${p.tier})`} onClick={() => navigate(`/problems/${p.id}`)} style={{ cursor: 'pointer' }}>
+                <div key={p.id} title={`#${p.id} ${p.title}\n+${TIER_POINTS[p.tier]||20}pts (${p.tier})`} onClick={() => navigate(`/problems/${p.id}`)} style={{ cursor: 'pointer' }}>
                   <TierBadge tier={p.tier} size={34} />
                 </div>
               ))}
@@ -735,10 +737,10 @@ export default function ProfilePage() {
           {/* Submission summary cards */}
           <div className="profile-stats-summary">
             {[
-              { label:'Total Submissions', v:submissions.length,   color:'var(--blue)'   },
-              { label:'Correct',           v:resultStats.correct,  color:'var(--green)'  },
-              { label:'Wrong',             v:resultStats.wrong,    color:'var(--red)'    },
-              { label:'Time Limit',        v:resultStats.timeout,  color:'var(--yellow)' },
+              { label:'총 제출',    v:submissions.length,   color:'var(--blue)'   },
+              { label:'맞았습니다', v:resultStats.correct,  color:'var(--green)'  },
+              { label:'틀렸습니다', v:resultStats.wrong,    color:'var(--red)'    },
+              { label:'시간 초과',  v:resultStats.timeout,  color:'var(--yellow)' },
             ].map(s=>(
               <div key={s.label} className="card profile-stat-mini">
                 <div className="profile-stat-mini-value" style={{ color:s.color }}>{s.v}</div>
@@ -749,9 +751,9 @@ export default function ProfilePage() {
 
           {/* Submissions by language */}
           <div className="card card-pad">
-            <div className="section-header-title" style={{ marginBottom:14 }}>Submissions by Language</div>
+            <div className="section-header-title" style={{ marginBottom:14 }}>언어별 제출</div>
             {topLang.length===0
-              ? <div style={{ color:'var(--text3)', fontSize:13 }}>No submission history.</div>
+              ? <div style={{ color:'var(--text3)', fontSize:13 }}>제출 기록이 없습니다.</div>
               : topLang.map(([lang,cnt],i)=>{
                 const colors=['var(--blue)','var(--green)','var(--yellow)','var(--orange)','var(--purple)'];
                 const color=colors[i%colors.length];
@@ -796,11 +798,11 @@ export default function ProfilePage() {
                 }
               });
               const maxDaily=Math.max(...dailyCounts,1);
-              const dayNames=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+              const dayNames=['일','월','화','수','목','금','토'];
               return (
                 <div>
                   <div style={{ display:'flex', gap:16, marginBottom:16 }}>
-                    {[{v:weekTotal,l:'Submissions',c:'var(--blue)'},{v:weekCorrect,l:'Correct',c:'var(--green)'},{v:`${weekRate}%`,l:'Accuracy',c:'var(--yellow)'}].map(s=>(
+                    {[{v:weekTotal,l:'제출',c:'var(--blue)'},{v:weekCorrect,l:'정답',c:'var(--green)'},{v:`${weekRate}%`,l:'정확도',c:'var(--yellow)'}].map(s=>(
                       <div key={s.l} style={{ textAlign:'center', flex:1 }}>
                         <div style={{ fontSize:22, fontWeight:800, color:s.c, fontFamily:'Space Mono,monospace' }}>{s.v}</div>
                         <div style={{ fontSize:10, color:'var(--text3)', marginTop:2 }}>{s.l}</div>
@@ -810,7 +812,7 @@ export default function ProfilePage() {
                   <div style={{ display:'flex', gap:4, alignItems:'end', height:60 }}>
                     {dailyCounts.map((cnt,i)=>(
                       <div key={i} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:3 }}>
-                        <div style={{ width:'100%', height:`${Math.max(4,cnt/maxDaily*50)}px`, background:cnt>0?'var(--blue)':'var(--bg3)', borderRadius:3 }} title={`${dayNames[i]}: ${cnt}회`}/>
+                        <div style={{ width:'100%', height:`${Math.max(4,cnt/maxDaily*50)}px`, background:cnt>0?'var(--blue)':'var(--bg3)', borderRadius:3 }} title={`${dayNames[i]}: ${cnt}`}/>
                         <span style={{ fontSize:9, color:'var(--text3)' }}>{dayNames[i]}</span>
                       </div>
                     ))}
@@ -822,14 +824,14 @@ export default function ProfilePage() {
 
           <div className="card card-pad">
             <div className="section-header" style={{ marginBottom:12 }}>
-              <div className="section-header-title">Weak Spots Analysis</div>
-              <span style={{ fontSize:11, color:'var(--text3)' }}>Based on highest error rate by tag</span>
+              <div className="section-header-title">취약 태그 분석</div>
+              <span style={{ fontSize:11, color:'var(--text3)' }}>태그별 오답률 기준</span>
             </div>
             {weaknessStats.length === 0 ? (
               <div className="empty-state" style={{ padding:'24px 0' }}>
                 <div className="empty-state-icon">📊</div>
                 <div style={{ fontSize:13, color:'var(--text3)', lineHeight:1.7 }}>
-                  Weak tags will appear automatically once you have 2+ submissions of the same type.
+                  같은 유형 제출이 2개 이상이면 자동으로 취약 태그가 표시됩니다.
                 </div>
               </div>
             ) : (
@@ -856,12 +858,12 @@ export default function ProfilePage() {
           </div>
 
           <div className="card card-pad">
-            <div className="section-header-title" style={{ marginBottom:12 }}>Solve Time Statistics</div>
+            <div className="section-header-title" style={{ marginBottom:12 }}>풀이 시간 통계</div>
             <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(140px, 1fr))', gap:10, marginBottom:14 }}>
               {[
-                { label:'Avg Solve Time', value: formatDuration(solveStats.avgSolveTime) },
-                { label:'Total Solve Time', value: formatDuration(solveStats.totalSolveTime) },
-                { label:'Fastest Solve', value: solveStats.fastestSolve ? `${solveStats.fastestSolve.problemTitle} · ${formatDuration(solveStats.fastestSolve.timeSec)}` : 'No record' },
+                { label:'평균 풀이 시간', value: formatDuration(solveStats.avgSolveTime) },
+                { label:'총 풀이 시간', value: formatDuration(solveStats.totalSolveTime) },
+                { label:'최단 풀이', value: solveStats.fastestSolve ? `${solveStats.fastestSolve.problemTitle} · ${formatDuration(solveStats.fastestSolve.timeSec)}` : '기록 없음' },
               ].map((item) => (
                 <div key={item.label} className="card card-pad-sm">
                   <div style={{ fontSize:11, color:'var(--text3)', marginBottom:6 }}>{item.label}</div>
@@ -875,7 +877,7 @@ export default function ProfilePage() {
                   <div key={tierName} className="list-item-hover" style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 12px', border:'1px solid var(--border)', borderRadius:10 }}>
                     <span style={{ fontSize:12, fontWeight:700, textTransform:'capitalize' }}>{tierName}</span>
                     <span style={{ fontSize:12, color:'var(--text2)' }}>
-                      Avg {formatDuration(stat.avgSec)} · {stat.count} problems
+                      평균 {formatDuration(stat.avgSec)} · {stat.count}문제
                     </span>
                   </div>
                 ))}
@@ -885,17 +887,17 @@ export default function ProfilePage() {
 
           {/* Recent activity */}
           <div className="card card-pad">
-            <div className="section-header-title" style={{ marginBottom:12 }}>Recent Activity</div>
+            <div className="section-header-title" style={{ marginBottom:12 }}>최근 활동</div>
             {submissions.length===0
               ? <div className="empty-state" style={{ padding:'24px 0' }}>
                   <div className="empty-state-icon">📋</div>
-                  <div style={{ fontSize:13, color:'var(--text3)' }}>No submission history.</div>
+                  <div style={{ fontSize:13, color:'var(--text3)' }}>제출 기록이 없습니다.</div>
                 </div>
               : submissions.slice(0,8).map(s=>(
                 <div key={s.id} className="list-item-hover" onClick={() => navigate(`/problems/${s.problem_id || s.problemId}`)} style={{ display:'flex', alignItems:'center', gap:12, padding:'9px 0', borderBottom:'1px solid var(--border)', cursor:'pointer' }}>
                   <span style={{ flex:1, fontSize:13, fontWeight:500 }}>{s.problem_title || s.problemTitle}</span>
                   <span style={{ fontSize:12, fontWeight:700, color:s.result==='correct'?'var(--green)':s.result==='wrong'?'var(--red)':'var(--yellow)' }}>
-                    {s.result==='correct'?'✓ Correct':s.result==='wrong'?'✗ Wrong':'Time Limit'}
+                    {s.result==='correct'?'✓ 정답':s.result==='wrong'?'✗ 오답':'시간 초과'}
                   </span>
                   <span style={{ fontSize:11, color:'var(--text3)' }}>{(s.submitted_at || s.date || '').slice(0,10)}</span>
                 </div>
@@ -913,32 +915,32 @@ export default function ProfilePage() {
           <div className="card card-pad" style={{ position:'relative' }}>
             <div className="section-header" style={{ marginBottom:16 }}>
               <div>
-                <div style={{ fontSize:22, fontWeight:800 }}>{user?.streak||0} days</div>
-                <div style={{ fontSize:13, color:'var(--text3)', marginTop:2 }}>Current streak</div>
+                <div style={{ fontSize:22, fontWeight:800 }}>{user?.streak||0}일</div>
+                <div style={{ fontSize:13, color:'var(--text3)', marginTop:2 }}>현재 스트릭</div>
               </div>
               <div style={{ textAlign:'right' }}>
-                <div style={{ fontSize:13, color:'var(--text3)' }}>Active days (52 weeks)</div>
-                <div style={{ fontSize:20, fontWeight:800, fontFamily:'Space Mono,monospace' }}>{activeHeatmapDays} days</div>
+                <div style={{ fontSize:13, color:'var(--text3)' }}>활성 일수 (52주)</div>
+                <div style={{ fontSize:20, fontWeight:800, fontFamily:'Space Mono,monospace' }}>{activeHeatmapDays}일</div>
               </div>
             </div>
             <YearHeatmap cells={heatmapCells} onCellHover={(cell) => setHeatmapHover(cell)} />
             <div style={{ display:'flex', gap:6, alignItems:'center', marginTop:12, fontSize:11, color:'var(--text3)' }}>
-              <span>None</span>
+              <span>없음</span>
               {[0,1,2,3,4].map(l=>(
                 <div key={l} className={`gcell lv${l}`} style={{ width:12, height:12, borderRadius:3, flexShrink:0 }}/>
               ))}
-              <span>Many</span>
+              <span>많음</span>
             </div>
           </div>
           {heatmapHover && heatmapHover.level > 0 && (
             <div className="card card-pad" style={{ borderColor:'var(--blue)', borderWidth:1, borderStyle:'solid' }}>
               <div style={{ fontSize:13, fontWeight:700, marginBottom:8, color:'var(--blue)' }}>
-                📅 {heatmapHover.date} — {['None','Light','Moderate','Heavy','Very Heavy'][heatmapHover.level]} ({heatmapHover.count} problems)
+                📅 {heatmapHover.date} — {['없음','약함','보통','많음','매우 많음'][heatmapHover.level]} ({heatmapHover.count}문제)
               </div>
               {!yearSubsLoaded ? (
                 <div style={{ fontSize:12, color:'var(--text3)', display:'flex', alignItems:'center', gap:6 }}>
                   <span className="spinner" style={{ width:12, height:12, borderWidth:2 }} />
-                  불러오는 중...
+                  Loading...
                 </div>
               ) : (solvedByDate[heatmapHover?.date] || []).length > 0 ? (
                 <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
@@ -966,12 +968,12 @@ export default function ProfilePage() {
         <div className="fade-up profile-settings-layout">
           <div className="profile-settings-hero">
             <div>
-              <div className="profile-settings-kicker">Profile Settings</div>
+              <div className="profile-settings-kicker">프로필 설정</div>
               <h2>{headerDisplayName}'s Profile</h2>
             </div>
             <div className="profile-completion-card">
               <div className="profile-completion-head">
-                <span>Completeness</span>
+                <span>완성도</span>
                 <strong>{profileCompleteness}%</strong>
               </div>
               <div className="profile-completion-bar">
@@ -1002,11 +1004,11 @@ export default function ProfilePage() {
                       {PROFILE_TIER_LABELS[user?.tier || 'unranked']}
                     </span>
                   </div>
-                  <p>{headerBio || 'Add a bio to display it at the top of your profile.'}</p>
+                  <p>{headerBio || '소개를 추가하면 프로필 상단에 표시됩니다.'}</p>
                   {equippedTitleMeta && <div className="profile-live-title">{equippedTitleMeta.icon} {equippedTitleMeta.name}</div>}
                   <div className="profile-live-chips">
                     {headerTechStack.slice(0, 5).map((tech) => <span key={tech}>{tech}</span>)}
-                    {countFilledProfileLinks(headerSocialLinks) > 0 && <span>{countFilledProfileLinks(headerSocialLinks)} link{countFilledProfileLinks(headerSocialLinks) !== 1 ? 's' : ''}</span>}
+                    {countFilledProfileLinks(headerSocialLinks) > 0 && <span>{countFilledProfileLinks(headerSocialLinks)}개 링크</span>}
                   </div>
                 </div>
               </div>
@@ -1014,16 +1016,16 @@ export default function ProfilePage() {
 
             <div className="profile-settings-notes">
               <div>
-                <span>Visibility</span>
-                <strong>{submissionsPublic ? 'Submissions public' : 'Submissions private'}</strong>
+                <span>공개 범위</span>
+                <strong>{submissionsPublic ? '제출 공개' : '제출 비공개'}</strong>
               </div>
               <div>
-                <span>Default language</span>
+                <span>기본 언어</span>
                 <strong>{JUDGE_LANGUAGE_OPTIONS.find((option) => option.value === defaultLanguage)?.label || defaultLanguage}</strong>
               </div>
               <div>
-                <span>Changes</span>
-                <strong>{profileDraftChanged ? 'Unsaved' : 'Saved'}</strong>
+                <span>변경사항</span>
+                <strong>{profileDraftChanged ? '미저장' : '저장됨'}</strong>
               </div>
             </div>
           </div>
@@ -1033,21 +1035,21 @@ export default function ProfilePage() {
 
           {/* 프로필 정보 */}
           <div className="card profile-settings-card">
-            <div className="profile-section-head"><span>🧑</span><div><strong>Profile Info</strong><p>Edit the name, bio, and links shown on your public profile.</p></div></div>
+            <div className="profile-section-head"><span>🧑</span><div><strong>프로필 정보</strong><p>공개 프로필에 표시되는 이름, 소개, 링크를 수정합니다.</p></div></div>
             <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
               <div className="form-group">
-                <label>Display Name</label>
+                <label>표시 이름</label>
                 <input className="settings-input" value={displayName} onChange={e => setDisplayName(e.target.value)}
-                  placeholder={user?.username || 'Display name'} style={{ maxWidth:360 }} />
+                  placeholder={user?.username || '표시 이름'} style={{ maxWidth:360 }} />
               </div>
               <div className="form-group">
-                <label>Bio</label>
+                <label>소개</label>
                 <textarea className="settings-input" value={bio} onChange={e => setBio(e.target.value)}
-                  placeholder="Tell us about yourself" rows={3}
+                  placeholder="자신을 소개해주세요" rows={3}
                   style={{ resize:'vertical', fontFamily:'inherit', lineHeight:1.6, maxWidth:480 }} />
               </div>
               <div className="form-group">
-                <label>Social Links</label>
+                <label>소셜 링크</label>
                 <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
                   {Object.entries(PROFILE_LINK_LABELS).map(([key, label]) => (
                     <div key={key} style={{ display:'flex', alignItems:'center', gap:8, maxWidth:480 }}>
@@ -1060,7 +1062,7 @@ export default function ProfilePage() {
                 </div>
               </div>
               <div className="form-group">
-                <label>Tech Stack</label>
+                <label>기술 스택</label>
                 <div style={{ display:'flex', flexWrap:'wrap', gap:6, maxWidth:560 }}>
                   {TECH_OPTIONS.map(tech => (
                     <button key={tech} onClick={() => setTechStack(prev => prev.includes(tech) ? prev.filter(x => x !== tech) : prev.length < 20 ? [...prev, tech] : prev)}
@@ -1077,16 +1079,16 @@ export default function ProfilePage() {
                 </div>
               </div>
               <button className="btn btn-primary" onClick={handleSaveProfileInfo} disabled={profileInfoSaving} style={{ alignSelf:'flex-start', padding:'10px 24px' }}>
-                {profileInfoSaving ? <span className="spinner"/> : 'Save Profile'}
+                {profileInfoSaving ? <span className="spinner"/> : '프로필 저장'}
               </button>
             </div>
           </div>
 
           <div className="card profile-settings-card" style={{ width:'100%' }}>
-            <div className="profile-section-head"><span>⚙️</span><div><strong>제출 & 공개 설정</strong><p>풀이 기본값과 제출 기록 공개 여부를 조정합니다.</p></div></div>
+            <div className="profile-section-head"><span>⚙️</span><div><strong>제출 및 개인정보 설정</strong><p>기본 언어를 설정하고 제출 내역 공개 범위를 제어합니다.</p></div></div>
             <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
               <div className="form-group">
-                <label>기본 제출 언어</label>
+                <label>기본 언어</label>
                 <select value={defaultLanguage} onChange={(e) => setDefaultLanguage(e.target.value)}>
                   {JUDGE_LANGUAGE_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>{option.label}</option>
@@ -1095,19 +1097,19 @@ export default function ProfilePage() {
               </div>
 
               <div className="card card-pad-sm">
-                <div className="section-header-title" style={{ marginBottom:6 }}>제출 기록 공개</div>
+                <div className="section-header-title" style={{ marginBottom:6 }}>제출 내역 공개 범위</div>
                 <div style={{ fontSize:12, color:'var(--text2)', lineHeight:1.6, marginBottom:10 }}>
-                  켜면 다른 사용자가 제출 목록에서 내 제출 기록을 볼 수 있습니다. 코드는 항상 본인만 열람할 수 있습니다.
+                  활성화하면 다른 유저가 제출 목록을 볼 수 있습니다. 코드는 항상 비공개입니다.
                 </div>
                 <div style={{ display:'flex', gap:8 }}>
                   <button className="btn btn-ghost btn-sm" onClick={() => setSubmissionsPublic(true)} style={{
                     background: submissionsPublic ? 'var(--blue)' : 'var(--bg2)',
                     color: submissionsPublic ? '#fff' : 'var(--text2)',
-                  }}>전체 공개</button>
+                  }}>공개</button>
                   <button className="btn btn-ghost btn-sm" onClick={() => setSubmissionsPublic(false)} style={{
                     background: !submissionsPublic ? 'var(--orange)' : 'var(--bg2)',
                     color: !submissionsPublic ? '#fff' : 'var(--text2)',
-                  }}>내꺼만 보기</button>
+                  }}>비공개</button>
                 </div>
               </div>
 
@@ -1119,7 +1121,7 @@ export default function ProfilePage() {
 
           {/* 아바타 꾸미기 */}
           <div className="card profile-settings-card profile-avatar-card">
-            <div className="profile-section-head"><span>🎨</span><div><strong>프로필 사진 & 배경</strong><p>사이트 프로필과 원래 OAuth 프로필을 선택하고, 배경/색상을 빠르게 꾸밉니다.</p></div></div>
+            <div className="profile-section-head"><span>🎨</span><div><strong>프로필 사진 및 배경</strong><p>DailyCoding 프로필과 OAuth 원본 사진 중 선택하고 배경과 색상을 커스터마이즈합니다.</p></div></div>
             <div style={{ display:'flex', gap:16, alignItems:'center', marginBottom:16, flexWrap:'wrap' }}>
               <ProfileAvatar
                 profile={{ ...user, avatarUrlCustom, avatarColor, avatarEmoji, avatarSource }}
@@ -1136,7 +1138,7 @@ export default function ProfilePage() {
                     onChange={async (e) => {
                       const file = e.target.files?.[0]
                       if (!file) return
-                      if (file.size > 2 * 1024 * 1024) { toast?.show('2MB 이하 이미지만 가능합니다', 'error'); return }
+                      if (file.size > 2 * 1024 * 1024) { toast?.show('Image must be under 2MB', 'error'); return }
                       const formData = new FormData()
                       formData.append('avatar', file)
                       try {
@@ -1146,9 +1148,9 @@ export default function ProfilePage() {
                         setAvatarUrlCustom(data.avatarUrl)
                         setAvatarSource(data.user?.avatarSource || data.user?.avatar_source || 'site')
                         applyUser(data.user)
-                        toast?.show('아바타가 업로드되었습니다.', 'success')
+                        toast?.show('Avatar uploaded.', 'success')
                       } catch (err) {
-                        toast?.show(err.response?.data?.message || '아바타 업로드 실패', 'error')
+                        toast?.show(err.response?.data?.message || 'Avatar upload failed', 'error')
                       }
                     }}
                   />
@@ -1164,7 +1166,7 @@ export default function ProfilePage() {
                 <span className="avatar-source-icon">DC</span>
                 <span>
                   <strong>DailyCoding 프로필 사용</strong>
-                  <small>업로드 이미지·이모지·색상을 사이트 프로필로 저장해서 보여줍니다.</small>
+                  <small>업로드한 이미지, 이모지, 또는 색상을 프로필로 표시합니다.</small>
                 </span>
                 {avatarSource !== 'provider' && <em>선택됨</em>}
               </button>
@@ -1176,44 +1178,44 @@ export default function ProfilePage() {
               >
                 <span className="avatar-source-icon">OAuth</span>
                 <span>
-                  <strong>원래 프로필 사진 사용</strong>
-                  <small>Google/GitHub 등 로그인 제공자의 원본 프로필로 되돌립니다.</small>
+                  <strong>원본 프로필 사진 사용</strong>
+                  <small>Google/GitHub 로그인 제공자의 원본 사진으로 되돌립니다.</small>
                 </span>
                 {avatarSource === 'provider' && <em>선택됨</em>}
               </button>
             </div>
             <div className="profile-avatar-status-note">
               {avatarSource === 'provider'
-                ? '현재 원래 프로필 사진을 사용 중입니다. 저장된 DailyCoding 프로필은 지워지지 않아 언제든 다시 켤 수 있습니다.'
+                ? '원본 제공자 사진을 사용 중입니다. DailyCoding 프로필은 저장되어 있으며 언제든지 다시 활성화할 수 있습니다.'
                 : hasCustomAvatarProfile
-                  ? '현재 DailyCoding에 저장한 사이트 프로필을 사용 중입니다.'
+                  ? '저장된 DailyCoding 프로필을 사용 중입니다.'
                   : providerAvatarUrl
-                    ? '아직 사이트 프로필을 꾸미지 않아 원래 프로필 사진이 자동으로 보입니다.'
-                    : '원본 프로필 이미지가 없어서 이모지/색상 또는 이니셜로 표시됩니다.'}
+                    ? '사이트 프로필이 없습니다 — 원본 제공자 사진이 자동으로 표시됩니다.'
+                    : '제공자 사진을 찾을 수 없습니다 — 이모지/색상 또는 이니셜이 표시됩니다.'}
             </div>
             <div style={{ marginBottom:16, padding:14, border:'1px solid var(--border)', borderRadius:14, background:'var(--bg2)' }}>
               <div style={{display:'flex',justifyContent:'space-between',gap:12,alignItems:'center'}}>
                 <div>
                   <div style={{fontSize:13,fontWeight:800}}>푸시 알림</div>
-                  <small style={{color:'var(--text3)'}}>배틀 초대와 데일리 리셋 알림을 브라우저로 받습니다.</small>
+                  <small style={{color:'var(--text3)'}}>배틀 초대 및 일일 초기화 알림을 브라우저에서 받습니다.</small>
                 </div>
                 <button className="btn btn-ghost btn-sm" onClick={async()=>{
                   try {
                     if (pushStatus.subscribed) {
                       await unsubscribePush();
                       setPushStatus((prev) => ({...prev, subscribed:false}));
-                      toast?.show('푸시 알림을 껐습니다.', 'info');
+                      toast?.show('Push notifications disabled.', 'info');
                     } else {
                       await subscribePush();
                       setPushStatus((prev) => ({...prev, subscribed:true, configured:true}));
-                      toast?.show('푸시 알림을 켰습니다.', 'success');
+                      toast?.show('Push notifications enabled.', 'success');
                     }
                   } catch (err) {
-                    toast?.show(err.message || '푸시 알림 설정 실패', 'error');
+                    toast?.show(err.message || 'Failed to update push notification settings', 'error');
                   }
-                }}>{pushStatus.subscribed ? '끄기' : '켜기'}</button>
+                }}>{pushStatus.subscribed ? '비활성화' : '활성화'}</button>
               </div>
-              {!pushStatus.configured && <div style={{fontSize:11,color:'var(--yellow)',marginTop:8}}>운영 서버 VAPID 키 설정 후 사용할 수 있습니다.</div>}
+              {!pushStatus.configured && <div style={{fontSize:11,color:'var(--yellow)',marginTop:8}}>서버에 VAPID 키가 설정된 후 사용 가능합니다.</div>}
             </div>
 
             <div style={{ marginBottom:16 }}>
@@ -1227,9 +1229,9 @@ export default function ProfilePage() {
                           const { data } = await api.patch('/auth/profile/background', { backgroundSlug: bg.slug })
                           setEquippedBackground(bg.slug)
                           applyUser(data)
-                          toast?.show('배경이 적용되었습니다.', 'success')
+                          toast?.show('Background applied.', 'success')
                         } catch (err) {
-                          toast?.show(err.response?.data?.message || '배경 적용 실패', 'error')
+                          toast?.show(err.response?.data?.message || 'Failed to apply background', 'error')
                         }
                       }}
                       className="profile-background-preview"
@@ -1256,7 +1258,7 @@ export default function ProfilePage() {
                       setAvatarColor(updated?.avatarColor || null);
                       setAvatarSource(updated?.avatarSource || updated?.avatar_source || 'site');
                     } catch {
-                      toast?.show('아바타 색상 저장 실패', 'error');
+                      toast?.show('Failed to save avatar color', 'error');
                     }
                   }} style={{
                     width:28, height:28, borderRadius:'50%', background:c,
@@ -1270,7 +1272,7 @@ export default function ProfilePage() {
                     setAvatarColor(updated?.avatarColor || null);
                     setAvatarSource(updated?.avatarSource || updated?.avatar_source || 'site');
                   } catch {
-                    toast?.show('아바타 색상 초기화 실패', 'error');
+                    toast?.show('Failed to reset avatar color', 'error');
                   }
                 }} style={{
                   width:28, height:28, borderRadius:'50%', border:'2px dashed var(--border)', background:'transparent',
@@ -1288,7 +1290,7 @@ export default function ProfilePage() {
                       setAvatarEmoji(updated?.avatarEmoji || null);
                       setAvatarSource(updated?.avatarSource || updated?.avatar_source || 'site');
                     } catch {
-                      toast?.show('아바타 이모지 저장 실패', 'error');
+                      toast?.show('Failed to save avatar emoji', 'error');
                     }
                   }} style={{
                     width:36, height:36, borderRadius:8, fontSize:18,
@@ -1302,7 +1304,7 @@ export default function ProfilePage() {
                     setAvatarEmoji(updated?.avatarEmoji || null);
                     setAvatarSource(updated?.avatarSource || updated?.avatar_source || 'site');
                   } catch {
-                    toast?.show('아바타 이모지 초기화 실패', 'error');
+                    toast?.show('Failed to reset avatar emoji', 'error');
                   }
                 }} style={{
                   width:36, height:36, borderRadius:8, border:'1px dashed var(--border)',
@@ -1318,10 +1320,10 @@ export default function ProfilePage() {
           {/* 보상 */}
           {rewards.length > 0 && (
             <div className="card profile-settings-card">
-              <div className="profile-section-head"><span>🎁</span><div><strong>보상 & 장착</strong><p>획득한 뱃지와 칭호를 프로필에 적용합니다.</p></div></div>
+              <div className="profile-section-head"><span>🎁</span><div><strong>보상 및 장착</strong><p>획득한 배지와 칭호를 프로필에 적용합니다.</p></div></div>
               {/* 현재 장착 */}
               <div style={{ display:'flex', gap:10, marginBottom:16, flexWrap:'wrap' }}>
-                {[{type:'badge',current:equippedBadge,label:'장착 뱃지'},{type:'title',current:equippedTitle,label:'장착 칭호'}].map(item=>(
+                {[{type:'badge',current:equippedBadge,label:'장착된 배지'},{type:'title',current:equippedTitle,label:'장착된 칭호'}].map(item=>(
                   <div key={item.type} className="card card-pad-sm" style={{ display:'flex', alignItems:'center', gap:10, flex:1, minWidth:180 }}>
                     <span style={{ fontSize:20 }}>{item.current ? rewards.find(r=>r.code===item.current)?.icon : (item.type==='badge'?'⬜':'📛')}</span>
                     <div>
@@ -1338,7 +1340,7 @@ export default function ProfilePage() {
               {/* 뱃지 그리드 */}
               {rewards.filter(r=>r.type==='badge').length>0 && (
                 <>
-                  <div className="profile-rewards-subtitle">보유 뱃지</div>
+                  <div className="profile-rewards-subtitle">배지</div>
                   <div className="profile-rewards-grid">
                     {rewards.filter(r=>r.type==='badge').map(r=>{
                       const isEquipped=equippedBadge===r.code;
@@ -1357,7 +1359,7 @@ export default function ProfilePage() {
               {/* 칭호 리스트 */}
               {rewards.filter(r=>r.type==='title').length>0 && (
                 <>
-                  <div className="profile-rewards-subtitle">보유 칭호</div>
+                  <div className="profile-rewards-subtitle">칭호</div>
                   <div className="profile-rewards-list">
                     {rewards.filter(r=>r.type==='title').map(r=>{
                       const isEquipped=equippedTitle===r.code;
@@ -1380,7 +1382,7 @@ export default function ProfilePage() {
 
           {/* 구독 */}
           <div className="card profile-settings-card">
-            <div className="profile-section-head"><span>💳</span><div><strong>구독 관리</strong><p>현재 플랜과 업그레이드/해지 상태를 확인합니다.</p></div></div>
+            <div className="profile-section-head"><span>💳</span><div><strong>Subscription</strong><p>View your current plan and manage upgrades or cancellations.</p></div></div>
             {paymentFeedback && (
               <div style={{
                 marginBottom: 16,
@@ -1394,17 +1396,17 @@ export default function ProfilePage() {
               </div>
             )}
             <div className={`profile-sub-current-panel tier-${subPlan?.tier || 'free'}`}>
-              <div className="sub-label">현재 플랜</div>
+              <div className="sub-label">Current Plan</div>
               <div className="sub-value">
-                {formatCurrentSubscriptionLabel(subPlan?.tier)}
+                {formatCurrentSubscriptionLabel(subPlan?.tier, lang)}
               </div>
               {subPlan?.expires && (
-                <div className="sub-expiry">만료일: {new Date(subPlan.expires).toLocaleDateString('ko-KR')}</div>
+                <div className="sub-expiry">Expires: {new Date(subPlan.expires).toLocaleDateString('en-US')}</div>
               )}
               <div className="sub-note">
                 {subPlan?.tier && subPlan.tier !== 'free'
-                  ? '현재 유료 플랜이 활성화되어 있습니다. 필요하면 아래에서 해지 예약이나 플랜 비교를 진행할 수 있습니다.'
-                  : '무료 플랜으로 이용 중입니다. AI 사용량과 프리미엄 기능이 더 필요하면 업그레이드하세요.'}
+                  ? 'Your paid plan is active. You can schedule a cancellation or compare plans below.'
+                  : 'You are on the free plan. Upgrade for more AI usage and premium features.'}
               </div>
             </div>
 
@@ -1426,7 +1428,7 @@ export default function ProfilePage() {
                     <button onClick={() => handleUpgrade(plan.id)} disabled={loadingPlan === plan.id} className="btn-plan-upgrade" style={{
                       background:`${plan.color}20`, color:plan.color,
                       opacity: loadingPlan && loadingPlan !== plan.id ? 0.5 : 1,
-                    }}>{loadingPlan === plan.id ? '처리 중...' : '업그레이드 →'}</button>
+                    }}>{loadingPlan === plan.id ? 'Processing...' : 'Upgrade →'}</button>
                   </div>
                 ))}
               </div>
@@ -1434,7 +1436,7 @@ export default function ProfilePage() {
             {subPlan?.tier && subPlan.tier!=='free' && (
               <div style={{ display:'flex', flexWrap:'wrap', gap:10, alignItems:'center' }}>
                 <button className="btn btn-ghost btn-sm" onClick={() => navigate('/pricing')}>
-                  💳 플랜 비교
+                  💳 Compare Plans
                 </button>
                 <button
                   className="btn btn-ghost btn-sm"
@@ -1442,7 +1444,7 @@ export default function ProfilePage() {
                   disabled={cancelLoading}
                   style={{ color:'var(--red)', borderColor:'rgba(248,81,73,.25)' }}
                 >
-                  {cancelLoading ? '처리 중...' : '구독 해지 예약'}
+                  {cancelLoading ? 'Processing...' : 'Schedule Cancellation'}
                 </button>
                 <a href="mailto:choijunhuk2007@gmail.com" style={{ color:'var(--blue)', fontSize:13 }}>
                   choijunhuk2007@gmail.com
@@ -1450,7 +1452,7 @@ export default function ProfilePage() {
               </div>
             )}
             {cancelMsg && (
-              <div style={{ marginTop:12, fontSize:12, fontWeight:600, color:cancelMsg.includes('실패') ? 'var(--red)' : 'var(--green)' }}>
+              <div style={{ marginTop:12, fontSize:12, fontWeight:600, color:cancelMsg.toLowerCase().includes('fail') || cancelMsg.toLowerCase().includes('error') ? 'var(--red)' : 'var(--green)' }}>
                 {cancelMsg}
               </div>
             )}
@@ -1458,14 +1460,14 @@ export default function ProfilePage() {
 
           {/* 비밀번호 변경 */}
           <div className="card profile-settings-card">
-            <div className="profile-section-head"><span>🔒</span><div><strong>비밀번호 변경</strong><p>비밀번호 계정에서만 사용됩니다. OAuth 계정이면 비워둘 수 있습니다.</p></div></div>
+            <div className="profile-section-head"><span>🔒</span><div><strong>Change Password</strong><p>Only applies to password accounts. Leave blank for OAuth accounts.</p></div></div>
             <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
-              <div className="form-group"><label>현재 비밀번호</label><input type="password" value={pwCurrent} onChange={e=>setPwCurrent(e.target.value)} placeholder="현재 비밀번호"/></div>
-              <div className="form-group"><label>새 비밀번호</label><input type="password" value={pwNext} onChange={e=>setPwNext(e.target.value)} placeholder="새 비밀번호 (8자 이상)"/></div>
-              <div className="form-group"><label>새 비밀번호 확인</label><input type="password" value={pwConfirm} onChange={e=>setPwConfirm(e.target.value)} placeholder="새 비밀번호 재입력"/></div>
+              <div className="form-group"><label>Current Password</label><input type="password" value={pwCurrent} onChange={e=>setPwCurrent(e.target.value)} placeholder="Current password"/></div>
+              <div className="form-group"><label>New Password</label><input type="password" value={pwNext} onChange={e=>setPwNext(e.target.value)} placeholder="New password (min 8 chars)"/></div>
+              <div className="form-group"><label>Confirm New Password</label><input type="password" value={pwConfirm} onChange={e=>setPwConfirm(e.target.value)} placeholder="Re-enter new password"/></div>
               {pwMsg && <div style={{ fontSize:13, color:pwMsg.startsWith('✅')?'var(--green)':'var(--red)', fontWeight:600 }}>{pwMsg}</div>}
               <button className="btn btn-primary" onClick={handlePwChange} disabled={pwLoading||!pwCurrent||!pwNext||!pwConfirm} style={{ alignSelf:'flex-start', padding:'10px 24px' }}>
-                {pwLoading ? <span className="spinner"/> : '비밀번호 변경'}
+                {pwLoading ? <span className="spinner"/> : 'Change Password'}
               </button>
             </div>
           </div>

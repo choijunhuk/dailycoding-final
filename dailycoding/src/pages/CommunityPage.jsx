@@ -7,9 +7,9 @@ import { useLang } from '../context/LangContext.jsx'
 import './CommunityPage.css'
 
 const BOARD_META = {
-  qna: { label: 'Q&A', tone: 'var(--blue)', desc: 'A space for questions and answers' },
-  tech: { label: 'Tech Discussion', tone: 'var(--green)', desc: 'A space to discuss implementation strategies, performance, and architecture' },
-  lounge: { label: 'Lounge', tone: 'var(--purple)', desc: 'A space for casual conversation and retrospectives' },
+  qna: { label: 'Q&A', tone: 'var(--blue)', desc: '질문과 답변을 위한 공간' },
+  tech: { label: 'Tech Discussion', tone: 'var(--green)', desc: '구현 전략, 성능, 아키텍처를 토론하는 공간' },
+  lounge: { label: 'Lounge', tone: 'var(--purple)', desc: '자유로운 대화와 회고를 위한 공간' },
 }
 
 function parseTags(raw) {
@@ -404,42 +404,42 @@ export default function CommunityPage() {
   }
 
   const isMyPost = selectedPost?.user_id === user?.id
-  const postAuthorName = selectedPost?.nickname || selectedPost?.username || 'Anonymous'
+  const postAuthorName = selectedPost?.nickname || selectedPost?.username || '익명'
 
   const composerModal = (
-    <Modal open={composerOpen} onClose={() => setComposerOpen(false)} title={editorMode === 'edit' ? 'Edit Post' : 'Write New Post'}>
+    <Modal open={composerOpen} onClose={() => setComposerOpen(false)} title={editorMode === 'edit' ? '게시글 수정' : '새 게시글 작성'}>
       <div style={{ display: 'grid', gap: 14 }}>
         <input
           value={draft.title}
           onChange={(event) => setDraft((current) => ({ ...current, title: event.target.value }))}
-          placeholder="Title"
+          placeholder="제목"
           style={{ border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', borderRadius: 12, padding: '12px 14px', fontFamily: 'inherit', fontSize: 14, outline: 'none' }}
         />
         <textarea
           value={draft.content}
           onChange={(event) => setDraft((current) => ({ ...current, content: event.target.value }))}
-          placeholder="Enter the body text. You can mention users with @username."
+          placeholder="본문을 입력하세요. @username으로 유저를 멘션할 수 있습니다."
           rows={12}
           style={{ border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', borderRadius: 14, padding: '14px 16px', fontFamily: 'inherit', fontSize: 14, lineHeight: 1.7, resize: 'vertical', outline: 'none' }}
         />
         <input
           value={draft.tags}
           onChange={(event) => setDraft((current) => ({ ...current, tags: event.target.value }))}
-          placeholder="Enter tags separated by commas. e.g. dp, graph, review"
+          placeholder="쉼표로 태그를 구분하여 입력하세요. 예: dp, 그래프, 리뷰"
           style={{ border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', borderRadius: 12, padding: '12px 14px', fontFamily: 'inherit', fontSize: 13, outline: 'none' }}
         />
         {editorMode === 'create' ? (
           <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: 'var(--text2)' }}>
             <input type="checkbox" checked={draft.isAnonymous} onChange={(event) => setDraft((current) => ({ ...current, isAnonymous: event.target.checked }))} />
-            Post anonymously
+            익명으로 게시
           </label>
         ) : null}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, flexWrap: 'wrap' }}>
           <button onClick={() => setComposerOpen(false)} style={{ border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--text)', borderRadius: 12, padding: '10px 14px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 700 }}>
-            Cancel
+            취소
           </button>
           <button onClick={submitPost} disabled={savingPost} style={{ border: 'none', background: BOARD_META[activeBoard].tone, color: 'var(--bg)', borderRadius: 12, padding: '10px 16px', cursor: savingPost ? 'default' : 'pointer', fontFamily: 'inherit', fontWeight: 800, opacity: savingPost ? 0.5 : 1 }}>
-            {savingPost ? 'Saving...' : editorMode === 'edit' ? 'Save Changes' : 'Publish'}
+            {savingPost ? '저장 중...' : editorMode === 'edit' ? '변경사항 저장' : '게시'}
           </button>
         </div>
       </div>
@@ -451,10 +451,10 @@ export default function CommunityPage() {
       <div style={{ maxWidth: 980, margin: '0 auto', padding: '28px 20px 44px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 18 }}>
           <button onClick={closePost} className="btn btn-ghost">
-            ← Back to List
+            ← 목록으로
           </button>
           <button onClick={() => openComposer('create')} className="btn" style={{ background: BOARD_META[activeBoard].tone, color: 'var(--bg)' }}>
-            Write Post
+            글쓰기
           </button>
         </div>
 
@@ -485,17 +485,17 @@ export default function CommunityPage() {
                 </div>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   <button onClick={() => togglePostLike(selectedPost.id)} style={{ border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--text)', borderRadius: 12, padding: '9px 12px', cursor: 'pointer', fontWeight: 700 }}>❤️ Like {selectedPost.like_count || 0}</button>
-                  <button onClick={() => toggleScrap(selectedPost.id)} style={{ border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--text)', borderRadius: 12, padding: '9px 12px', cursor: 'pointer', fontWeight: 700 }}>{selectedPost.isScrapped ? 'Remove Bookmark' : 'Bookmark'}</button>
+                  <button onClick={() => toggleScrap(selectedPost.id)} style={{ border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--text)', borderRadius: 12, padding: '9px 12px', cursor: 'pointer', fontWeight: 700 }}>{selectedPost.isScrapped ? '북마크 해제' : '북마크'}</button>
                   {!isMyPost && selectedPost.user_id ? (
-                    <button onClick={() => blockAuthor(selectedPost.user_id)} style={{ border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--red)', borderRadius: 12, padding: '9px 12px', cursor: 'pointer', fontWeight: 700 }}>Block</button>
+                    <button onClick={() => blockAuthor(selectedPost.user_id)} style={{ border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--red)', borderRadius: 12, padding: '9px 12px', cursor: 'pointer', fontWeight: 700 }}>차단</button>
                   ) : null}
                   {isMyPost ? (
                     <>
-                      <button onClick={() => openComposer('edit', selectedPost)} style={{ border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--text)', borderRadius: 12, padding: '9px 12px', cursor: 'pointer', fontWeight: 700 }}>Edit</button>
-                      <button onClick={deletePost} style={{ border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--red)', borderRadius: 12, padding: '9px 12px', cursor: 'pointer', fontWeight: 700 }}>Delete</button>
+                      <button onClick={() => openComposer('edit', selectedPost)} style={{ border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--text)', borderRadius: 12, padding: '9px 12px', cursor: 'pointer', fontWeight: 700 }}>수정</button>
+                      <button onClick={deletePost} style={{ border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--red)', borderRadius: 12, padding: '9px 12px', cursor: 'pointer', fontWeight: 700 }}>삭제</button>
                     </>
                   ) : isAdmin ? (
-                    <button onClick={deletePost} style={{ border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--red)', borderRadius: 12, padding: '9px 12px', cursor: 'pointer', fontWeight: 700 }}>🛡 Delete</button>
+                    <button onClick={deletePost} style={{ border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--red)', borderRadius: 12, padding: '9px 12px', cursor: 'pointer', fontWeight: 700 }}>🛡 삭제</button>
                   ) : null}
                 </div>
               </div>
@@ -544,7 +544,7 @@ export default function CommunityPage() {
                           </div>
                           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                             <button onClick={() => likeReply(reply.id)} style={{ border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', borderRadius: 10, padding: '7px 10px', cursor: 'pointer', fontWeight: 700 }}>👍 {reply.like_count || 0}</button>
-                            <button onClick={() => setReplyDraft(`@${reply.nickname || reply.username} `)} style={{ border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', borderRadius: 10, padding: '7px 10px', cursor: 'pointer', fontWeight: 700 }}>Reply</button>
+                            <button onClick={() => setReplyDraft(`@${reply.nickname || reply.username} `)} style={{ border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', borderRadius: 10, padding: '7px 10px', cursor: 'pointer', fontWeight: 700 }}>답글</button>
                             {canAccept ? <button onClick={() => acceptReply(reply.id)} style={{ border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--green)', borderRadius: 10, padding: '7px 10px', cursor: 'pointer', fontWeight: 800 }}>Accept</button> : null}
                             {canDelete ? <button onClick={() => deleteReply(reply.id)} style={{ border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--red)', borderRadius: 10, padding: '7px 10px', cursor: 'pointer', fontWeight: 700 }}>Delete</button> : null}
                           </div>
@@ -562,7 +562,7 @@ export default function CommunityPage() {
                     value={replyDraft}
                     onChange={(event) => setReplyDraft(event.target.value)}
                     rows={4}
-                    placeholder="Write a comment. You can mention users with @username."
+                    placeholder="댓글을 입력하세요. @username으로 유저를 멘션할 수 있습니다."
                     style={{ border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', borderRadius: 14, padding: '12px 14px', fontFamily: 'inherit', fontSize: 13, lineHeight: 1.7, resize: 'vertical', outline: 'none' }}
                   />
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
@@ -623,7 +623,7 @@ export default function CommunityPage() {
                 <input
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Search title or body"
+                  placeholder="제목 또는 본문 검색"
                   style={{
                     width: '100%',
                     border: '1px solid var(--border)',
@@ -639,7 +639,7 @@ export default function CommunityPage() {
                 <input
                   value={tag}
                   onChange={(event) => setTag(event.target.value)}
-                  placeholder="Tag filter"
+                  placeholder="태그 필터"
                   style={{
                     width: '100%',
                     border: '1px solid var(--border)',
@@ -682,7 +682,7 @@ export default function CommunityPage() {
                   No posts match the current filters.
                 </div>
               ) : normalizedPosts.map((post) => {
-                const authorName = post.nickname || post.username || 'Anonymous'
+                const authorName = post.nickname || post.username || '익명'
                 return (
                   <button
                     key={post.id}
@@ -722,9 +722,9 @@ export default function CommunityPage() {
                       </div>
                       <div className="community-post-metrics" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(54px, 1fr))', gap: 8, textAlign: 'center', flexShrink: 0 }}>
                         {[
-                          { label: 'Likes', value: post.like_count || 0, color: 'var(--red)' },
-                          { label: 'Comments', value: post.answer_count || 0, color: 'var(--green)' },
-                          { label: 'Views', value: post.view_count || 0, color: 'var(--yellow)' },
+                          { label: '좋아요', value: post.like_count || 0, color: 'var(--red)' },
+                          { label: '댓글', value: post.answer_count || 0, color: 'var(--green)' },
+                          { label: '조회', value: post.view_count || 0, color: 'var(--yellow)' },
                         ].map((item) => (
                           <div key={`${post.id}-${item.label}`} style={{ background: 'var(--bg3)', borderRadius: 12, padding: '10px 8px' }}>
                             <div style={{ fontSize: 15, fontWeight: 800, color: item.color }}>{item.value}</div>
@@ -763,7 +763,7 @@ export default function CommunityPage() {
 
           <aside style={{ display: 'grid', gap: 18 }}>
             <div className="card" style={{ padding: 18 }}>
-              <SectionTitle title="Popular Posts" desc="Top liked posts in the last 24 hours" />
+              <SectionTitle title="인기 게시글" desc="최근 24시간 좋아요 상위 게시글" />
               <div style={{ display: 'grid', gap: 12 }}>
                 {popularPosts.length === 0 ? (
                   <div style={{ fontSize: 12, color: 'var(--text3)' }}>No popular posts in this board yet.</div>

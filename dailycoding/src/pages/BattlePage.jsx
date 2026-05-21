@@ -89,8 +89,8 @@ function BattleReplayViewer({ roomId }) {
     return (
       <div className="bp-page" style={{display:'grid',placeItems:'center'}}>
         <div className="card card-pad-lg" style={{maxWidth:420,textAlign:'center'}}>
-          <h2>Replay not found</h2>
-          <button className="btn btn-primary" onClick={() => navigate('/battle')}>Go to Battle</button>
+          <h2>리플레이를 찾을 수 없습니다</h2>
+          <button className="btn btn-primary" onClick={() => navigate('/battle')}>배틀로 이동</button>
         </div>
       </div>
     );
@@ -666,10 +666,10 @@ export default function BattlePage() {
   };
 
   const buildShareText = (battleRoom, currentPlayer, opponentPlayer, didWin, didDraw) => {
-    const outcome = didWin ? 'Victory' : didDraw ? 'Draw' : 'Defeat';
-    const primaryProblemTitle = battleRoom?.problems?.[0]?.title || 'Battle Problem';
+    const outcome = didWin ? '승리' : didDraw ? '무승부' : '패배';
+    const primaryProblemTitle = battleRoom?.problems?.[0]?.title || '배틀 문제';
     const elapsedSec = Math.max(0, BATTLE_SEC - timeLeft);
-    return `I got a ${outcome} in DailyCoding Battle! 🔥 Problem: ${primaryProblemTitle} | Score ${currentPlayer?.score ?? 0}:${opponentPlayer?.score ?? 0} | ${elapsedSec}s elapsed`;
+    return `DailyCoding 배틀에서 ${outcome}했습니다! 🔥 문제: ${primaryProblemTitle} | 점수 ${currentPlayer?.score ?? 0}:${opponentPlayer?.score ?? 0} | ${elapsedSec}초 경과`;
   };
 
   const handleShareCopy = async () => {
@@ -870,7 +870,7 @@ export default function BattlePage() {
                       value={inviteInput}
                       onChange={e => setInviteInput(e.target.value)}
                       onKeyDown={e => e.key === 'Enter' && sendInvite()}
-                      placeholder="Enter opponent username"
+                      placeholder="상대방 사용자 이름 입력"
                     />
                     <select
                       className="bp-invite-input"
@@ -882,7 +882,7 @@ export default function BattlePage() {
                         <option key={option.value} value={option.value}>{option.label}</option>
                       ))}
                     </select>
-                    <button className="bp-btn-primary" onClick={sendInvite}>Send Invite</button>
+                    <button className="bp-btn-primary" onClick={sendInvite}>초대 보내기</button>
                   </div>
                   {inviteError && <div className="bp-error">{inviteError}</div>}
                 </div>
@@ -1050,18 +1050,18 @@ export default function BattlePage() {
     return (
       <div className="bp-page" style={{ display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:8, background:'var(--bg)' }}>
         <div style={{ textAlign:'center' }}>
-          <div style={{ fontSize:13, color:'var(--text3)', letterSpacing:3, marginBottom:16, textTransform:'uppercase' }}>Battle starts in</div>
+          <div style={{ fontSize:13, color:'var(--text3)', letterSpacing:3, marginBottom:16, textTransform:'uppercase' }}>배틀 시작까지</div>
           <div style={{ fontSize:128, fontWeight:900, color: countdown > 0 ? 'var(--blue)' : 'var(--green)', lineHeight:1, fontFamily:'Space Mono,monospace', minWidth:160, transition:'color 0.3s' }}>
             {countdown > 0 ? countdown : '🔥'}
           </div>
           <div style={{ fontSize:15, color:'var(--text2)', marginTop:20 }}>
-            {countdown > 0 ? 'The problem will be revealed shortly...' : 'Battle Start!'}
+            {countdown > 0 ? '잠시 후 문제가 공개됩니다...' : '배틀 시작!'}
           </div>
           {players.length > 0 && (
             <div style={{ marginTop:28, display:'flex', gap:12, justifyContent:'center', flexWrap:'wrap' }}>
               {players.map(p => (
                 <div key={p.id} style={{ padding:'6px 18px', borderRadius:20, background:'var(--bg3)', border:`2px solid ${p.teamId === 'team_1' ? 'var(--blue)' : 'var(--red)'}`, fontSize:14, fontWeight:600, color:'var(--text)' }}>
-                  {p.id === myId ? `${p.username} (You)` : p.username}
+                  {p.id === myId ? `${p.username} (나)` : p.username}
                 </div>
               ))}
             </div>
@@ -1097,7 +1097,7 @@ export default function BattlePage() {
     return (
       <div className="bp-page bp-battle-page">
         {isFreePlan && <BattleAdSlot slot={BATTLE_AD_SLOTS.battle} />}
-        {isSpectator && <div className="bp-spectator-banner">👁️ You are spectating this battle (read-only)</div>}
+        {isSpectator && <div className="bp-spectator-banner">👁️ 관전 중입니다 (읽기 전용)</div>}
         
         {/* ── 상단 HUD ── */}
         <div className="bp-hud">
@@ -1212,7 +1212,7 @@ export default function BattlePage() {
                   onClick={() => submitAnswer(activeProblem)}
                   disabled={submitting}
                 >
-                  {submitting ? 'Grading...' : 'Submit'}
+                  {submitting ? '채점 중...' : '제출'}
                 </button>
               )}
 
@@ -1250,7 +1250,7 @@ export default function BattlePage() {
             <div className="bp-spectator-chat">
               <div className="bp-spectator-chat-log">
                 {spectatorMessages.length === 0 ? (
-                  <div className="bp-spectator-empty">No spectator messages yet.</div>
+                  <div className="bp-spectator-empty">아직 관전자 메시지가 없습니다.</div>
                 ) : spectatorMessages.map((item, index) => (
                   <div key={`${item.at}-${index}`} className="bp-spectator-message">
                     <strong>{item.username || 'Anonymous'}</strong>
@@ -1264,9 +1264,9 @@ export default function BattlePage() {
                   onChange={(e) => setSpectatorMessage(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') sendSpectatorMessage(); }}
                   maxLength={100}
-                  placeholder="Cheer message for spectators"
+                  placeholder="관전자 응원 메시지"
                 />
-                <button type="button" onClick={sendSpectatorMessage}>Send</button>
+                <button type="button" onClick={sendSpectatorMessage}>전송</button>
               </div>
             </div>
           </div>
