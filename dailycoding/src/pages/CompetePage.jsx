@@ -3,25 +3,25 @@ import { Swords, Trophy, Zap } from 'lucide-react';
 
 const COMPETE_MODES = [
   {
-    title: '코딩 배틀',
+    title: 'Coding Battle',
     href: '/battle',
     icon: Swords,
     accent: 'var(--red)',
-    desc: '실시간 1v1 또는 팀 대결 — HP, 아이템, 효과, 점령전 5가지 모드로 코딩 실력을 겨룹니다.',
+    desc: 'Real-time 1v1 or team matches — compete in 5 modes including HP, items, effects, and conquest.',
   },
   {
-    title: '토너먼트',
+    title: 'Tournament',
     href: '/tournaments',
     icon: Trophy,
     accent: 'var(--yellow)',
-    desc: '8강·16강 싱글 엘리미네이션 브라켓으로 실력을 겨루고 자동 매치로 다음 라운드에 진출합니다.',
+    desc: 'Top 8 / Top 16 single-elimination brackets — win your matches and advance to the next round automatically.',
   },
   {
-    title: '대회',
+    title: 'Contest',
     href: '/contest',
     icon: Zap,
     accent: 'var(--blue)',
-    desc: '정해진 시간 안에 여러 문제를 풀며 실전 코딩 테스트 감각을 키웁니다.',
+    desc: 'Solve multiple problems within a set time limit and sharpen your coding test skills.',
   },
 ];
 
@@ -48,9 +48,9 @@ export default function CompetePage() {
           }}>
             ⚔️ COMPETE
           </span>
-          <h1 style={{ fontSize: 30, fontWeight: 900, margin: '14px 0 8px' }}>대결 허브</h1>
+          <h1 style={{ fontSize: 30, fontWeight: 900, margin: '14px 0 8px' }}>Compete Hub</h1>
           <p style={{ color: 'var(--text2)', fontSize: 15, lineHeight: 1.7, maxWidth: 720, margin: 0 }}>
-            실시간 배틀부터 토너먼트와 대회까지, DailyCoding의 경쟁 모드를 한 곳에서 시작하세요.
+            From real-time battles to tournaments and contests, start all of DailyCoding's competitive modes in one place.
           </p>
         </div>
 
@@ -89,7 +89,7 @@ export default function CompetePage() {
               </div>
               <div style={{ flex: 1 }} />
               <Link to={href} className="btn btn-primary" style={{ justifyContent: 'center', textDecoration: 'none' }}>
-                시작하기
+                Get Started
               </Link>
             </article>
           ))}

@@ -6,7 +6,7 @@ import {
 } from './judge.js';
 
 function createHttpError(status, body) {
-  const err = new Error(body?.message || '요청 처리 실패');
+  const err = new Error(body?.message || 'Request processing failed');
   err.status = status;
   err.body = body;
   return err;
@@ -173,12 +173,12 @@ export async function executeSubmissionFlow({
   const detectedLang = detectSubmissionLanguageFromCode(code);
   const normalizedLang = detectedLang || normalizeLanguage(rawLang || 'Python 3');
   if (!normalizedLang) {
-    throw createHttpError(400, { message: '지원하지 않는 언어입니다.' });
+    throw createHttpError(400, { message: 'Unsupported language.' });
   }
 
   if (!runtimeSupportsLanguage(judgeRuntime, normalizedLang)) {
     throw createHttpError(400, {
-      message: `현재 채점 환경에서 지원하지 않는 언어입니다: ${rawLang || normalizedLang}`,
+      message: `Language not supported in the current judge environment: ${rawLang || normalizedLang}`,
       mode: judgeRuntime.mode,
       supportedLanguages: judgeRuntime.supportedLanguages,
     });

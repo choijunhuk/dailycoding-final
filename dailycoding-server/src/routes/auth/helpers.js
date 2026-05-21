@@ -4,7 +4,7 @@ import { redis } from '../../config/redis.js';
 import { User } from '../../models/User.js';
 import { AdminLog } from '../../models/AdminLog.js';
 import { SECRET } from '../../middleware/auth.js';
-import { insert, queryOne, run } from '../../config/mysql.js';
+import { insert, queryOne } from '../../config/mysql.js';
 
 export function makeToken(user) {
   return jwt.sign(

@@ -30,7 +30,7 @@ const upload = multer({
   limits: { fileSize: 2 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (['image/jpeg', 'image/png', 'image/webp'].includes(file.mimetype)) cb(null, true);
-    else cb(new Error('지원하지 않는 이미지 형식입니다.'));
+    else cb(new Error('Unsupported image format.'));
   },
 });
 
@@ -112,7 +112,7 @@ router.patch('/me', auth, validateBody(profileSchema), async (req, res) => {
     ]);
     res.json(User.safe(updated));
   } catch (err) {
-    if (err.code === 'ER_DUP_ENTRY') return errorResponse(res, 409, 'VALIDATION_ERROR', '이미 사용 중인 닉네임입니다.');
+    if (err.code === 'ER_DUP_ENTRY') return errorResponse(res, 409, 'VALIDATION_ERROR', 'Username already in use.');
     return internalError(res);
   }
 });
@@ -121,13 +121,13 @@ router.patch('/settings', auth, async (req, res) => {
   try {
     const { section, settings } = req.body;
     if (!settings || typeof settings !== 'object') {
-      return errorResponse(res, 400, 'VALIDATION_ERROR', '올바르지 않은 설정 형식입니다.');
+      return errorResponse(res, 400, 'VALIDATION_ERROR', 'Invalid settings format.');
     }
     const patch = section ? { [section]: settings } : settings;
     const updated = await User.updateSettings(req.user.id, patch);
     res.json({ settings: updated });
   } catch (err) {
-    return internalError(res, '설정 저장 실패');
+    return internalError(res, 'Failed to save settings.');
   }
 });
 
@@ -135,13 +135,13 @@ router.patch('/password', auth, validateBody(updatePasswordSchema), async (req, 
   try {
     const user = await User.findById(req.user.id);
     if (!await User.checkPassword(user, req.body.current)) {
-      return errorResponse(res, 401, 'UNAUTHORIZED', '현재 비밀번호가 틀렸습니다.');
+      return errorResponse(res, 401, 'UNAUTHORIZED', 'Current password is incorrect.');
     }
     await User.updatePassword(req.user.id, req.body.next);
     await redis.del(`auth:refresh:${req.user.id}`);
     await clearAuthStatus(req.user.id);
     clearAuthCookies(res);
-    res.json({ message: '비밀번호가 변경됐습니다.' });
+    res.json({ message: 'Password changed successfully.' });
   } catch (err) {
     return internalError(res);
   }
@@ -176,14 +176,14 @@ router.patch('/profile/background', auth, async (req, res) => {
       return res.json(User.safe(updated));
     }
     const backgroundSlug = String(raw).trim();
-    if (!backgroundSlug) return errorResponse(res, 400, 'VALIDATION_ERROR', '배경 slug가 필요합니다.');
+    if (!backgroundSlug) return errorResponse(res, 400, 'VALIDATION_ERROR', 'Background slug is required.');
     const background = await queryOne('SELECT * FROM profile_backgrounds WHERE slug = ?', [backgroundSlug]);
-    if (!background) return errorResponse(res, 404, 'NOT_FOUND', '배경을 찾을 수 없습니다.');
+    if (!background) return errorResponse(res, 404, 'NOT_FOUND', 'Background not found.');
     const unlocked = background.is_default || await queryOne(
       'SELECT 1 FROM user_backgrounds WHERE user_id = ? AND background_slug = ?',
       [req.user.id, backgroundSlug]
     );
-    if (!unlocked) return errorResponse(res, 403, 'FORBIDDEN', '보유하지 않은 배경입니다.');
+    if (!unlocked) return errorResponse(res, 403, 'FORBIDDEN', 'You do not own this background.');
     const updated = await User.update(req.user.id, { equipped_background: backgroundSlug });
     await clearAuthStatus(req.user.id);
     res.json(User.safe(updated));
@@ -195,14 +195,14 @@ router.patch('/profile/background', auth, async (req, res) => {
 
 router.get('/profile/:id', auth, async (req, res) => {
   const id = Number(req.params.id);
-  if (!id || Number.isNaN(id)) return errorResponse(res, 400, 'VALIDATION_ERROR', '유효하지 않은 ID');
+  if (!id || Number.isNaN(id)) return errorResponse(res, 400, 'VALIDATION_ERROR', 'Invalid ID.');
   try {
     const user = await User.findById(id);
-    if (!user) return errorResponse(res, 404, 'NOT_FOUND', '유저를 찾을 수 없습니다.');
+    if (!user) return errorResponse(res, 404, 'NOT_FOUND', 'User not found.');
 
     const isSelf = req.user.id === id;
     if (!isSelf && user.profile_visibility === 'private') {
-      return errorResponse(res, 403, 'FORBIDDEN', '비공개 프로필입니다.');
+      return errorResponse(res, 403, 'FORBIDDEN', 'This profile is private.');
     }
 
     const anonClause = isSelf ? '' : ' AND is_anonymous = 0';
@@ -263,7 +263,7 @@ router.get('/profile/:id', auth, async (req, res) => {
     }, {});
     const solvedProblems = (solvedProblemRows || []).map((row) => ({
       id: Number(row.id),
-      title: row.title || `문제 #${row.id}`,
+      title: row.title || `Problem #${row.id}`,
       tier: row.tier || 'unranked',
       difficulty: row.difficulty ?? null,
       solvedAt: row.solved_at || row.solvedAt || null,
@@ -363,21 +363,21 @@ router.get('/profile/:id/activity', auth, async (req, res) => {
     : new Date().getFullYear();
 
   if (!id || Number.isNaN(id)) {
-    return errorResponse(res, 400, 'VALIDATION_ERROR', '유효하지 않은 ID');
+    return errorResponse(res, 400, 'VALIDATION_ERROR', 'Invalid ID.');
   }
 
   try {
     const user = await User.findById(id);
-    if (!user) return errorResponse(res, 404, 'NOT_FOUND', '유저를 찾을 수 없습니다.');
+    if (!user) return errorResponse(res, 404, 'NOT_FOUND', 'User not found.');
     if (user.profile_visibility === 'private') {
-      return errorResponse(res, 403, 'FORBIDDEN', '비공개 프로필입니다.');
+      return errorResponse(res, 403, 'FORBIDDEN', 'This profile is private.');
     }
     if (user.profile_visibility === 'followers' && req.user.id !== id) {
       const isFollowing = await queryOne(
         'SELECT 1 FROM follows WHERE follower_id = ? AND following_id = ?',
         [req.user.id, id]
       );
-      if (!isFollowing) return errorResponse(res, 403, 'FORBIDDEN', '팔로워만 볼 수 있습니다.');
+      if (!isFollowing) return errorResponse(res, 403, 'FORBIDDEN', 'Only followers can view this profile.');
     }
 
     const rows = await query(
@@ -405,7 +405,7 @@ router.get('/profile/:id/activity', auth, async (req, res) => {
 router.get('/settings', auth, async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
-    if (!user) return errorResponse(res, 404, 'NOT_FOUND', '유저 없음');
+    if (!user) return errorResponse(res, 404, 'NOT_FOUND', 'User not found.');
     const defaults = User.getDefaultSettings();
     const current = safeParseJSON(user.settings, {});
     const merged = {};
@@ -427,7 +427,7 @@ router.patch('/profile/extended', auth, async (req, res) => {
   if (bio !== undefined) updates.bio = bio ? String(bio).trim().slice(0, 500) : null;
   if (social_links !== undefined) {
     if (typeof social_links !== 'object' || Array.isArray(social_links)) {
-      return errorResponse(res, 400, 'VALIDATION_ERROR', 'social_links는 객체여야 합니다.');
+      return errorResponse(res, 400, 'VALIDATION_ERROR', 'social_links must be an object.');
     }
     const allowedLinks = new Set(['github', 'instagram', 'x', 'linkedin', 'velog', 'tistory', 'twitter']);
     const filtered = {};
@@ -437,7 +437,7 @@ router.patch('/profile/extended', auth, async (req, res) => {
     updates.social_links = JSON.stringify(filtered);
   }
   if (tech_stack !== undefined) {
-    if (!Array.isArray(tech_stack)) return errorResponse(res, 400, 'VALIDATION_ERROR', 'tech_stack은 배열이어야 합니다.');
+    if (!Array.isArray(tech_stack)) return errorResponse(res, 400, 'VALIDATION_ERROR', 'tech_stack must be an array.');
     updates.tech_stack = JSON.stringify(
       tech_stack
         .filter((item) => typeof item === 'string')
@@ -447,7 +447,7 @@ router.patch('/profile/extended', auth, async (req, res) => {
     );
   }
 
-  if (Object.keys(updates).length === 0) return errorResponse(res, 400, 'VALIDATION_ERROR', '변경할 항목이 없습니다.');
+  if (Object.keys(updates).length === 0) return errorResponse(res, 400, 'VALIDATION_ERROR', 'No fields to update.');
 
   try {
     const updated = await User.update(req.user.id, updates);
@@ -461,10 +461,10 @@ router.patch('/profile/extended', auth, async (req, res) => {
 
 router.post('/profile/avatar', auth, upload.single('avatar'), async (req, res) => {
   try {
-    if (!req.file) return errorResponse(res, 400, 'VALIDATION_ERROR', '업로드할 이미지가 필요합니다.');
+    if (!req.file) return errorResponse(res, 400, 'VALIDATION_ERROR', 'An image file is required.');
     const detectedType = validateAvatarUpload(req.file);
     if (!detectedType) {
-      return errorResponse(res, 400, 'VALIDATION_ERROR', '유효한 JPEG, PNG, WEBP 이미지만 업로드할 수 있습니다.');
+      return errorResponse(res, 400, 'VALIDATION_ERROR', 'Only valid JPEG, PNG, or WEBP images are allowed.');
     }
     const previousUser = await User.findById(req.user.id);
     const safeBuffer = await sharp(req.file.buffer)
@@ -484,7 +484,7 @@ router.post('/profile/avatar', auth, upload.single('avatar'), async (req, res) =
     if (previousAvatar?.startsWith('/uploads/avatars/')) {
       const previousPath = path.join(uploadsDir, path.basename(previousAvatar));
       if (previousPath !== filePath) {
-        await fs.unlink(previousPath).catch(() => { /* 이미 삭제된 이전 아바타는 무시 */ });
+        await fs.unlink(previousPath).catch(() => { /* ignore if previous avatar already deleted */ });
       }
     }
     await Promise.all([
@@ -495,18 +495,18 @@ router.post('/profile/avatar', auth, upload.single('avatar'), async (req, res) =
     res.json({ avatarUrl, user: User.safe(updated) });
   } catch (err) {
     console.error('[profile/avatar]', err);
-    return internalError(res, err.message || '아바타 업로드 실패');
+    return internalError(res, err.message || 'Avatar upload failed.');
   }
 });
 
 router.patch('/nickname', auth, async (req, res) => {
   const { nickname } = req.body;
   if (!nickname || typeof nickname !== 'string' || !nickname.trim()) {
-    return errorResponse(res, 400, 'VALIDATION_ERROR', '닉네임을 입력해주세요.');
+    return errorResponse(res, 400, 'VALIDATION_ERROR', 'Please enter a nickname.');
   }
   const clean = nickname.trim().slice(0, 30);
   if (!/^[a-zA-Z0-9_가-힣]{2,30}$/.test(clean)) {
-    return errorResponse(res, 400, 'VALIDATION_ERROR', '닉네임은 2~30자, 한글/영문/숫자/밑줄만 허용됩니다.');
+    return errorResponse(res, 400, 'VALIDATION_ERROR', 'Nickname must be 2–30 characters and contain only Korean, English, numbers, or underscores.');
   }
   try {
     const updated = await User.setNickname(req.user.id, clean);
@@ -514,13 +514,13 @@ router.patch('/nickname', auth, async (req, res) => {
     res.json({ nickname: updated.nickname, nicknameChangedAt: updated.nickname_changed_at });
   } catch (err) {
     const status = err.status || 500;
-    res.status(status).json({ message: err.message || '서버 오류' });
+    res.status(status).json({ message: err.message || 'Server error.' });
   }
 });
 
 router.get('/check-nickname', auth, async (req, res) => {
   const { nickname } = req.query;
-  if (!nickname) return errorResponse(res, 400, 'VALIDATION_ERROR', '닉네임을 입력해주세요.');
+  if (!nickname) return errorResponse(res, 400, 'VALIDATION_ERROR', 'Please enter a nickname.');
   const exists = await User.findByNickname(nickname.trim());
   res.json({ available: !exists || exists.id === req.user.id });
 });
@@ -535,13 +535,13 @@ router.patch('/visibility', auth, async (req, res) => {
     });
   } catch (err) {
     const status = err.status || 500;
-    res.status(status).json({ message: err.message || '서버 오류' });
+    res.status(status).json({ message: err.message || 'Server error.' });
   }
 });
 
 router.get('/grass/:id', auth, async (req, res) => {
   const id = Number(req.params.id);
-  if (!id || Number.isNaN(id)) return errorResponse(res, 400, 'VALIDATION_ERROR', '유효하지 않은 ID');
+  if (!id || Number.isNaN(id)) return errorResponse(res, 400, 'VALIDATION_ERROR', 'Invalid ID.');
   try {
     const rows = await User.getGrass(id);
     res.json(rows);
@@ -553,12 +553,12 @@ router.get('/grass/:id', auth, async (req, res) => {
 router.post('/streak-freeze', auth, async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
-    if (!user) return errorResponse(res, 404, 'NOT_FOUND', '유저 없음');
+    if (!user) return errorResponse(res, 404, 'NOT_FOUND', 'User not found.');
     const today = new Date().toISOString().slice(0, 10);
     const solved = await queryOne('SELECT 1 FROM solve_logs WHERE user_id=? AND solve_date=?', [req.user.id, today]);
-    if (solved) return res.json({ message: '오늘 이미 문제를 풀었습니다. 프리즈 불필요!', streak: user.streak });
+    if (solved) return res.json({ message: 'You already solved a problem today. No freeze needed!', streak: user.streak });
     await run('INSERT INTO solve_logs (user_id, solve_date, count) VALUES (?,?,0) ON DUPLICATE KEY UPDATE count=count', [req.user.id, today]);
-    res.json({ message: '🧊 스트릭 프리즈 사용! 오늘 스트릭이 유지됩니다.', streak: user.streak });
+    res.json({ message: 'Streak freeze used! Your streak is preserved for today.', streak: user.streak });
   } catch (err) {
     console.error('[streak-freeze]', err.message);
     return internalError(res);

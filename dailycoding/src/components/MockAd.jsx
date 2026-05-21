@@ -78,7 +78,7 @@ export default function MockAd({ position = 'sidebar', onSkip }) {
       }}>
         <div style={{ position: 'relative', width: '100%', maxWidth: 720 }}>
           <div style={{ fontSize: 10, color: 'rgba(255,255,255,.5)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 }}>
-            광고 · Pro 플랜으로 광고 없이 이용하세요
+            Ad · Upgrade to Pro for an ad-free experience
           </div>
           <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, borderRadius: 12, overflow: 'hidden', background: '#000' }}>
             <iframe
@@ -93,7 +93,7 @@ export default function MockAd({ position = 'sidebar', onSkip }) {
               padding: '8px 18px', borderRadius: 8, background: 'var(--blue)', color: '#0d1117',
               fontSize: 13, fontWeight: 800, textDecoration: 'none',
             }}>
-              Pro로 업그레이드 — 광고 제거
+              Upgrade to Pro — Remove Ads
             </a>
             <button
               onClick={skipCountdown === 0 ? handleSkip : undefined}
@@ -107,7 +107,7 @@ export default function MockAd({ position = 'sidebar', onSkip }) {
                 transition: 'all .2s',
               }}
             >
-              {skipCountdown > 0 ? `${skipCountdown}초 후 건너뛰기` : '건너뛰기 →'}
+              {skipCountdown > 0 ? `Skip in ${skipCountdown}s` : 'Skip →'}
             </button>
           </div>
         </div>

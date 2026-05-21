@@ -9,16 +9,16 @@ const AppContext = createContext(null);
 
 
 function formatRelativeTime(value) {
-  if (!value) return '방금 전';
+  if (!value) return 'just now';
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '방금 전';
+  if (Number.isNaN(date.getTime())) return 'just now';
   const diffSec = Math.max(0, Math.floor((Date.now() - date.getTime()) / 1000));
-  if (diffSec < 60) return '방금 전';
+  if (diffSec < 60) return 'just now';
   const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) return `${diffMin}분 전`;
+  if (diffMin < 60) return `${diffMin}m ago`;
   const diffHour = Math.floor(diffMin / 60);
-  if (diffHour < 24) return `${diffHour}시간 전`;
-  return `${Math.floor(diffHour / 24)}일 전`;
+  if (diffHour < 24) return `${diffHour}h ago`;
+  return `${Math.floor(diffHour / 24)}d ago`;
 }
 
 function normalizeNotification(item) {

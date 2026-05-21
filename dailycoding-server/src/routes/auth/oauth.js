@@ -54,7 +54,7 @@ router.get('/github/callback', async (req, res) => {
     const primary = Array.isArray(emails)
       ? emails.find((e) => e.primary && e.verified)?.email
       : null;
-    if (!primary) throw new Error('GitHub에서 인증된 이메일을 찾을 수 없습니다. GitHub 계정의 이메일을 인증해주세요.');
+    if (!primary) throw new Error('No verified email found on your GitHub account. Please verify an email in your GitHub settings.');
 
     const user = await findOrCreateOAuthUser({
       provider: 'github',
@@ -114,7 +114,7 @@ router.get('/google/callback', async (req, res) => {
       headers: { Authorization: `Bearer ${tokenData.access_token}` },
     });
     const gUser = await infoRes.json();
-    if (!gUser.email || !gUser.email_verified) throw new Error('이메일 인증이 완료된 Google 계정이 필요합니다.');
+    if (!gUser.email || !gUser.email_verified) throw new Error('A Google account with a verified email is required.');
 
     const user = await findOrCreateOAuthUser({
       provider: 'google',

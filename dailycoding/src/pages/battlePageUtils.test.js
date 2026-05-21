@@ -5,7 +5,7 @@ import { BATTLE_AD_SLOTS, BATTLE_SEC, fmtTime, getSocketUrl, POLL_MS, TYPE_LABEL
 test('battle constants and labels remain stable', () => {
   assert.equal(POLL_MS, 2500);
   assert.equal(BATTLE_SEC, 1800);
-  assert.equal(TYPE_LABEL['bug-fix'], '버그수정');
+  assert.equal(TYPE_LABEL['bug-fix'], 'Bug Fix');
   assert.equal(BATTLE_AD_SLOTS.lobby.id, 'battle-lobby-top');
 });
 

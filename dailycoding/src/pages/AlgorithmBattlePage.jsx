@@ -23,7 +23,8 @@ const COMBAT_EVENT_TYPES = new Set([
 ]);
 const SOCIAL_EVENT_TYPES = new Set([
   'player.joined', 'player.left', 'player.ready', 'room.started',
-  'room.problem_selected', 'player.chat', 'player.emote',
+  'room.problem_selected', 'draft.started', 'draft.selection', 'draft.completed',
+  'player.chat', 'player.emote',
 ]);
 const DURATION_PRESETS = [
   { label: '⚡ 블리츠 5분', sec: 300 },
@@ -36,7 +37,7 @@ const FALLBACK_MODES = [
   { key: 'duel-effects', title: '✨ 효과전', description: '정답 제출 시 문제 태그 기반 버프/디버프가 발동! HP 전투 + 무작위 효과로 역전 가능.', winCondition: 'hp-knockout', rules: ['정답 → 상대 HP 감소 + 문제 효과 발동', '아이템 쿨다운 20초', 'HP 0 = 패배'], itemsEnabled: true, effectsEnabled: true, problemCount: 1 },
   { key: 'chaos-items', title: '🎒 아이템 난투', description: '빠른 쿨다운 아이템으로 상대를 흔드는 HP 전투! 아이템 전략이 승패를 가릅니다.', winCondition: 'hp-knockout', rules: ['아이템 쿨다운 12초 (빠름)', '정답 → 상대 HP 감소', 'HP 0 = 패배'], itemsEnabled: true, effectsEnabled: true, problemCount: 1 },
   { key: 'territory', title: '🏴 점령전', description: '5개 문제 동시 공개! 먼저 풀면 내 영토. 더 많은 구역을 점령한 플레이어가 승리.', winCondition: 'territory', rules: ['5개 문제 동시 공개', '정답 → 해당 문제 점령', '점령 수가 많은 플레이어 승리'], itemsEnabled: false, effectsEnabled: false, problemCount: 5 },
-  { key: 'draft-ban', title: '🚫 밴픽전', description: '티어와 알고리즘 태그를 밴하거나 특정 조건으로 묶어서 시작하는 전략형 1:1 대결.', winCondition: 'hp-knockout', rules: ['티어/태그 조건을 먼저 적용', '밴한 조건은 후보에서 제외', '정답 → 상대 HP 감소 + 문제 효과'], itemsEnabled: true, effectsEnabled: true, problemCount: 1 },
+  { key: 'draft-ban', title: '🚫 밴픽전', description: '게임 시작 후 양쪽 플레이어가 티어/태그를 밴픽하고 문제를 확정하는 전략형 1:1 대결.', winCondition: 'hp-knockout', rules: ['방 생성 시 문제 조건 없음', '양쪽 준비 완료 후 밴픽 진행', '밴픽 결과로 문제 확정', '정답 → 상대 HP 감소 + 문제 효과'], itemsEnabled: true, effectsEnabled: true, problemCount: 1, draftEnabled: true },
 ];
 
 const FALLBACK_BANNABLE_TAGS = [
@@ -173,6 +174,12 @@ function formatSocialEvent(event, myId, participantById = {}) {
       return { kind: 'system', text: `${actor}님이 준비 완료했습니다.` };
     case 'room.problem_selected':
       return { kind: 'system', text: '대결 문제가 선택되었습니다.' };
+    case 'draft.started':
+      return { kind: 'system', text: '밴픽이 시작되었습니다. 서로 조건을 고른 뒤 문제가 확정됩니다.' };
+    case 'draft.selection':
+      return { kind: 'system', text: `${actor}님이 밴픽을 제출했습니다.` };
+    case 'draft.completed':
+      return { kind: 'system', text: '밴픽이 완료되어 대결 문제가 확정되었습니다.' };
     case 'room.started':
       return { kind: 'system', text: '모든 플레이어가 준비해 배틀이 시작되었습니다.' };
     case 'player.chat': {
@@ -238,6 +245,130 @@ function TerritoryBar({ problems, claims, myId, onSelect, selectedIdx }) {
   );
 }
 
+function DraftBanPanel({
+  draft,
+  participants,
+  me,
+  problemTiers,
+  tagGroups,
+  bannedTier,
+  setBannedTier,
+  bannedTags,
+  setBannedTags,
+  pickedTags,
+  setPickedTags,
+  onSubmit,
+  submitting,
+  isSpectating,
+}) {
+  const submittedByUser = new Set((draft?.selections || []).map((selection) => Number(selection.userId)));
+  const mySubmitted = me?.userId != null && submittedByUser.has(Number(me.userId));
+  const canSubmit = !isSpectating && !mySubmitted && !submitting;
+
+  const toggleBanTag = (tag) => {
+    setBannedTags((prev) => {
+      if (prev.includes(tag)) return prev.filter((item) => item !== tag);
+      return prev.length >= 2 ? [prev[1], tag] : [...prev, tag];
+    });
+    setPickedTags((prev) => prev.filter((item) => item !== tag));
+  };
+
+  const togglePickTag = (tag) => {
+    setPickedTags((prev) => (prev.includes(tag) ? [] : [tag]));
+    setBannedTags((prev) => prev.filter((item) => item !== tag));
+  };
+
+  return (
+    <div className="ab-draft-panel">
+      <div className="ab-draft-head">
+        <div>
+          <strong>밴픽 단계</strong>
+          <span>{draft?.submittedCount || 0}/{draft?.requiredCount || 2}명 제출 완료</span>
+        </div>
+        <button className="btn btn-primary btn-sm" onClick={onSubmit} disabled={!canSubmit}>
+          {mySubmitted ? '제출 완료' : submitting ? <span className="spinner" /> : '밴픽 제출'}
+        </button>
+      </div>
+
+      <div className="ab-draft-progress">
+        {participants.map((player) => (
+          <div key={player.userId} className={submittedByUser.has(Number(player.userId)) ? 'done' : ''}>
+            <span>{player.username}{player.userId === me?.userId ? ' (나)' : ''}</span>
+            <strong>{submittedByUser.has(Number(player.userId)) ? 'LOCKED' : 'PICKING'}</strong>
+          </div>
+        ))}
+      </div>
+
+      <div className="ab-draft-grid">
+        <div className="ab-draft-block">
+          <label>티어 밴</label>
+          <div className="ab-chip-list">
+            {problemTiers.map((tier) => (
+              <button
+                type="button"
+                key={tier}
+                className={bannedTier === tier ? 'active danger' : ''}
+                onClick={() => canSubmit && setBannedTier((prev) => (prev === tier ? '' : tier))}
+                disabled={!canSubmit}
+              >
+                {PROBLEM_TIER_LABELS[tier] || tier}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="ab-draft-block">
+          <label>선호 태그 픽</label>
+          <div className="ab-tag-groups compact">
+            {tagGroups.map((group) => (
+              <div key={`draft-pick-${group.label}`} className="ab-tag-group">
+                <span>{group.label}</span>
+                <div className="ab-chip-list">
+                  {group.tags.map((tag) => (
+                    <button
+                      type="button"
+                      key={tag}
+                      className={pickedTags.includes(tag) ? 'active include' : ''}
+                      onClick={() => canSubmit && togglePickTag(tag)}
+                      disabled={!canSubmit}
+                    >
+                      {tag}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="ab-draft-block wide">
+          <label>태그 밴 최대 2개</label>
+          <div className="ab-tag-groups compact">
+            {tagGroups.map((group) => (
+              <div key={`draft-ban-${group.label}`} className="ab-tag-group">
+                <span>{group.label}</span>
+                <div className="ab-chip-list">
+                  {group.tags.map((tag) => (
+                    <button
+                      type="button"
+                      key={tag}
+                      className={bannedTags.includes(tag) ? 'active danger' : ''}
+                      onClick={() => canSubmit && toggleBanTag(tag)}
+                      disabled={!canSubmit}
+                    >
+                      {tag}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AlgorithmBattlePage() {
   const { roomId } = useParams();
   const navigate = useNavigate();
@@ -256,6 +387,7 @@ export default function AlgorithmBattlePage() {
   const [preferredLanguage, setPreferredLanguage] = useState(user?.defaultLanguage || 'python');
   const [isPrivate, setIsPrivate] = useState(false);
   const [problemFilters, setProblemFilters] = useState(DEFAULT_PROBLEM_FILTERS);
+  const [showProblemFilters, setShowProblemFilters] = useState(false);
   const [creating, setCreating] = useState(false);
   const [joinCode, setJoinCode] = useState('');
   const [joiningByCode, setJoiningByCode] = useState(false);
@@ -277,6 +409,10 @@ export default function AlgorithmBattlePage() {
   const [clock, setClock] = useState(0);
   const [selectedProblemIdx, setSelectedProblemIdx] = useState(0);
   const [showRules, setShowRules] = useState(false);
+  const [draftBannedTier, setDraftBannedTier] = useState('');
+  const [draftBannedTags, setDraftBannedTags] = useState([]);
+  const [draftPickedTags, setDraftPickedTags] = useState([]);
+  const [draftSubmitting, setDraftSubmitting] = useState(false);
 
   const lastActivityRef = useRef(0);
   const lobbyExpiredRef = useRef(false);
@@ -290,6 +426,9 @@ export default function AlgorithmBattlePage() {
   const events = state?.events || [];
   const activityByUserId = state?.activityByUserId || {};
   const isTerritoryMode = currentRoom?.mode === 'territory';
+  const isDraftBanRoom = currentRoom?.mode === 'draft-ban';
+  const draftState = state?.draft || null;
+  const isDrafting = isDraftBanRoom && currentRoom?.status === 'waiting' && draftState?.phase === 'active';
   const problems = isTerritoryMode ? (state?.problems || []) : null;
   const activeProblem = isTerritoryMode
     ? (problems?.[selectedProblemIdx] || problems?.[0] || null)
@@ -387,12 +526,12 @@ export default function AlgorithmBattlePage() {
     } finally { setLoading(false); }
   }, [navigate, roomId, toast]);
 
-  useEffect(() => {
-    if (roomId) return;
-    loadBattleModes();
-    loadRooms();
-    const t = setInterval(loadRooms, 4000);
-    return () => clearInterval(t);
+    useEffect(() => {
+      loadBattleModes();
+      if (roomId) return;
+      loadRooms();
+      const t = setInterval(loadRooms, 4000);
+      return () => clearInterval(t);
   }, [loadBattleModes, loadRooms, roomId]);
 
   useEffect(() => {
@@ -475,7 +614,14 @@ export default function AlgorithmBattlePage() {
   }, [clock, currentRoom]);
 
   // ── 로비 만료 체크 (대기 중 방) — 한 번만 실행
-  useEffect(() => { lobbyExpiredRef.current = false; finishedRef.current = false; setSpectatorMessages([]); }, [roomId]);
+  useEffect(() => {
+    lobbyExpiredRef.current = false;
+    finishedRef.current = false;
+    setSpectatorMessages([]);
+    setDraftBannedTier('');
+    setDraftBannedTags([]);
+    setDraftPickedTags([]);
+  }, [roomId]);
 
   // ── 채팅 자동 스크롤
   useEffect(() => {
@@ -525,20 +671,21 @@ export default function AlgorithmBattlePage() {
   };
 
   // ── 방 만들기
-  const createRoom = async () => {
-    setCreating(true);
-    try {
-      const modeConfig = battleModes.find((m) => m.key === selectedMode);
-      const safeFilters = sanitizeProblemFilters(normalizedProblemFilters, problemTiers);
-      const { data } = await api.post('/battles/rooms', {
-        mode: selectedMode,
-        maxPlayers: 2,
-        durationSec: modeConfig?.key === 'territory' ? 600 : selectedDuration,
-        isPrivate,
-        preferredLanguage,
-        bannedTags: safeFilters.bannedTags,
-        problemFilters: safeFilters,
-      });
+    const createRoom = async () => {
+      setCreating(true);
+      try {
+        const modeConfig = battleModes.find((m) => m.key === selectedMode);
+        const safeFilters = sanitizeProblemFilters(normalizedProblemFilters, problemTiers);
+        const roomProblemFilters = selectedMode === 'draft-ban' ? DEFAULT_PROBLEM_FILTERS : safeFilters;
+        const { data } = await api.post('/battles/rooms', {
+          mode: selectedMode,
+          maxPlayers: 2,
+          durationSec: modeConfig?.key === 'territory' ? 600 : selectedDuration,
+          isPrivate,
+          preferredLanguage,
+          bannedTags: roomProblemFilters.bannedTags,
+          problemFilters: roomProblemFilters,
+        });
       if (data.room?.inviteCode && navigator?.clipboard?.writeText) {
         navigator.clipboard.writeText(data.room.inviteCode).then(() => {
           toast?.show(`초대 코드 ${data.room.inviteCode}가 복사되었습니다.`, 'success');
@@ -596,13 +743,31 @@ export default function AlgorithmBattlePage() {
     navigate(`/battle/${id}?spectate=1`);
   };
 
-  const ready = async () => {
-    if (!currentRoom || isSpectating) return;
-    try {
-      const { data } = await api.post(`/battles/rooms/${currentRoom.id}/ready`);
-      setState(data);
-    } catch (err) { toast?.show(err.response?.data?.message || '준비 실패', 'error'); }
-  };
+    const ready = async () => {
+      if (!currentRoom || isSpectating) return;
+      try {
+        const { data } = await api.post(`/battles/rooms/${currentRoom.id}/ready`);
+        setState(data);
+      } catch (err) { toast?.show(err.response?.data?.message || '준비 실패', 'error'); }
+    };
+
+    const submitDraftSelection = async () => {
+      if (!currentRoom || isSpectating || draftSubmitting) return;
+      setDraftSubmitting(true);
+      try {
+        const { data } = await api.post(`/battles/rooms/${currentRoom.id}/draft`, {
+          bannedTiers: draftBannedTier ? [draftBannedTier] : [],
+          bannedTags: draftBannedTags,
+          pickedTags: draftPickedTags,
+        });
+        setState(data);
+        toast?.show(data?.room?.status === 'playing' ? '밴픽 완료. 문제가 확정되었습니다.' : '밴픽을 제출했습니다.', 'success');
+      } catch (err) {
+        toast?.show(err.response?.data?.message || '밴픽 제출 실패', 'error');
+      } finally {
+        setDraftSubmitting(false);
+      }
+    };
 
   const submit = async () => {
     if (!currentRoom || submitting || isSpectating) return;
@@ -745,12 +910,10 @@ export default function AlgorithmBattlePage() {
                 type="button"
                 key={mode.key}
                 className={`ab-mode ${selectedMode === mode.key ? 'active' : ''}`}
-                onClick={() => {
-                  setSelectedMode(mode.key);
-                  if (mode.key === 'draft-ban' && normalizedProblemFilters.tierMode === 'auto') {
-                    updateProblemFilters({ tierMode: 'range' });
-                  }
-                }}
+                  onClick={() => {
+                    setSelectedMode(mode.key);
+                    if (mode.key === 'draft-ban') setShowProblemFilters(false);
+                  }}
               >
                 {mode.itemsEnabled ? <Shield size={16} /> : <Swords size={16} />}
                 <div>
@@ -821,136 +984,159 @@ export default function AlgorithmBattlePage() {
             </div>
           </div>
 
-          <div className={`ab-filter-panel ${selectedMode === 'draft-ban' ? 'featured' : ''}`}>
-            <div className="ab-filter-head">
+          {selectedMode === 'draft-ban' ? (
+            <div className="ab-draft-lobby-note">
+              <Shield size={16} />
               <div>
-                <strong>문제 조건</strong>
-                <span>{filterSummary}</span>
+                <strong>밴픽은 방 안에서 진행됩니다</strong>
+                <span>방 생성 시 문제 조건을 고정하지 않고, 양쪽 준비 완료 후 서로 밴/픽한 결과로 문제가 확정됩니다.</span>
               </div>
-              <button
-                type="button"
-                className="btn btn-ghost btn-sm"
-                onClick={() => setProblemFilters(DEFAULT_PROBLEM_FILTERS)}
-              >
-                초기화
-              </button>
             </div>
-
-            <div className="ab-filter-grid">
-              <div className="ab-filter-block">
-                <label>티어 범위</label>
-                <div className="ab-segmented">
-                  {[
-                    ['auto', '자동'],
-                    ['min', '이상'],
-                    ['max', '이하'],
-                    ['range', '구간'],
-                    ['only', '선택'],
-                  ].map(([key, label]) => (
-                    <button
-                      type="button"
-                      key={key}
-                      className={normalizedProblemFilters.tierMode === key ? 'active' : ''}
-                      onClick={() => updateProblemFilters({ tierMode: key })}
-                    >
-                      {label}
-                    </button>
-                  ))}
+          ) : (
+            <div className={`ab-filter-panel ${showProblemFilters ? 'open' : 'compact'}`}>
+              <div className="ab-filter-head">
+                <div>
+                  <strong>문제 조건</strong>
+                  <span>{filterSummary}</span>
                 </div>
-                {normalizedProblemFilters.tierMode !== 'auto' && normalizedProblemFilters.tierMode !== 'only' && (
-                  <div className="ab-tier-select-row">
-                    {['min', 'range'].includes(normalizedProblemFilters.tierMode) && (
-                      <select value={normalizedProblemFilters.minTier} onChange={(e) => updateProblemFilters({ minTier: e.target.value })}>
-                        {problemTiers.map((tier) => <option key={tier} value={tier}>{PROBLEM_TIER_LABELS[tier] || tier} 이상</option>)}
-                      </select>
-                    )}
-                    {normalizedProblemFilters.tierMode === 'range' && <span>~</span>}
-                    {['max', 'range'].includes(normalizedProblemFilters.tierMode) && (
-                      <select value={normalizedProblemFilters.maxTier} onChange={(e) => updateProblemFilters({ maxTier: e.target.value })}>
-                        {problemTiers.map((tier) => <option key={tier} value={tier}>{PROBLEM_TIER_LABELS[tier] || tier} 이하</option>)}
-                      </select>
-                    )}
-                  </div>
-                )}
-                {normalizedProblemFilters.tierMode === 'only' && (
-                  <div className="ab-chip-list">
-                    {problemTiers.map((tier) => (
-                      <button
-                        type="button"
-                        key={tier}
-                        className={normalizedProblemFilters.allowedTiers.includes(tier) ? 'active include' : ''}
-                        onClick={() => toggleFilterTier('allowedTiers', tier)}
-                      >
-                        {PROBLEM_TIER_LABELS[tier] || tier}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="ab-filter-block">
-                <label>밴 티어</label>
-                <div className="ab-chip-list">
-                  {problemTiers.map((tier) => (
+                <div className="ab-filter-actions">
+                  {showProblemFilters && (
                     <button
                       type="button"
-                      key={tier}
-                      className={normalizedProblemFilters.bannedTiers.includes(tier) ? 'active danger' : ''}
-                      onClick={() => toggleFilterTier('bannedTiers', tier)}
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => setProblemFilters(DEFAULT_PROBLEM_FILTERS)}
                     >
-                      {PROBLEM_TIER_LABELS[tier] || tier}
+                      초기화
                     </button>
-                  ))}
+                  )}
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => setShowProblemFilters((v) => !v)}
+                  >
+                    {showProblemFilters ? '접기' : '조건 열기'}
+                  </button>
                 </div>
               </div>
 
-              <div className="ab-filter-block wide">
-                <label>특정 알고리즘 태그만</label>
-                <div className="ab-tag-groups">
-                  {tagGroups.map((group) => (
-                    <div key={`required-${group.label}`} className="ab-tag-group">
-                      <span>{group.label}</span>
+              {showProblemFilters && (
+                <div className="ab-filter-grid">
+                  <div className="ab-filter-block">
+                    <label>티어 범위</label>
+                    <div className="ab-segmented">
+                      {[
+                        ['auto', '자동'],
+                        ['min', '이상'],
+                        ['max', '이하'],
+                        ['range', '구간'],
+                        ['only', '선택'],
+                      ].map(([key, label]) => (
+                        <button
+                          type="button"
+                          key={key}
+                          className={normalizedProblemFilters.tierMode === key ? 'active' : ''}
+                          onClick={() => updateProblemFilters({ tierMode: key })}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                    {normalizedProblemFilters.tierMode !== 'auto' && normalizedProblemFilters.tierMode !== 'only' && (
+                      <div className="ab-tier-select-row">
+                        {['min', 'range'].includes(normalizedProblemFilters.tierMode) && (
+                          <select value={normalizedProblemFilters.minTier} onChange={(e) => updateProblemFilters({ minTier: e.target.value })}>
+                            {problemTiers.map((tier) => <option key={tier} value={tier}>{PROBLEM_TIER_LABELS[tier] || tier} 이상</option>)}
+                          </select>
+                        )}
+                        {normalizedProblemFilters.tierMode === 'range' && <span>~</span>}
+                        {['max', 'range'].includes(normalizedProblemFilters.tierMode) && (
+                          <select value={normalizedProblemFilters.maxTier} onChange={(e) => updateProblemFilters({ maxTier: e.target.value })}>
+                            {problemTiers.map((tier) => <option key={tier} value={tier}>{PROBLEM_TIER_LABELS[tier] || tier} 이하</option>)}
+                          </select>
+                        )}
+                      </div>
+                    )}
+                    {normalizedProblemFilters.tierMode === 'only' && (
                       <div className="ab-chip-list">
-                        {group.tags.map((tag) => (
+                        {problemTiers.map((tier) => (
                           <button
                             type="button"
-                            key={tag}
-                            className={normalizedProblemFilters.requiredTags.includes(tag) ? 'active include' : ''}
-                            onClick={() => toggleFilterTag('requiredTags', tag)}
+                            key={tier}
+                            className={normalizedProblemFilters.allowedTiers.includes(tier) ? 'active include' : ''}
+                            onClick={() => toggleFilterTier('allowedTiers', tier)}
                           >
-                            {tag}
+                            {PROBLEM_TIER_LABELS[tier] || tier}
                           </button>
                         ))}
                       </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+                    )}
+                  </div>
 
-              <div className="ab-filter-block wide">
-                <label>밴할 알고리즘 태그</label>
-                <div className="ab-tag-groups">
-                  {tagGroups.map((group) => (
-                    <div key={`banned-${group.label}`} className="ab-tag-group">
-                      <span>{group.label}</span>
-                      <div className="ab-chip-list">
-                        {group.tags.map((tag) => (
-                          <button
-                            type="button"
-                            key={tag}
-                            className={normalizedProblemFilters.bannedTags.includes(tag) ? 'active danger' : ''}
-                            onClick={() => toggleFilterTag('bannedTags', tag)}
-                          >
-                            {tag}
-                          </button>
-                        ))}
-                      </div>
+                  <div className="ab-filter-block">
+                    <label>밴 티어</label>
+                    <div className="ab-chip-list">
+                      {problemTiers.map((tier) => (
+                        <button
+                          type="button"
+                          key={tier}
+                          className={normalizedProblemFilters.bannedTiers.includes(tier) ? 'active danger' : ''}
+                          onClick={() => toggleFilterTier('bannedTiers', tier)}
+                        >
+                          {PROBLEM_TIER_LABELS[tier] || tier}
+                        </button>
+                      ))}
                     </div>
-                  ))}
+                  </div>
+
+                  <div className="ab-filter-block wide">
+                    <label>특정 알고리즘 태그만</label>
+                    <div className="ab-tag-groups">
+                      {tagGroups.map((group) => (
+                        <div key={`required-${group.label}`} className="ab-tag-group">
+                          <span>{group.label}</span>
+                          <div className="ab-chip-list">
+                            {group.tags.map((tag) => (
+                              <button
+                                type="button"
+                                key={tag}
+                                className={normalizedProblemFilters.requiredTags.includes(tag) ? 'active include' : ''}
+                                onClick={() => toggleFilterTag('requiredTags', tag)}
+                              >
+                                {tag}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="ab-filter-block wide">
+                    <label>밴할 알고리즘 태그</label>
+                    <div className="ab-tag-groups">
+                      {tagGroups.map((group) => (
+                        <div key={`banned-${group.label}`} className="ab-tag-group">
+                          <span>{group.label}</span>
+                          <div className="ab-chip-list">
+                            {group.tags.map((tag) => (
+                              <button
+                                type="button"
+                                key={tag}
+                                className={normalizedProblemFilters.bannedTags.includes(tag) ? 'active danger' : ''}
+                                onClick={() => toggleFilterTag('bannedTags', tag)}
+                              >
+                                {tag}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
-          </div>
+          )}
 
           <button className="btn btn-primary ab-create-btn" onClick={createRoom} disabled={creating}>
             {creating ? <span className="spinner" /> : <Plus size={16} />} 방 만들기
@@ -1069,18 +1255,18 @@ export default function AlgorithmBattlePage() {
     : `최종 ${me?.score || 0}점`;
 
   return (
-    <div className="ab-room-page">
-      {/* 상단 바 */}
-      <div className="ab-room-top">
-        <button className="btn btn-ghost btn-sm" onClick={leave}>← 나가기</button>
-        <div className="ab-room-title">
-          <strong>{activeProblem?.title || '배틀'}</strong>
-          <span>
-            {config?.title || currentRoom?.mode} ·{' '}
-            {currentRoom?.status === 'waiting'
-              ? lobbyLeft != null ? `대기 중 (${fmtSec(lobbyLeft)} 남음)` : '대기 중'
-              : currentRoom?.status === 'playing'
-                ? config?.winCondition === 'first-correct'
+      <div className="ab-room-page">
+        {/* 상단 바 */}
+        <div className="ab-room-top">
+          <button className="btn btn-ghost btn-sm" onClick={leave}>← 나가기</button>
+          <div className="ab-room-title">
+            <strong>{isDrafting ? '밴픽 진행 중' : activeProblem?.title || '배틀'}</strong>
+            <span>
+              {config?.title || currentRoom?.mode} ·{' '}
+              {currentRoom?.status === 'waiting'
+                ? isDrafting ? `밴픽 중 (${draftState?.submittedCount || 0}/${draftState?.requiredCount || 2})` : lobbyLeft != null ? `대기 중 (${fmtSec(lobbyLeft)} 남음)` : '대기 중'
+                : currentRoom?.status === 'playing'
+                  ? config?.winCondition === 'first-correct'
                   ? '⚡ 먼저 정답 제출 → 즉시 승리'
                   : `⏱ ${fmtSec(timeLeft(currentRoom))}`
                 : '종료'}
@@ -1098,11 +1284,16 @@ export default function AlgorithmBattlePage() {
           {currentRoom?.status === 'waiting' && Number(currentRoom?.createdBy) === Number(user?.id) && (
             <button className="btn btn-danger btn-sm" onClick={deleteRoom}>방 삭제</button>
           )}
-          {currentRoom?.status === 'waiting' && (
-            <button className="btn btn-success btn-sm" onClick={ready} disabled={me?.isReady || isSpectating}>
-              {me?.isReady ? '준비 완료 ✓' : '준비'}
-            </button>
-          )}
+            {currentRoom?.status === 'waiting' && !isDrafting && (
+              <button className="btn btn-success btn-sm" onClick={ready} disabled={me?.isReady || isSpectating}>
+                {me?.isReady ? '준비 완료 ✓' : '준비'}
+              </button>
+            )}
+            {isDrafting && (
+              <button className="btn btn-success btn-sm" disabled>
+                밴픽 중
+              </button>
+            )}
           {currentRoom?.status === 'playing' && (
             <button className="btn btn-primary btn-sm" onClick={submit} disabled={submitting || isSpectating}>
               {isSpectating ? '관전 중' : submitting ? <span className="spinner" /> : <><Play size={13} /> 제출</>}
@@ -1140,10 +1331,10 @@ export default function AlgorithmBattlePage() {
       )}
 
       <div className="ab-mobile-tabs">
-        {[
-          ['problem', '문제/에디터'],
-          ['players', '플레이어 상태'],
-          ['log', '채팅/전투로그'],
+          {[
+            ['problem', currentRoom?.status === 'playing' ? '문제/에디터' : isDrafting ? '밴픽' : '대기'],
+            ['players', '플레이어 상태'],
+            ['log', '채팅/전투로그'],
         ].map(([key, label]) => (
           <button
             type="button"
@@ -1205,66 +1396,94 @@ export default function AlgorithmBattlePage() {
           )}
         </aside>
 
-        {/* 중앙: 문제 + 에디터 */}
-        <main className="ab-center">
-          {activeProblem ? (
-            <div className="ab-problem">
-              <h2>
-                {activeProblem.title}
-                {activeProblem.tier && (
-                  <span className="ab-problem-tier" style={{ marginLeft: 8, fontSize: 12, opacity: 0.6 }}>
-                    [{activeProblem.tier}]
-                  </span>
-                )}
-              </h2>
-              <p>{activeProblem.desc}</p>
-              {activeProblem.examples?.[0] && (
-                <div className="ab-example">
-                  <pre><b>입력</b>{'\n'}{activeProblem.examples[0].input}</pre>
-                  <pre><b>출력</b>{'\n'}{activeProblem.examples[0].output}</pre>
+          {/* 중앙: 문제 + 에디터 */}
+          <main className="ab-center">
+            {currentRoom?.status !== 'playing' ? (
+              isDrafting ? (
+                <DraftBanPanel
+                  draft={draftState}
+                  participants={participants}
+                  me={me}
+                  problemTiers={problemTiers}
+                  tagGroups={tagGroups}
+                  bannedTier={draftBannedTier}
+                  setBannedTier={setDraftBannedTier}
+                  bannedTags={draftBannedTags}
+                  setBannedTags={setDraftBannedTags}
+                  pickedTags={draftPickedTags}
+                  setPickedTags={setDraftPickedTags}
+                  onSubmit={submitDraftSelection}
+                  submitting={draftSubmitting}
+                  isSpectating={isSpectating}
+                />
+              ) : (
+                <div className="ab-wait-panel">
+                  <strong>{loading ? '불러오는 중...' : '대기 중'}</strong>
+                  <span>양쪽 플레이어가 준비하면 {isDraftBanRoom ? '밴픽 단계로 이동합니다.' : '문제가 확정되고 게임이 시작됩니다.'}</span>
                 </div>
-              )}
-            </div>
-          ) : (
-            <div className="ab-problem">
-              <p style={{ color: 'var(--text3)' }}>{loading ? '불러오는 중...' : '대기 중 — 준비 완료 시 게임이 시작됩니다.'}</p>
-            </div>
-          )}
+              )
+            ) : (
+              <>
+                {activeProblem ? (
+                  <div className="ab-problem">
+                    <h2>
+                      {activeProblem.title}
+                      {activeProblem.tier && (
+                        <span className="ab-problem-tier" style={{ marginLeft: 8, fontSize: 12, opacity: 0.6 }}>
+                          [{activeProblem.tier}]
+                        </span>
+                      )}
+                    </h2>
+                    <p>{activeProblem.desc}</p>
+                    {activeProblem.examples?.[0] && (
+                      <div className="ab-example">
+                        <pre><b>입력</b>{'\n'}{activeProblem.examples[0].input}</pre>
+                        <pre><b>출력</b>{'\n'}{activeProblem.examples[0].output}</pre>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="ab-problem">
+                    <p style={{ color: 'var(--text3)' }}>{loading ? '불러오는 중...' : '문제를 확정하는 중입니다.'}</p>
+                  </div>
+                )}
 
-          <div className="ab-editor-toolbar">
-            <select
-              value={language}
-              onChange={(e) => setLanguage(e.target.value)}
-              className="mono"
-            >
-              {JUDGE_LANGUAGE_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
-            <span style={{ fontSize: 12, color: 'var(--text3)' }}>
-              {getBattleObjectiveText(config, isTerritoryMode)}
-            </span>
-          </div>
+                <div className="ab-editor-toolbar">
+                  <select
+                    value={language}
+                    onChange={(e) => setLanguage(e.target.value)}
+                    className="mono"
+                  >
+                    {JUDGE_LANGUAGE_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </select>
+                  <span style={{ fontSize: 12, color: 'var(--text3)' }}>
+                    {getBattleObjectiveText(config, isTerritoryMode)}
+                  </span>
+                </div>
 
-          <div className="ab-editor">
-            <Suspense fallback={<div className="ab-empty">에디터 로딩 중...</div>}>
-              <Editor
-                height="100%"
-                language={JUDGE_LANGUAGE_OPTIONS.find((o) => o.value === language)?.monaco || 'python'}
-                theme="vs-dark"
-                value={code}
-                onChange={(v) => { setCode(v || ''); emitActivity('코드 작성 중'); }}
-                options={{
-                  fontSize: 14,
-                  minimap: { enabled: false },
-                  scrollBeyondLastLine: false,
-                  tabSize: 2,
-                  fontFamily: "'Space Mono', 'Fira Code', Consolas, monospace",
-                }}
-              />
-            </Suspense>
-          </div>
-        </main>
+                <div className="ab-editor">
+                  <Suspense fallback={<div className="ab-empty">에디터 로딩 중...</div>}>
+                    <Editor
+                      height="100%"
+                      language={JUDGE_LANGUAGE_OPTIONS.find((o) => o.value === language)?.monaco || 'python'}
+                      theme="vs-dark"
+                      value={code}
+                      onChange={(v) => { setCode(v || ''); emitActivity('코드 작성 중'); }}
+                      options={{
+                        fontSize: 14,
+                        minimap: { enabled: false },
+                        scrollBeyondLastLine: false,
+                        tabSize: 2,
+                        fontFamily: "'Space Mono', 'Fira Code', Consolas, monospace",
+                      }}
+                    />
+                  </Suspense>
+                </div>
+              </>
+            )}
+          </main>
 
         {/* 오른쪽: 전술 + 로그 + 채팅 */}
         <aside className="ab-right">

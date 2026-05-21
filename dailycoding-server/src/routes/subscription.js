@@ -29,7 +29,7 @@ const STRIPE_CURRENCY = 'usd';
 
 const PLANS = {
   pro: {
-    name: '프로',
+    name: 'Pro',
     monthly: PRO_MONTHLY_ID,
     annual: PRO_ANNUAL_ID,
     monthlyUrl: PRO_MONTHLY_URL,
@@ -37,7 +37,7 @@ const PLANS = {
     tier: 'pro'
   },
   team: {
-    name: '팀',
+    name: 'Team',
     monthly: TEAM_MONTHLY_ID,
     annual: TEAM_ANNUAL_ID,
     monthlyUrl: TEAM_MONTHLY_URL,
@@ -54,9 +54,9 @@ export function tierFromPriceId(priceId) {
 }
 
 export function getStripeConfigError({ requireWebhook = false, env = process.env } = {}) {
-  if (!env.STRIPE_SECRET_KEY) return '결제 시크릿 키가 설정되지 않았습니다.';
-  if (!env.FRONTEND_URL) return 'FRONTEND_URL이 설정되지 않았습니다.';
-  if (requireWebhook && !env.STRIPE_WEBHOOK_SECRET) return 'Stripe 웹훅 시크릿이 설정되지 않았습니다.';
+  if (!env.STRIPE_SECRET_KEY) return 'Payment secret key is not configured.';
+  if (!env.FRONTEND_URL) return 'FRONTEND_URL is not configured.';
+  if (requireWebhook && !env.STRIPE_WEBHOOK_SECRET) return 'Stripe webhook secret is not configured.';
   return null;
 }
 
@@ -130,9 +130,9 @@ async function rememberStripeError(meta) {
 router.get('/plans', (req, res) => {
   res.json({
     plans: [
-      { id: 'free', name: '무료', priceMonthly: 0, priceAnnual: 0, features: ['전체 문제 풀이', 'AI 힌트 하루 5회', '기본 통계'] },
-      { id: 'pro', name: '프로', priceMonthly: SUBSCRIPTION_PRICE.pro_monthly, priceAnnual: SUBSCRIPTION_PRICE.pro_yearly, features: ['무제한 AI 힌트', '광고 제거', '우선 매칭', '심화 분석'] },
-      { id: 'team', name: '팀', priceMonthly: TEAM_SUBSCRIPTION_PRICE.monthly, priceAnnual: TEAM_SUBSCRIPTION_PRICE.yearly, features: ['프로 기능 전체', '팀 대시보드', '커스텀 대회', 'API 연동'] },
+      { id: 'free', name: 'Free', priceMonthly: 0, priceAnnual: 0, features: ['Full problem access', 'AI hints 5 times/day', 'Basic statistics'] },
+      { id: 'pro', name: 'Pro', priceMonthly: SUBSCRIPTION_PRICE.pro_monthly, priceAnnual: SUBSCRIPTION_PRICE.pro_yearly, features: ['Unlimited AI hints', 'Ad-free', 'Priority matching', 'Advanced analytics'] },
+      { id: 'team', name: 'Team', priceMonthly: TEAM_SUBSCRIPTION_PRICE.monthly, priceAnnual: TEAM_SUBSCRIPTION_PRICE.yearly, features: ['All Pro features', 'Team dashboard', 'Custom contests', 'API integration'] },
     ]
   });
 });
@@ -143,7 +143,7 @@ router.get('/ops', auth, adminOnly, async (req, res) => {
     res.json(status);
   } catch (error) {
     logger.error('Stripe ops status error', { error: error.message, userId: req.user.id });
-    res.status(500).json({ message: 'Stripe 운영 상태를 불러오지 못했습니다.' });
+    res.status(500).json({ message: 'Failed to load Stripe ops status.' });
   }
 });
 
@@ -151,7 +151,7 @@ router.get('/ops', auth, adminOnly, async (req, res) => {
 router.post('/checkout', auth, async (req, res) => {
   const { tier, billingPeriod = 'monthly' } = req.body;
   const plan = PLANS[tier];
-  if (!plan) return res.status(400).json({ message: '유효하지 않은 플랜입니다.' });
+  if (!plan) return res.status(400).json({ message: 'Invalid plan.' });
   const user = await User.findById(req.user.id);
   const configError = getStripeConfigError();
   const directCheckoutUrl = buildCheckoutLink(
@@ -162,7 +162,7 @@ router.post('/checkout', auth, async (req, res) => {
   if ((!stripe || configError) && directCheckoutUrl) {
     return res.json({ url: directCheckoutUrl, mode: 'payment_link' });
   }
-  if (!stripe || configError) return res.status(503).json({ message: configError || '결제 시스템이 준비되지 않았습니다.' });
+  if (!stripe || configError) return res.status(503).json({ message: configError || 'Payment system is not ready.' });
   
   const priceId = billingPeriod === 'annual' ? plan.annual : plan.monthly;
 
@@ -231,23 +231,23 @@ router.post('/checkout', auth, async (req, res) => {
     res.json({ url: session.url });
   } catch (err) {
     logger.error('Stripe checkout error', { error: err.message, userId: req.user.id });
-    res.status(500).json({ message: '결제 세션 생성 실패' });
+    res.status(500).json({ message: 'Failed to create payment session.' });
   }
 });
 
 // POST /api/subscription/cancel - cancel subscription
 router.post('/cancel', auth, async (req, res) => {
-  if (!stripe) return res.status(503).json({ message: '결제 시스템이 준비되지 않았습니다.' });
+  if (!stripe) return res.status(503).json({ message: 'Payment system is not ready.' });
   try {
     const user = await User.findById(req.user.id);
-    if (!user.stripe_customer_id) return res.status(400).json({ message: '구독 정보가 없습니다.' });
+    if (!user.stripe_customer_id) return res.status(400).json({ message: 'No subscription information found.' });
     const subs = await stripe.subscriptions.list({ customer: user.stripe_customer_id, status: 'active' });
-    if (!subs.data.length) return res.status(400).json({ message: '활성 구독이 없습니다.' });
+    if (!subs.data.length) return res.status(400).json({ message: 'No active subscription found.' });
     await stripe.subscriptions.update(subs.data[0].id, { cancel_at_period_end: true });
-    res.json({ message: '구독이 기간 종료 시 해지됩니다.' });
+    res.json({ message: 'Subscription will be cancelled at the end of the billing period.' });
   } catch (err) {
     logger.error('Stripe cancel error', { error: err.message });
-    res.status(500).json({ message: '구독 해지 실패' });
+    res.status(500).json({ message: 'Failed to cancel subscription.' });
   }
 });
 
@@ -261,14 +261,14 @@ router.get('/status', auth, async (req, res) => {
     });
   } catch (err) {
     logger.error('Subscription status error', { error: err.message, userId: req.user.id });
-    res.status(500).json({ message: '구독 상태 조회 실패' });
+    res.status(500).json({ message: 'Failed to retrieve subscription status.' });
   }
 });
 
 // POST /api/subscription/webhook - Stripe webhook handler
 export async function stripeWebhookHandler(req, res) {
   const configError = getStripeConfigError({ requireWebhook: true });
-  if (!stripe || configError) return res.status(503).json({ message: configError || '결제 시스템이 준비되지 않았습니다.' });
+  if (!stripe || configError) return res.status(503).json({ message: configError || 'Payment system is not ready.' });
 
   const sig = req.headers['stripe-signature'];
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;

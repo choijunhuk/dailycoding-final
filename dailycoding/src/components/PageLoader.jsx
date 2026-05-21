@@ -1,4 +1,4 @@
-export default function PageLoader({ text = '로딩 중...' }) {
+export default function PageLoader({ text = 'Loading...' }) {
   return (
     <div style={{
       display: 'flex', flexDirection: 'column', alignItems: 'center',

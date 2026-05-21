@@ -86,13 +86,13 @@ export const Tournament = {
   async delete(id, requesterId) {
     const tournament = await this.getById(id);
     if (!tournament) {
-      const err = new Error('토너먼트를 찾을 수 없습니다.');
+      const err = new Error('Tournament not found.');
       err.status = 404;
       throw err;
     }
     const requester = await User.findById(requesterId);
     if (requester?.role !== 'admin' && tournament.createdBy !== requesterId) {
-      const err = new Error('토너먼트 생성자만 삭제할 수 있습니다.');
+      const err = new Error('Only the tournament creator can delete it.');
       err.status = 403;
       throw err;
     }
@@ -152,17 +152,17 @@ export const Tournament = {
   async join(id, userId, password = null) {
     const tournament = await this.getById(id);
     if (!tournament) {
-      const err = new Error('토너먼트를 찾을 수 없습니다.');
+      const err = new Error('Tournament not found.');
       err.status = 404;
       throw err;
     }
     if (tournament.status !== 'open') {
-      const err = new Error('모집 중인 토너먼트만 참가할 수 있습니다.');
+      const err = new Error('You can only join tournaments that are open for registration.');
       err.status = 400;
       throw err;
     }
     if (tournament.participantCount >= tournament.size) {
-      const err = new Error('토너먼트 정원이 찼습니다.');
+      const err = new Error('The tournament is full.');
       err.status = 400;
       throw err;
     }
@@ -170,7 +170,7 @@ export const Tournament = {
     if (tournament.isPrivate) {
       const raw = await queryOne('SELECT join_password FROM tournaments WHERE id=?', [id]);
       if (raw?.join_password && raw.join_password !== (password || '')) {
-        const err = new Error('비밀번호가 틀렸습니다.');
+        const err = new Error('Incorrect password.');
         err.status = 403;
         throw err;
       }
@@ -180,9 +180,9 @@ export const Tournament = {
       const user = await User.findById(userId);
       if (!checkTierAccess(user?.tier, tournament.minTier, tournament.maxTier)) {
         const parts = [];
-        if (tournament.minTier) parts.push(`${tournament.minTier} 이상`);
-        if (tournament.maxTier) parts.push(`${tournament.maxTier} 이하`);
-        const err = new Error(`티어 조건 미충족 (${parts.join(', ')})`);
+        if (tournament.minTier) parts.push(`${tournament.minTier} or above`);
+        if (tournament.maxTier) parts.push(`${tournament.maxTier} or below`);
+        const err = new Error(`Tier requirement not met (${parts.join(', ')})`);
         err.status = 403;
         throw err;
       }
@@ -196,25 +196,25 @@ export const Tournament = {
   async start(id, requesterId) {
     const tournament = await this.getById(id);
     if (!tournament) {
-      const err = new Error('토너먼트를 찾을 수 없습니다.');
+      const err = new Error('Tournament not found.');
       err.status = 404;
       throw err;
     }
     if (requesterId !== undefined) {
       const requester = await User.findById(requesterId);
       if (requester?.role !== 'admin' && tournament.createdBy !== requesterId) {
-        const err = new Error('토너먼트 생성자만 시작할 수 있습니다.');
+        const err = new Error('Only the tournament creator can start it.');
         err.status = 403;
         throw err;
       }
     }
     if (tournament.status !== 'open') {
-      const err = new Error('이미 시작된 토너먼트입니다.');
+      const err = new Error('The tournament has already started.');
       err.status = 400;
       throw err;
     }
     if (tournament.participants.length < 2) {
-      const err = new Error('최소 2명 이상 참가해야 시작할 수 있습니다.');
+      const err = new Error('At least 2 participants are required to start the tournament.');
       err.status = 400;
       throw err;
     }
@@ -242,7 +242,7 @@ export const Tournament = {
 
     try {
       const participantIds = tournament.participants.map((p) => p.userId);
-      await Notification.broadcast(participantIds, `"${tournament.name}" 토너먼트가 시작됐습니다! 대진표를 확인하세요.`, '/tournaments');
+      await Notification.broadcast(participantIds, `The "${tournament.name}" tournament has started! Check the bracket.`, '/tournaments');
     } catch { /* non-critical */ }
 
     return this.getById(id);
@@ -274,7 +274,7 @@ export const Tournament = {
         const allIds = participants.map((p) => p.userId);
         if (t && allIds.length > 0) {
           const winner = participants.find((p) => p.userId === winnerId);
-          await Notification.broadcast(allIds, `"${t.name}" 토너먼트가 종료됐습니다! 우승: ${winner?.user?.username || winnerId}`, '/tournaments');
+          await Notification.broadcast(allIds, `The "${t.name}" tournament has ended! Winner: ${winner?.user?.username || winnerId}`, '/tournaments');
         }
       } catch { /* non-critical */ }
       return this.getById(tournamentId);
@@ -287,8 +287,8 @@ export const Tournament = {
         if (nextMatch?.player1_id && nextMatch?.player2_id) {
           const opponentId = nextMatch.player1_id === winnerId ? nextMatch.player2_id : nextMatch.player1_id;
           const tName = await queryOne('SELECT name FROM tournaments WHERE id=?', [tournamentId]);
-          await Notification.create(winnerId, `토너먼트 다음 라운드 매치가 배정됐습니다! "${tName?.name}" Round ${nextRound}`, '/tournaments');
-          await Notification.create(opponentId, `토너먼트 다음 라운드 매치가 배정됐습니다! "${tName?.name}" Round ${nextRound}`, '/tournaments');
+          await Notification.create(winnerId, `You have been assigned a next round match! "${tName?.name}" Round ${nextRound}`, '/tournaments');
+          await Notification.create(opponentId, `You have been assigned a next round match! "${tName?.name}" Round ${nextRound}`, '/tournaments');
         }
       }
     } catch { /* non-critical */ }
@@ -302,12 +302,12 @@ export const Tournament = {
       [matchId, tournamentId]
     );
     if (!match) {
-      const err = new Error('매치를 찾을 수 없습니다.');
+      const err = new Error('Match not found.');
       err.status = 404;
       throw err;
     }
     if (match.winner_id) {
-      const err = new Error('이미 종료된 매치입니다.');
+      const err = new Error('This match has already ended.');
       err.status = 400;
       throw err;
     }
@@ -316,12 +316,12 @@ export const Tournament = {
     }
     const playerIds = [match.player1_id, match.player2_id].filter(Boolean).map(Number);
     if (playerIds.length !== 2) {
-      const err = new Error('두 플레이어가 모두 배정된 매치만 배틀을 만들 수 있습니다.');
+      const err = new Error('A battle can only be created for matches where both players are assigned.');
       err.status = 400;
       throw err;
     }
     if (!playerIds.includes(Number(requesterId))) {
-      const err = new Error('매치 참가자만 배틀을 만들 수 있습니다.');
+      const err = new Error('Only match participants can create a battle.');
       err.status = 403;
       throw err;
     }
@@ -333,13 +333,13 @@ export const Tournament = {
       User.findById(requesterFirst[1]),
     ]);
     if (!inviter || !invited) {
-      const err = new Error('플레이어 정보를 찾을 수 없습니다.');
+      const err = new Error('Player information not found.');
       err.status = 404;
       throw err;
     }
     const existing = await Battle.getInvite(invited.id);
     if (existing) {
-      const err = new Error('상대방이 이미 다른 배틀 초대를 받은 상태입니다.');
+      const err = new Error('The opponent already has a pending battle invitation.');
       err.status = 409;
       throw err;
     }

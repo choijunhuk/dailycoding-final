@@ -46,7 +46,7 @@ export default function GrowthHubPage() {
         if (!cancelled) setData({ ...fallback, ...data });
       })
       .catch(() => {
-        toast?.show('성장 허브를 불러오지 못했습니다.', 'error');
+        toast?.show('Failed to load Growth Hub.', 'error');
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -57,14 +57,14 @@ export default function GrowthHubPage() {
   const copyShare = async () => {
     try {
       await navigator.clipboard.writeText(data.shareCard?.shareText || '');
-      toast?.show('성장 카드 문구를 복사했습니다.', 'success');
+      toast?.show('Growth card text copied.', 'success');
     } catch {
-      toast?.show('복사에 실패했습니다.', 'error');
+      toast?.show('Failed to copy.', 'error');
     }
   };
 
   if (loading) {
-    return <div style={{ padding:40, color:'var(--text3)' }}>성장 허브를 불러오는 중...</div>;
+    return <div style={{ padding:40, color:'var(--text3)' }}>Loading Growth Hub...</div>;
   }
 
   return (
@@ -72,18 +72,18 @@ export default function GrowthHubPage() {
       <header style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-end', gap:16, flexWrap:'wrap' }}>
         <div>
           <div style={{ color:'var(--blue)', fontSize:12, fontWeight:900, letterSpacing:'.16em', textTransform:'uppercase', marginBottom:8 }}>Growth Hub</div>
-          <h1 style={{ fontSize:26, fontWeight:900, marginBottom:8 }}>DailyCoding 성장 허브</h1>
+          <h1 style={{ fontSize:26, fontWeight:900, marginBottom:8 }}>DailyCoding Growth Hub</h1>
           <p style={{ color:'var(--text2)', lineHeight:1.7, maxWidth:720 }}>
-            주간 학습 플랜, 배틀 분석, 직무형 세트, AI 면접, 성장 공유, 팀 과제, 해설 루틴, 단계형 힌트, 시험 개선을 한 흐름으로 묶었습니다.
+            Weekly learning plan, battle analysis, role-based sets, AI interview, growth sharing, team assignments, discussion routines, step-by-step hints, and exam improvement — all in one flow.
           </p>
         </div>
         <button className="btn btn-primary" onClick={() => navigate('/problems?recommended=true')}>
-          추천 문제 풀기
+          Solve Recommended Problems
         </button>
       </header>
 
       <div style={{ display:'grid', gridTemplateColumns:'minmax(0, 1.25fr) minmax(320px, .75fr)', gap:18 }} className="dashboard-main-grid">
-        <Panel icon={<CalendarDays size={18} color="var(--blue)" />} title={data.weeklyPlan?.title || '이번 주 맞춤 학습 플랜'}>
+        <Panel icon={<CalendarDays size={18} color="var(--blue)" />} title={data.weeklyPlan?.title || 'This Week\'s Personalized Learning Plan'}>
           <p style={{ color:'var(--text2)', fontSize:13, lineHeight:1.7, marginBottom:14 }}>{data.weeklyPlan?.summary}</p>
           <div style={{ display:'grid', gap:10 }}>
             {(data.weeklyPlan?.days || []).map((item) => (
@@ -104,16 +104,16 @@ export default function GrowthHubPage() {
                 <span style={{ color:TIERS[item.tier]?.color || 'var(--text3)', fontSize:11, fontWeight:900 }}>{TIERS[item.tier]?.label || item.tier}</span>
               </button>
             ))}
-            {(data.weeklyPlan?.days || []).length === 0 && <div style={{ color:'var(--text3)', fontSize:13 }}>추천할 문제가 없습니다.</div>}
+            {(data.weeklyPlan?.days || []).length === 0 && <div style={{ color:'var(--text3)', fontSize:13 }}>No problems to recommend.</div>}
           </div>
         </Panel>
 
-        <Panel icon={<Swords size={18} color="var(--yellow)" />} title="배틀 분석">
+        <Panel icon={<Swords size={18} color="var(--yellow)" />} title="Battle Analysis">
           <div style={{ display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:8, marginBottom:14 }}>
             {[
-              ['승', data.battleAnalysis?.wins || 0, 'var(--green)'],
-              ['패', data.battleAnalysis?.losses || 0, 'var(--red)'],
-              ['무', data.battleAnalysis?.draws || 0, 'var(--yellow)'],
+              ['Win', data.battleAnalysis?.wins || 0, 'var(--green)'],
+              ['Loss', data.battleAnalysis?.losses || 0, 'var(--red)'],
+              ['Draw', data.battleAnalysis?.draws || 0, 'var(--yellow)'],
             ].map(([label, value, color]) => (
               <div key={label} style={{ padding:'10px 12px', background:'var(--bg3)', border:'1px solid var(--border)', borderRadius:8, textAlign:'center' }}>
                 <div style={{ color, fontSize:20, fontWeight:900 }}>{value}</div>
@@ -122,12 +122,12 @@ export default function GrowthHubPage() {
             ))}
           </div>
           <p style={{ color:'var(--text2)', fontSize:13, lineHeight:1.7 }}>{data.battleAnalysis?.insight}</p>
-          <button className="btn btn-ghost btn-sm" onClick={() => navigate('/battles/history')} style={{ marginTop:12 }}>배틀 기록 보기</button>
+          <button className="btn btn-ghost btn-sm" onClick={() => navigate('/battles/history')} style={{ marginTop:12 }}>View Battle History</button>
         </Panel>
       </div>
 
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(260px, 1fr))', gap:18 }}>
-        <Panel icon={<Target size={18} color="var(--green)" />} title="회사/직무별 코테 세트">
+        <Panel icon={<Target size={18} color="var(--green)" />} title="Coding Test Sets by Company / Role">
           <div style={{ display:'grid', gap:10 }}>
             {(data.roleSets || []).map((set) => (
               <div key={set.id} style={{ padding:'12px 14px', background:'var(--bg3)', border:'1px solid var(--border)', borderRadius:8 }}>
@@ -139,35 +139,35 @@ export default function GrowthHubPage() {
           </div>
         </Panel>
 
-        <Panel icon={<Bot size={18} color="var(--purple)" />} title={data.aiInterview?.title || 'AI 모의 면접'}>
+        <Panel icon={<Bot size={18} color="var(--purple)" />} title={data.aiInterview?.title || 'AI Mock Interview'}>
           <ol style={{ margin:'0 0 14px 18px', padding:0, color:'var(--text2)', fontSize:13, lineHeight:1.8 }}>
             {(data.aiInterview?.flow || []).map((step) => <li key={step}>{step}</li>)}
           </ol>
-          <button className="btn btn-primary btn-sm" onClick={() => navigate('/ai')}>AI 페이지로 이동</button>
+          <button className="btn btn-primary btn-sm" onClick={() => navigate('/ai')}>Go to AI Page</button>
         </Panel>
 
-        <Panel icon={<Share2 size={18} color="var(--blue)" />} title="성장 리포트 공유 카드">
+        <Panel icon={<Share2 size={18} color="var(--blue)" />} title="Growth Report Share Card">
           <div style={{ padding:'14px', borderRadius:8, background:'var(--bg3)', border:'1px solid var(--border)', color:'var(--text2)', fontSize:13, lineHeight:1.7 }}>
             {data.shareCard?.shareText}
           </div>
-          <button className="btn btn-ghost btn-sm" onClick={copyShare} style={{ marginTop:12 }}><Clipboard size={14} />복사</button>
+          <button className="btn btn-ghost btn-sm" onClick={copyShare} style={{ marginTop:12 }}><Clipboard size={14} />Copy</button>
         </Panel>
 
-        <Panel icon={<Users size={18} color="var(--yellow)" />} title={data.teamStudy?.title || '팀/스터디 과제'}>
+        <Panel icon={<Users size={18} color="var(--yellow)" />} title={data.teamStudy?.title || 'Team / Study Assignment'}>
           <ul style={{ margin:'0 0 14px 18px', padding:0, color:'var(--text2)', fontSize:13, lineHeight:1.8 }}>
             {(data.teamStudy?.steps || []).map((step) => <li key={step}>{step}</li>)}
           </ul>
-          <button className="btn btn-ghost btn-sm" onClick={() => navigate(data.teamStudy?.cta || '/team')}>팀 대시보드</button>
+          <button className="btn btn-ghost btn-sm" onClick={() => navigate(data.teamStudy?.cta || '/team')}>Team Dashboard</button>
         </Panel>
 
-        <Panel icon={<MessageSquare size={18} color="var(--green)" />} title={data.discussionGuide?.title || '토론/해설 강화'}>
+        <Panel icon={<MessageSquare size={18} color="var(--green)" />} title={data.discussionGuide?.title || 'Discussion / Explanation Practice'}>
           <ul style={{ margin:'0 0 14px 18px', padding:0, color:'var(--text2)', fontSize:13, lineHeight:1.8 }}>
             {(data.discussionGuide?.rules || []).map((rule) => <li key={rule}>{rule}</li>)}
           </ul>
-          <button className="btn btn-ghost btn-sm" onClick={() => navigate(data.discussionGuide?.cta || '/community')}>커뮤니티</button>
+          <button className="btn btn-ghost btn-sm" onClick={() => navigate(data.discussionGuide?.cta || '/community')}>Community</button>
         </Panel>
 
-        <Panel icon={<Lightbulb size={18} color="var(--orange)" />} title="AI 힌트 단계 제한">
+        <Panel icon={<Lightbulb size={18} color="var(--orange)" />} title="AI Hint Step Ladder">
           <div style={{ display:'grid', gap:8 }}>
             {(data.hintLadder || []).map((item) => (
               <div key={item.step} style={{ padding:'10px 12px', background:'var(--bg3)', border:'1px solid var(--border)', borderRadius:8 }}>
@@ -178,18 +178,18 @@ export default function GrowthHubPage() {
           </div>
         </Panel>
 
-        <Panel icon={<Trophy size={18} color="var(--yellow)" />} title={data.examImprovement?.title || '실전 시험 모드 개선'}>
+        <Panel icon={<Trophy size={18} color="var(--yellow)" />} title={data.examImprovement?.title || 'Exam Mode Improvement'}>
           <div style={{ color:'var(--text2)', fontSize:13, lineHeight:1.7, marginBottom:12 }}>{data.examImprovement?.recommendation}</div>
           <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
             {(data.examImprovement?.checks || []).map((check) => (
               <span key={check} style={{ padding:'4px 8px', borderRadius:999, background:'var(--bg3)', color:'var(--text3)', fontSize:11, fontWeight:800 }}>{check}</span>
             ))}
           </div>
-          <button className="btn btn-primary btn-sm" onClick={() => navigate(data.examImprovement?.cta || '/exams')} style={{ marginTop:12 }}>모의 코테 보기</button>
+          <button className="btn btn-primary btn-sm" onClick={() => navigate(data.examImprovement?.cta || '/exams')} style={{ marginTop:12 }}>View Mock Exam</button>
         </Panel>
       </div>
 
-      <Panel icon={<Target size={18} color="var(--red)" />} title="3번 오답 복구 미션 설명">
+      <Panel icon={<Target size={18} color="var(--red)" />} title="3-Strike Recovery Mission Guide">
         <p style={{ color:'var(--text2)', fontSize:13, lineHeight:1.8, margin:0 }}>
           {data.excludedRewardMission?.explanation}
         </p>

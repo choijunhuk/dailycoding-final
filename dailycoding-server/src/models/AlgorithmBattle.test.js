@@ -210,6 +210,59 @@ test('battle problem filters apply tier ranges, tier bans, and tag choices', () 
   assert.deepEqual(resolved.bannedTags, ['DP']);
 });
 
+test('draft-ban defers problem conditions until both players submit draft choices', async () => {
+  await waitForDB();
+  const userA = await insert('INSERT INTO users (email, username, role, tier, rating) VALUES (?,?,?,?,?)', ['battle-draft-a@test.com', 'BattleDraftA', 'user', 'bronze', 500]);
+  const userB = await insert('INSERT INTO users (email, username, role, tier, rating) VALUES (?,?,?,?,?)', ['battle-draft-b@test.com', 'BattleDraftB', 'user', 'bronze', 520]);
+  const problemId = await insert(
+    'INSERT INTO problems (title, problem_type, description, visibility, tier, difficulty) VALUES (?,?,?,?,?,?)',
+    ['Draft Graph Battle', 'coding', 'Graph test', 'global', 'bronze', 2]
+  );
+  await run('INSERT INTO problem_tags (problem_id, tag) VALUES (?,?)', [problemId, '그래프']);
+
+  const created = await AlgorithmBattle.createRoom({
+    creatorId: userA,
+    mode: 'draft-ban',
+    maxPlayers: 2,
+    problemFilters: {
+      tierMode: 'only',
+      allowedTiers: ['diamond'],
+      bannedTags: ['그래프'],
+    },
+  });
+  assert.equal(created.room.status, 'waiting');
+  assert.equal(created.room.problemId, null);
+  assert.deepEqual(created.config.problemFilters.bannedTags, []);
+  assert.deepEqual(created.config.problemFilters.allowedTiers, []);
+
+  await AlgorithmBattle.joinRoom(created.room.id, userB);
+  await AlgorithmBattle.markReady(created.room.id, userA);
+  const drafting = await AlgorithmBattle.markReady(created.room.id, userB);
+  assert.equal(drafting.room.status, 'waiting');
+  assert.equal(drafting.draft.phase, 'active');
+  assert.equal(drafting.problem, null);
+
+  const firstPick = await AlgorithmBattle.submitDraftSelection(created.room.id, userA, {
+    bannedTiers: ['gold'],
+    bannedTags: ['DP'],
+    pickedTags: ['그래프'],
+  });
+  assert.equal(firstPick.room.status, 'waiting');
+  assert.equal(firstPick.draft.submittedCount, 1);
+
+  const started = await AlgorithmBattle.submitDraftSelection(created.room.id, userB, {
+    bannedTiers: ['silver'],
+    bannedTags: ['문자열'],
+    pickedTags: ['그래프'],
+  });
+  assert.equal(started.room.status, 'playing');
+  assert.equal(started.draft.phase, 'completed');
+  assert.ok(started.room.problemId);
+  assert.ok(started.config.problemFilters.bannedTiers.includes('gold'));
+  assert.ok(started.config.problemFilters.bannedTags.includes('DP'));
+  assert.ok(started.config.problemFilters.requiredTags.includes('그래프'));
+});
+
 test('algorithm battle does not award wins for abandoned single-player rooms', async () => {
   await waitForDB();
   const userA = await insert('INSERT INTO users (email, username, role) VALUES (?,?,?)', ['battle-solo-a@test.com', 'BattleSoloA', 'user']);

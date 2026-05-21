@@ -2,11 +2,11 @@ import { insert, query, queryOne, run } from '../config/mysql.js';
 import { Reward } from '../models/Reward.js';
 
 export const MISSION_TEMPLATES = [
-  { type: 'solve_1', label: '오늘 문제 1개 풀기', rewardValue: 10 },
-  { type: 'solve_3', label: '오늘 문제 3개 풀기', rewardValue: 30 },
-  { type: 'correct_streak_3', label: '3문제 연속 정답', rewardValue: 20 },
-  { type: 'battle_win', label: '배틀에서 1승', rewardValue: 25 },
-  { type: 'review_ai', label: 'AI 코드 리뷰 1회 사용', rewardValue: 5 },
+  { type: 'solve_1', label: 'Solve 1 problem today', rewardValue: 10 },
+  { type: 'solve_3', label: 'Solve 3 problems today', rewardValue: 30 },
+  { type: 'correct_streak_3', label: '3 correct answers in a row', rewardValue: 20 },
+  { type: 'battle_win', label: 'Win 1 battle', rewardValue: 25 },
+  { type: 'review_ai', label: 'Use AI code review once', rewardValue: 5 },
 ];
 
 const MISSION_LABELS = new Map(MISSION_TEMPLATES.map((mission) => [mission.type, mission.label]));

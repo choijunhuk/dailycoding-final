@@ -20,8 +20,8 @@ function formatSeconds(sec) {
 
 function tierLabel(tier) {
   return ({
-    iron: '아이언', bronze: '브론즈', silver: '실버', gold: '골드', platinum: '플래티넘', emerald: '에메랄드', diamond: '다이아', master: '마스터', grandmaster: '그마', challenger: '챌린저',
-  })[tier] || tier || '훈련'
+    iron: 'Iron', bronze: 'Bronze', silver: 'Silver', gold: 'Gold', platinum: 'Platinum', emerald: 'Emerald', diamond: 'Diamond', master: 'Master', grandmaster: 'Grandmaster', challenger: 'Challenger',
+  })[tier] || tier || 'Training'
 }
 
 export default function GameHubPage() {
@@ -43,7 +43,7 @@ export default function GameHubPage() {
       const { data } = await api.get('/game/summary')
       setSummary({ ...emptySummary, ...data })
     } catch (err) {
-      setError(err?.response?.data?.message || '게임 데이터를 불러오지 못했습니다.')
+      setError(err?.response?.data?.message || 'Failed to load game data.')
       setSummary(emptySummary)
     } finally {
       setLoading(false)
@@ -64,21 +64,21 @@ export default function GameHubPage() {
       <section className="game-hero card card-pad">
         <div className="game-hero-copy">
           <span className="game-eyebrow"><Swords size={14} /> DailyCoding Arcade</span>
-          <h1>문제 풀이를 게임처럼 이어가는 코딩 게임 허브</h1>
+          <h1>A coding game hub that turns problem solving into a game</h1>
           <p>
-            실시간 배틀뿐 아니라 고스트 레이스, 오늘의 던전, 시즌 점령전을 한 곳에서 시작하세요.
-            랭킹 점수는 건드리지 않고 풀이 동기와 반복 플레이를 강화합니다.
+            Beyond real-time battles, start Ghost Race, Daily Dungeon, and Season Conquest all in one place.
+            Boosts your motivation and replay value without affecting your ranking score.
           </p>
           <div className="game-hero-actions">
-            <button className="btn btn-primary" onClick={() => navigate('/battle')}>실시간 배틀 입장 <ArrowRight size={16} /></button>
-            <button className="btn btn-ghost" onClick={loadSummary} disabled={loading}><RefreshCcw size={15} /> 새로고침</button>
+            <button className="btn btn-primary" onClick={() => navigate('/battle')}>Enter Live Battle <ArrowRight size={16} /></button>
+            <button className="btn btn-ghost" onClick={loadSummary} disabled={loading}><RefreshCcw size={15} /> Refresh</button>
           </div>
         </div>
         <div className="game-hero-panel">
           <div className="game-boss-orb">{boss?.emoji || '🎮'}</div>
           <div>
-            <div className="game-panel-label">오늘의 보스</div>
-            <strong>{boss?.name || '준비 중인 보스'}</strong>
+            <div className="game-panel-label">Today's Boss</div>
+            <strong>{boss?.name || 'Boss coming soon'}</strong>
             <small>{dungeonProgress.cleared}/{dungeonProgress.total} 방 클리어 · {dungeonProgress.percent}% 진행</small>
           </div>
         </div>
@@ -87,24 +87,24 @@ export default function GameHubPage() {
       {error && (
         <div className="game-alert card">
           <span>{error}</span>
-          <button className="btn btn-ghost btn-sm" onClick={() => navigate('/problems')}>문제부터 풀기</button>
+          <button className="btn btn-ghost btn-sm" onClick={() => navigate('/problems')}>Solve Problems First</button>
         </div>
       )}
 
       <section className="game-stat-grid">
         <div className="game-stat card card-hover">
           <Zap size={18} />
-          <span>고스트 후보</span>
+          <span>Ghost Candidates</span>
           <strong>{loading ? '-' : summary.ghost?.candidates || 0}</strong>
         </div>
         <div className="game-stat card card-hover">
           <Flame size={18} />
-          <span>던전 피해량</span>
+          <span>Dungeon Damage</span>
           <strong>{loading ? '-' : dungeonProgress.damageDealt || 0}</strong>
         </div>
         <div className="game-stat card card-hover">
           <Crown size={18} />
-          <span>점령 지역</span>
+          <span>Territories Held</span>
           <strong>{loading ? '-' : `${controlledCount}/${territories.length || 5}`}</strong>
         </div>
       </section>

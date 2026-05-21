@@ -16,17 +16,17 @@ function normalizeFollowListQuery(query = {}) {
 }
 
 async function canViewFollowLists(requesterId, targetUser) {
-  if (!targetUser) return { ok: false, status: 404, message: '유저를 찾을 수 없습니다.' };
+  if (!targetUser) return { ok: false, status: 404, message: 'User not found.' };
   if (Number(requesterId) === Number(targetUser.id)) return { ok: true };
   if (targetUser.profile_visibility === 'private') {
-    return { ok: false, status: 403, message: '비공개 프로필입니다.' };
+    return { ok: false, status: 403, message: 'This profile is private.' };
   }
   if (targetUser.profile_visibility === 'followers') {
     const isFollowing = await queryOne(
       'SELECT 1 FROM follows WHERE follower_id = ? AND following_id = ?',
       [requesterId, targetUser.id]
     );
-    if (!isFollowing) return { ok: false, status: 403, message: '팔로워만 볼 수 있습니다.' };
+    if (!isFollowing) return { ok: false, status: 403, message: 'Only followers can view this.' };
   }
   return { ok: true };
 }
@@ -52,7 +52,7 @@ function toPublicFollowUser(user, followingSet) {
 async function listFollowUsers(req, res, type) {
   const targetId = Number(req.params.id);
   if (!targetId || Number.isNaN(targetId)) {
-    return res.status(400).json({ message: '유효하지 않은 사용자 ID입니다.' });
+    return res.status(400).json({ message: 'Invalid user ID.' });
   }
 
   try {
@@ -96,7 +96,7 @@ async function listFollowUsers(req, res, type) {
     });
   } catch (err) {
     console.error(`[follows/${type}]`, err);
-    res.status(500).json({ message: '서버 오류' });
+    res.status(500).json({ message: 'Server error' });
   }
 }
 
@@ -166,15 +166,15 @@ router.get('/feed', auth, async (req, res) => {
     return res.json(items);
   } catch (err) {
     console.error('[follows/feed]', err);
-    return res.status(500).json({ message: '서버 오류' });
+    return res.status(500).json({ message: 'Server error' });
   }
 });
 
 // POST /api/follows/:id  — follow a user
 router.post('/:id', auth, async (req, res) => {
   const targetId = Number(req.params.id);
-  if (!targetId || isNaN(targetId)) return res.status(400).json({ message: '유효하지 않은 사용자 ID입니다.' });
-  if (targetId === req.user.id) return res.status(400).json({ message: '자신을 팔로우할 수 없습니다.' });
+  if (!targetId || isNaN(targetId)) return res.status(400).json({ message: 'Invalid user ID.' });
+  if (targetId === req.user.id) return res.status(400).json({ message: 'You cannot follow yourself.' });
   try {
     await dbRun(
       'INSERT IGNORE INTO follows (follower_id, following_id) VALUES (?,?)',
@@ -183,14 +183,14 @@ router.post('/:id', auth, async (req, res) => {
     await redis.del(`feed:${req.user.id}`);
     res.json({ following: true });
   } catch (err) {
-    res.status(500).json({ message: '서버 오류' });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
 // DELETE /api/follows/:id  — unfollow a user
 router.delete('/:id', auth, async (req, res) => {
   const targetId = Number(req.params.id);
-  if (!targetId || isNaN(targetId)) return res.status(400).json({ message: '유효하지 않은 사용자 ID입니다.' });
+  if (!targetId || isNaN(targetId)) return res.status(400).json({ message: 'Invalid user ID.' });
   try {
     await dbRun(
       'DELETE FROM follows WHERE follower_id=? AND following_id=?',
@@ -199,7 +199,7 @@ router.delete('/:id', auth, async (req, res) => {
     await redis.del(`feed:${req.user.id}`);
     res.json({ following: false });
   } catch (err) {
-    res.status(500).json({ message: '서버 오류' });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -212,7 +212,7 @@ router.get('/my', auth, async (req, res) => {
     );
     res.json(rows.map(r => r.following_id));
   } catch (err) {
-    res.status(500).json({ message: '서버 오류' });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -227,7 +227,7 @@ router.get('/:id/following', auth, async (req, res) => {
 // GET /api/follows/:id/stats — follower/following counts for a user
 router.get('/:id/stats', auth, async (req, res) => {
   const targetId = Number(req.params.id);
-  if (!targetId || isNaN(targetId)) return res.status(400).json({ message: '유효하지 않은 사용자 ID입니다.' });
+  if (!targetId || isNaN(targetId)) return res.status(400).json({ message: 'Invalid user ID.' });
   try {
     const [followers, following, isFollowing] = await Promise.all([
       dbQuery('SELECT COUNT(*) AS cnt FROM follows WHERE following_id=?', [targetId]),
@@ -240,7 +240,7 @@ router.get('/:id/stats', auth, async (req, res) => {
       isFollowing: !!isFollowing,
     });
   } catch (err) {
-    res.status(500).json({ message: '서버 오류' });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 

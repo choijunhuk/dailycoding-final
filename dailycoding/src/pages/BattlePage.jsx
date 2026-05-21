@@ -11,7 +11,7 @@ import { BATTLE_AD_SLOTS, BATTLE_DURATIONS, BATTLE_MODES, BATTLE_SEC, fmtTime, g
 import { BattleAdSlot, BugFixProblem, CodingProblem, FillBlankProblem, getBattleStarterCode } from './battleProblemViews.jsx';
 import './BattlePage.css';
 
-// ── Web Audio 타이핑 사운드 (외부 라이브러리 없음) ────────────────────────
+// ── Web Audio typing sound (no external libraries) ────────────────────────
 function useTypingSound() {
   const ctxRef = useRef(null);
   useEffect(() => {
@@ -41,7 +41,7 @@ function useTypingSound() {
       osc.start(ctx.currentTime);
       osc.stop(ctx.currentTime + 0.055);
     } catch {
-      // 오디오 컨텍스트가 막힌 브라우저에서는 무음 처리
+      // Silently ignore in browsers that block AudioContext
     }
   }, []);
 }
@@ -89,8 +89,8 @@ function BattleReplayViewer({ roomId }) {
     return (
       <div className="bp-page" style={{display:'grid',placeItems:'center'}}>
         <div className="card card-pad-lg" style={{maxWidth:420,textAlign:'center'}}>
-          <h2>리플레이를 찾을 수 없습니다</h2>
-          <button className="btn btn-primary" onClick={() => navigate('/battle')}>배틀로 이동</button>
+          <h2>Replay not found</h2>
+          <button className="btn btn-primary" onClick={() => navigate('/battle')}>Go to Battle</button>
         </div>
       </div>
     );
@@ -99,7 +99,7 @@ function BattleReplayViewer({ roomId }) {
   return (
     <div className="bp-page bp-replay-page">
       <div className="bp-result">
-        <div className="bp-result-banner draw">🎬 배틀 리플레이</div>
+        <div className="bp-result-banner draw">🎬 Battle Replay</div>
         <div style={{fontSize:13,color:'var(--text2)',textAlign:'center',marginBottom:16}}>
           Room {replay.roomId} · {new Date(replay.createdAt).toLocaleString('ko-KR')}
         </div>
@@ -128,14 +128,14 @@ function BattleReplayViewer({ roomId }) {
         />
 
         <div className="bp-replay-events">
-          {visibleEvents.length === 0 && <div className="bp-empty-msg">저장된 제출 이벤트가 없습니다.</div>}
+          {visibleEvents.length === 0 && <div className="bp-empty-msg">No submission events recorded.</div>}
           {visibleEvents.map((event, index) => (
             <div key={`${event.ts}-${index}`} className={`bp-replay-event ${event.type}`}>
               <span className="mono">{new Date(event.ts).toLocaleTimeString('ko-KR')}</span>
               <strong>User {event.userId}</strong>
               <span>P{event.problemId}</span>
               <span>{event.language || '-'}</span>
-              <span>{event.type === 'pass' ? '통과' : '실패'}</span>
+              <span>{event.type === 'pass' ? 'Pass' : 'Fail'}</span>
             </div>
           ))}
         </div>
@@ -237,7 +237,7 @@ export default function BattlePage() {
       } catch (err) {
         setActiveBattles([]);
         if (err?.response?.status !== 401) {
-          showLoadErrorToast(err?.response?.data?.message || '배틀 목록을 불러오지 못했습니다.');
+          showLoadErrorToast(err?.response?.data?.message || 'Failed to load battle list.');
         }
       }
     };
@@ -254,7 +254,7 @@ export default function BattlePage() {
       .catch((err) => {
         setHistoryRows([]);
         if (err?.response?.status !== 401) {
-          showLoadErrorToast(err?.response?.data?.message || '배틀 기록을 불러오지 못했습니다.');
+          showLoadErrorToast(err?.response?.data?.message || 'Failed to load battle history.');
         }
       })
       .finally(() => setHistoryLoading(false));
@@ -507,7 +507,7 @@ export default function BattlePage() {
       setLobbyPhase('invite_sent');
       // invite_sent 상태에서 수락 대기 폴링
     } catch (err) {
-      setInviteError(err.response?.data?.message || '초대 전송 실패');
+      setInviteError(err.response?.data?.message || 'Failed to send invite');
     }
   };
 
@@ -526,7 +526,7 @@ export default function BattlePage() {
           setLobbyPhase('idle');
         } else if (r.status === 'declined') {
           setLobbyPhase('idle');
-          setInviteError('상대방이 초대를 거절했습니다.');
+          setInviteError('The opponent declined your invite.');
           setRoomId(null);
         }
       } catch {
@@ -549,7 +549,7 @@ export default function BattlePage() {
       setPhase('countdown');
       setLobbyPhase('idle');
     } catch (err) {
-      setInviteError(err.response?.data?.message || '수락 실패');
+      setInviteError(err.response?.data?.message || 'Failed to accept invite');
     }
   };
 
@@ -624,7 +624,7 @@ export default function BattlePage() {
       setSubmitResults(prev => ({ ...prev, [problem.id]: 'error' }));
       setJudgeDetails(prev => ({
         ...prev,
-        [problem.id]: { detail: err.response?.data?.message || '채점 요청에 실패했습니다.', timeMs: null, memoryMb: null },
+        [problem.id]: { detail: err.response?.data?.message || 'Grading request failed.', timeMs: null, memoryMb: null },
       }));
     } finally {
       setSubmitting(false);
@@ -642,7 +642,7 @@ export default function BattlePage() {
       startTimer(data.room.startTime, data.room.duration);
       navigate(`/battle/watch/${targetRoomId}`, { replace: true });
     } catch (err) {
-      toast?.show(err?.response?.data?.message || '관전에 실패했습니다.', 'error');
+      toast?.show(err?.response?.data?.message || 'Failed to spectate.', 'error');
     }
   };
 
@@ -666,10 +666,10 @@ export default function BattlePage() {
   };
 
   const buildShareText = (battleRoom, currentPlayer, opponentPlayer, didWin, didDraw) => {
-    const outcome = didWin ? '승리' : didDraw ? '무승부' : '패배';
-    const primaryProblemTitle = battleRoom?.problems?.[0]?.title || '배틀 문제';
+    const outcome = didWin ? 'Victory' : didDraw ? 'Draw' : 'Defeat';
+    const primaryProblemTitle = battleRoom?.problems?.[0]?.title || 'Battle Problem';
     const elapsedSec = Math.max(0, BATTLE_SEC - timeLeft);
-    return `DailyCoding 배틀에서 ${outcome}했습니다! 🔥 문제: ${primaryProblemTitle} | 점수 ${currentPlayer?.score ?? 0}:${opponentPlayer?.score ?? 0} | ${elapsedSec}s 소요`;
+    return `I got a ${outcome} in DailyCoding Battle! 🔥 Problem: ${primaryProblemTitle} | Score ${currentPlayer?.score ?? 0}:${opponentPlayer?.score ?? 0} | ${elapsedSec}s elapsed`;
   };
 
   const handleShareCopy = async () => {
@@ -684,16 +684,16 @@ export default function BattlePage() {
     try {
       if (navigator.share && window.matchMedia?.('(max-width: 768px)')?.matches) {
         await navigator.share({ text: shareText });
-        toast?.show('결과를 공유했습니다.', 'success');
+        toast?.show('Result shared successfully.', 'success');
         return;
       }
 
       const copied = await copyWithFallback(shareText);
       if (!copied) throw new Error('copy_failed');
-      toast?.show('결과를 클립보드에 복사했습니다.', 'success');
+      toast?.show('Result copied to clipboard.', 'success');
     } catch (error) {
       if (error?.name === 'AbortError') return;
-      toast?.show('결과 공유에 실패했습니다.', 'error');
+      toast?.show('Failed to share result.', 'error');
     }
   };
 
@@ -741,9 +741,9 @@ export default function BattlePage() {
       setInviteError('');
       setTimeLeft(BATTLE_SEC);
       navigate('/battle', { replace: true });
-      toast?.show('리매치 요청을 보냈습니다.', 'success');
+      toast?.show('Rematch request sent.', 'success');
     } catch (error) {
-      toast?.show(error?.response?.data?.message || '리매치 요청에 실패했습니다.', 'error');
+      toast?.show(error?.response?.data?.message || 'Failed to send rematch request.', 'error');
     } finally {
       setRematchPending(false);
     }
@@ -774,9 +774,9 @@ export default function BattlePage() {
                 const { data: inv } = await api.get('/battles/invite');
                 if (cancelled) return;
                 const matched = inv?.invite?.roomId === params.roomId ? inv.invite : null;
-                setPendingInvite(matched || { roomId: params.roomId, inviterName: '상대방' });
+                setPendingInvite(matched || { roomId: params.roomId, inviterName: 'Opponent' });
               } catch {
-                if (!cancelled) setPendingInvite({ roomId: params.roomId, inviterName: '상대방' });
+                if (!cancelled) setPendingInvite({ roomId: params.roomId, inviterName: 'Opponent' });
               }
               if (!cancelled) setLobbyPhase('invite_received');
             }
@@ -787,7 +787,7 @@ export default function BattlePage() {
       } catch (err) {
         if (cancelled) return;
         if (err?.response?.status === 404) {
-          toast?.show('배틀 방을 찾을 수 없습니다.', 'error');
+          toast?.show('Battle room not found.', 'error');
         } else {
           spectateBattle(params.roomId);
         }
@@ -803,7 +803,7 @@ export default function BattlePage() {
     return <BattleReplayViewer roomId={params.id || params.roomId} />;
   }
 
-  if (!user?.emailVerified) return <EmailVerifyGate feature="배틀 기능" />;
+  if (!user?.emailVerified) return <EmailVerifyGate feature="Battle" />;
 
   // ─────────────────────────────────────────────────────────────────────────
   // RENDER: 로비
@@ -813,22 +813,22 @@ export default function BattlePage() {
       <div className="bp-page">
         {isFreePlan && (
           <div className="bp-free-plan-banner">
-            무료 플랜도 1:1 배틀을 이용할 수 있으며, 대신 광고 슬롯이 노출됩니다.
+            Free plan users can use 1:1 Battle, but ad slots will be shown.
           </div>
         )}
         {isFreePlan && <BattleAdSlot slot={BATTLE_AD_SLOTS.lobby} />}
         <div className="bp-lobby">
           <div className="bp-lobby-hero">
             <div className="bp-lobby-icon">⚔️</div>
-            <h1>코딩 배틀</h1>
-            <p>실시간으로 상대와 코딩 대결을 펼쳐보세요.<br/>모든 영토(문제)를 먼저 점령하는 팀이 승리!</p>
+            <h1>Coding Battle</h1>
+            <p>Challenge opponents in real-time coding duels.<br/>The team that captures all territories (problems) first wins!</p>
           </div>
 
           <div className="bp-lobby-main">
             <div className="bp-lobby-left">
               {lobbyPhase === 'idle' && (
                 <div className="bp-invite-box">
-                  <div className="bp-invite-title">상대방 초대</div>
+                  <div className="bp-invite-title">Invite Opponent</div>
                   <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
                     {BATTLE_MODES.map(m => (
                       <button
@@ -870,7 +870,7 @@ export default function BattlePage() {
                       value={inviteInput}
                       onChange={e => setInviteInput(e.target.value)}
                       onKeyDown={e => e.key === 'Enter' && sendInvite()}
-                      placeholder="상대방 사용자명 입력"
+                      placeholder="Enter opponent username"
                     />
                     <select
                       className="bp-invite-input"
@@ -882,7 +882,7 @@ export default function BattlePage() {
                         <option key={option.value} value={option.value}>{option.label}</option>
                       ))}
                     </select>
-                    <button className="bp-btn-primary" onClick={sendInvite}>초대 보내기</button>
+                    <button className="bp-btn-primary" onClick={sendInvite}>Send Invite</button>
                   </div>
                   {inviteError && <div className="bp-error">{inviteError}</div>}
                 </div>
@@ -892,14 +892,14 @@ export default function BattlePage() {
                 <div className="bp-waiting-box">
                   <div className="bp-spinner" />
                   <div className="bp-waiting-text">
-                    <strong>{opponentName}</strong>님의 수락을 기다리는 중...
+                    Waiting for <strong>{opponentName}</strong> to accept...
                   </div>
-                  <div className="bp-waiting-sub">상대방이 2분 내에 수락해야 합니다.</div>
+                  <div className="bp-waiting-sub">The opponent must accept within 2 minutes.</div>
                   <button className="bp-btn-ghost" onClick={() => {
                     setLobbyPhase('idle');
                     setRoomId(null);
                     setInviteError('');
-                  }}>취소</button>
+                  }}>Cancel</button>
                 </div>
               )}
 
@@ -908,27 +908,27 @@ export default function BattlePage() {
                   <div className="bp-invite-from">
                     <span className="bp-invite-icon">📩</span>
                     <div>
-                      <div className="bp-invite-name">{pendingInvite.inviterName}님이 배틀을 신청했습니다!</div>
-                      <div className="bp-invite-sub">지금 수락하지 않으면 2분 후 자동 만료됩니다.</div>
+                      <div className="bp-invite-name">{pendingInvite.inviterName} has challenged you to a Battle!</div>
+                      <div className="bp-invite-sub">If you don't accept now, the invite expires in 2 minutes.</div>
                     </div>
                   </div>
                   <div className="bp-invite-actions">
-                    <button className="bp-btn-primary" onClick={acceptInvite}>수락</button>
-                    <button className="bp-btn-danger"  onClick={declineInvite}>거절</button>
+                    <button className="bp-btn-primary" onClick={acceptInvite}>Accept</button>
+                    <button className="bp-btn-danger"  onClick={declineInvite}>Decline</button>
                   </div>
                 </div>
               )}
 
               <div className="bp-active-battles">
                 <div style={{ display:'flex', gap:8, marginBottom:12 }}>
-                  <button className="bp-btn-small" onClick={() => setLobbyTab('active')} style={{ opacity: lobbyTab === 'active' ? 1 : 0.7 }}>진행 중인 배틀</button>
-                  <button className="bp-btn-small" onClick={() => setLobbyTab('history')} style={{ opacity: lobbyTab === 'history' ? 1 : 0.7 }}>히스토리</button>
+                  <button className="bp-btn-small" onClick={() => setLobbyTab('active')} style={{ opacity: lobbyTab === 'active' ? 1 : 0.7 }}>Active Battles</button>
+                  <button className="bp-btn-small" onClick={() => setLobbyTab('history')} style={{ opacity: lobbyTab === 'history' ? 1 : 0.7 }}>History</button>
                 </div>
                 {lobbyTab === 'active' ? (
                   <>
-                    <div className="bp-section-title">진행 중인 배틀 (관전 가능)</div>
+                    <div className="bp-section-title">Active Battles (Spectate available)</div>
                     {activeBattles.length === 0 ? (
-                      <div className="bp-empty-msg">현재 진행 중인 배틀이 없습니다.</div>
+                      <div className="bp-empty-msg">No battles in progress right now.</div>
                     ) : (
                       <div className="bp-battle-list">
                         {activeBattles.map(b => {
@@ -946,7 +946,7 @@ export default function BattlePage() {
                                   </span>
                                 )}
                               </div>
-                              <button className="bp-btn-small" onClick={() => spectateBattle(b.id)}>관전하기</button>
+                              <button className="bp-btn-small" onClick={() => spectateBattle(b.id)}>Spectate</button>
                             </div>
                           );
                         })}
@@ -955,13 +955,13 @@ export default function BattlePage() {
                   </>
                 ) : (
                   <>
-                    <div className="bp-section-title">내 배틀 히스토리</div>
+                    <div className="bp-section-title">My Battle History</div>
                     {historyRows.length > 0 && (
                       <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:8, marginBottom:14 }}>
                         {[
-                          ['승', historyRows.filter(r=>r.result==='win').length, 'var(--green)'],
-                          ['패', historyRows.filter(r=>r.result==='lose').length, 'var(--red)'],
-                          ['무', historyRows.filter(r=>r.result==='draw').length, 'var(--yellow)'],
+                          ['W', historyRows.filter(r=>r.result==='win').length, 'var(--green)'],
+                          ['L', historyRows.filter(r=>r.result==='lose').length, 'var(--red)'],
+                          ['D', historyRows.filter(r=>r.result==='draw').length, 'var(--yellow)'],
                         ].map(([label, count, color]) => (
                           <div key={label} style={{ padding:'10px', background:'var(--bg3)', border:'1px solid var(--border)', borderRadius:8, textAlign:'center' }}>
                             <div style={{ color, fontSize:20, fontWeight:900 }}>{count}</div>
@@ -971,9 +971,9 @@ export default function BattlePage() {
                       </div>
                     )}
                     {historyLoading ? (
-                      <div className="bp-empty-msg">히스토리를 불러오는 중입니다.</div>
+                      <div className="bp-empty-msg">Loading history...</div>
                     ) : historyRows.length === 0 ? (
-                      <div className="bp-empty-msg">아직 완료된 배틀이 없습니다.</div>
+                      <div className="bp-empty-msg">No completed battles yet.</div>
                     ) : (
                       <div className="bp-battle-list">
                         {historyRows.map((row) => (
@@ -986,7 +986,7 @@ export default function BattlePage() {
                               <span style={{ fontSize:11, color:'var(--text3)' }}>{new Date(row.createdAt).toLocaleString('ko-KR')}</span>
                             </div>
                             <div style={{ fontSize:12, color:'var(--text2)' }}>
-                              점수 {row.scoreFor} : {row.scoreAgainst} · 해결 {row.solvedFor} : {row.solvedAgainst}
+                              Score {row.scoreFor} : {row.scoreAgainst} · Solved {row.solvedFor} : {row.solvedAgainst}
                             </div>
                             <div style={{ fontSize:11, color:'var(--text3)' }}>
                               {(row.problems || []).map((problem) => problem.title).join(' · ')}
@@ -997,7 +997,7 @@ export default function BattlePage() {
                                 onClick={() => requestRematch(row.roomId, row.opponentName)}
                                 disabled={rematchPending}
                               >
-                                리매치
+                                Rematch
                               </button>
                             </div>
                           </div>
@@ -1010,27 +1010,27 @@ export default function BattlePage() {
             </div>
 
             <div className="bp-rules">
-              <div className="bp-rules-title">배틀 규칙</div>
+              <div className="bp-rules-title">Battle Rules</div>
               {selectedBattleMode === 'race' ? (
                 <ul>
-                  <li>🏁 선착순 방식: 모든 문제를 <strong>먼저 풀면 즉시 승리</strong>합니다.</li>
-                  <li>⏰ 제한 시간 없음: 속도가 승패를 결정합니다. 빠르고 정확하게!</li>
-                  <li>🗺️ 영토 선점: 문제를 먼저 맞힌 팀이 영토를 점령하며, 상대 팀은 해당 문제를 풀 수 없습니다.</li>
-                  <li>🎯 전략: 쉬운 문제를 빠르게 선점한 뒤 어려운 문제에 집중하세요.</li>
-                  <li>👥 팀 배틀: 팀원끼리 실시간 소통하며 역할을 분담해 빠르게 모든 영토를 점령하세요.</li>
-                  <li>👁️ 관전 모드: 다른 플레이어의 배틀을 실시간으로 관전할 수 있습니다.</li>
+                  <li>🏁 First-to-finish: <strong>Solve all problems first to win instantly.</strong></li>
+                  <li>⏰ No time limit: Speed decides the winner. Be fast and accurate!</li>
+                  <li>🗺️ Territory capture: The team that answers first claims the territory; the opposing team cannot attempt that problem.</li>
+                  <li>🎯 Strategy: Claim easy problems quickly, then focus on harder ones.</li>
+                  <li>👥 Team battle: Communicate in real-time and divide roles to capture all territories fast.</li>
+                  <li>👁️ Spectate mode: You can watch other players' battles in real-time.</li>
                 </ul>
               ) : (
                 (() => {
                   const dur = BATTLE_DURATIONS.find(d => d.sec === selectedDuration) || BATTLE_DURATIONS[1];
                   return (
                     <ul>
-                      <li>⏱️ 제한 시간: <strong>{dur.desc}</strong> ({dur.label.replace(/[^\w가-힣]/g, '').trim()} 모드)</li>
-                      {dur.sec === 300 && <li>⚡ 블리츠: 빠른 판단이 핵심입니다. 쉬운 문제부터 빠르게 선점하세요.</li>}
-                      {dur.sec === 3600 && <li>🏔️ 마라톤: 긴 시간을 활용해 어려운 문제에 도전하세요. 팀원과 역할 분담이 중요합니다.</li>}
-                      <li>🗺️ 영토 선점: 문제를 먼저 맞힌 팀이 영토를 점령하며, 상대 팀은 해당 문제를 풀 수 없습니다.</li>
-                      <li>👥 팀 배틀: 팀원끼리 점수를 합산하며, 실시간으로 소통하며 문제를 나눠 풀어보세요.</li>
-                      <li>👁️ 관전 모드: 다른 플레이어의 배틀을 실시간으로 관전할 수 있습니다.</li>
+                      <li>⏱️ Time limit: <strong>{dur.desc}</strong> ({dur.label.replace(/[^\w가-힣]/g, '').trim()} mode)</li>
+                      {dur.sec === 300 && <li>⚡ Blitz: Quick thinking is key. Claim easy problems first.</li>}
+                      {dur.sec === 3600 && <li>🏔️ Marathon: Use the extra time to tackle hard problems. Teamwork and role division matter.</li>}
+                      <li>🗺️ Territory capture: The team that answers first claims the territory; the opposing team cannot attempt that problem.</li>
+                      <li>👥 Team battle: Combine scores with teammates and split problems in real-time.</li>
+                      <li>👁️ Spectate mode: You can watch other players' battles in real-time.</li>
                     </ul>
                   );
                 })()
@@ -1050,18 +1050,18 @@ export default function BattlePage() {
     return (
       <div className="bp-page" style={{ display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:8, background:'var(--bg)' }}>
         <div style={{ textAlign:'center' }}>
-          <div style={{ fontSize:13, color:'var(--text3)', letterSpacing:3, marginBottom:16, textTransform:'uppercase' }}>배틀 시작까지</div>
+          <div style={{ fontSize:13, color:'var(--text3)', letterSpacing:3, marginBottom:16, textTransform:'uppercase' }}>Battle starts in</div>
           <div style={{ fontSize:128, fontWeight:900, color: countdown > 0 ? 'var(--blue)' : 'var(--green)', lineHeight:1, fontFamily:'Space Mono,monospace', minWidth:160, transition:'color 0.3s' }}>
             {countdown > 0 ? countdown : '🔥'}
           </div>
           <div style={{ fontSize:15, color:'var(--text2)', marginTop:20 }}>
-            {countdown > 0 ? '잠시 후 문제가 공개됩니다...' : '배틀 시작!'}
+            {countdown > 0 ? 'The problem will be revealed shortly...' : 'Battle Start!'}
           </div>
           {players.length > 0 && (
             <div style={{ marginTop:28, display:'flex', gap:12, justifyContent:'center', flexWrap:'wrap' }}>
               {players.map(p => (
                 <div key={p.id} style={{ padding:'6px 18px', borderRadius:20, background:'var(--bg3)', border:`2px solid ${p.teamId === 'team_1' ? 'var(--blue)' : 'var(--red)'}`, fontSize:14, fontWeight:600, color:'var(--text)' }}>
-                  {p.id === myId ? `${p.username} (나)` : p.username}
+                  {p.id === myId ? `${p.username} (You)` : p.username}
                 </div>
               ))}
             </div>
@@ -1092,12 +1092,12 @@ export default function BattlePage() {
     const myTeamScore = myTeamId === 'team_2' ? team2Score : team1Score;
     const opponentTeamScore = myTeamId === 'team_2' ? team1Score : team2Score;
     const opponentPlayers = players.filter((p) => p.teamId !== myTeamId);
-    const opponentLabel = opponentPlayers.map((p) => p.username).join(', ') || '상대';
+    const opponentLabel = opponentPlayers.map((p) => p.username).join(', ') || 'Opponent';
 
     return (
       <div className="bp-page bp-battle-page">
         {isFreePlan && <BattleAdSlot slot={BATTLE_AD_SLOTS.battle} />}
-        {isSpectator && <div className="bp-spectator-banner">👁️ 현재 배틀을 관전 중입니다 (읽기 전용)</div>}
+        {isSpectator && <div className="bp-spectator-banner">👁️ You are spectating this battle (read-only)</div>}
         
         {/* ── 상단 HUD ── */}
         <div className="bp-hud">
@@ -1112,10 +1112,10 @@ export default function BattlePage() {
 
           <div className="bp-hud-center">
             {room?.battleMode === 'race'
-              ? <div className="bp-timer" style={{ fontSize: 18, letterSpacing: 1 }}>🏁 선착순</div>
+              ? <div className="bp-timer" style={{ fontSize: 18, letterSpacing: 1 }}>🏁 First to Finish</div>
               : <div className={`bp-timer ${timeLeft < 60 ? 'urgent' : timeLeft < 300 ? 'warning' : ''}`}>{fmtTime(timeLeft)}</div>
             }
-            {opponentTyping && <div className="bp-opp-typing">⌨️ 입력 중...</div>}
+            {opponentTyping && <div className="bp-opp-typing">⌨️ Typing...</div>}
           </div>
 
           <div className={`bp-hud-player team2 ${myTeamId === 'team_2' ? 'me' : ''}`}>
@@ -1128,15 +1128,15 @@ export default function BattlePage() {
           </div>
         </div>
 
-        <div className="bp-scoreboard" aria-label="현재 배틀 점수">
+        <div className="bp-scoreboard" aria-label="Current battle score">
           <div className="bp-score-card mine">
-            <span className="bp-score-label">내 점수</span>
-            <strong>{myTeamScore}점</strong>
-            <small>{me?.username || '나'}</small>
+            <span className="bp-score-label">My Score</span>
+            <strong>{myTeamScore} pts</strong>
+            <small>{me?.username || 'Me'}</small>
           </div>
           <div className="bp-score-card opponent">
-            <span className="bp-score-label">상대 점수</span>
-            <strong>{opponentTeamScore}점</strong>
+            <span className="bp-score-label">Opponent Score</span>
+            <strong>{opponentTeamScore} pts</strong>
             <small>{opponentLabel}</small>
           </div>
         </div>
@@ -1155,8 +1155,8 @@ export default function BattlePage() {
               >
                 <span className="bp-territory-num">{i + 1}</span>
                 <span className="bp-territory-type" style={{ color: TYPE_COLOR[p.type] }}>{TYPE_LABEL[p.type]}</span>
-                {byMe  && <span className="bp-territory-flag">🏳️ 내 것</span>}
-                {byOpp && <span className="bp-territory-flag">🔒 선점됨</span>}
+                {byMe  && <span className="bp-territory-flag">🏳️ Captured</span>}
+                {byOpp && <span className="bp-territory-flag">🔒 Taken</span>}
               </button>
             );
           })}
@@ -1171,7 +1171,7 @@ export default function BattlePage() {
                   {TYPE_LABEL[activeProblem.type]}
                 </span>
                 <h2 className="bp-problem-title">{activeProblem.title}</h2>
-                {isLocked && <span className="bp-locked-badge">🔒 상대가 선점한 문제</span>}
+                {isLocked && <span className="bp-locked-badge">🔒 Claimed by opponent</span>}
               </div>
 
               {activeProblem.type === 'fill-blank' && (
@@ -1212,25 +1212,25 @@ export default function BattlePage() {
                   onClick={() => submitAnswer(activeProblem)}
                   disabled={submitting}
                 >
-                  {submitting ? '채점 중...' : '제출'}
+                  {submitting ? 'Grading...' : 'Submit'}
                 </button>
               )}
 
               {(!isSpectator && (submitResults[pid] === false || submitResults[pid] === 'wrong')) && (
-                <div className="bp-feedback wrong">오답입니다. 다시 시도해보세요.</div>
+                <div className="bp-feedback wrong">Incorrect. Please try again.</div>
               )}
               {(!isSpectator && (isMine || submitResults[pid] === true || submitResults[pid] === 'correct')) && (
-                <div className="bp-feedback correct">정답! 영토를 점령했습니다 🎉</div>
+                <div className="bp-feedback correct">Correct! Territory captured 🎉</div>
               )}
               {(!isSpectator && submitResults[pid] === 'error') && (
-                <div className="bp-feedback error">{judgeDetails[pid]?.detail || '채점 중 오류가 발생했습니다. 다시 시도해보세요.'}</div>
+                <div className="bp-feedback error">{judgeDetails[pid]?.detail || 'An error occurred during grading. Please try again.'}</div>
               )}
               {(!isSpectator && submitResults[pid] === 'locked') && (
-                <div className="bp-feedback locked">이미 상대 팀이 선점한 문제입니다.</div>
+                <div className="bp-feedback locked">This territory has already been claimed by the opposing team.</div>
               )}
               {(isSpectator && lockedTeamId) && (
                 <div className={`bp-feedback ${lockedTeamId === 'team_1' ? 'team1' : 'team2'}`}>
-                  {lockedTeamId === 'team_1' ? 'Team 1' : 'Team 2'}이 이 문제를 점령했습니다.
+                  {lockedTeamId === 'team_1' ? 'Team 1' : 'Team 2'} has captured this territory.
                 </div>
               )}
             </>
@@ -1250,10 +1250,10 @@ export default function BattlePage() {
             <div className="bp-spectator-chat">
               <div className="bp-spectator-chat-log">
                 {spectatorMessages.length === 0 ? (
-                  <div className="bp-spectator-empty">관전자 채팅이 아직 없습니다.</div>
+                  <div className="bp-spectator-empty">No spectator messages yet.</div>
                 ) : spectatorMessages.map((item, index) => (
                   <div key={`${item.at}-${index}`} className="bp-spectator-message">
-                    <strong>{item.username || '익명'}</strong>
+                    <strong>{item.username || 'Anonymous'}</strong>
                     <span>{item.message}</span>
                   </div>
                 ))}
@@ -1264,9 +1264,9 @@ export default function BattlePage() {
                   onChange={(e) => setSpectatorMessage(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') sendSpectatorMessage(); }}
                   maxLength={100}
-                  placeholder="관전자 응원 메시지"
+                  placeholder="Cheer message for spectators"
                 />
-                <button type="button" onClick={sendSpectatorMessage}>전송</button>
+                <button type="button" onClick={sendSpectatorMessage}>Send</button>
               </div>
             </div>
           </div>
@@ -1289,24 +1289,24 @@ export default function BattlePage() {
       <div className="bp-page">
         <div className="bp-result">
           <div className={`bp-result-banner ${won ? 'win' : draw ? 'draw' : 'lose'}`}>
-            {won ? '🏆 승리!' : draw ? '🤝 무승부' : '💀 패배'}
+            {won ? '🏆 Victory!' : draw ? '🤝 Draw' : '💀 Defeat'}
           </div>
           <div className="bp-result-scores">
             <div className="bp-result-player me">
-              <div className="bp-result-name">{me?.username} (나)</div>
-              <div className="bp-result-pts">{myScore}점</div>
-              <div className="bp-result-solved">{me?.solved?.length ?? 0}문제 풀이</div>
+              <div className="bp-result-name">{me?.username} (You)</div>
+              <div className="bp-result-pts">{myScore} pts</div>
+              <div className="bp-result-solved">{me?.solved?.length ?? 0} solved</div>
             </div>
             <div className="bp-result-vs">VS</div>
             <div className="bp-result-player opp">
               <div className="bp-result-name">{opp?.username}</div>
-              <div className="bp-result-pts">{oppScore}점</div>
-              <div className="bp-result-solved">{opp?.solved?.length ?? 0}문제 풀이</div>
+              <div className="bp-result-pts">{oppScore} pts</div>
+              <div className="bp-result-solved">{opp?.solved?.length ?? 0} solved</div>
             </div>
           </div>
 
           <div className="bp-result-territory">
-            <div className="bp-result-section-title">영토 결과</div>
+            <div className="bp-result-section-title">Territory Results</div>
             <div className="bp-territory">
               {(room.problems || []).map((p, i) => {
                 const lockedBy = room.locked?.[String(p.id)];
@@ -1317,7 +1317,7 @@ export default function BattlePage() {
                     <span className="bp-territory-num">{i + 1}</span>
                     <span className="bp-territory-type">{TYPE_LABEL[p.type]}</span>
                     <span className="bp-territory-flag">
-                      {byMe ? `🏳️ 내 팀` : byOpp ? `🏴 상대 팀` : '—'}
+                      {byMe ? `🏳️ My Team` : byOpp ? `🏴 Opponent` : '—'}
                     </span>
                   </div>
                 );
@@ -1326,22 +1326,22 @@ export default function BattlePage() {
           </div>
 
           <div className="bp-result-notice">
-            ℹ️ 배틀 결과는 레이팅/티어에 반영되지 않습니다.
+            ℹ️ Battle results do not affect your rating or tier.
           </div>
 
           <div style={{ display:'flex', gap:10, justifyContent:'center', flexWrap:'wrap' }}>
             <button className="bp-btn-small" onClick={() => requestRematch(room.id, opp?.username)} disabled={rematchPending}>
-              {rematchPending ? '요청 중...' : '🔄 리매치'}
+              {rematchPending ? 'Requesting...' : '🔄 Rematch'}
             </button>
             <button className="bp-btn-small" onClick={() => navigate('/battles/history')}>
-              🕘 히스토리
+              🕘 History
             </button>
-            <button className="bp-btn-small" onClick={handleShareCopy}>📋 복사</button>
-            <button className="bp-btn-small" onClick={handleShareTwitter}>🐦 트위터</button>
+            <button className="bp-btn-small" onClick={handleShareCopy}>📋 Copy</button>
+            <button className="bp-btn-small" onClick={handleShareTwitter}>🐦 Twitter</button>
           </div>
 
           <button className="bp-btn-primary" onClick={resetBattleStateToLobby}>
-            다시 배틀하기
+            Play Again
           </button>
         </div>
       </div>

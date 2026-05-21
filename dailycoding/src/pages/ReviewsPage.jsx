@@ -7,11 +7,11 @@ import { useToast } from '../context/ToastContext.jsx';
 import './ReviewsPage.css';
 
 const STATUS_LABEL = {
-  open: '열림',
-  approved: '승인',
-  rejected: '반려',
-  merged: '병합',
-  cancelled: '취소됨',
+  open: 'Open',
+  approved: 'Approved',
+  rejected: 'Rejected',
+  merged: 'Merged',
+  cancelled: 'Cancelled',
 };
 
 function splitLines(value) {
@@ -84,7 +84,7 @@ export default function ReviewsPage() {
         collaborationScore: data.collaborationScore || null,
       });
     } catch (err) {
-      toast?.show(err.response?.data?.message || '리뷰 목록을 불러오지 못했습니다.', 'error');
+      toast?.show(err.response?.data?.message || 'Failed to load review list.', 'error');
     } finally {
       setLoading(false);
     }
@@ -101,7 +101,7 @@ export default function ReviewsPage() {
         suggestedCode: prev.suggestedCode || data.codeSuggestions?.[0]?.suggestedCode || data.submission?.code || '',
       }));
     } catch (err) {
-      toast?.show(err.response?.data?.message || '리뷰를 불러오지 못했습니다.', 'error');
+      toast?.show(err.response?.data?.message || 'Failed to load review.', 'error');
       navigate('/reviews', { replace: true });
     } finally {
       setLoading(false);
@@ -118,7 +118,7 @@ export default function ReviewsPage() {
       const { data } = await api.post(`/submissions/${submissionId}/reviews`);
       navigate(`/reviews/${data.id}`);
     } catch (err) {
-      toast?.show(err.response?.data?.message || '리뷰 생성 실패', 'error');
+      toast?.show(err.response?.data?.message || 'Failed to create review.', 'error');
     }
   };
 
@@ -129,7 +129,7 @@ export default function ReviewsPage() {
       setReview(data);
       setComment('');
     } catch (err) {
-      toast?.show(err.response?.data?.message || '댓글 작성 실패', 'error');
+      toast?.show(err.response?.data?.message || 'Failed to post comment.', 'error');
     }
   };
 
@@ -142,9 +142,9 @@ export default function ReviewsPage() {
         reason: codeForm.reason,
       });
       setReview(data);
-      toast?.show('코드 제안을 저장했습니다.', 'success');
+      toast?.show('Code suggestion saved.', 'success');
     } catch (err) {
-      toast?.show(err.response?.data?.message || '코드 제안 실패', 'error');
+      toast?.show(err.response?.data?.message || 'Failed to submit code suggestion.', 'error');
     }
   };
 
@@ -153,9 +153,9 @@ export default function ReviewsPage() {
       const { data } = await api.post(`/reviews/${id}/suggestions/test`, testForm);
       setReview(data);
       setTestForm({ inputData: '', expectedOutput: '', reason: '' });
-      toast?.show('테스트 제안을 저장했습니다.', 'success');
+      toast?.show('Test suggestion saved.', 'success');
     } catch (err) {
-      toast?.show(err.response?.data?.message || '테스트 제안 실패', 'error');
+      toast?.show(err.response?.data?.message || 'Failed to submit test suggestion.', 'error');
     }
   };
 
@@ -163,20 +163,20 @@ export default function ReviewsPage() {
     try {
       const { data } = await api.post(`/reviews/${id}/${action}`);
       setReview(data);
-      toast?.show('리뷰 상태가 변경되었습니다.', 'success');
+      toast?.show('Review status updated.', 'success');
     } catch (err) {
-      toast?.show(err.response?.data?.message || '처리 실패', 'error');
+      toast?.show(err.response?.data?.message || 'Action failed.', 'error');
     }
   };
 
   const cancelReview = async () => {
-    if (!window.confirm('이 리뷰 요청을 취소할까요? 취소 후 다시 요청할 수 있습니다.')) return;
+    if (!window.confirm('Cancel this review request? You can re-request it after cancellation.')) return;
     try {
       const { data } = await api.post(`/reviews/${id}/cancel`);
       setReview(data);
-      toast?.show('리뷰 요청을 취소했습니다.', 'success');
+      toast?.show('Review request cancelled.', 'success');
     } catch (err) {
-      toast?.show(err.response?.data?.message || '리뷰 취소 실패', 'error');
+      toast?.show(err.response?.data?.message || 'Failed to cancel review.', 'error');
     }
   };
 
@@ -184,21 +184,21 @@ export default function ReviewsPage() {
     try {
       const { data } = await api.post(`/reviews/${id}/reopen`);
       setReview(data);
-      toast?.show('리뷰를 다시 요청했습니다.', 'success');
+      toast?.show('Review re-requested.', 'success');
     } catch (err) {
-      toast?.show(err.response?.data?.message || '리뷰 재요청 실패', 'error');
+      toast?.show(err.response?.data?.message || 'Failed to re-request review.', 'error');
     }
   };
 
   const deleteReview = async (reviewId) => {
-    if (!window.confirm('리뷰를 삭제하면 댓글·제안이 모두 사라집니다. 계속할까요?')) return;
+    if (!window.confirm('Deleting this review will remove all comments and suggestions. Continue?')) return;
     try {
       await api.delete(`/reviews/${reviewId}`);
-      toast?.show('리뷰가 삭제되었습니다.', 'success');
+      toast?.show('Review deleted.', 'success');
       if (isDetail) navigate('/reviews', { replace: true });
       else loadList();
     } catch (err) {
-      toast?.show(err.response?.data?.message || '삭제 실패', 'error');
+      toast?.show(err.response?.data?.message || 'Failed to delete.', 'error');
     }
   };
 
@@ -206,52 +206,52 @@ export default function ReviewsPage() {
     return (
       <main className="reviews-page">
         <div className="reviews-toolbar">
-          <button className="ghost" onClick={() => navigate('/reviews')}>목록</button>
-          <button className="ghost" onClick={loadReview}><RefreshCw size={15} />새로고침</button>
+          <button className="ghost" onClick={() => navigate('/reviews')}>List</button>
+          <button className="ghost" onClick={loadReview}><RefreshCw size={15} />Refresh</button>
           {review && <StatusPill status={review.status} />}
           {canCancel && (
-            <button className="ghost danger" onClick={cancelReview} title="리뷰 요청 취소">
-              <X size={15} /> 요청 취소
+            <button className="ghost danger" onClick={cancelReview} title="Cancel review request">
+              <X size={15} /> Cancel Request
             </button>
           )}
           {canReopen && (
-            <button className="ghost" onClick={reopenReview} title="리뷰 재요청">
-              <RotateCcw size={15} /> 재요청
+            <button className="ghost" onClick={reopenReview} title="Re-request review">
+              <RotateCcw size={15} /> Re-request
             </button>
           )}
           {review && review.reviewerId === user?.id && (
-            <button className="ghost danger" onClick={() => deleteReview(review.id)} title="내 리뷰 삭제">
-              <Trash2 size={15} /> 삭제
+            <button className="ghost danger" onClick={() => deleteReview(review.id)} title="Delete my review">
+              <Trash2 size={15} /> Delete
             </button>
           )}
         </div>
 
         {!review || loading ? (
-          <div className="review-empty">리뷰를 불러오는 중입니다.</div>
+          <div className="review-empty">Loading review...</div>
         ) : (
           <>
             <section className="review-detail-head">
               <div>
                 <p>{review.problemTitle}</p>
-                <h1>{review.authorUsername}의 제출을 {review.reviewerUsername}가 리뷰 중</h1>
-                <span>제출 #{review.submissionId} · {review.submission?.lang} · {review.submission?.result}</span>
+                <h1>{review.reviewerUsername} reviewing {review.authorUsername}'s submission</h1>
+                <span>Submission #{review.submissionId} · {review.submission?.lang} · {review.submission?.result}</span>
               </div>
               {canResolve && (
                 <div className="review-actions">
-                  <button disabled={isClosed} onClick={() => resolveReview('approve')}><Check size={15} />승인</button>
-                  <button disabled={isClosed} onClick={() => resolveReview('reject')}><X size={15} />반려</button>
-                  <button disabled={review.status === 'merged' || review.status === 'rejected'} onClick={() => resolveReview('merge')}><GitMerge size={15} />병합</button>
+                  <button disabled={isClosed} onClick={() => resolveReview('approve')}><Check size={15} />Approve</button>
+                  <button disabled={isClosed} onClick={() => resolveReview('reject')}><X size={15} />Reject</button>
+                  <button disabled={review.status === 'merged' || review.status === 'rejected'} onClick={() => resolveReview('merge')}><GitMerge size={15} />Merge</button>
                 </div>
               )}
             </section>
 
             <section className="review-grid">
               <div className="review-panel">
-                <h2>원본 코드</h2>
+                <h2>Original Code</h2>
                 <pre className="review-code">{review.submission?.code || ''}</pre>
               </div>
               <div className="review-panel">
-                <h2>제안 코드</h2>
+                <h2>Suggested Code</h2>
                 <textarea
                   disabled={isClosed}
                   value={codeForm.suggestedCode}
@@ -261,53 +261,53 @@ export default function ReviewsPage() {
                   disabled={isClosed}
                   value={codeForm.filePath}
                   onChange={(event) => setCodeForm((prev) => ({ ...prev, filePath: event.target.value }))}
-                  placeholder="파일 경로"
+                  placeholder="File path"
                 />
                 <input
                   disabled={isClosed}
                   value={codeForm.reason}
                   onChange={(event) => setCodeForm((prev) => ({ ...prev, reason: event.target.value }))}
-                  placeholder="변경 이유"
+                  placeholder="Reason for change"
                 />
-                <button disabled={isClosed} onClick={submitCodeSuggestion}><Plus size={15} />코드 제안 추가</button>
+                <button disabled={isClosed} onClick={submitCodeSuggestion}><Plus size={15} />Add Code Suggestion</button>
               </div>
             </section>
 
             <section className="review-panel">
               <h2>Diff</h2>
               <DiffViewer original={review.submission?.code || ''} suggested={firstSuggestion?.suggestedCode || codeForm.suggestedCode} />
-              {firstSuggestion?.reason && <p className="review-reason">변경 이유: {firstSuggestion.reason}</p>}
+              {firstSuggestion?.reason && <p className="review-reason">Reason: {firstSuggestion.reason}</p>}
             </section>
 
             <section className="review-lists">
               <div className="review-panel">
-                <h2>코드 제안</h2>
+                <h2>Code Suggestions</h2>
                 {(review.codeSuggestions || []).map((item) => (
                   <article key={item.id} className="review-item">
                     <div><b>{item.filePath}</b><StatusPill status={item.status} /></div>
-                    <p>{item.reason || '이유 없음'}</p>
+                    <p>{item.reason || 'No reason provided'}</p>
                   </article>
                 ))}
-                {review.codeSuggestions?.length === 0 && <p className="muted">아직 코드 제안이 없습니다.</p>}
+                {review.codeSuggestions?.length === 0 && <p className="muted">No code suggestions yet.</p>}
               </div>
               <div className="review-panel">
-                <h2>테스트 제안</h2>
+                <h2>Test Suggestions</h2>
                 <textarea disabled={isClosed} value={testForm.inputData} onChange={(event) => setTestForm((prev) => ({ ...prev, inputData: event.target.value }))} placeholder="input" />
                 <textarea disabled={isClosed} value={testForm.expectedOutput} onChange={(event) => setTestForm((prev) => ({ ...prev, expectedOutput: event.target.value }))} placeholder="expected output" />
-                <input disabled={isClosed} value={testForm.reason} onChange={(event) => setTestForm((prev) => ({ ...prev, reason: event.target.value }))} placeholder="제안 이유" />
-                <button disabled={isClosed} onClick={submitTestSuggestion}><Plus size={15} />테스트 제안 추가</button>
+                <input disabled={isClosed} value={testForm.reason} onChange={(event) => setTestForm((prev) => ({ ...prev, reason: event.target.value }))} placeholder="Reason for suggestion" />
+                <button disabled={isClosed} onClick={submitTestSuggestion}><Plus size={15} />Add Test Suggestion</button>
                 {(review.testSuggestions || []).map((item) => (
                   <article key={item.id} className="review-item">
-                    <div><b>테스트 #{item.id}</b><StatusPill status={item.status} /></div>
+                    <div><b>Test #{item.id}</b><StatusPill status={item.status} /></div>
                     <code>{item.inputData} → {item.expectedOutput}</code>
-                    <p>{item.reason || '이유 없음'}</p>
+                    <p>{item.reason || 'No reason provided'}</p>
                   </article>
                 ))}
               </div>
             </section>
 
             <section className="review-panel">
-              <h2>댓글</h2>
+              <h2>Comments</h2>
               <div className="review-comments">
                 {(review.comments || []).map((item) => (
                   <article key={item.id}>
@@ -317,8 +317,8 @@ export default function ReviewsPage() {
                 ))}
               </div>
               <div className="review-comment-form">
-                <input disabled={isClosed} value={comment} onChange={(event) => setComment(event.target.value)} placeholder="리뷰 댓글 작성" />
-                <button disabled={isClosed} onClick={submitComment}><MessageSquare size={15} />댓글</button>
+                <input disabled={isClosed} value={comment} onChange={(event) => setComment(event.target.value)} placeholder="Write a review comment" />
+                <button disabled={isClosed} onClick={submitComment}><MessageSquare size={15} />Comment</button>
               </div>
             </section>
           </>
@@ -332,56 +332,56 @@ export default function ReviewsPage() {
       <section className="reviews-hero">
         <div>
           <p>Code Review Collaboration</p>
-          <h1>코드 리뷰와 개선 제안</h1>
-          <span>공개된 다른 유저 제출에 코드 수정안과 테스트 케이스를 제안하고, 제출자가 승인하면 협업 점수를 얻습니다.</span>
+          <h1>Code Review & Improvement Suggestions</h1>
+          <span>Suggest code changes and test cases on other users' public submissions. Earn collaboration points when the author approves your suggestions.</span>
         </div>
         <div className="review-score-card">
           <b>{listData.collaborationScore?.totalScore || 0}</b>
-          <span>협업 점수</span>
-          <small>승인 {listData.collaborationScore?.acceptedCount || 0} · 기여 {listData.collaborationScore?.totalCount || 0}</small>
+          <span>Collaboration Score</span>
+          <small>Approved {listData.collaborationScore?.acceptedCount || 0} · Contributed {listData.collaborationScore?.totalCount || 0}</small>
         </div>
       </section>
 
       <section className="reviews-filters">
         <select value={filters.status} onChange={(event) => setFilters((prev) => ({ ...prev, status: event.target.value }))}>
-          <option value="all">전체 상태</option>
-          <option value="open">열림</option>
-          <option value="approved">승인</option>
-          <option value="rejected">반려</option>
-          <option value="merged">병합</option>
-          <option value="cancelled">취소됨</option>
+          <option value="all">All Statuses</option>
+          <option value="open">Open</option>
+          <option value="approved">Approved</option>
+          <option value="rejected">Rejected</option>
+          <option value="merged">Merged</option>
+          <option value="cancelled">Cancelled</option>
         </select>
         <select value={filters.lang} onChange={(event) => setFilters((prev) => ({ ...prev, lang: event.target.value }))}>
-          <option value="all">전체 언어</option>
+          <option value="all">All Languages</option>
           <option value="python">python</option>
           <option value="javascript">javascript</option>
           <option value="cpp">cpp</option>
           <option value="java">java</option>
         </select>
-        <input value={filters.problemId} onChange={(event) => setFilters((prev) => ({ ...prev, problemId: event.target.value }))} placeholder="문제 ID" />
-        <button onClick={loadList}><RefreshCw size={15} />필터 적용</button>
+        <input value={filters.problemId} onChange={(event) => setFilters((prev) => ({ ...prev, problemId: event.target.value }))} placeholder="Problem ID" />
+        <button onClick={loadList}><RefreshCw size={15} />Apply Filter</button>
       </section>
 
       <section className="review-columns">
         <div className="review-panel review-panel-scroll">
-          <h2>리뷰 가능한 제출 <span className="review-count">{listData.reviewableSubmissions.length}</span></h2>
-          <p className="muted" style={{ marginBottom: 10, fontSize: 12 }}>내가 푼 문제 중 다른 유저의 정답 제출을 리뷰할 수 있습니다.</p>
-          {loading && <p className="muted">불러오는 중...</p>}
+          <h2>Reviewable Submissions <span className="review-count">{listData.reviewableSubmissions.length}</span></h2>
+          <p className="muted" style={{ marginBottom: 10, fontSize: 12 }}>You can review other users' correct submissions on problems you have solved.</p>
+          {loading && <p className="muted">Loading...</p>}
           {listData.reviewableSubmissions.map((submission) => (
             <article key={submission.id} className="review-card">
               <div>
                 <b>{submission.problemTitle}</b>
                 <StatusPill status={submission.result} />
               </div>
-              <p>{submission.username} · {submission.lang} · {submission.timeMs || '-'}ms · 코드 {submission.codeLength} bytes</p>
+              <p>{submission.username} · {submission.lang} · {submission.timeMs || '-'}ms · Code {submission.codeLength} bytes</p>
               <button onClick={() => submission.existingReviewId ? navigate(`/reviews/${submission.existingReviewId}`) : createReview(submission.id)}>
-                {submission.existingReviewId ? '열린 리뷰 보기' : '리뷰 시작'}
+                {submission.existingReviewId ? 'View Open Review' : 'Start Review'}
               </button>
             </article>
           ))}
           {!loading && listData.reviewableSubmissions.length === 0 && (
             <div className="review-empty">
-              아직 풀어본 문제의 다른 유저 제출이 없습니다. 더 많은 문제를 풀면 리뷰할 수 있는 제출이 생깁니다.
+              No other users' submissions on problems you have solved yet. Solve more problems to find submissions to review.
             </div>
           )}
         </div>
@@ -389,20 +389,20 @@ export default function ReviewsPage() {
         <div className="review-panel-right">
           {listData.reviews.length > 0 && (
             <div className="review-panel review-panel-scroll" style={{ marginBottom: 16 }}>
-              <h2>내가 리뷰함 <span className="review-count">{listData.reviews.length}</span></h2>
+              <h2>Reviewed by Me <span className="review-count">{listData.reviews.length}</span></h2>
               {listData.reviews.map((item) => (
                 <article key={item.id} className="review-card" onClick={() => navigate(`/reviews/${item.id}`)}>
                   <div>
                     <b>{item.problemTitle}</b>
                     <StatusPill status={item.status} />
                   </div>
-                  <p>작성자 {item.authorUsername} · 리뷰어 {item.reviewerUsername}</p>
+                  <p>Author: {item.authorUsername} · Reviewer: {item.reviewerUsername}</p>
                   <button
                     className="review-delete-btn"
                     onClick={(e) => { e.stopPropagation(); deleteReview(item.id); }}
-                    title="리뷰 삭제"
+                    title="Delete review"
                   >
-                    <Trash2 size={13} /> 삭제
+                    <Trash2 size={13} /> Delete
                   </button>
                 </article>
               ))}

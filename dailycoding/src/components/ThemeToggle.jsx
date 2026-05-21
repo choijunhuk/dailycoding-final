@@ -18,7 +18,7 @@ export default function ThemeToggle() {
         justifyContent: 'center',
         border: '1px solid var(--border)'
       }}
-      title={isDark ? '라이트 모드로 전환' : '다크 모드로 전환'}
+      title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
     >
       {isDark ? '☀️' : '🌙'}
     </button>

@@ -44,7 +44,7 @@ function getTierProgress(rating) {
       return { pct, nextTier: next.key, nextRating: next.min };
     }
   }
-  // 아직 bronze 미달 (unranked)
+  // below bronze threshold (unranked)
   const bronze = TIER_RANGES[0];
   return { pct: Math.min(100, Math.round((rating / bronze.min) * 100)), nextTier: 'bronze', nextRating: bronze.min };
 }
@@ -279,29 +279,29 @@ export default function RankingPage() {
         </h1>
         <p style={{ color: 'var(--text2)', fontSize: 13, margin: 0 }}>
           {['battle', 'collaboration', 'overall'].includes(mode)
-            ? (platformLoading ? '...' : `${rankers.length.toLocaleString(locale)}명이 ${mode === 'battle' ? '배틀' : mode === 'collaboration' ? '협업' : '종합'} 랭킹에 집계됐습니다.`)
+            ? (platformLoading ? '...' : `${rankers.length.toLocaleString(locale)}players ranked in the ${mode === 'battle' ? 'Battle' : mode === 'collaboration' ? 'Collaboration' : 'Overall'} leaderboard.`)
             : mode === 'season'
             ? (seasonLoading ? '...' : t('rankingSeasonSummary').replace('{season}', seasonPayload.season || t('rankingThisSeason')).replace('{count}', rankers.length.toLocaleString()))
             : (loading ? '...' : t('rankingGlobalSummary').replace('{count}', rankers.length.toLocaleString()))}
         </p>
         <div style={{ display:'flex', gap:8, marginTop:12, alignItems:'center', flexWrap:'wrap' }}>
           <button className="btn btn-ghost btn-sm" onClick={() => setMode('global')} style={{ opacity: mode === 'global' ? 1 : 0.6 }}>
-            알고리즘 랭킹
+            Algorithm Ranking
           </button>
           <button className="btn btn-ghost btn-sm" onClick={() => setMode('season')} style={{ opacity: mode === 'season' ? 1 : 0.6 }}>
             {t('rankingSeasonMode')}
           </button>
           <button className="btn btn-ghost btn-sm" onClick={() => setMode('battle')} style={{ opacity: mode === 'battle' ? 1 : 0.6 }}>
-            배틀 랭킹
+            Battle Ranking
           </button>
           <button className="btn btn-ghost btn-sm" onClick={() => setMode('collaboration')} style={{ opacity: mode === 'collaboration' ? 1 : 0.6 }}>
-            협업 랭킹
+            Collaboration Ranking
           </button>
           <button className="btn btn-ghost btn-sm" onClick={() => setMode('overall')} style={{ opacity: mode === 'overall' ? 1 : 0.6 }}>
-            종합 랭킹
+            Overall Ranking
           </button>
           <button className="btn btn-ghost btn-sm" onClick={() => setMode('teams')} style={{ opacity: mode === 'teams' ? 1 : 0.6 }}>
-            🏢 소속 랭킹
+            🏢 Team Ranking
           </button>
           {mode === 'season' && seasonPayload.remainingDays != null && (
             <span style={{ fontSize:12, color:'var(--text3)' }}>
@@ -498,7 +498,7 @@ export default function RankingPage() {
         ) : null}
       </div>
 
-      {/* ── 소속(팀) 랭킹 ── */}
+      {/* ── Team Ranking ── */}
       {mode === 'teams' && (
         <div>
           {teamLoading && (
@@ -508,14 +508,14 @@ export default function RankingPage() {
           )}
           {!teamLoading && teamError && (
             <div style={{ marginBottom: 16, padding: '14px 16px', borderRadius: 14, background: 'rgba(248,81,73,.08)', border: '1px solid rgba(248,81,73,.2)', color: 'var(--text2)' }}>
-              소속 랭킹을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.
+              Failed to load team rankings. Please try again later.
             </div>
           )}
           {!teamLoading && !teamError && teamRankers.length === 0 && (
             <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--text3)' }}>
               <div style={{ fontSize: 40, marginBottom: 12 }}>🏢</div>
-              <div style={{ fontWeight: 700 }}>등록된 소속이 없습니다.</div>
-              <div style={{ fontSize: 12, marginTop: 6 }}>소속을 만들고 팀원을 초대해 보세요.</div>
+              <div style={{ fontWeight: 700 }}>No teams registered.</div>
+              <div style={{ fontSize: 12, marginTop: 6 }}>Create a team and invite members.</div>
             </div>
           )}
           {!teamLoading && teamRankers.map((team) => (
@@ -526,24 +526,24 @@ export default function RankingPage() {
               <div style={{ fontSize: 28, flexShrink: 0 }}>{team.avatarEmoji || team.avatar_emoji || '🏢'}</div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 700, fontSize: 15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{team.name}</div>
-                <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>멤버 {team.memberCount ?? team.member_count}명 · 주간 해결 {Number(team.weeklySolved ?? team.weekly_solved ?? 0).toLocaleString()}개</div>
+                <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>{team.memberCount ?? team.member_count} members · Weekly solved: {Number(team.weeklySolved ?? team.weekly_solved ?? 0).toLocaleString()}</div>
               </div>
               <div style={{ display: 'flex', gap: 20, flexShrink: 0, textAlign: 'center' }}>
                 <div>
                   <div className="mono" style={{ fontWeight: 800, fontSize: 15, color: 'var(--blue)' }}>{Number(team.teamScore ?? team.team_score ?? 0).toLocaleString()}</div>
-                  <div style={{ fontSize: 10, color: 'var(--text3)' }}>팀 점수</div>
+                  <div style={{ fontSize: 10, color: 'var(--text3)' }}>Team Score</div>
                 </div>
                 <div>
                   <div className="mono" style={{ fontWeight: 800, fontSize: 15, color: 'var(--purple)' }}>{Number(team.avgRating ?? team.avg_rating ?? 0).toLocaleString()}</div>
-                  <div style={{ fontSize: 10, color: 'var(--text3)' }}>평균 레이팅</div>
+                  <div style={{ fontSize: 10, color: 'var(--text3)' }}>Avg Rating</div>
                 </div>
                 <div>
                   <div className="mono" style={{ fontWeight: 800, fontSize: 15, color: 'var(--green)' }}>{Number(team.totalSolved ?? team.total_solved ?? 0).toLocaleString()}</div>
-                  <div style={{ fontSize: 10, color: 'var(--text3)' }}>총 해결</div>
+                  <div style={{ fontSize: 10, color: 'var(--text3)' }}>Total Solved</div>
                 </div>
                 <div>
                   <div className="mono" style={{ fontWeight: 800, fontSize: 15, color: 'var(--yellow)' }}>{Number(team.topRating ?? team.top_rating ?? 0).toLocaleString()}</div>
-                  <div style={{ fontSize: 10, color: 'var(--text3)' }}>최고 레이팅</div>
+                  <div style={{ fontSize: 10, color: 'var(--text3)' }}>Top Rating</div>
                 </div>
               </div>
             </div>

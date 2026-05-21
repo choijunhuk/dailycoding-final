@@ -14,17 +14,17 @@ import { useLang } from '../context/LangContext.jsx';
 import { buildDailyFocusPlan } from './dashboardPlanUtils.js';
 
 const TIER_META = {
-  unranked:    { label:'언랭크드',      color:'#888',    next:'아이언',       bg:'rgba(136,136,136,.06)' },
-  iron:        { label:'아이언',        color:'#a8a8a8', next:'브론즈',       bg:'rgba(168,168,168,.06)' },
-  bronze:      { label:'브론즈',        color:'#cd7f32', next:'실버',         bg:'rgba(205,127,50,.08)'  },
-  silver:      { label:'실버',          color:'#c0c0c0', next:'골드',         bg:'rgba(192,192,192,.08)' },
-  gold:        { label:'골드',          color:'#ffd700', next:'플래티넘',     bg:'rgba(255,215,0,.08)'   },
-  platinum:    { label:'플래티넘',      color:'#00e5cc', next:'에메랄드',     bg:'rgba(0,229,204,.08)'   },
-  emerald:     { label:'에메랄드',      color:'#00d18f', next:'다이아몬드',   bg:'rgba(0,209,143,.08)'   },
-  diamond:     { label:'다이아몬드',    color:'#b9f2ff', next:'마스터',       bg:'rgba(185,242,255,.08)' },
-  master:      { label:'마스터',        color:'#9b59b6', next:'그랜드마스터', bg:'rgba(155,89,182,.08)'  },
-  grandmaster: { label:'그랜드마스터',  color:'#e74c3c', next:'챌린저',       bg:'rgba(231,76,60,.08)'   },
-  challenger:  { label:'챌린저',        color:'#f1c40f', next:'MAX',          bg:'rgba(241,196,15,.08)'  },
+  unranked:    { label:'Unranked',    color:'#888',    next:'Iron',        bg:'rgba(136,136,136,.06)' },
+  iron:        { label:'Iron',        color:'#a8a8a8', next:'Bronze',      bg:'rgba(168,168,168,.06)' },
+  bronze:      { label:'Bronze',      color:'#cd7f32', next:'Silver',      bg:'rgba(205,127,50,.08)'  },
+  silver:      { label:'Silver',      color:'#c0c0c0', next:'Gold',        bg:'rgba(192,192,192,.08)' },
+  gold:        { label:'Gold',        color:'#ffd700', next:'Platinum',    bg:'rgba(255,215,0,.08)'   },
+  platinum:    { label:'Platinum',    color:'#00e5cc', next:'Emerald',     bg:'rgba(0,229,204,.08)'   },
+  emerald:     { label:'Emerald',     color:'#00d18f', next:'Diamond',     bg:'rgba(0,209,143,.08)'   },
+  diamond:     { label:'Diamond',     color:'#b9f2ff', next:'Master',      bg:'rgba(185,242,255,.08)' },
+  master:      { label:'Master',      color:'#9b59b6', next:'Grandmaster', bg:'rgba(155,89,182,.08)'  },
+  grandmaster: { label:'Grandmaster', color:'#e74c3c', next:'Challenger',  bg:'rgba(231,76,60,.08)'   },
+  challenger:  { label:'Challenger',  color:'#f1c40f', next:'MAX',         bg:'rgba(241,196,15,.08)'  },
 };
 
 const DAILY_FOCUS_ICONS = {
@@ -132,7 +132,7 @@ export default function Dashboard() {
     if ((count || 0) <= 3 || level === 2) return 'rgba(86,211,100,.5)';
     return 'var(--green)';
   };
-  const showLoadErrorToast = useCallback((message = '대시보드 데이터를 불러오지 못했습니다.') => {
+  const showLoadErrorToast = useCallback((message = 'Failed to load dashboard data.') => {
     if (loadErrorToastShownRef.current) return;
     loadErrorToastShownRef.current = true;
     toast?.show(message, 'error');
@@ -157,7 +157,7 @@ export default function Dashboard() {
       const { data } = await api.patch('/auth/onboarding/complete');
       if (data?.user) applyUser?.(data.user);
     } catch (err) {
-      showLoadErrorToast(err?.response?.data?.message || '온보딩 완료 상태를 저장하지 못했습니다.');
+      showLoadErrorToast(err?.response?.data?.message || 'Failed to save onboarding completion.');
     }
   }, [applyUser, showLoadErrorToast, user]);
 
@@ -191,7 +191,7 @@ export default function Dashboard() {
       .catch((err) => {
         if (!cancelled) setWeeklyChallenge(null);
         if (err?.response?.status !== 401) {
-          showLoadErrorToast(err?.response?.data?.message || '주간 챌린지를 불러오지 못했습니다.');
+          showLoadErrorToast(err?.response?.data?.message || 'Failed to load weekly challenge.');
         }
       });
     return () => { cancelled = true; };
@@ -206,7 +206,7 @@ export default function Dashboard() {
       .catch((err) => {
         if (!cancelled) setPromotion({ active: null, recent: null });
         if (err?.response?.status !== 401) {
-          showLoadErrorToast(err?.response?.data?.message || '승급 정보를 불러오지 못했습니다.');
+          showLoadErrorToast(err?.response?.data?.message || 'Failed to load promotion info.');
         }
       });
     return () => { cancelled = true; };
@@ -221,7 +221,7 @@ export default function Dashboard() {
       .catch((err) => {
         if (!cancelled) setFollowFeed([]);
         if (err?.response?.status !== 401) {
-          showLoadErrorToast(err?.response?.data?.message || '팔로우 피드를 불러오지 못했습니다.');
+          showLoadErrorToast(err?.response?.data?.message || 'Failed to load follow feed.');
         }
       });
     return () => { cancelled = true; };
@@ -371,7 +371,7 @@ export default function Dashboard() {
           <div style={{marginTop:12,maxWidth:300}}>
             <div style={{display:'flex',justifyContent:'space-between',fontSize:11,color:'var(--text3)',marginBottom:4}}>
               <span>{tierMeta.label}</span>
-              <span>{tierMeta.next} +{ratingMax - (user?.rating||800)}점</span>
+              <span>{tierMeta.next} +{ratingMax - (user?.rating||800)} pts</span>
             </div>
             <div style={{height:5,background:'var(--bg3)',borderRadius:3,overflow:'hidden'}}>
               <div style={{
@@ -407,7 +407,7 @@ export default function Dashboard() {
       {/* 통계 카드 */}
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:12,marginBottom:20}}>
         <StatCard icon={<CheckCircle2 size={20} />} value={solvedList.length}  label={t('solved')}  color="var(--green)" delta={solvedList.length > 0 ? `▲ ${Math.min(99, Math.round(solvedList.length / Math.max(PROBLEMS.length, 1) * 100))}%` : null} onClick={() => navigate('/submissions')} />
-        <StatCard icon={<TrendingUp size={20} />} value={progression ? `Lv.${progression.level}` : (user?.rating||800)}  label={progression ? '성장 레벨' : t('rating')}  color="var(--yellow)" delta={progression ? `${progression.xp.toLocaleString()} XP` : ((user?.streak||0) > 0 ? `+${(user.streak) * 2} 성장` : null)} onClick={() => navigate('/profile')} />
+        <StatCard icon={<TrendingUp size={20} />} value={progression ? `Lv.${progression.level}` : (user?.rating||800)}  label={progression ? 'Growth Level' : t('rating')}  color="var(--yellow)" delta={progression ? `${progression.xp.toLocaleString()} XP` : ((user?.streak||0) > 0 ? `+${(user.streak) * 2} Growth` : null)} onClick={() => navigate('/profile')} />
         <StatCard icon={<Target size={20} />} value={myRank?`#${myRank}`:'−'} label={t('dashboardMyRank')} color="var(--purple)" delta={t('dashboardRealtimeTrack')} onClick={() => navigate('/ranking')} />
         <div className="card card-pad card-hover" onClick={() => navigate('/battle')} style={{display:'flex',alignItems:'center',gap:14,cursor:'pointer',position:'relative',overflow:'hidden'}}>
           <div className="stat-card-accent" style={{background:'linear-gradient(90deg, rgba(248,81,73,.75), rgba(248,81,73,.16))'}} />
@@ -418,7 +418,7 @@ export default function Dashboard() {
             <div style={{fontFamily:'Space Mono,monospace',fontSize:22,fontWeight:800,color:'var(--red)',lineHeight:1}}>
               {battleSummary.total > 0 ? `${battleSummary.winRate}%` : '0%'}
             </div>
-            <div style={{fontSize:12,color:'var(--text2)',marginTop:3}}>배틀 승률</div>
+            <div style={{fontSize:12,color:'var(--text2)',marginTop:3}}>Battle Win Rate</div>
             <div style={{display:'flex',gap:4,marginTop:6}}>
               {(battleSummary.recent || []).slice(0, 5).map((item, index) => (
                 <span key={`${item.roomId || index}-${item.result}`} title={item.result} style={{
@@ -431,7 +431,7 @@ export default function Dashboard() {
                 </span>
               ))}
               {(!battleSummary.recent || battleSummary.recent.length === 0) && (
-                <span style={{fontSize:11,color:'var(--text3)'}}>최근 전적 없음</span>
+                <span style={{fontSize:11,color:'var(--text3)'}}>No recent results</span>
               )}
             </div>
           </div>
@@ -442,14 +442,14 @@ export default function Dashboard() {
         <div className="dashboard-game-banner-icon"><Sparkles size={22} /></div>
         <div className="dashboard-game-banner-body">
           <span>NEW GAME HUB</span>
-          <strong>고스트 배틀 · 오늘의 던전 · 시즌 점령전을 한 번에 시작하세요</strong>
-          <small>고스트 {gameSummary.ghost}개 · 던전 {gameSummary.dungeon}% · 점령 {gameSummary.territory}지역</small>
+          <strong>Ghost Battle · Daily Dungeon · Season Conquest — all in one place</strong>
+          <small>Ghost {gameSummary.ghost} · Dungeon {gameSummary.dungeon}% · Territories {gameSummary.territory}</small>
         </div>
-        <button className="btn btn-primary btn-sm" onClick={(e) => { e.stopPropagation(); navigate('/game'); }}>게임 허브</button>
+        <button className="btn btn-primary btn-sm" onClick={(e) => { e.stopPropagation(); navigate('/game'); }}>Game Hub</button>
       </div>
 
       {dailyFocusPlan.length > 0 && (
-        <div className="dashboard-learning-modes" aria-label="오늘의 학습 루틴">
+        <div className="dashboard-learning-modes" aria-label="Today's learning routine">
           {dailyFocusPlan.map((item) => {
             const Icon = DAILY_FOCUS_ICONS[item.icon] || Target;
             return (
@@ -534,16 +534,16 @@ export default function Dashboard() {
             <div className="dashboard-xp-card card card-hover">
               <div className="dashboard-xp-head">
                 <div>
-                  <div className="dashboard-xp-kicker">개인 성장 보상</div>
+                  <div className="dashboard-xp-kicker">Personal Growth Rewards</div>
                   <div className="dashboard-xp-title">Lv.{progression.level} · {progression.xp.toLocaleString()} XP</div>
                 </div>
-                <button className="btn btn-ghost btn-sm" onClick={() => navigate('/profile')}>프로필 보상</button>
+                <button className="btn btn-ghost btn-sm" onClick={() => navigate('/profile')}>Profile Rewards</button>
               </div>
               <div className="dashboard-xp-bar">
                 <div style={{ width:`${Math.min(100, Math.max(0, progression.progressPercent || 0))}%` }} />
               </div>
               <div className="dashboard-xp-note">
-                미션 보상은 랭킹 점수에 영향을 주지 않고 XP, 배지, 칭호, 프로필 배경으로만 쌓입니다.
+                Mission rewards do not affect ranking points — they accumulate as XP, badges, titles, and profile backgrounds only.
               </div>
             </div>
           )}
@@ -604,10 +604,10 @@ export default function Dashboard() {
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:12,marginBottom:14}}>
               <div>
                 <div style={{fontWeight:800,fontSize:14,display:'flex',alignItems:'center',gap:8}}>
-                  <Target size={16} />오답 복구 큐
+                  <Target size={16} />Wrong Answer Recovery Queue
                 </div>
                 <div style={{fontSize:12,color:'var(--text3)',marginTop:4,lineHeight:1.5}}>
-                  {recoveryQueue.summary || '틀린 문제를 다시 잡아 실전 약점을 줄입니다.'}
+                  {recoveryQueue.summary || 'Retry incorrect problems to eliminate weaknesses.'}
                 </div>
               </div>
               <span style={{
@@ -616,7 +616,7 @@ export default function Dashboard() {
                 color:recoveryQueue.count > 0 ? 'var(--red)' : 'var(--green)',
                 fontSize:11,fontWeight:800,whiteSpace:'nowrap',
               }}>
-                {recoveryQueue.count > 0 ? `${recoveryQueue.count}개 대기` : '정리됨'}
+                {recoveryQueue.count > 0 ? `${recoveryQueue.count} pending` : 'All clear'}
               </span>
             </div>
             {recoveryQueue.items?.length > 0 ? (
@@ -646,7 +646,7 @@ export default function Dashboard() {
                         color:item.priority === 'high' ? 'var(--red)' : 'var(--orange)',
                         fontSize:11,fontWeight:800,whiteSpace:'nowrap',
                       }}>
-                        {item.priority === 'high' ? '우선 복구' : '점검'}
+                        {item.priority === 'high' ? 'Priority' : 'Review'}
                       </span>
                     </div>
                     <div style={{fontSize:12,color:'var(--text2)',lineHeight:1.6,marginTop:8}}>
@@ -670,13 +670,13 @@ export default function Dashboard() {
                         className="btn btn-primary btn-sm"
                         onClick={() => navigate(`/problems/${item.problemId}`)}
                       >
-                        재도전
+                        Retry
                       </button>
                       <button
                         className="btn btn-ghost btn-sm"
                         onClick={() => navigate('/submissions', { state: { scope: 'me', result: item.result, highlightId: item.submissionId, autoCoach: true } })}
                       >
-                        AI 코치 보기
+                        View AI Coach
                       </button>
                     </div>
                   </div>
@@ -684,7 +684,7 @@ export default function Dashboard() {
               </div>
             ) : (
               <div style={{padding:'14px 0',fontSize:13,color:'var(--text3)',lineHeight:1.7}}>
-                지금은 미해결 오답이 없습니다. 추천 문제나 배틀로 새로운 약점을 찾아보세요.
+                No unresolved wrong answers right now. Try recommended problems or battles to discover new weaknesses.
               </div>
             )}
           </div>
@@ -723,9 +723,9 @@ export default function Dashboard() {
               <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:12,marginBottom:12}}>
                 <div>
                   <div style={{fontSize:11,color:'var(--orange)',fontWeight:800,letterSpacing:.5}}>REVIEW QUEUE</div>
-                  <h3 style={{fontSize:17,fontWeight:800,margin:'4px 0 0'}}>복습 큐</h3>
+                  <h3 style={{fontSize:17,fontWeight:800,margin:'4px 0 0'}}>Review Queue</h3>
                 </div>
-                <span style={{fontSize:12,color:'var(--text3)'}}>{reviewQueue.length}개 대기</span>
+                <span style={{fontSize:12,color:'var(--text3)'}}>{reviewQueue.length} pending</span>
               </div>
               <div style={{display:'grid',gap:8}}>
                 {reviewQueue.slice(0,5).map((item) => (
@@ -740,7 +740,7 @@ export default function Dashboard() {
 
           {tagStats.length > 0 && (
             <div className="card card-pad card-hover">
-              <div style={{fontWeight:800,fontSize:15,marginBottom:12,display:'flex',alignItems:'center',gap:8}}><Target size={16} />태그 숙련도</div>
+              <div style={{fontWeight:800,fontSize:15,marginBottom:12,display:'flex',alignItems:'center',gap:8}}><Target size={16} />Tag Proficiency</div>
               <div style={{display:'grid',gap:10}}>
                 {tagStats.slice(0,6).map((item) => (
                   <div key={item.tag}>
@@ -765,9 +765,9 @@ export default function Dashboard() {
                   <div style={{fontSize:11,color:'var(--text3)',fontWeight:700,marginBottom:4,textTransform:'uppercase',letterSpacing:.5}}>
                     {t('recommendedProblems')}
                   </div>
-                  <h3 style={{fontSize:17,fontWeight:800,margin:0}}>모바일에서도 넘겨보는 추천 문제</h3>
+                  <h3 style={{fontSize:17,fontWeight:800,margin:0}}>Recommended Problems</h3>
                 </div>
-                <button className="btn btn-ghost btn-sm" onClick={()=>navigate('/problems')}>전체 보기</button>
+                <button className="btn btn-ghost btn-sm" onClick={()=>navigate('/problems')}>View All</button>
               </div>
               <div className="dashboard-problem-rail">
                 {recommendedProblems.map((problem) => (
@@ -843,7 +843,7 @@ export default function Dashboard() {
           {/* 랭킹 TOP5 */}
           <div className="card card-pad card-hover">
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
-              <div style={{fontWeight:700,fontSize:14,display:'flex',alignItems:'center',gap:8}}><Trophy size={16} />실시간 랭킹</div>
+              <div style={{fontWeight:700,fontSize:14,display:'flex',alignItems:'center',gap:8}}><Trophy size={16} />Live Ranking</div>
               <button onClick={()=>navigate('/ranking')} style={{
                 fontSize:12,color:'var(--blue)',background:'none',border:'none',cursor:'pointer',
               }}>{t('dashboardViewAll')}</button>
@@ -977,7 +977,7 @@ export default function Dashboard() {
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
               {[
                 {icon:<BookOpen size={16} />, label:t('problemList'),  page:'problems',    color:'var(--blue)',   rgba:'rgba(121,192,255,'},
-                {icon:<Sparkles size={16} />, label:'학습 경로',        page:'learning',    color:'var(--purple)', rgba:'rgba(210,168,255,'},
+                {icon:<Sparkles size={16} />, label:'Learning Path',    page:'learning',    color:'var(--purple)', rgba:'rgba(210,168,255,'},
                 {icon:<Trophy size={16} />,   label:t('joinContest'),   page:'contest',     color:'var(--yellow)', rgba:'rgba(227,179,65,'},
                 {icon:<FileText size={16} />, label:t('submissions'),   page:'submissions', color:'var(--green)',  rgba:'rgba(86,211,100,'},
               ].map(a=>(
@@ -1029,12 +1029,12 @@ export default function Dashboard() {
         <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))',gap:12}}>
           {[
             { step:1, title:t('dashboardRoadmapStep1'),   tags:['구현','수학'],          icon:'🔢', color:'#cd7f32' },
-            { step:2, title:t('dashboardRoadmapStep2'),  tags:['구현','문자열'],        icon:'🔄', color:'#cd7f32' },
-            { step:3, title:t('dashboardRoadmapStep3'),     tags:['정렬','배열'],          icon:'📊', color:'#c0c0c0' },
-            { step:4, title:t('dashboardRoadmapStep4'),       tags:['스택','큐'],           icon:'📚', color:'#c0c0c0' },
-            { step:5, title:t('dashboardRoadmapStep5'),       tags:['완전탐색','백트래킹'],   icon:'🔍', color:'#ffd700' },
-            { step:6, title:t('dashboardRoadmapStep6'),     tags:['BFS','DFS','그래프'],   icon:'🌐', color:'#ffd700' },
-            { step:7, title:t('dashboardRoadmapStep7'),  tags:['DP','동적프로그래밍'],   icon:'💎', color:'#00e5cc' },
+            { step:2, title:t('dashboardRoadmapStep2'),   tags:['구현','문자열'],        icon:'🔄', color:'#cd7f32' },
+            { step:3, title:t('dashboardRoadmapStep3'),   tags:['정렬','배열'],          icon:'📊', color:'#c0c0c0' },
+            { step:4, title:t('dashboardRoadmapStep4'),   tags:['스택','큐'],            icon:'📚', color:'#c0c0c0' },
+            { step:5, title:t('dashboardRoadmapStep5'),   tags:['완전탐색','백트래킹'],  icon:'🔍', color:'#ffd700' },
+            { step:6, title:t('dashboardRoadmapStep6'),   tags:['BFS','DFS','그래프'],   icon:'🌐', color:'#ffd700' },
+            { step:7, title:t('dashboardRoadmapStep7'),   tags:['DP','동적프로그래밍'],  icon:'💎', color:'#00e5cc' },
             { step:8, title:t('dashboardRoadmapStep8'),   tags:['이분탐색','그리디','분할정복'], icon:'🏆', color:'#b9f2ff' },
           ].map(stage => {
             const stageProblems = PROBLEMS.filter(p => (p.tags||[]).some(t => stage.tags.includes(t)));

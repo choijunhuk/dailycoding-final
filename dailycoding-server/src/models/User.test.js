@@ -11,6 +11,40 @@ test('tier calculation keeps low positive ratings in iron and out of challenger'
   assert.equal(User.calcTier(16000), 'grandmaster');
 });
 
+test('first positive rating places unranked users into a real tier immediately', async () => {
+  const { User } = await import('./User.js');
+  const { insert, queryOne, waitForDB } = await import('../config/mysql.js');
+
+  await waitForDB();
+  const suffix = Date.now();
+  const userId = await insert(
+    'INSERT INTO users (email, username, role, rating, tier, solved_count) VALUES (?,?,?,?,?,?)',
+    [`placement-${suffix}@test.com`, `placement-${suffix}`, 'user', 0, 'unranked', 0]
+  );
+  const problemId = await insert(
+    'INSERT INTO problems (title, problem_type, tier, difficulty, description, visibility) VALUES (?,?,?,?,?,?)',
+    [`Placement ${suffix}`, 'coding', 'bronze', 3, 'placement test', 'global']
+  );
+
+  await User.onSolve(userId, {
+    id: problemId,
+    title: `Placement ${suffix}`,
+    tier: 'bronze',
+    difficulty: 3,
+    problemType: 'coding',
+  });
+
+  const user = await queryOne('SELECT rating, tier FROM users WHERE id = ?', [userId]);
+  const activePromotion = await queryOne(
+    'SELECT id FROM promotion_series WHERE user_id = ? AND status = ?',
+    [userId, 'in_progress']
+  );
+
+  assert.equal(user.rating, User.tierPoints('bronze'));
+  assert.equal(user.tier, 'iron');
+  assert.equal(activePromotion, null);
+});
+
 test('calcRatingFromTop100 hydrates before adding a new problem when the cache is missing', async (t) => {
   const { User } = await import('./User.js');
   const { redis } = await import('../config/redis.js');

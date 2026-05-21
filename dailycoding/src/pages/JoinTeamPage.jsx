@@ -16,7 +16,7 @@ export default function JoinTeamPage() {
         toast.show(data.message, 'success');
         navigate('/team');
       } catch (err) {
-        toast.show(err.response?.data?.message || '팀 합류에 실패했습니다.', 'error');
+        toast.show(err.response?.data?.message || 'Failed to join team.', 'error');
         navigate('/');
       } finally {
         setLoading(false);
@@ -27,8 +27,8 @@ export default function JoinTeamPage() {
 
   return (
     <div style={{ padding: 100, textAlign: 'center' }}>
-      <h2>팀에 합류하는 중...</h2>
-      <p style={{ color: 'var(--text3)' }}>잠시만 기다려주세요.</p>
+      <h2>Joining team...</h2>
+      <p style={{ color: 'var(--text3)' }}>Please wait a moment.</p>
     </div>
   );
 }

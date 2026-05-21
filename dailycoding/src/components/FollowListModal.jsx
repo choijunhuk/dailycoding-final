@@ -38,7 +38,7 @@ export default function FollowListModal({ userId, initialType = 'followers', ope
         if (cancelled) return;
         setItems([]);
         setTotal(0);
-        setError(err.response?.data?.message || (lang === 'ko' ? '목록을 불러오지 못했습니다.' : 'Failed to load the list.'));
+        setError(err.response?.data?.message || 'Failed to load the list.');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -51,8 +51,8 @@ export default function FollowListModal({ userId, initialType = 'followers', ope
 
   const title = activeType === 'followers' ? t('followers') : t('following');
   const emptyText = activeType === 'followers'
-    ? (lang === 'ko' ? '아직 팔로워가 없습니다.' : 'No followers yet.')
-    : (lang === 'ko' ? '아직 팔로잉한 사용자가 없습니다.' : 'Not following anyone yet.');
+    ? 'No followers yet.'
+    : 'Not following anyone yet.';
 
   const goProfile = (targetId) => {
     onClose?.();
@@ -93,13 +93,13 @@ export default function FollowListModal({ userId, initialType = 'followers', ope
           <div>
             <div style={{ fontSize: 18, fontWeight: 850, color: 'var(--text)' }}>{title}</div>
             <div style={{ marginTop: 3, fontSize: 12, color: 'var(--text3)' }}>
-              {total.toLocaleString()} {lang === 'ko' ? '명' : 'users'}
+              {total.toLocaleString()} users
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            aria-label={lang === 'ko' ? '닫기' : 'Close'}
+            aria-label="Close"
             style={{
               width: 36,
               height: 36,
@@ -145,7 +145,7 @@ export default function FollowListModal({ userId, initialType = 'followers', ope
         <div style={{ overflow: 'auto', padding: '0 18px 18px', display: 'grid', gap: 10 }}>
           {loading ? (
             <div style={{ color: 'var(--text3)', fontSize: 13, padding: '20px 0' }}>
-              {lang === 'ko' ? '불러오는 중...' : 'Loading...'}
+              {'Loading...'}
             </div>
           ) : error ? (
             <div style={{ color: 'var(--red)', fontSize: 13, padding: '20px 0' }}>{error}</div>
@@ -187,7 +187,7 @@ export default function FollowListModal({ userId, initialType = 'followers', ope
                 </span>
                 {item.isFollowing && Number(item.id) !== Number(user?.id) ? (
                   <span style={{ fontSize: 10, color: 'var(--blue)', fontWeight: 800 }}>
-                    {lang === 'ko' ? '팔로잉' : 'Following'}
+                    Following
                   </span>
                 ) : null}
               </div>

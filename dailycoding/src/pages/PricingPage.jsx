@@ -21,7 +21,7 @@ export default function PricingPage() {
       id: plan.id,
       name: plan.name,
       value: billingPeriod === 'monthly' ? plan.monthlyPrice : plan.annualPrice,
-      suffix: billingPeriod === 'monthly' ? '/월' : '/년',
+      suffix: billingPeriod === 'monthly' ? '/mo' : '/yr',
       accent: plan.accent,
     }))
   ), [billingPeriod, plans]);
@@ -35,7 +35,7 @@ export default function PricingPage() {
     }
     const result = await startCheckout(planId, billingPeriod);
     if (!result.ok) {
-      toast?.show(result.reason || '결제 페이지를 여는 데 실패했습니다.', 'error');
+      toast?.show(result.reason || 'Failed to open the checkout page.', 'error');
     }
   };
 
@@ -57,7 +57,7 @@ export default function PricingPage() {
             gap: 6,
           }}
         >
-          ← 돌아가기
+          ← Back
         </button>
 
         <section
@@ -82,20 +82,20 @@ export default function PricingPage() {
               Pricing Overview
             </div>
             <h1 style={{ fontSize: 'clamp(32px, 5vw, 54px)', lineHeight: 1.05, letterSpacing: '-0.04em', fontWeight: 900, marginBottom: 12 }}>
-              요금제가
+              Pricing plans
               <br />
-              <span className="gradient-text">한눈에 보이게</span> 정리됐습니다
+              <span className="gradient-text">at a glance</span>
             </h1>
             <p style={{ color: 'var(--text2)', fontSize: 16, lineHeight: 1.75, maxWidth: 620, marginBottom: 18 }}>
-              무료로 시작하고, 필요할 때 업그레이드하세요.
-              프로와 팀 플랜은 Stripe 안전 결제로 즉시 시작되며, 언제든 취소할 수 있습니다.
+              Start for free and upgrade when you need to.
+              Pro and Team plans start instantly via Stripe secure checkout and can be cancelled anytime.
             </p>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
               <button className="btn btn-primary" onClick={() => handleUpgrade('pro')} disabled={loadingPlan === 'pro' || currentTier === 'pro'}>
-                프로 바로 선택
+                Get Pro Now
               </button>
               <button className="btn btn-ghost" onClick={() => handleUpgrade('team')} disabled={loadingPlan === 'team' || currentTier === 'team'}>
-                팀 플랜 보기
+                View Team Plan
               </button>
             </div>
           </div>
@@ -114,7 +114,7 @@ export default function PricingPage() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
               <div>
                 <div style={{ fontSize: 12, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '.08em' }}>Billing</div>
-                <div style={{ fontSize: 18, fontWeight: 900, marginTop: 4 }}>결제 주기</div>
+                <div style={{ fontSize: 18, fontWeight: 900, marginTop: 4 }}>Billing Period</div>
               </div>
               <div style={{ display: 'flex', padding: 4, borderRadius: 999, background: 'var(--bg2)', border: '1px solid var(--border)' }}>
                 <button
@@ -130,7 +130,7 @@ export default function PricingPage() {
                     fontSize: 13,
                   }}
                 >
-                  월간
+                  Monthly
                 </button>
                 <button
                   onClick={() => setBillingPeriod('annual')}
@@ -145,7 +145,7 @@ export default function PricingPage() {
                     fontSize: 13,
                   }}
                 >
-                  연간
+                  Annual
                 </button>
               </div>
             </div>
@@ -178,8 +178,8 @@ export default function PricingPage() {
             </div>
 
             <div style={{ padding: '12px 14px', borderRadius: 18, background: 'linear-gradient(135deg, rgba(63,185,80,.14), rgba(121,192,255,.12))', border: '1px solid rgba(63,185,80,.22)', color: 'var(--text2)', fontSize: 13, lineHeight: 1.7 }}>
-              연간 결제 시 월간 대비 약 17% 절약됩니다.
-              프로는 2개월 무료에 가까운 가격 구조이고, 팀은 운영 단가를 더 낮추는 방향입니다.
+              Annual billing saves ~17% compared to monthly.
+              Pro is priced close to 2 months free, and Team further lowers the per-seat cost.
             </div>
           </div>
         </section>
@@ -195,7 +195,7 @@ export default function PricingPage() {
         >
           {plans.map((plan) => {
             const price = billingPeriod === 'monthly' ? plan.monthlyPrice : plan.annualPrice;
-            const suffix = billingPeriod === 'monthly' ? '/월' : '/년';
+            const suffix = billingPeriod === 'monthly' ? '/mo' : '/yr';
             return (
               <div
                 key={plan.id}
@@ -213,7 +213,7 @@ export default function PricingPage() {
               >
                 {plan.highlight && (
                   <div style={{ position: 'absolute', top: 14, right: 14, padding: '5px 10px', borderRadius: 999, background: plan.accent, color: '#0d1117', fontSize: 11, fontWeight: 900 }}>
-                    추천
+                    Recommended
                   </div>
                 )}
                 <div style={{ fontSize: 11, color: plan.accent, letterSpacing: '.12em', textTransform: 'uppercase', fontWeight: 900, marginBottom: 8 }}>
@@ -268,14 +268,14 @@ export default function PricingPage() {
                   }}
                 >
                   {loadingPlan === plan.id
-                    ? '이동 중...'
+                    ? 'Redirecting...'
                     : plan.id === currentTier
-                      ? '현재 이용 중'
+                      ? 'Current Plan'
                       : plan.id === 'free'
-                        ? '무료로 시작'
+                        ? 'Get Started Free'
                         : user
-                          ? (billingPeriod === 'annual' ? '연간 플랜 시작' : '이 플랜 선택')
-                          : '회원가입 후 시작'}
+                          ? (billingPeriod === 'annual' ? 'Start Annual Plan' : 'Choose This Plan')
+                          : 'Sign Up to Start'}
                 </button>
               </div>
             );
@@ -291,8 +291,8 @@ export default function PricingPage() {
           }}
         >
           <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 26, padding: '24px 22px' }}>
-            <div style={{ fontSize: 28, fontWeight: 900, marginBottom: 8 }}>자주 묻는 질문</div>
-            <div style={{ color: 'var(--text2)', fontSize: 14, marginBottom: 20 }}>결제 전에 많이 확인하는 항목만 짧게 정리했습니다.</div>
+            <div style={{ fontSize: 28, fontWeight: 900, marginBottom: 8 }}>Frequently Asked Questions</div>
+            <div style={{ color: 'var(--text2)', fontSize: 14, marginBottom: 20 }}>Quick answers to the most common questions before subscribing.</div>
             <div style={{ display: 'grid', gap: 10 }}>
               {PRICING_FAQ.map((item, index) => {
                 const open = openFaq === index;
@@ -333,24 +333,24 @@ export default function PricingPage() {
           <div style={{ display: 'grid', gap: 14 }}>
             <div style={{ padding: '22px 20px', borderRadius: 26, background: 'linear-gradient(145deg, rgba(121,192,255,.12), rgba(13,17,23,.96))', border: '1px solid rgba(121,192,255,.18)' }}>
               <div style={{ fontSize: 12, color: 'var(--blue)', fontWeight: 900, letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 10 }}>Security</div>
-              <div style={{ fontSize: 22, fontWeight: 900, marginBottom: 10 }}>안심하고 결제하세요</div>
+              <div style={{ fontSize: 22, fontWeight: 900, marginBottom: 10 }}>Pay with confidence</div>
               <div style={{ display: 'grid', gap: 10, color: 'var(--text2)', fontSize: 13, lineHeight: 1.7 }}>
-                <div>카드 정보는 DailyCoding 서버에 저장되지 않으며, Stripe가 직접 처리합니다.</div>
-                <div>결제 후 7일 이내 전액 환불이 보장되며 위약금이 없습니다.</div>
-                <div>구독은 언제든지 마이페이지에서 즉시 취소할 수 있습니다.</div>
+                <div>Card details are never stored on DailyCoding servers — all payments are handled directly by Stripe.</div>
+                <div>Full refund guaranteed within 7 days of payment with no cancellation fees.</div>
+                <div>Cancel your subscription anytime instantly from your account page.</div>
               </div>
             </div>
 
             <div style={{ padding: '20px', borderRadius: 26, background: 'var(--bg2)', border: '1px solid var(--border)', color: 'var(--text3)', fontSize: 13, lineHeight: 1.8 }}>
-              모든 유료 플랜은 <strong style={{ color: 'var(--text)' }}>결제 후 7일 이내 전액 환불</strong> 요청이 가능합니다.
+              All paid plans are eligible for a <strong style={{ color: 'var(--text)' }}>full refund within 7 days of payment</strong>.
               <br />
-              문의: <a href="mailto:choijunhuk2007@gmail.com" style={{ color: 'var(--blue)' }}>choijunhuk2007@gmail.com</a>
+              Contact: <a href="mailto:choijunhuk2007@gmail.com" style={{ color: 'var(--blue)' }}>choijunhuk2007@gmail.com</a>
               {' · '}
               <button
                 onClick={() => navigate('/terms')}
                 style={{ background: 'none', border: 'none', color: 'var(--blue)', cursor: 'pointer', fontSize: 13, fontFamily: 'inherit', padding: 0 }}
               >
-                이용약관
+                Terms of Service
               </button>
             </div>
           </div>

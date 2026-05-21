@@ -22,12 +22,12 @@ const LANGUAGE_TRACKS = [
     logo: '/tech/python.png',
     label: 'Python',
     color: { bg: 'rgba(255,212,59,.08)', border: 'rgba(255,212,59,.3)', text: '#d4a900', pill: 'rgba(255,212,59,.15)' },
-    desc: '파이썬으로 알고리즘의 기초를 배워보세요. 문법이 간결해 초보자에게 가장 추천하는 언어입니다.',
+    desc: 'Learn algorithm fundamentals with Python. Its clean syntax makes it the top recommendation for beginners.',
     levels: [
       {
         id: 'python-lv1',
-        title: '🌱 입문',
-        subtitle: '기본 문법 · 입출력 · 조건/반복문',
+        title: '🌱 Beginner',
+        subtitle: 'Basic Syntax · I/O · Conditionals/Loops',
         problems: [
           { id: 1001, title: 'A+B', tier: 'bronze' },
           { id: 1002, title: '사칙연산', tier: 'bronze' },
@@ -45,8 +45,8 @@ const LANGUAGE_TRACKS = [
       },
       {
         id: 'python-lv2',
-        title: '📘 기초',
-        subtitle: '리스트 · 딕셔너리 · 수학',
+        title: '📘 Fundamentals',
+        subtitle: 'Lists · Dictionaries · Math',
         problems: [
           { id: 1003, title: '피보나치 수', tier: 'bronze' },
           { id: 1005, title: '최댓값 구하기', tier: 'bronze' },
@@ -64,8 +64,8 @@ const LANGUAGE_TRACKS = [
       },
       {
         id: 'python-lv3',
-        title: '⚡ 중급',
-        subtitle: '정렬 · 탐색 · DP 입문',
+        title: '⚡ Intermediate',
+        subtitle: 'Sorting · Search · Intro to DP',
         problems: [
           { id: 2001, title: '계단 오르기', tier: 'silver' },
           { id: 2002, title: '가장 긴 증가하는 부분 수열', tier: 'silver' },
@@ -83,8 +83,8 @@ const LANGUAGE_TRACKS = [
       },
       {
         id: 'python-lv4',
-        title: '🔥 심화',
-        subtitle: '그래프 · DP · 고급 알고리즘',
+        title: '🔥 Advanced',
+        subtitle: 'Graph · DP · Advanced Algorithms',
         problems: [
           { id: 2004, title: 'BFS', tier: 'silver' },
           { id: 2013, title: 'DFS 연결 요소', tier: 'silver' },
@@ -108,12 +108,12 @@ const LANGUAGE_TRACKS = [
     logo: '/tech/javascript.webp',
     label: 'JavaScript',
     color: { bg: 'rgba(247,223,30,.08)', border: 'rgba(247,223,30,.3)', text: '#c9a800', pill: 'rgba(247,223,30,.15)' },
-    desc: '웹의 언어 자바스크립트로 알고리즘 실력과 웹 개발 역량을 동시에 키워보세요.',
+    desc: 'Sharpen your algorithm skills and web development ability at the same time with JavaScript, the language of the web.',
     levels: [
       {
         id: 'js-lv1',
-        title: '🌱 입문',
-        subtitle: '변수 · 함수 · 기본 연산',
+        title: '🌱 Beginner',
+        subtitle: 'Variables · Functions · Basic Operations',
         problems: [
           { id: 1001, title: 'A+B', tier: 'bronze' },
           { id: 1002, title: '사칙연산', tier: 'bronze' },
@@ -130,8 +130,8 @@ const LANGUAGE_TRACKS = [
       },
       {
         id: 'js-lv2',
-        title: '📘 기초',
-        subtitle: '배열 · 객체 · 함수형 패턴',
+        title: '📘 Fundamentals',
+        subtitle: 'Arrays · Objects · Functional Patterns',
         problems: [
           { id: 1003, title: '피보나치 수', tier: 'bronze' },
           { id: 1005, title: '최댓값 구하기', tier: 'bronze' },
@@ -148,8 +148,8 @@ const LANGUAGE_TRACKS = [
       },
       {
         id: 'js-lv3',
-        title: '⚡ 중급',
-        subtitle: '스택 · 큐 · 해시맵',
+        title: '⚡ Intermediate',
+        subtitle: 'Stack · Queue · HashMap',
         problems: [
           { id: 2006, title: '괄호 검사', tier: 'silver' },
           { id: 2007, title: '구간 합 질의', tier: 'silver' },
@@ -166,8 +166,8 @@ const LANGUAGE_TRACKS = [
       },
       {
         id: 'js-lv4',
-        title: '🔥 심화',
-        subtitle: 'BFS/DFS · DP · 고급',
+        title: '🔥 Advanced',
+        subtitle: 'BFS/DFS · DP · Advanced',
         problems: [
           { id: 2001, title: '계단 오르기', tier: 'silver' },
           { id: 2002, title: '가장 긴 증가하는 부분 수열', tier: 'silver' },
@@ -190,12 +190,12 @@ const LANGUAGE_TRACKS = [
     logo: '/tech/java.webp',
     label: 'Java',
     color: { bg: 'rgba(234,91,32,.08)', border: 'rgba(234,91,32,.3)', text: '#ea5b20', pill: 'rgba(234,91,32,.15)' },
-    desc: '객체지향 프로그래밍의 정석 Java로 탄탄한 기초를 쌓으세요. 취업 코딩테스트 1위 언어입니다.',
+    desc: 'Build a solid foundation with Java, the gold standard of object-oriented programming and the #1 language for job coding tests.',
     levels: [
       {
         id: 'java-lv1',
-        title: '🌱 입문',
-        subtitle: '기본 문법 · 클래스 · 타입',
+        title: '🌱 Beginner',
+        subtitle: 'Basic Syntax · Classes · Types',
         problems: [
           { id: 1001, title: 'A+B', tier: 'bronze' },
           { id: 1002, title: '사칙연산', tier: 'bronze' },
@@ -211,7 +211,7 @@ const LANGUAGE_TRACKS = [
       },
       {
         id: 'java-lv2',
-        title: '📘 기초',
+        title: '📘 Fundamentals',
         subtitle: 'ArrayList · HashMap · Stack · Queue',
         problems: [
           { id: 1005, title: '최댓값 구하기', tier: 'bronze' },
@@ -229,8 +229,8 @@ const LANGUAGE_TRACKS = [
       },
       {
         id: 'java-lv3',
-        title: '⚡ 중급',
-        subtitle: '정렬 · 탐색 · 재귀',
+        title: '⚡ Intermediate',
+        subtitle: 'Sorting · Search · Recursion',
         problems: [
           { id: 2001, title: '계단 오르기', tier: 'silver' },
           { id: 2002, title: '가장 긴 증가하는 부분 수열', tier: 'silver' },
@@ -246,8 +246,8 @@ const LANGUAGE_TRACKS = [
       },
       {
         id: 'java-lv4',
-        title: '🔥 심화',
-        subtitle: '그래프 · DP · 고급 자료구조',
+        title: '🔥 Advanced',
+        subtitle: 'Graph · DP · Advanced Data Structures',
         problems: [
           { id: 2004, title: 'BFS', tier: 'silver' },
           { id: 2013, title: 'DFS 연결 요소', tier: 'silver' },
@@ -267,14 +267,14 @@ const LANGUAGE_TRACKS = [
     id: 'c',
     icon: '🔵',
     logo: '/tech/c.png',
-    label: 'C언어',
+    label: 'C',
     color: { bg: 'rgba(88,166,255,.08)', border: 'rgba(88,166,255,.3)', text: '#58a6ff', pill: 'rgba(88,166,255,.15)' },
-    desc: '컴퓨터 과학의 뿌리 C언어로 메모리 구조와 포인터까지 깊이 이해하세요.',
+    desc: 'Deeply understand memory structures and pointers with C, the root of computer science.',
     levels: [
       {
         id: 'c-lv1',
-        title: '🌱 입문',
-        subtitle: 'printf/scanf · 변수 · 연산자',
+        title: '🌱 Beginner',
+        subtitle: 'printf/scanf · Variables · Operators',
         problems: [
           { id: 1001, title: 'A+B', tier: 'bronze' },
           { id: 1002, title: '사칙연산', tier: 'bronze' },
@@ -291,8 +291,8 @@ const LANGUAGE_TRACKS = [
       },
       {
         id: 'c-lv2',
-        title: '📘 기초',
-        subtitle: '배열 · 포인터 · 문자열',
+        title: '📘 Fundamentals',
+        subtitle: 'Arrays · Pointers · Strings',
         problems: [
           { id: 1003, title: '피보나치 수', tier: 'bronze' },
           { id: 1005, title: '최댓값 구하기', tier: 'bronze' },
@@ -309,8 +309,8 @@ const LANGUAGE_TRACKS = [
       },
       {
         id: 'c-lv3',
-        title: '⚡ 중급',
-        subtitle: '구조체 · 동적 메모리 · 알고리즘',
+        title: '⚡ Intermediate',
+        subtitle: 'Structs · Dynamic Memory · Algorithms',
         problems: [
           { id: 1025, title: '배열 속 소수 개수', tier: 'bronze' },
           { id: 2001, title: '계단 오르기', tier: 'silver' },
@@ -326,8 +326,8 @@ const LANGUAGE_TRACKS = [
       },
       {
         id: 'c-lv4',
-        title: '🔥 심화',
-        subtitle: '그래프 · DP · 고급 알고리즘',
+        title: '🔥 Advanced',
+        subtitle: 'Graph · DP · Advanced Algorithms',
         problems: [
           { id: 2004, title: 'BFS', tier: 'silver' },
           { id: 2013, title: 'DFS 연결 요소', tier: 'silver' },
@@ -349,11 +349,11 @@ const LANGUAGE_TRACKS = [
     logo: '/tech/cpp.png',
     label: 'C++',
     color: { bg: 'rgba(86,211,100,.08)', border: 'rgba(86,211,100,.3)', text: '#56d364', pill: 'rgba(86,211,100,.15)' },
-    desc: 'STL과 고성능 알고리즘의 강자 C++로 코딩 대회와 실전 개발까지 대비하세요.',
+    desc: 'Prepare for coding competitions and real-world development with C++, the powerhouse of STL and high-performance algorithms.',
     levels: [
       {
         id: 'cpp-lv1',
-        title: '🌱 입문',
+        title: '🌱 Beginner',
         subtitle: 'cin/cout · vector · string',
         problems: [
           { id: 1001, title: 'A+B', tier: 'bronze' },
@@ -370,7 +370,7 @@ const LANGUAGE_TRACKS = [
       },
       {
         id: 'cpp-lv2',
-        title: '📘 기초',
+        title: '📘 Fundamentals',
         subtitle: 'vector · map · set · stack · queue',
         problems: [
           { id: 1003, title: '피보나치 수', tier: 'bronze' },
@@ -388,8 +388,8 @@ const LANGUAGE_TRACKS = [
       },
       {
         id: 'cpp-lv3',
-        title: '⚡ 중급',
-        subtitle: 'sort · binary_search · 그래프 탐색',
+        title: '⚡ Intermediate',
+        subtitle: 'sort · binary_search · Graph Traversal',
         problems: [
           { id: 2001, title: '계단 오르기', tier: 'silver' },
           { id: 2002, title: '가장 긴 증가하는 부분 수열', tier: 'silver' },
@@ -405,8 +405,8 @@ const LANGUAGE_TRACKS = [
       },
       {
         id: 'cpp-lv4',
-        title: '🔥 심화',
-        subtitle: '세그먼트 트리 · KMP · 위상 정렬',
+        title: '🔥 Advanced',
+        subtitle: 'Segment Tree · KMP · Topological Sort',
         problems: [
           { id: 3001, title: '최단경로', tier: 'gold' },
           { id: 3003, title: '위상 정렬', tier: 'gold' },
@@ -428,14 +428,14 @@ const ALGO_TRACKS = [
   {
     id: 'data-structure',
     icon: '🗃️',
-    label: '자료구조',
+    label: 'Data Structures',
     color: { bg: 'rgba(188,140,255,.08)', border: 'rgba(188,140,255,.3)', text: '#bc8cff', pill: 'rgba(188,140,255,.15)' },
-    desc: '스택, 큐, 트리, 그래프 — 알고리즘의 뼈대를 이루는 자료구조들을 단계별로 마스터하세요.',
+    desc: 'Stack, Queue, Tree, Graph — master the data structures that form the backbone of algorithms, step by step.',
     levels: [
       {
         id: 'ds-lv1',
-        title: '🌱 선형 자료구조',
-        subtitle: '배열 · 스택 · 큐',
+        title: '🌱 Linear Structures',
+        subtitle: 'Array · Stack · Queue',
         problems: [
           { id: 1005, title: '최댓값 구하기', tier: 'bronze' },
           { id: 1010, title: '최솟값 구하기', tier: 'bronze' },
@@ -451,8 +451,8 @@ const ALGO_TRACKS = [
       },
       {
         id: 'ds-lv2',
-        title: '📘 해시 · 집합',
-        subtitle: '해시맵 · 집합 · 우선순위 큐',
+        title: '📘 Hash · Sets',
+        subtitle: 'HashMap · Sets · Priority Queue',
         problems: [
           { id: 2009, title: '두 수 쌍 개수', tier: 'silver' },
           { id: 2015, title: '최빈값', tier: 'silver' },
@@ -466,8 +466,8 @@ const ALGO_TRACKS = [
       },
       {
         id: 'ds-lv3',
-        title: '⚡ 트리',
-        subtitle: '이진트리 · 힙 · 세그먼트 트리',
+        title: '⚡ Trees',
+        subtitle: 'Binary Tree · Heap · Segment Tree',
         problems: [
           { id: 3005, title: '트리의 지름', tier: 'gold' },
           { id: 3009, title: '유니온 파인드 질의', tier: 'gold' },
@@ -478,8 +478,8 @@ const ALGO_TRACKS = [
       },
       {
         id: 'ds-lv4',
-        title: '🔥 고급 자료구조',
-        subtitle: 'Union-Find · 네트워크 플로우',
+        title: '🔥 Advanced Data Structures',
+        subtitle: 'Union-Find · Network Flow',
         problems: [
           { id: 3002, title: '네트워크 플로우', tier: 'gold' },
           { id: 3007, title: '최소 스패닝 트리', tier: 'gold' },
@@ -492,14 +492,14 @@ const ALGO_TRACKS = [
   {
     id: 'dp',
     icon: '💡',
-    label: '동적 프로그래밍',
+    label: 'Dynamic Programming',
     color: { bg: 'rgba(255,166,87,.08)', border: 'rgba(255,166,87,.3)', text: '#ffa657', pill: 'rgba(255,166,87,.15)' },
-    desc: '복잡한 문제를 작은 부분 문제로 나누어 해결하는 DP를 마스터하세요.',
+    desc: 'Master DP — solving complex problems by breaking them into smaller subproblems.',
     levels: [
       {
         id: 'dp-lv1',
-        title: '🌱 1차원 DP',
-        subtitle: '피보나치 · 계단 · 최대 부분합',
+        title: '🌱 1D DP',
+        subtitle: 'Fibonacci · Stairs · Max Subarray Sum',
         problems: [
           { id: 1003, title: '피보나치 수', tier: 'bronze' },
           { id: 2001, title: '계단 오르기', tier: 'silver' },
@@ -511,8 +511,8 @@ const ALGO_TRACKS = [
       },
       {
         id: 'dp-lv2',
-        title: '📘 2차원 DP',
-        subtitle: 'LCS · 배낭 · 행렬 경로',
+        title: '📘 2D DP',
+        subtitle: 'LCS · Knapsack · Matrix Path',
         problems: [
           { id: 3004, title: '배낭 문제', tier: 'gold' },
           { id: 3006, title: '2차원 구간 합', tier: 'gold' },
@@ -524,8 +524,8 @@ const ALGO_TRACKS = [
       },
       {
         id: 'dp-lv3',
-        title: '⚡ DP 최적화',
-        subtitle: '동전 · 메모이제이션 · 경로',
+        title: '⚡ DP Optimization',
+        subtitle: 'Coin Change · Memoization · Path Finding',
         problems: [
           { id: 3010, title: '최소 동전 개수', tier: 'gold' },
           { id: 3012, title: '미로 최단 경로', tier: 'gold' },
@@ -539,14 +539,14 @@ const ALGO_TRACKS = [
   {
     id: 'graph',
     icon: '🕸️',
-    label: '그래프 이론',
+    label: 'Graph Theory',
     color: { bg: 'rgba(255,122,143,.08)', border: 'rgba(255,122,143,.3)', text: '#ff7a8f', pill: 'rgba(255,122,143,.15)' },
-    desc: 'BFS, DFS부터 최단경로, 최소신장트리까지 그래프 이론을 완파하세요.',
+    desc: 'Conquer graph theory from BFS and DFS all the way to shortest paths and minimum spanning trees.',
     levels: [
       {
         id: 'graph-lv1',
-        title: '🌱 탐색',
-        subtitle: 'BFS · DFS · 연결 요소',
+        title: '🌱 Traversal',
+        subtitle: 'BFS · DFS · Connected Components',
         problems: [
           { id: 2004, title: 'BFS', tier: 'silver' },
           { id: 2013, title: 'DFS 연결 요소', tier: 'silver' },
@@ -556,8 +556,8 @@ const ALGO_TRACKS = [
       },
       {
         id: 'graph-lv2',
-        title: '📘 최단경로',
-        subtitle: '다익스트라 · BFS 최단경로',
+        title: '📘 Shortest Path',
+        subtitle: 'Dijkstra · BFS Shortest Path',
         problems: [
           { id: 3001, title: '최단경로', tier: 'gold' },
           { id: 3012, title: '미로 최단 경로', tier: 'gold' },
@@ -566,8 +566,8 @@ const ALGO_TRACKS = [
       },
       {
         id: 'graph-lv3',
-        title: '⚡ 고급 그래프',
-        subtitle: 'MST · 위상 정렬 · 플로우 · Union-Find',
+        title: '⚡ Advanced Graph',
+        subtitle: 'MST · Topological Sort · Flow · Union-Find',
         problems: [
           { id: 3002, title: '네트워크 플로우', tier: 'gold' },
           { id: 3003, title: '위상 정렬', tier: 'gold' },
@@ -583,14 +583,14 @@ const ALGO_TRACKS = [
   {
     id: 'sorting',
     icon: '📊',
-    label: '정렬 · 탐색',
+    label: 'Sorting · Search',
     color: { bg: 'rgba(86,211,100,.08)', border: 'rgba(86,211,100,.3)', text: '#56d364', pill: 'rgba(86,211,100,.15)' },
-    desc: '효율적인 정렬과 탐색 알고리즘으로 코딩테스트의 기본기를 다지세요.',
+    desc: 'Build the fundamentals of coding tests with efficient sorting and searching algorithms.',
     levels: [
       {
         id: 'sort-lv1',
-        title: '🌱 기본 정렬',
-        subtitle: '정렬 응용 · 통계',
+        title: '🌱 Basic Sorting',
+        subtitle: 'Sorting Applications · Statistics',
         problems: [
           { id: 2015, title: '최빈값', tier: 'silver' },
           { id: 2019, title: '중앙값 찾기', tier: 'silver' },
@@ -601,8 +601,8 @@ const ALGO_TRACKS = [
       },
       {
         id: 'sort-lv2',
-        title: '📘 이진 탐색',
-        subtitle: '이진탐색 · 투포인터 · 슬라이딩 윈도우',
+        title: '📘 Binary Search',
+        subtitle: 'Binary Search · Two Pointers · Sliding Window',
         problems: [
           { id: 2005, title: '이진 탐색', tier: 'silver' },
           { id: 2007, title: '구간 합 질의', tier: 'silver' },
@@ -617,14 +617,14 @@ const ALGO_TRACKS = [
   {
     id: 'string',
     icon: '🔤',
-    label: '문자열',
+    label: 'Strings',
     color: { bg: 'rgba(88,166,255,.08)', border: 'rgba(88,166,255,.3)', text: '#58a6ff', pill: 'rgba(88,166,255,.15)' },
-    desc: '문자열 처리부터 KMP까지 문자열 알고리즘을 정복하세요.',
+    desc: 'Conquer string algorithms from basic processing all the way to KMP.',
     levels: [
       {
         id: 'str-lv1',
-        title: '🌱 기본 문자열',
-        subtitle: '역순 · 회문 · 대소문자 변환',
+        title: '🌱 Basic Strings',
+        subtitle: 'Reverse · Palindrome · Case Conversion',
         problems: [
           { id: 1007, title: '문자열 뒤집기', tier: 'bronze' },
           { id: 1012, title: '모음 개수', tier: 'bronze' },

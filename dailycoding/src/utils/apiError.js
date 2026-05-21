@@ -1,3 +1,3 @@
-export function getApiErrorMessage(err, fallback = '알 수 없는 오류가 발생했습니다.') {
+export function getApiErrorMessage(err, fallback = 'An unknown error occurred.') {
   return err?.response?.data?.message || err?.message || fallback;
 }

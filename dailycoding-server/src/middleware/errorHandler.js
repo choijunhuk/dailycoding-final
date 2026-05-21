@@ -7,6 +7,6 @@ export function errorResponse(res, status, code, message, extra = {}) {
   });
 }
 
-export function internalError(res, message = '서버 오류') {
+export function internalError(res, message = 'Internal server error') {
   return errorResponse(res, 500, 'INTERNAL_ERROR', message);
 }

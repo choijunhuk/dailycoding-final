@@ -47,8 +47,8 @@ function getProblemAcceptanceRate(problem) {
 function formatAcceptanceStat(problem) {
   const submitCount = getProblemCount(problem, 'submissions', 'submit_count');
   const rate = getProblemAcceptanceRate(problem);
-  const rateText = rate == null ? '데이터 없음' : `${rate.toFixed(1)}%`;
-  return `정답률 ${rateText} (${submitCount.toLocaleString()}명 제출)`;
+  const rateText = rate == null ? 'No data' : `${rate.toFixed(1)}%`;
+  return `Acceptance Rate ${rateText} (${submitCount.toLocaleString()} submissions)`;
 }
 
 
@@ -72,19 +72,19 @@ export default function JudgePage() {
   const { id } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, refreshUser } = useAuth();
   const { isDark } = useTheme();
   const { t } = useLang();
   const { tier: subscriptionTier } = useSubscriptionStatus(user?.id);
   const isFreePlan = !subscriptionTier || subscriptionTier === 'free';
   const RESULT_INFO = {
     correct: { label: t('accepted'),           color: RESULT_INFO_COLORS.correct },
-    success: { label: '실행 완료',              color: RESULT_INFO_COLORS.success },
+    success: { label: 'Run Complete',           color: RESULT_INFO_COLORS.success },
     wrong:   { label: t('wrongAnswer'),         color: RESULT_INFO_COLORS.wrong   },
     timeout: { label: t('timeLimitExceeded'),   color: RESULT_INFO_COLORS.timeout },
     error:   { label: t('runtimeError'),        color: RESULT_INFO_COLORS.error   },
     compile: { label: t('compileError'),        color: RESULT_INFO_COLORS.compile },
-    judging: { label: '채점 중...',             color: RESULT_INFO_COLORS.judging },
+    judging: { label: 'Judging...',             color: RESULT_INFO_COLORS.judging },
   };
   const { solved, submissions, addSubmission, problems: appProblems, bookmarks, toggleBookmark, loadProblems, loadSubmissions } = useApp();
   const toast = useToast();
@@ -119,14 +119,14 @@ export default function JudgePage() {
   const [diffVote,     setDiffVote]     = useState(null);
   const [myVote,       setMyVote]       = useState(0);
   const [voteSubmitted,setVoteSubmitted]= useState(false);
-  // ★ 풀이 타이머
+  // ★ Solve timer
   const timerComponentRef = useRef(null);
-  // ★ 풀이 노트
+  // ★ Solution note
   const [problemNote, setProblemNote] = useState('');
   const [showEditorial, setShowEditorial] = useState(false);
-  // ★ 코드 템플릿
+  // ★ Code template
   const [showTpl,     setShowTpl]     = useState(false);
-  // ★ 힌트
+  // ★ Hint
   const [judgeStatus,  setJudgeStatus]  = useState(null);
   const [judgeStatusError, setJudgeStatusError] = useState('');
   const [fillBlankAnswers, setFillBlankAnswers] = useState([])
@@ -158,7 +158,7 @@ export default function JudgePage() {
       setProblemNote(res.data.content || '');
     } catch (err) {
       if (err.response?.status !== 404) {
-        toast?.show('풀이 노트를 불러오지 못했습니다.', 'error');
+        toast?.show('Failed to load solution note.', 'error');
       }
     }
   };
@@ -168,9 +168,9 @@ export default function JudgePage() {
     setIsSavingNote(true);
     try {
       await api.post('/notes/' + problem.id, { content: problemNote });
-      toast?.show('🗒️ 노트가 저장되었습니다.', 'success');
+      toast?.show('🗒️ Note saved.', 'success');
     } catch (err) {
-      toast?.show('노트 저장 실패', 'error');
+      toast?.show('Failed to save note.', 'error');
     } finally {
       setIsSavingNote(false);
     }
@@ -192,11 +192,11 @@ export default function JudgePage() {
       setProblem(res.data);
     } catch (err) {
       setProblem(null);
-      setProblemError(err.response?.status === 404 ? '문제를 찾을 수 없습니다.' : '문제를 불러오지 못했습니다.');
+      setProblemError(err.response?.status === 404 ? 'Problem not found.' : 'Failed to load problem.');
     }
   };
 
-  // 문제 없거나 예제 없으면 API에서 가져옴 (직접 URL 접속 포함)
+  // Fetch from API if problem or examples are missing (includes direct URL access)
   useEffect(() => {
     const probId = problem?.id || id;
     if (probId && (!problem || !problem.examples || problem.examples.length === 0)) {
@@ -216,7 +216,7 @@ export default function JudgePage() {
   useEffect(() => {
     if (problem?.id) {
       api.get('/problems/'+problem.id+'/comments').then(r => setComments(r.data)).catch(() => {
-        toast?.show('댓글을 불러오지 못했습니다.', 'error');
+        toast?.show('Failed to load comments.', 'error');
       });
     }
   }, [problem?.id]);
@@ -269,12 +269,12 @@ export default function JudgePage() {
         setTroubleshootingConfig(null)
         setTroubleshootingFiles([])
         setActiveTroubleshootingPath('')
-        setTroubleshootingError(err.response?.data?.message || '트러블슈팅 설정을 불러오지 못했습니다.')
+        setTroubleshootingError(err.response?.data?.message || 'Failed to load troubleshooting config.')
       })
     return () => { cancelled = true }
   }, [problem?.id, isTroubleshootingProblem])
 
-  // 코드 자동저장
+  // Auto-save code
   useEffect(() => {
     if (code && problem?.id) {
       const key = getDraftStorageKey(problem.id, lang);
@@ -285,7 +285,7 @@ export default function JudgePage() {
     }
   }, [code, problem?.id, lang]);
 
-  // 문제 변경 시 타이머 리셋 + 노트 로드
+  // Reset timer + load note on problem change
   useEffect(() => {
     timerComponentRef.current?.reset(); setShowEditorial(false);
     setResult(null); setTestResults([]); setAiReview(null);
@@ -294,10 +294,10 @@ export default function JudgePage() {
     setFillBlankAnswers([])
     setBugFixAnswer('')
     setTroubleshootingResult(null)
-    // 오답노트 로드
+    // Load wrong-answer note
     const savedNote = localStorage.getItem(`dc_note_${problem?.id}`);
     if (savedNote) setWrongNote(savedNote);
-    // 풀이 노트 로드
+    // Load solution note
     if (problem?.id) loadNote(problem.id);
   }, [problem?.id]);
 
@@ -309,7 +309,7 @@ export default function JudgePage() {
     }
   }, [isSpecialProblem, problemType, specialConfig?.blanks])
 
-  // Docker 채점 가용성 체크
+  // Check judge availability
   useEffect(() => {
     api.get('/submissions/judge-status').then(r => {
       setJudgeStatus(r.data);
@@ -320,7 +320,7 @@ export default function JudgePage() {
         mode: 'unavailable',
         supportedLanguages: [],
       });
-      setJudgeStatusError(err.response?.data?.message || '채점 환경 정보를 확인하지 못했습니다.');
+      setJudgeStatusError(err.response?.data?.message || 'Failed to check judge environment.');
     });
   }, []);
 
@@ -328,7 +328,7 @@ export default function JudgePage() {
     if (availableLangOptions.length > 0 && !availableLangOptions.some(o => o.value === lang)) {
       const fallback = availableLangOptions[0]?.value || 'python';
       setLang(fallback);
-      toast?.show(`선택한 언어를 지원하지 않아 ${fallback}으로 변경되었습니다.`, 'warning');
+      toast?.show(`Selected language not supported. Switched to ${fallback}.`, 'warning');
     }
   }, [availableLangOptions, lang]);
 
@@ -339,20 +339,20 @@ export default function JudgePage() {
   const saveWrongNote = () => {
     if (wrongNote.trim()) {
       localStorage.setItem(`dc_note_${problem.id}`, wrongNote);
-      toast?.show('📝 오답노트가 저장됐습니다.', 'success');
+      toast?.show('📝 Wrong answer note saved.', 'success');
     }
   };
 
   const saveSnippet = () => {
     if (!problem?.id || !lang) return
     localStorage.setItem(getSnippetStorageKey(problem.id, lang), code || '')
-    toast?.show('📌 스니펫이 저장되었습니다.', 'success')
+    toast?.show('📌 Snippet saved.', 'success')
   }
 
   const clearSnippet = () => {
     if (!problem?.id || !lang) return
     localStorage.removeItem(getSnippetStorageKey(problem.id, lang))
-    toast?.show('🗑 저장된 스니펫을 삭제했습니다.', 'info')
+    toast?.show('🗑 Saved snippet deleted.', 'info')
   }
 
   const getReview = async () => {
@@ -366,10 +366,10 @@ export default function JudgePage() {
       setBottomTab('review');
     } catch (err) {
       if (err.response?.data?.code === 'QUOTA_EXCEEDED') {
-        setAiQuotaNotice('오늘 AI 사용 가능 횟수를 모두 소진했습니다.');
+        setAiQuotaNotice("You've used all AI calls for today.");
         setBottomTab('review');
       } else {
-        toast?.show('AI 리뷰를 불러올 수 없습니다.', 'error');
+        toast?.show('Failed to load AI review.', 'error');
       }
     }
     setReviewLoading(false);
@@ -383,9 +383,9 @@ export default function JudgePage() {
       setWalkthrough(data.walkthrough || '');
     } catch (err) {
       if (err.response?.data?.requiresPro) {
-        toast?.show('문제를 먼저 풀거나 Pro 구독이 필요합니다.', 'warning');
+        toast?.show('Solve the problem first or upgrade to Pro.', 'warning');
       } else {
-        toast?.show(err.response?.data?.message || '풀이 해설을 불러오지 못했습니다.', 'error');
+        toast?.show(err.response?.data?.message || 'Failed to load solution walkthrough.', 'error');
       }
     } finally {
       setWalkthroughLoading(false);
@@ -404,7 +404,7 @@ export default function JudgePage() {
       setCommentText('');
       setReplyTo(null);
     } catch (err) {
-      toast?.show(err.response?.data?.message || '댓글 작성에 실패했습니다.', 'error');
+      toast?.show(err.response?.data?.message || 'Failed to post comment.', 'error');
     }
     setCommentLoading(false);
   };
@@ -414,7 +414,7 @@ export default function JudgePage() {
       await api.delete('/problems/' + problem.id + '/comments/' + cid);
       setComments(p => p.filter(c => c.id !== cid && c.parentId !== cid));
     } catch (err) {
-      toast?.show(err.response?.data?.message || '댓글 삭제에 실패했습니다.', 'error');
+      toast?.show(err.response?.data?.message || 'Failed to delete comment.', 'error');
     }
   };
 
@@ -427,7 +427,7 @@ export default function JudgePage() {
         likeCount: data.likeCount,
       } : comment));
     } catch (err) {
-      toast?.show(err.response?.data?.message || '좋아요 처리에 실패했습니다.', 'error');
+      toast?.show(err.response?.data?.message || 'Failed to process like.', 'error');
     }
   };
 
@@ -445,9 +445,9 @@ export default function JudgePage() {
       setDiffVote(res.data);
       setMyVote(res.data?.myVote || vote);
       setVoteSubmitted(true);
-      toast?.show('체감 난이도 투표가 저장됐습니다.', 'success');
+      toast?.show('Difficulty vote saved.', 'success');
     } catch (err) {
-      toast?.show(err.response?.data?.message || '난이도 투표에 실패했습니다.', 'error');
+      toast?.show(err.response?.data?.message || 'Failed to submit difficulty vote.', 'error');
     }
   };
 
@@ -482,16 +482,16 @@ export default function JudgePage() {
     if (!problem?.id) return
     try {
       const data = await toggleBookmark(problem.id)
-      toast?.show(data?.bookmarked ? '북마크에 추가했습니다.' : '북마크를 해제했습니다.', 'info')
+      toast?.show(data?.bookmarked ? 'Bookmarked.' : 'Bookmark removed.', 'info')
     } catch (err) {
-      toast?.show(err?.response?.data?.message || '북마크 처리에 실패했습니다.', 'error')
+      toast?.show(err?.response?.data?.message || 'Failed to update bookmark.', 'error')
     }
   }
 
   const handleShareSubmission = async () => {
     const latestSubmission = [...mySubmissions].find((item) => item.result === 'correct') || mySubmissions[0]
     if (!latestSubmission?.id) {
-      toast?.show('공유할 제출 기록이 없습니다. 먼저 제출을 완료해주세요.', 'info')
+      toast?.show('No submission to share. Please submit first.', 'info')
       return
     }
 
@@ -499,14 +499,14 @@ export default function JudgePage() {
       const { data } = await api.post(`/submissions/${latestSubmission.id}/share`)
       const shareUrl = `${window.location.origin}/share/${data.slug}`
       if (navigator.share && window.matchMedia?.('(max-width: 768px)')?.matches) {
-        await navigator.share({ title: `${problem.title} 제출 공유`, text: `${problem.title} 제출 결과`, url: shareUrl })
+        await navigator.share({ title: `${problem.title} Submission Share`, text: `${problem.title} Submission Result`, url: shareUrl })
       } else {
         await copyText(shareUrl)
       }
-      toast?.show('공유 링크를 준비했습니다.', 'success')
+      toast?.show('Share link copied.', 'success')
     } catch (err) {
       if (err?.name === 'AbortError') return
-      toast?.show(err?.response?.data?.message || '공유 링크 생성에 실패했습니다.', 'error')
+      toast?.show(err?.response?.data?.message || 'Failed to create share link.', 'error')
     }
   }
 
@@ -517,7 +517,7 @@ export default function JudgePage() {
       localStorage.setItem(getLegacyDraftStorageKey(problem.id, submitLang), code)
     }
     setLang(submitLang)
-    toast?.show(`코드 패턴을 보고 ${getJudgeLanguageOption(submitLang)?.label || submitLang}로 ${actionLabel}합니다.`, 'info')
+    toast?.show(`Detected code pattern. Switching to ${getJudgeLanguageOption(submitLang)?.label || submitLang} for ${actionLabel}.`, 'info')
   }
 
   const updateTroubleshootingFile = (path, content) => {
@@ -529,7 +529,7 @@ export default function JudgePage() {
     setTroubleshootingFiles(files)
     setActiveTroubleshootingPath(files[0]?.path || '')
     setTroubleshootingResult(null)
-    toast?.show('트러블슈팅 파일을 초기 상태로 되돌렸습니다.', 'info')
+    toast?.show('Troubleshooting files reset to initial state.', 'info')
   }
 
   const runTroubleshooting = async ({ submit = false } = {}) => {
@@ -558,16 +558,16 @@ export default function JudgePage() {
         readabilityScore: data.readabilityScore,
       })
       if (submit) {
-        await Promise.allSettled([loadSubmissions?.(), loadProblems?.()])
+        await Promise.allSettled([loadSubmissions?.(), loadProblems?.(), refreshUser?.()])
       }
       if (data.result === 'correct') {
         if (submit) confetti({ particleCount: 120, spread: 80, origin: { y: 0.7 } })
-        toast?.show(submit ? '트러블슈팅 제출 성공' : 'visible test 통과', 'success')
+        toast?.show(submit ? 'Troubleshooting submitted successfully.' : 'Visible test passed.', 'success')
       } else {
-        toast?.show(submit ? '트러블슈팅 조건을 아직 만족하지 못했습니다.' : 'visible test 실패', 'warning')
+        toast?.show(submit ? 'Troubleshooting conditions not yet satisfied.' : 'Visible test failed.', 'warning')
       }
     } catch (err) {
-      const msg = err.response?.data?.message || (submit ? '트러블슈팅 제출 실패' : '트러블슈팅 실행 실패')
+      const msg = err.response?.data?.message || (submit ? 'Troubleshooting submission failed.' : 'Troubleshooting run failed.')
       setResult({ status: 'error', detail: msg })
       toast?.show(msg, 'error')
     } finally {
@@ -581,23 +581,23 @@ export default function JudgePage() {
       return
     }
     if (isSpecialProblem) {
-      toast?.show('특수 문제 유형은 실행 기능을 지원하지 않습니다. 바로 제출해 주세요.', 'info')
+      toast?.show('Run is not supported for this problem type. Please submit directly.', 'info')
       return
     }
     if (!problem?.id) return;
     if (availableLangOptions.length === 0) {
-      toast?.show('현재 실행 가능한 언어가 없습니다.', 'error');
+      toast?.show('No executable language available.', 'error');
       return;
     }
     if (!code.trim()) {
-      toast?.show('코드를 입력해주세요.', 'warning');
+      toast?.show('Please enter your code.', 'warning');
       return;
     }
 
     const runMode = input === undefined ? 'examples' : 'custom';
     const codeLength = new TextEncoder().encode(code).length;
     const submitLang = getEffectiveJudgeLanguage(code, lang, judgeStatus?.supportedLanguages);
-    applyDetectedLanguage(submitLang, '실행');
+    applyDetectedLanguage(submitLang, 'run');
 
     setIsJudging(true);
     setTestResults([]);
@@ -633,16 +633,16 @@ export default function JudgePage() {
       setResult(runResult);
 
       if (runResult.status === 'correct' || runResult.status === 'success') {
-        toast?.show(runMode === 'custom' ? '▶ 커스텀 실행 완료' : '▶ 예제 실행 완료', 'success');
+        toast?.show(runMode === 'custom' ? '▶ Custom run complete.' : '▶ Example run complete.', 'success');
       } else if (runResult.status === 'wrong') {
-        toast?.show('❌ 예제 실행 결과가 정답과 다릅니다.', 'error');
+        toast?.show('❌ Output does not match expected answer.', 'error');
       } else if (runResult.status === 'timeout') {
-        toast?.show('⏱ 실행 시간이 초과되었습니다.', 'warning');
+        toast?.show('⏱ Time limit exceeded.', 'warning');
       } else {
-        toast?.show('⚡ 실행 중 오류가 발생했습니다.', 'warning');
+        toast?.show('⚡ An error occurred during execution.', 'warning');
       }
     } catch (err) {
-      const msg = err.response?.data?.message || '실행 요청 실패';
+      const msg = err.response?.data?.message || 'Run request failed.';
       setResult({
         status: 'error',
         mode: runMode,
@@ -658,14 +658,14 @@ export default function JudgePage() {
 
   const showCorrectToast = (solveTimeSec) => {
     if (ghostChallenge?.ghost?.targetTimeSec && solveTimeSec && solveTimeSec <= ghostChallenge.ghost.targetTimeSec) {
-      toast?.show('👻 고스트 기록을 이겼습니다!', 'success');
+      toast?.show('👻 You beat the ghost record!', 'success');
       return;
     }
     if (dungeonRoom?.damage) {
-      toast?.show(`🐉 보스에게 ${dungeonRoom.damage} 피해를 입혔습니다!`, 'success');
+      toast?.show(`🐉 Dealt ${dungeonRoom.damage} damage to the boss!`, 'success');
       return;
     }
-    toast?.show('🎉 정답입니다!', 'success');
+    toast?.show('🎉 Correct!', 'success');
   };
 
   const submitCode = async () => {
@@ -693,9 +693,9 @@ export default function JudgePage() {
           confetti({ particleCount: 120, spread: 80, origin: { y: 0.7 } });
           showCorrectToast(solveTimeSec);
         }
-        else toast?.show('❌ 틀렸습니다', 'error');
+        else toast?.show('❌ Wrong answer.', 'error');
       } catch (err) {
-        const msg = err.response?.data?.message || '제출 요청 실패';
+        const msg = err.response?.data?.message || 'Submission request failed.';
         setResult({ status: 'error', detail: msg });
         setLeftTab('submissions');
         toast?.show(msg, 'error');
@@ -705,12 +705,12 @@ export default function JudgePage() {
     }
 
     if (availableLangOptions.length === 0) {
-      toast?.show('현재 제출 가능한 언어가 없습니다.', 'error');
+      toast?.show('No submittable language available.', 'error');
       return;
     }
     const solveTimeSec = timerComponentRef.current?.getSec?.() || null
     const submitLang = getEffectiveJudgeLanguage(code, lang, judgeStatus?.supportedLanguages);
-    applyDetectedLanguage(submitLang, '제출');
+    applyDetectedLanguage(submitLang, 'submit');
     setIsJudging(true); setTestResults([]); setResult({ status: 'judging' });
     try {
       const sub = await addSubmission({
@@ -723,11 +723,11 @@ export default function JudgePage() {
         confetti({ particleCount: 120, spread: 80, origin: { y: 0.7 } });
         showCorrectToast(solveTimeSec);
       }
-      else if (sub.result === 'wrong') toast?.show('❌ 틀렸습니다', 'error');
-      else if (sub.result === 'timeout') toast?.show('⏱ 시간 초과', 'warning');
-      else toast?.show('⚡ 에러 발생', 'warning');
+      else if (sub.result === 'wrong') toast?.show('❌ Wrong Answer.', 'error');
+      else if (sub.result === 'timeout') toast?.show('⏱ Time Limit Exceeded.', 'warning');
+      else toast?.show('⚡ Error occurred.', 'warning');
     } catch (err) {
-      const msg = err.response?.data?.message || '채점 요청 실패';
+      const msg = err.response?.data?.message || 'Judge request failed.';
       setResult({ status: 'error', detail: msg });
       setLeftTab('submissions');
       toast?.show(msg, 'error');
@@ -800,7 +800,7 @@ export default function JudgePage() {
               maxWidth:520,
             }}>
               <div style={{ fontSize: 30, marginBottom: 10 }}>⚠️</div>
-              <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 8 }}>문제를 열 수 없습니다</div>
+              <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 8 }}>Cannot open problem</div>
               <div style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.7, marginBottom: 16 }}>
                 {problemError}
               </div>
@@ -809,7 +809,7 @@ export default function JudgePage() {
                   {t('tryAgain')}
                 </button>
                 <button className="btn btn-ghost btn-sm" onClick={() => navigate('/problems')}>
-                  문제 목록으로
+                  Problem List
                 </button>
               </div>
             </div>
@@ -817,7 +817,7 @@ export default function JudgePage() {
         </div>
         <div className="judge-right">
           <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', color:'var(--text3)', background:'var(--bg)' }}>
-            문제 데이터를 불러오지 못했습니다.
+            Failed to load problem data.
           </div>
         </div>
       </div>
@@ -838,14 +838,14 @@ export default function JudgePage() {
             }}
               onMouseEnter={e=>e.currentTarget.style.background='var(--bg3)'}
               onMouseLeave={e=>e.currentTarget.style.background='none'}
-            >← 문제</button>
+            >← Problem</button>
             <span style={{width:1,height:16,background:'var(--border)'}}/>
             <span style={{fontSize:13,fontWeight:700,color:'var(--text)'}}>
-              {leftTab==='solutions'?'💡 풀이':leftTab==='discuss'?'💬 토론':leftTab==='editorial'?'📘 Editorial':'📝 제출'}
+              {leftTab==='solutions'?'💡 Solutions':leftTab==='discuss'?'💬 Discussion':leftTab==='editorial'?'📘 Editorial':'📝 Submissions'}
             </span>
             <div style={{flex:1}}/>
             <span style={{fontSize:12,color:solved[problem.id]?'var(--green)':'var(--text3)'}}>
-              {solved[problem.id]?'✅ 해결':'⬜ 미해결'}
+              {solved[problem.id]?'✅ Solved':'⬜ Unsolved'}
             </span>
           </div>
         )}
@@ -891,7 +891,7 @@ export default function JudgePage() {
 
           {leftTab === 'problem' && similarProblems.length > 0 && (
             <div className="prob-content fade-in" style={{ borderTop:'1px solid var(--border)', marginTop:0, paddingTop:16 }}>
-              <div style={{ fontSize:12, fontWeight:700, color:'var(--text2)', marginBottom:10 }}>🔗 관련 문제</div>
+              <div style={{ fontSize:12, fontWeight:700, color:'var(--text2)', marginBottom:10 }}>🔗 Related Problems</div>
               <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
                 {similarProblems.slice(0,4).map(p => {
                   const t = TIERS[p.tier] || {}
@@ -926,11 +926,11 @@ export default function JudgePage() {
             <div className="prob-content fade-in">
               <h4>📘 Editorial</h4>
               {!editorial ? (
-                <p style={{ color:'var(--text3)', fontSize:13 }}>아직 공개된 해설이 없습니다.</p>
+                <p style={{ color:'var(--text3)', fontSize:13 }}>No editorial available yet.</p>
               ) : (
                 <div style={{ background:'var(--bg3)', border:'1px solid var(--border)', borderRadius:10, padding:'16px 18px' }}>
                   <div style={{ fontSize:11, color:'var(--text3)', marginBottom:10 }}>
-                    작성자 {editorial.author_username || editorial.author_id} · {editorial.updated_at ? new Date(editorial.updated_at).toLocaleString('ko-KR') : ''}
+                    Author: {editorial.author_username || editorial.author_id} · {editorial.updated_at ? new Date(editorial.updated_at).toLocaleString('ko-KR') : ''}
                   </div>
                   <div style={{ whiteSpace:'pre-line', lineHeight:1.7, color:'var(--text)' }}>{editorial.content}</div>
                 </div>
@@ -938,24 +938,24 @@ export default function JudgePage() {
             </div>
           )}
 
-          {/* ── 풀이 공유 탭 ── */}
+          {/* ── Solutions tab ── */}
           {leftTab === 'solutions' && (
             <div className="prob-content fade-in">
-              <h4>💡 다른 사람의 풀이</h4>
-              <p style={{fontSize:12,color:'var(--text3)',marginBottom:12}}>문제를 먼저 풀어야 다른 풀이를 볼 수 있습니다.</p>
+              <h4>💡 Other Solutions</h4>
+              <p style={{fontSize:12,color:'var(--text3)',marginBottom:12}}>Solve this problem first to view other solutions.</p>
               {!solutions || solutions === 'locked' ? (
                 solutions === 'locked' ? (
                   <div style={{padding:'24px',textAlign:'center',background:'var(--bg3)',borderRadius:10,border:'1px solid var(--border)'}}>
                     <div style={{fontSize:32,marginBottom:8}}>🔒</div>
-                    <p style={{fontSize:13,color:'var(--text2)'}}>이 문제를 먼저 풀어야<br/>다른 풀이를 볼 수 있어요!</p>
+                    <p style={{fontSize:13,color:'var(--text2)'}}>Solve this problem first<br/>to view other solutions!</p>
                   </div>
                 ) : (
                   <button className="btn btn-primary btn-sm" onClick={loadSolutions} disabled={solLoading}>
-                    {solLoading ? <><span className="spinner"/> 로딩 중...</> : '풀이 보기'}
+                    {solLoading ? <><span className="spinner"/> Loading...</> : 'View Solutions'}
                   </button>
                 )
               ) : solutions.length === 0 ? (
-                <p style={{color:'var(--text3)',fontSize:13}}>아직 풀이가 없어요.</p>
+                <p style={{color:'var(--text3)',fontSize:13}}>No solutions yet.</p>
               ) : (
                 <div style={{display:'flex',flexDirection:'column',gap:12}}>
                   {solutions.map((s,i) => (
@@ -978,30 +978,30 @@ export default function JudgePage() {
             </div>
           )}
 
-          {/* ── 토론 탭 ── */}
+          {/* ── Discussion tab ── */}
           {leftTab === 'discuss' && (
             <div className="prob-content fade-in">
-              <h4>💬 토론 ({comments.length})</h4>
+              <h4>💬 Discussion ({comments.length})</h4>
               <div style={{marginTop:12}}>
                 {!user?.emailVerified && (
                   <div style={{marginBottom:10,padding:'10px 12px',borderRadius:8,background:'var(--bg3)',border:'1px solid var(--border)',fontSize:12,color:'var(--text2)'}}>
-                    이메일 인증 후 댓글을 작성할 수 있습니다.
+                    Please verify your email to post comments.
                   </div>
                 )}
                 {replyTo && (
                   <div style={{marginBottom:8,fontSize:12,color:'var(--text2)'}}>
-                    <strong>{replyTo.username}</strong>님에게 답글 작성 중
-                    <button onClick={() => setReplyTo(null)} style={{marginLeft:8,background:'none',border:'none',color:'var(--blue)',cursor:'pointer',fontSize:12}}>취소</button>
+                    Replying to <strong>{replyTo.username}</strong>
+                    <button onClick={() => setReplyTo(null)} style={{marginLeft:8,background:'none',border:'none',color:'var(--blue)',cursor:'pointer',fontSize:12}}>Cancel</button>
                   </div>
                 )}
                 <textarea rows={3} value={commentText} onChange={e=>setCommentText(e.target.value)}
-                  placeholder="질문이나 풀이 방법을 공유해보세요..." style={{resize:'vertical',marginBottom:8}} disabled={!user?.emailVerified} />
+                  placeholder="Share your question or approach..." style={{resize:'vertical',marginBottom:8}} disabled={!user?.emailVerified} />
                 <button className="btn btn-primary btn-sm" onClick={postComment} disabled={commentLoading||!commentText.trim()||!user?.emailVerified}>
-                  {commentLoading?<span className="spinner"/>:'댓글 작성'}
+                  {commentLoading?<span className="spinner"/>:'Post Comment'}
                 </button>
               </div>
               <div style={{marginTop:16,display:'flex',flexDirection:'column',gap:10}}>
-                {comments.length===0&&<p style={{color:'var(--text3)',fontSize:13}}>아직 댓글이 없어요.</p>}
+                {comments.length===0&&<p style={{color:'var(--text3)',fontSize:13}}>No comments yet.</p>}
                 {(commentsByParent.get(0) || []).map(comment => (
                   <div key={comment.id} style={{background:'var(--bg3)',borderRadius:8,padding:'12px 14px',border:'1px solid var(--border)'}}>
                     <div style={{display:'flex',justifyContent:'space-between',marginBottom:6,gap:10}}>
@@ -1020,10 +1020,10 @@ export default function JudgePage() {
                     <p style={{fontSize:13,color:'var(--text2)',lineHeight:1.6,whiteSpace:'pre-wrap'}}>{comment.content || comment.text}</p>
                     <div style={{display:'flex',gap:12,marginTop:8}}>
                       <button onClick={() => toggleCommentLike(comment.id)} style={{background:'none',border:'none',padding:0,color:comment.isLiked ? 'var(--yellow)' : 'var(--text3)',cursor:'pointer',fontSize:12}}>
-                        {comment.isLiked ? '★' : '☆'} 좋아요 {comment.likeCount || 0}
+                        {comment.isLiked ? '★' : '☆'} Like {comment.likeCount || 0}
                       </button>
                       <button onClick={() => { setReplyTo(comment); setCommentText(`@${comment.username} `); }} style={{background:'none',border:'none',padding:0,color:'var(--blue)',cursor:'pointer',fontSize:12}}>
-                        답글
+                        Reply
                       </button>
                     </div>
 
@@ -1045,10 +1045,10 @@ export default function JudgePage() {
                         <p style={{fontSize:13,color:'var(--text2)',lineHeight:1.6,whiteSpace:'pre-wrap'}}>{reply.content || reply.text}</p>
                         <div style={{display:'flex',gap:12,marginTop:8}}>
                           <button onClick={() => toggleCommentLike(reply.id)} style={{background:'none',border:'none',padding:0,color:reply.isLiked ? 'var(--yellow)' : 'var(--text3)',cursor:'pointer',fontSize:12}}>
-                            {reply.isLiked ? '★' : '☆'} 좋아요 {reply.likeCount || 0}
+                            {reply.isLiked ? '★' : '☆'} Like {reply.likeCount || 0}
                           </button>
                           <button onClick={() => { setReplyTo(comment); setCommentText(`@${reply.username} `); }} style={{background:'none',border:'none',padding:0,color:'var(--blue)',cursor:'pointer',fontSize:12}}>
-                            답글
+                            Reply
                           </button>
                         </div>
                       </div>
@@ -1059,20 +1059,20 @@ export default function JudgePage() {
             </div>
           )}
 
-          {/* ── 개인 노트 탭 ── */}
+          {/* ── Personal notes tab ── */}
           {leftTab === 'notes' && (
             <div className="prob-content fade-in">
               <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
-                <h4 style={{margin:0}}>🗒️ 나만의 풀이 노트</h4>
+                <h4 style={{margin:0}}>🗒️ My Solution Notes</h4>
                 <button className="btn btn-primary btn-sm" onClick={saveNote} disabled={isSavingNote}>
-                  {isSavingNote ? <span className="spinner"/> : '저장하기'}
+                  {isSavingNote ? <span className="spinner"/> : 'Save'}
                 </button>
               </div>
-              <p style={{fontSize:12,color:'var(--text3)',marginBottom:12}}>이 노트는 오직 본인에게만 보입니다. 문제 접근 방식이나 배운 점을 기록해보세요.</p>
-              <textarea 
-                value={problemNote} 
+              <p style={{fontSize:12,color:'var(--text3)',marginBottom:12}}>This note is only visible to you. Write down your approach or key takeaways.</p>
+              <textarea
+                value={problemNote}
                 onChange={e=>setProblemNote(e.target.value)}
-                placeholder="여기에 자유롭게 메모하세요..."
+                placeholder="Jot down anything here..."
                 style={{
                   width:'100%', minHeight:'400px', padding:'16px', borderRadius:10,
                   background:'var(--bg3)', border:'1px solid var(--border)',
@@ -1103,7 +1103,7 @@ export default function JudgePage() {
                   borderRadius:10, display:'flex', alignItems:'center', gap:12, flexWrap:'wrap',
                 }}>
                   <div style={{ flex:1, minWidth:120 }}>
-                    <div style={{ fontSize:12, fontWeight:700, color:'var(--green)', marginBottom:2 }}>🎉 정답! 다음 문제</div>
+                    <div style={{ fontSize:12, fontWeight:700, color:'var(--green)', marginBottom:2 }}>🎉 Correct! Next Problem</div>
                     <div style={{ fontSize:12, color:'var(--text2)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                       {similarProblems[0].title}
                     </div>
@@ -1112,15 +1112,15 @@ export default function JudgePage() {
                     className="btn btn-success btn-sm"
                     onClick={() => navigate(`/problems/${similarProblems[0].id}`)}
                   >
-                    바로 풀기 →
+                    Solve Now →
                   </button>
                 </div>
               )}
 
-              {/* 제출 기록 */}
-              <h4>내 제출 기록</h4>
+              {/* Submission history */}
+              <h4>My Submissions</h4>
               {mySubmissions.length === 0
-                ? <p style={{ color:'var(--text3)', marginTop:12, fontSize:13 }}>아직 제출한 기록이 없어요.</p>
+                ? <p style={{ color:'var(--text3)', marginTop:12, fontSize:13 }}>No submissions yet.</p>
                 : mySubmissions.map(s => (
                   <div key={s.id} className="sub-row-item">
                     <span className="sri-result" style={{ color: RESULT_INFO[s.result]?.color }}>{RESULT_INFO[s.result]?.label}</span>
@@ -1187,12 +1187,12 @@ export default function JudgePage() {
         {isTroubleshootingProblem && (
           <div className="result-panel troubleshooting-result-panel">
             <div className="result-tabs">
-              <button className="rtab active">실행 결과</button>
+              <button className="rtab active">Run Result</button>
             </div>
             <div className="result-body">
               {!troubleshootingResult ? (
                 <div style={{ color:'var(--text3)', fontSize:12 }}>
-                  Visible 테스트 실행 또는 제출 후 점수와 피드백이 표시됩니다.
+                  Scores and feedback will appear after running a visible test or submitting.
                 </div>
               ) : (
                 <div className="troubleshooting-result-grid">
@@ -1200,11 +1200,11 @@ export default function JudgePage() {
                     <strong style={{ color: RESULT_INFO[troubleshootingResult.result]?.color || 'var(--text)' }}>
                       {RESULT_INFO[troubleshootingResult.result]?.label || troubleshootingResult.result}
                     </strong>
-                    <span>총점 {troubleshootingResult.totalScore ?? 0}/100</span>
+                    <span>Total Score {troubleshootingResult.totalScore ?? 0}/100</span>
                     <span>{troubleshootingResult.testPassCount ?? 0}/{troubleshootingResult.totalTestCount ?? 0} tests</span>
                     <span>{troubleshootingResult.executionTimeMs ?? '-'}ms</span>
                   </div>
-                  <pre className="troubleshooting-feedback">{troubleshootingResult.feedback || '피드백 없음'}</pre>
+                  <pre className="troubleshooting-feedback">{troubleshootingResult.feedback || 'No feedback'}</pre>
                   {Array.isArray(troubleshootingResult.tests) && troubleshootingResult.tests.length > 0 && (
                     <div className="troubleshooting-test-list">
                       {troubleshootingResult.tests.map((test, index) => (
@@ -1223,15 +1223,15 @@ export default function JudgePage() {
 
         {!isSpecialProblem && !isTroubleshootingProblem && <div className={`result-panel ${bottomTab === 'review' ? 'expanded' : ''}`}>
           <div className="result-tabs">
-            <button className={`rtab ${bottomTab === 'custom' ? 'active' : ''}`} onClick={() => setBottomTab('custom')}>커스텀 입력</button>
-            <button className={`rtab ${bottomTab === 'review' ? 'active' : ''}`} onClick={() => setBottomTab('review')}>🔍 AI 코드 리뷰</button>
+            <button className={`rtab ${bottomTab === 'custom' ? 'active' : ''}`} onClick={() => setBottomTab('custom')}>Custom Input</button>
+            <button className={`rtab ${bottomTab === 'review' ? 'active' : ''}`} onClick={() => setBottomTab('review')}>🔍 AI Code Review</button>
           </div>
 
           {bottomTab === 'custom' && (
             <div className="custom-body">
-              <textarea className="custom-input mono" placeholder="직접 입력값을 넣어보세요..." value={customInput} onChange={e => setCustomInput(e.target.value)} />
+              <textarea className="custom-input mono" placeholder="Enter custom input here..." value={customInput} onChange={e => setCustomInput(e.target.value)} />
               <button className="btn btn-ghost btn-sm" style={{ marginTop: 8, alignSelf: 'flex-start' }}
-                onClick={() => runCode({ input: customInput })}>▶ 실행</button>
+                onClick={() => runCode({ input: customInput })}>▶ Run</button>
             </div>
           )}
 
@@ -1249,9 +1249,9 @@ export default function JudgePage() {
                 }}>
                   {aiQuotaNotice}{' '}
                   <Link to="/pricing" style={{ color:'var(--blue)', fontWeight:700, textDecoration:'none' }}>
-                    Pro로 업그레이드
+                    Upgrade to Pro
                   </Link>
-                  하면 무제한 사용 가능합니다.
+                  {' '}for unlimited access.
                 </div>
               )}
               {!aiReview ? (
@@ -1264,15 +1264,15 @@ export default function JudgePage() {
                   </div>
                   <div style={{ textAlign:'center' }}>
                     <div style={{ fontSize:14, fontWeight:700, color:'var(--text)', marginBottom:4 }}>
-                      {reviewLoading ? 'AI가 코드를 분석 중입니다...' : 'AI 코드 리뷰 준비 완료'}
+                      {reviewLoading ? 'AI is analyzing your code...' : 'AI Code Review Ready'}
                     </div>
                     <div style={{ fontSize:12, color:'var(--text3)', maxWidth: 280, lineHeight: 1.5 }}>
-                      정확성, 효율성 및 잠재적 개선 사항에 대한 즉각적인 피드백을 받아보세요.
+                      Get instant feedback on correctness, efficiency, and potential improvements.
                     </div>
                   </div>
                   {!reviewLoading && (
                     <button className="btn btn-primary btn-sm" onClick={getReview} disabled={!code.trim()}>
-                      내 코드 분석하기
+                      Analyze My Code
                     </button>
                   )}
                 </div>
@@ -1302,10 +1302,10 @@ export default function JudgePage() {
 
                     <div className="summary-text">
                       <div className="summary-title">{aiReview.summary}</div>
-                      <div className="summary-subtitle">AI 성능 점수</div>
+                      <div className="summary-subtitle">AI Performance Score</div>
                     </div>
 
-                    <button className="btn btn-ghost btn-sm re-analyze-btn" onClick={getReview} disabled={reviewLoading} title="다시 분석하기">
+                    <button className="btn btn-ghost btn-sm re-analyze-btn" onClick={getReview} disabled={reviewLoading} title="Re-analyze">
                       {reviewLoading ? <span className="spinner" /> : '↻'}
                     </button>
                   </div>
@@ -1313,9 +1313,9 @@ export default function JudgePage() {
                   {/* Analysis Cards */}
                   <div className="analysis-grid">
                     {[
-                      { label: '정확성', val: aiReview.correctness, color: 'var(--blue)', bg: 'rgba(56,139,253,0.1)', border: 'rgba(56,139,253,0.15)', icon: '✓' },
-                      { label: '시간 복잡도', val: aiReview.timeComplexity, color: 'var(--purple)', bg: 'rgba(163,113,247,0.1)', border: 'rgba(163,113,247,0.15)', icon: '⏱' },
-                      { label: '공간 복잡도', val: aiReview.spaceComplexity, color: 'var(--orange)', bg: 'rgba(255,166,87,0.1)', border: 'rgba(255,166,87,0.15)', icon: '💾' },
+                      { label: 'Correctness', val: aiReview.correctness, color: 'var(--blue)', bg: 'rgba(56,139,253,0.1)', border: 'rgba(56,139,253,0.15)', icon: '✓' },
+                      { label: 'Time Complexity', val: aiReview.timeComplexity, color: 'var(--purple)', bg: 'rgba(163,113,247,0.1)', border: 'rgba(163,113,247,0.15)', icon: '⏱' },
+                      { label: 'Space Complexity', val: aiReview.spaceComplexity, color: 'var(--orange)', bg: 'rgba(255,166,87,0.1)', border: 'rgba(255,166,87,0.15)', icon: '💾' },
                     ].map(c => (
                       <div key={c.label} className="ai-review-card" style={{
                         background: c.bg, border: `1px solid ${c.border}`
@@ -1330,7 +1330,7 @@ export default function JudgePage() {
                   {(aiReview.improvements || []).length > 0 && (
                     <div className="improvements-card">
                       <div className="card-header">
-                        <span>🚀</span> 주요 개선 사항
+                        <span>🚀</span> Key Improvements
                       </div>
                       <div className="improvements-list">
                         {aiReview.improvements.map((imp, i) => (
@@ -1349,13 +1349,13 @@ export default function JudgePage() {
                       <div className="card-header">
                         <div className="header-left">
                           <span className="icon">💡</span>
-                          <span className="title">AI 최적화 코드</span>
+                          <span className="title">AI Optimized Code</span>
                         </div>
                         <button className="btn btn-primary btn-sm apply-btn" onClick={() => {
                           setCode(aiReview.betterCode);
-                          toast?.show('💡 최적화된 코드가 적용되었습니다.', 'success');
+                          toast?.show('💡 Optimized code applied.', 'success');
                         }}>
-                          변경 사항 적용
+                          Apply Changes
                         </button>
                       </div>
                       <div className="code-container">

@@ -94,7 +94,7 @@ export function rateLimit(max = 30, windowSec = 60) {
       res.setHeader('Retry-After', String(retryAfter));
       res.setHeader('Cache-Control', 'no-store');
       return res.status(429).json({
-        message: `요청이 너무 많습니다. ${retryAfter}초 후 다시 시도해주세요.`,
+        message: `Too many requests. Please try again in ${retryAfter} seconds.`,
         retryAfter,
       });
     }

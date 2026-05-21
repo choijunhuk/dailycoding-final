@@ -34,7 +34,7 @@ test('getStripeConfigError requires webhook secret only for webhook mode', () =>
       STRIPE_TEAM_MONTHLY_ID: 'team',
       FRONTEND_URL: 'http://localhost:5173',
     },
-  }), 'Stripe 웹훅 시크릿이 설정되지 않았습니다.');
+  }), 'Stripe webhook secret is not configured.');
 });
 
 test('buildCheckoutLink appends user context for payment link fallback', () => {

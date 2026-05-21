@@ -19,7 +19,7 @@ router.patch('/all/read', auth, async (req, res) => {
   try {
     await Notification.markAllRead(req.user.id);
     res.json({ message: 'ok' });
-  } catch { res.status(500).json({ message: '서버 오류' }); }
+  } catch { res.status(500).json({ message: 'Server error' }); }
 });
 
 router.patch('/:id/read', auth, async (req, res) => {
@@ -27,14 +27,14 @@ router.patch('/:id/read', auth, async (req, res) => {
     // Pass user ID to prevent marking another user's notification (IDOR)
     await Notification.markRead(Number(req.params.id), req.user.id);
     res.json({ message: 'ok' });
-  } catch { res.status(500).json({ message: '서버 오류' }); }
+  } catch { res.status(500).json({ message: 'Server error' }); }
 });
 
 router.delete('/all', auth, async (req, res) => {
   try {
     await Notification.deleteAll(req.user.id);
     res.json({ message: 'ok' });
-  } catch { res.status(500).json({ message: '서버 오류' }); }
+  } catch { res.status(500).json({ message: 'Server error' }); }
 });
 
 export default router;

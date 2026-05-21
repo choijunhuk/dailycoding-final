@@ -42,7 +42,7 @@ router.get('/', auth, async (req, res) => {
     });
   } catch (err) {
     console.error('[badges/]', err.message);
-    res.status(500).json({ message: '서버 오류' });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -67,7 +67,7 @@ router.get('/stats', async (req, res) => {
     res.json(stats);
   } catch (err) {
     console.error('[badges/stats]', err.message);
-    res.status(500).json({ message: '서버 오류' });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -88,14 +88,14 @@ router.get('/titles', auth, async (req, res) => {
     res.json({ titles, earnedCount, totalCount: titles.length });
   } catch (err) {
     console.error('[badges/titles]', err.message);
-    res.status(500).json({ message: '서버 오류' });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
 // GET /api/badges/user/:id — 다른 유저의 획득 훈장
 router.get('/user/:id', async (req, res) => {
   const userId = parseInt(req.params.id, 10);
-  if (!userId || isNaN(userId)) return res.status(400).json({ message: '유효하지 않은 유저 ID' });
+  if (!userId || isNaN(userId)) return res.status(400).json({ message: 'Invalid user ID' });
 
   try {
     const allBadges = await query(
@@ -112,7 +112,7 @@ router.get('/user/:id', async (req, res) => {
     res.json({ badges: earnedBadges, earnedCount: earnedBadges.length, totalCount: allBadges.length });
   } catch (err) {
     console.error('[badges/user/:id]', err.message);
-    res.status(500).json({ message: '서버 오류' });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 

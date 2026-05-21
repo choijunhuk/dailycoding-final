@@ -21,7 +21,7 @@ const VALID_BOARDS = new Set(['qna', 'tech', 'lounge']);
 
 function boardGuard(req, res, next) {
   if (!VALID_BOARDS.has(req.params.board)) {
-    return res.status(400).json({ message: '유효하지 않은 게시판입니다. (qna | tech | lounge)' });
+    return res.status(400).json({ message: 'Invalid board. (qna | tech | lounge)' });
   }
   next();
 }
@@ -44,14 +44,14 @@ async function notifyMentions(content, authorId, postTitle, board) {
     [...content.matchAll(/@([a-zA-Z0-9_가-힣]{2,30})/g)].map(m => m[1])
   )];
   if (usernames.length === 0) return;
-  const boardLabel = { qna: 'Q&A', tech: '기술 토론', lounge: '라운지' }[board] || '커뮤니티';
+  const boardLabel = { qna: 'Q&A', tech: 'Tech Discussion', lounge: 'Lounge' }[board] || 'Community';
   for (const uname of usernames) {
     try {
       const mentioned = await queryOne('SELECT id FROM users WHERE username = ? OR nickname = ?', [uname, uname]);
       if (mentioned && mentioned.id !== authorId) {
         Notification.create(
           mentioned.id,
-          `📢 "${postTitle.slice(0, 30)}" 게시글에서 @${uname} 님이 멘션됐습니다. [${boardLabel}]`,
+          `📢 You were mentioned by @${uname} in "${postTitle.slice(0, 30)}". [${boardLabel}]`,
           'community'
         ).catch((err) => console.warn('[notification] create failed:', err.message));
       }
@@ -105,7 +105,7 @@ function maskAnonymousPostAuthor(row, viewerId) {
   return {
     ...row,
     user_id: null,
-    username: '익명',
+    username: 'Anonymous',
     nickname: null,
     tier: null,
     avatar_color: null,
@@ -134,7 +134,7 @@ router.get('/popular', auth, async (req, res) => {
     res.json({ posts: (posts || []).map((post) => maskAnonymousPostAuthor(post, req.user.id)) });
   } catch (err) {
     console.error('[community/popular]', err);
-    res.status(500).json({ message: '서버 오류' });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -156,7 +156,7 @@ router.get('/scraps/mine', auth, async (req, res) => {
     res.json({ posts: (posts || []).map((post) => maskAnonymousPostAuthor(post, req.user.id)) });
   } catch (err) {
     console.error('[community/scraps/mine]', err);
-    res.status(500).json({ message: '서버 오류' });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -174,7 +174,7 @@ router.get('/block/list', auth, async (req, res) => {
     res.json({ blocked: rows || [] });
   } catch (err) {
     console.error('[community/block/list]', err);
-    res.status(500).json({ message: '서버 오류' });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -183,16 +183,16 @@ router.get('/block/list', auth, async (req, res) => {
 router.post('/block/:targetId', auth, async (req, res) => {
   const targetId = Number(req.params.targetId);
   if (!targetId || targetId === req.user.id) {
-    return res.status(400).json({ message: '유효하지 않은 대상입니다.' });
+    return res.status(400).json({ message: 'Invalid target.' });
   }
   try {
     const target = await queryOne('SELECT id FROM users WHERE id = ?', [targetId]);
-    if (!target) return res.status(404).json({ message: '유저를 찾을 수 없습니다.' });
+    if (!target) return res.status(404).json({ message: 'User not found.' });
     const result = await User.toggleBlock(req.user.id, targetId);
     res.json(result);
   } catch (err) {
     console.error('[community/block]', err);
-    res.status(500).json({ message: '서버 오류' });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -253,7 +253,7 @@ router.get('/:board', auth, boardGuard, async (req, res) => {
     });
   } catch (err) {
     console.error('[community/list]', err);
-    res.status(500).json({ message: '서버 오류' });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -261,7 +261,7 @@ router.get('/:board', auth, boardGuard, async (req, res) => {
 // GET /api/community/:board/:id
 router.get('/:board/:id', auth, boardGuard, async (req, res) => {
   const postId = Number(req.params.id);
-  if (!postId) return res.status(400).json({ message: '유효하지 않은 ID' });
+  if (!postId) return res.status(400).json({ message: 'Invalid ID' });
   try {
     const blockedReplies = replyBlockFilter(req.user.id);
     const post = await queryOne(
@@ -270,7 +270,7 @@ router.get('/:board/:id', auth, boardGuard, async (req, res) => {
        WHERE p.id = ? AND p.board_type = ?`,
       [postId, req.params.board]
     );
-    if (!post) return res.status(404).json({ message: '게시글을 찾을 수 없습니다.' });
+    if (!post) return res.status(404).json({ message: 'Post not found.' });
 
     // 조회수 비동기 증가
     run('UPDATE posts SET view_count = view_count + 1 WHERE id = ?', [postId]).catch(() => {});
@@ -314,7 +314,7 @@ router.get('/:board/:id', auth, boardGuard, async (req, res) => {
     });
   } catch (err) {
     console.error('[community/detail]', err);
-    res.status(500).json({ message: '서버 오류' });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -323,7 +323,7 @@ router.get('/:board/:id', auth, boardGuard, async (req, res) => {
 router.post('/:board', auth, requireVerified, communityPostLimiter, boardGuard, validateBody(communityPostSchema), async (req, res) => {
   const { title, content, code_snippet, lang, tags, problem_id, is_anonymous, poll } = req.body;
   if (!title?.trim() || !content?.trim()) {
-    return res.status(400).json({ message: '제목과 내용은 필수입니다.' });
+    return res.status(400).json({ message: 'Title and content are required.' });
   }
   try {
     const cleanTags = sanitizeTags(tags);
@@ -371,7 +371,7 @@ router.post('/:board', auth, requireVerified, communityPostLimiter, boardGuard, 
     res.status(201).json({ ...post, boj_refs: extractBojRefs(post.content) });
   } catch (err) {
     console.error('[community/create]', err);
-    res.status(500).json({ message: '서버 오류' });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -380,15 +380,15 @@ router.post('/:board', auth, requireVerified, communityPostLimiter, boardGuard, 
 router.patch('/:board/:id', auth, requireVerified, boardGuard, async (req, res) => {
   const postId = Number(req.params.id);
   const post = await queryOne('SELECT * FROM posts WHERE id = ? AND board_type = ?', [postId, req.params.board]);
-  if (!post) return res.status(404).json({ message: '게시글 없음' });
-  if (post.user_id !== req.user.id) return res.status(403).json({ message: '권한 없음' });
+  if (!post) return res.status(404).json({ message: 'Post not found' });
+  if (post.user_id !== req.user.id) return res.status(403).json({ message: 'Unauthorized' });
 
   const { title, content, code_snippet, lang, tags } = req.body;
   if (title !== undefined && String(title).length > 300) {
-    return res.status(400).json({ message: 'title은(는) 300자 이하여야 합니다.' });
+    return res.status(400).json({ message: 'title must be 300 characters or fewer.' });
   }
   if (content !== undefined && String(content).length > 10000) {
-    return res.status(400).json({ message: 'content은(는) 10000자 이하여야 합니다.' });
+    return res.status(400).json({ message: 'content must be 10000 characters or fewer.' });
   }
   try {
     const cleanTags = tags === undefined ? undefined : sanitizeTags(tags);
@@ -407,7 +407,7 @@ router.patch('/:board/:id', auth, requireVerified, boardGuard, async (req, res) 
     res.json({ ...updated, boj_refs: extractBojRefs(updated.content) });
   } catch (err) {
     console.error('[community/update]', err);
-    res.status(500).json({ message: '서버 오류' });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -416,14 +416,14 @@ router.patch('/:board/:id', auth, requireVerified, boardGuard, async (req, res) 
 router.delete('/:board/:id', auth, boardGuard, async (req, res) => {
   const postId = Number(req.params.id);
   const post = await queryOne('SELECT * FROM posts WHERE id = ?', [postId]);
-  if (!post) return res.status(404).json({ message: '게시글 없음' });
+  if (!post) return res.status(404).json({ message: 'Post not found' });
 
   const requester = await User.findById(req.user.id);
   if (post.user_id !== req.user.id && requester?.role !== 'admin') {
-    return res.status(403).json({ message: '권한 없음' });
+    return res.status(403).json({ message: 'Unauthorized' });
   }
   await run('DELETE FROM posts WHERE id = ?', [postId]);
-  res.json({ message: '삭제됐습니다.' });
+  res.json({ message: 'Deleted successfully.' });
 });
 
 // ── 댓글 작성 ─────────────────────────────────────────────────────────────
@@ -431,11 +431,11 @@ router.delete('/:board/:id', auth, boardGuard, async (req, res) => {
 router.post('/:board/:id/replies', auth, requireVerified, communityReplyLimiter, boardGuard, async (req, res) => {
   const postId = Number(req.params.id);
   const { content, code_snippet, lang, decocon_id } = req.body;
-  if (!content?.trim()) return res.status(400).json({ message: '내용은 필수입니다.' });
+  if (!content?.trim()) return res.status(400).json({ message: 'Content is required.' });
 
   try {
     const post = await queryOne('SELECT * FROM posts WHERE id = ? AND board_type = ?', [postId, req.params.board]);
-    if (!post) return res.status(404).json({ message: '게시글 없음' });
+    if (!post) return res.status(404).json({ message: 'Post not found' });
 
     const replyId = await insert(
       'INSERT INTO post_replies (post_id, user_id, content, code_snippet, lang, decocon_id, created_at) VALUES (?,?,?,?,?,?,NOW())',
@@ -445,10 +445,10 @@ router.post('/:board/:id/replies', auth, requireVerified, communityReplyLimiter,
 
     // 알림: 내 글에 남이 댓글 달면 알림
     if (post.user_id !== req.user.id) {
-      const board_label = { qna: 'Q&A', tech: '기술 토론', lounge: '라운지' }[req.params.board] || '커뮤니티';
+      const board_label = { qna: 'Q&A', tech: 'Tech Discussion', lounge: 'Lounge' }[req.params.board] || 'Community';
       Notification.create(
         post.user_id,
-        `💬 "${post.title.slice(0, 30)}" 게시글에 새 댓글이 달렸습니다. [${board_label}]`,
+        `💬 A new comment was posted on "${post.title.slice(0, 30)}". [${board_label}]`,
         'community'
       ).catch((err) => console.warn('[notification] create failed:', err.message));
     }
@@ -464,7 +464,7 @@ router.post('/:board/:id/replies', auth, requireVerified, communityReplyLimiter,
     res.status(201).json(reply);
   } catch (err) {
     console.error('[community/reply/create]', err);
-    res.status(500).json({ message: '서버 오류' });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -473,7 +473,7 @@ router.post('/:board/:id/replies', auth, requireVerified, communityReplyLimiter,
 router.delete('/:board/:postId/replies/:replyId', auth, boardGuard, async (req, res) => {
   const postId = Number(req.params.postId);
   const replyId = Number(req.params.replyId);
-  if (!postId || !replyId) return res.status(400).json({ message: '유효하지 않은 ID' });
+  if (!postId || !replyId) return res.status(400).json({ message: 'Invalid ID' });
 
   try {
     const [post, reply, requester] = await Promise.all([
@@ -481,18 +481,18 @@ router.delete('/:board/:postId/replies/:replyId', auth, boardGuard, async (req, 
       queryOne('SELECT * FROM post_replies WHERE id = ? AND post_id = ?', [replyId, postId]),
       User.findById(req.user.id),
     ]);
-    if (!post) return res.status(404).json({ message: '게시글 없음' });
-    if (!reply) return res.status(404).json({ message: '댓글 없음' });
+    if (!post) return res.status(404).json({ message: 'Post not found' });
+    if (!reply) return res.status(404).json({ message: 'Comment not found' });
     if (reply.user_id !== req.user.id && post.user_id !== req.user.id && requester?.role !== 'admin') {
-      return res.status(403).json({ message: '권한 없음' });
+      return res.status(403).json({ message: 'Unauthorized' });
     }
 
     await run('DELETE FROM post_replies WHERE id = ?', [replyId]);
     await run('UPDATE posts SET answer_count = GREATEST(0, answer_count - 1) WHERE id = ?', [postId]);
-    res.json({ message: '삭제됐습니다.' });
+    res.json({ message: 'Deleted successfully.' });
   } catch (err) {
     console.error('[community/reply/delete]', err);
-    res.status(500).json({ message: '서버 오류' });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -503,11 +503,11 @@ router.post('/qna/:id/replies/:replyId/accept', auth, async (req, res) => {
   const replyId = Number(req.params.replyId);
   try {
     const post = await queryOne('SELECT * FROM posts WHERE id = ? AND board_type = ?', [postId, 'qna']);
-    if (!post) return res.status(404).json({ message: '게시글 없음' });
-    if (post.user_id !== req.user.id) return res.status(403).json({ message: '작성자만 채택할 수 있습니다.' });
+    if (!post) return res.status(404).json({ message: 'Post not found' });
+    if (post.user_id !== req.user.id) return res.status(403).json({ message: 'Only the post author can accept an answer.' });
 
     const reply = await queryOne('SELECT * FROM post_replies WHERE id = ? AND post_id = ?', [replyId, postId]);
-    if (!reply) return res.status(404).json({ message: '댓글 없음' });
+    if (!reply) return res.status(404).json({ message: 'Comment not found' });
 
     await run('UPDATE post_replies SET is_accepted = 0 WHERE post_id = ?', [postId]);
     await run('UPDATE post_replies SET is_accepted = 1 WHERE id = ?', [replyId]);
@@ -516,15 +516,15 @@ router.post('/qna/:id/replies/:replyId/accept', auth, async (req, res) => {
     if (reply.user_id !== req.user.id) {
       Notification.create(
         reply.user_id,
-        `✅ Q&A "${post.title.slice(0, 30)}"에서 내 답변이 채택됐습니다!`,
+        `✅ Your answer was accepted in Q&A "${post.title.slice(0, 30)}"!`,
         'community'
       ).catch((err) => console.warn('[notification] create failed:', err.message));
     }
 
-    res.json({ message: '답변이 채택됐습니다.' });
+    res.json({ message: 'Answer accepted.' });
   } catch (err) {
     console.error('[community/accept]', err);
-    res.status(500).json({ message: '서버 오류' });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -551,7 +551,7 @@ router.post('/:board/:id/like', auth, boardGuard, async (req, res) => {
     res.json({ liked: false });
   } catch (err) {
     console.error('[community/like]', err);
-    res.status(500).json({ message: '서버 오류' });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -559,11 +559,11 @@ router.post('/:board/:id/like', auth, boardGuard, async (req, res) => {
 // POST /api/community/:board/:id/scrap
 router.post('/:board/:id/scrap', auth, boardGuard, async (req, res) => {
   const postId = Number(req.params.id);
-  if (!postId) return res.status(400).json({ message: '유효하지 않은 ID' });
+  if (!postId) return res.status(400).json({ message: 'Invalid ID' });
   try {
     // 게시글 존재 확인
     const post = await queryOne('SELECT 1 FROM posts WHERE id = ? AND board_type = ?', [postId, req.params.board]);
-    if (!post) return res.status(404).json({ message: '게시글 없음' });
+    if (!post) return res.status(404).json({ message: 'Post not found' });
     const insertResult = await run('INSERT IGNORE INTO post_scraps (user_id, post_id) VALUES (?, ?)', [req.user.id, postId]);
     if (insertResult.affectedRows > 0) {
       return res.json({ scrapped: true });
@@ -572,7 +572,7 @@ router.post('/:board/:id/scrap', auth, boardGuard, async (req, res) => {
     res.json({ scrapped: false });
   } catch (err) {
     console.error('[community/scrap]', err);
-    res.status(500).json({ message: '서버 오류' });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -580,10 +580,10 @@ router.post('/:board/:id/scrap', auth, boardGuard, async (req, res) => {
 // GET /api/community/:board/:id/poll
 router.get('/:board/:id/poll', auth, boardGuard, async (req, res) => {
   const postId = Number(req.params.id);
-  if (!postId) return res.status(400).json({ message: '유효하지 않은 ID' });
+  if (!postId) return res.status(400).json({ message: 'Invalid ID' });
   try {
     const poll = await queryOne('SELECT id, question FROM polls WHERE post_id = ?', [postId]);
-    if (!poll) return res.status(404).json({ message: '투표가 없습니다.' });
+    if (!poll) return res.status(404).json({ message: 'Poll not found.' });
 
     const [options, myVote] = await Promise.all([
       query('SELECT id, label, votes, ord FROM poll_options WHERE poll_id = ? ORDER BY ord', [poll.id]),
@@ -592,7 +592,7 @@ router.get('/:board/:id/poll', auth, boardGuard, async (req, res) => {
     res.json({ ...poll, options: options || [], myVoteOptionId: myVote?.option_id ?? null });
   } catch (err) {
     console.error('[community/poll/get]', err);
-    res.status(500).json({ message: '서버 오류' });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -601,16 +601,16 @@ router.get('/:board/:id/poll', auth, boardGuard, async (req, res) => {
 router.post('/:board/:id/poll/:optionId/vote', auth, boardGuard, async (req, res) => {
   const postId   = Number(req.params.id);
   const optionId = Number(req.params.optionId);
-  if (!postId || !optionId) return res.status(400).json({ message: '유효하지 않은 ID' });
+  if (!postId || !optionId) return res.status(400).json({ message: 'Invalid ID' });
   try {
     const poll = await queryOne('SELECT id FROM polls WHERE post_id = ?', [postId]);
-    if (!poll) return res.status(404).json({ message: '투표가 없습니다.' });
+    if (!poll) return res.status(404).json({ message: 'Poll not found.' });
 
     const option = await queryOne(
       'SELECT id FROM poll_options WHERE id = ? AND poll_id = ?',
       [optionId, poll.id]
     );
-    if (!option) return res.status(404).json({ message: '선택지를 찾을 수 없습니다.' });
+    if (!option) return res.status(404).json({ message: 'Option not found.' });
 
     // 이미 투표한 경우 이전 투표 취소 후 새 선택으로 교체
     const existing = await queryOne(
@@ -619,7 +619,7 @@ router.post('/:board/:id/poll/:optionId/vote', auth, boardGuard, async (req, res
     );
     if (existing) {
       if (existing.option_id === optionId) {
-        return res.status(409).json({ message: '이미 해당 선택지에 투표했습니다.' });
+        return res.status(409).json({ message: 'You have already voted for this option.' });
       }
       // 기존 선택 취소
       await run('UPDATE poll_options SET votes = GREATEST(0, votes - 1) WHERE id = ?', [existing.option_id]);
@@ -642,7 +642,7 @@ router.post('/:board/:id/poll/:optionId/vote', auth, boardGuard, async (req, res
     res.json({ options, myVoteOptionId: optionId });
   } catch (err) {
     console.error('[community/poll/vote]', err);
-    res.status(500).json({ message: '서버 오류' });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -650,7 +650,7 @@ router.post('/:board/:id/poll/:optionId/vote', auth, boardGuard, async (req, res
 // POST /api/community/:board/:id/replies/:replyId/like
 router.post('/:board/:id/replies/:replyId/like', auth, boardGuard, async (req, res) => {
   const replyId = Number(req.params.replyId);
-  if (!replyId) return res.status(400).json({ message: '유효하지 않은 ID' });
+  if (!replyId) return res.status(400).json({ message: 'Invalid ID' });
   try {
     const insertResult = await run(
       "INSERT IGNORE INTO post_likes (user_id, target_type, target_id) VALUES (?, 'reply', ?)",
@@ -670,7 +670,7 @@ router.post('/:board/:id/replies/:replyId/like', auth, boardGuard, async (req, r
     res.json({ liked: false });
   } catch (err) {
     console.error('[community/reply/like]', err);
-    res.status(500).json({ message: '서버 오류' });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -678,25 +678,25 @@ router.post('/:board/:id/replies/:replyId/like', auth, boardGuard, async (req, r
 // POST /api/community/:board/:id/report
 router.post('/:board/:id/report', auth, boardGuard, async (req, res) => {
   const postId = Number(req.params.id);
-  if (!postId) return res.status(400).json({ message: '유효하지 않은 ID' });
+  if (!postId) return res.status(400).json({ message: 'Invalid ID' });
   const VALID_REASONS = new Set(['spam', 'hate', 'illegal', 'misinformation', 'other']);
   const { reason, detail } = req.body;
   if (!VALID_REASONS.has(reason)) {
-    return res.status(400).json({ message: '유효하지 않은 신고 사유입니다. (spam|hate|illegal|misinformation|other)' });
+    return res.status(400).json({ message: 'Invalid report reason. (spam|hate|illegal|misinformation|other)' });
   }
   try {
     const post = await queryOne('SELECT 1 FROM posts WHERE id = ? AND board_type = ?', [postId, req.params.board]);
-    if (!post) return res.status(404).json({ message: '게시글 없음' });
+    if (!post) return res.status(404).json({ message: 'Post not found' });
 
     await insert(
       'INSERT INTO post_reports (reporter_id, target_type, target_id, reason, detail) VALUES (?,?,?,?,?)',
       [req.user.id, 'post', postId, reason, detail?.slice(0, 200) || null]
     );
-    res.json({ message: '신고가 접수됐습니다.' });
+    res.json({ message: 'Report submitted.' });
   } catch (err) {
-    if (err.code === 'ER_DUP_ENTRY') return res.status(409).json({ message: '이미 신고한 게시글입니다.' });
+    if (err.code === 'ER_DUP_ENTRY') return res.status(409).json({ message: 'You have already reported this post.' });
     console.error('[community/report]', err);
-    res.status(500).json({ message: '서버 오류' });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -704,25 +704,25 @@ router.post('/:board/:id/report', auth, boardGuard, async (req, res) => {
 // POST /api/community/:board/:id/replies/:replyId/report
 router.post('/:board/:id/replies/:replyId/report', auth, boardGuard, async (req, res) => {
   const replyId = Number(req.params.replyId);
-  if (!replyId) return res.status(400).json({ message: '유효하지 않은 ID' });
+  if (!replyId) return res.status(400).json({ message: 'Invalid ID' });
   const VALID_REASONS = new Set(['spam', 'hate', 'illegal', 'misinformation', 'other']);
   const { reason, detail } = req.body;
   if (!VALID_REASONS.has(reason)) {
-    return res.status(400).json({ message: '유효하지 않은 신고 사유입니다.' });
+    return res.status(400).json({ message: 'Invalid report reason.' });
   }
   try {
     const reply = await queryOne('SELECT 1 FROM post_replies WHERE id = ?', [replyId]);
-    if (!reply) return res.status(404).json({ message: '댓글 없음' });
+    if (!reply) return res.status(404).json({ message: 'Comment not found' });
 
     await insert(
       'INSERT INTO post_reports (reporter_id, target_type, target_id, reason, detail) VALUES (?,?,?,?,?)',
       [req.user.id, 'reply', replyId, reason, detail?.slice(0, 200) || null]
     );
-    res.json({ message: '신고가 접수됐습니다.' });
+    res.json({ message: 'Report submitted.' });
   } catch (err) {
-    if (err.code === 'ER_DUP_ENTRY') return res.status(409).json({ message: '이미 신고한 댓글입니다.' });
+    if (err.code === 'ER_DUP_ENTRY') return res.status(409).json({ message: 'You have already reported this comment.' });
     console.error('[community/reply/report]', err);
-    res.status(500).json({ message: '서버 오류' });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 

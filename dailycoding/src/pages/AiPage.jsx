@@ -383,15 +383,15 @@ export default function AiPage() {
           </div>
         )}
         <div className="ai-card fade-up" style={{marginTop:16,background:'linear-gradient(135deg,rgba(188,140,255,.08),rgba(13,17,23,.9))',borderColor:'rgba(188,140,255,.25)'}}>
-          <div className="ai-card-title" style={{color:'var(--purple)'}}>🎙️ AI 면접 준비 가이드</div>
+          <div className="ai-card-title" style={{color:'var(--purple)'}}>🎙️ AI Interview Prep Guide</div>
           <p style={{fontSize:13,color:'var(--text2)',lineHeight:1.7,marginBottom:12}}>
-            AI 채팅창에 아래 질문들을 입력해 모의 면접을 진행해보세요.
+            Type any of the prompts below into the AI chat to run a mock interview.
           </p>
           <div style={{display:'flex',flexDirection:'column',gap:6}}>
             {[
-              '내 풀이 스타일 기반으로 면접 예상 질문 3개 만들어줘',
-              '시간복잡도 O(n log n)을 설명하는 면접 답변 예시 알려줘',
-              '해시맵을 사용한 알고리즘 문제 면접 답변 전략 알려줘',
+              'Generate 3 expected interview questions based on my solving style',
+              'Give me an example interview answer explaining O(n log n) time complexity',
+              'Explain interview answer strategies for algorithm problems using hash maps',
             ].map((q) => (
               <button key={q} onClick={() => setInput(q)} style={{
                 padding:'8px 12px',borderRadius:8,border:'1px solid rgba(188,140,255,.25)',

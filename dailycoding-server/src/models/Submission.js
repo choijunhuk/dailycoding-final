@@ -67,7 +67,7 @@ export const Submission = {
   async getWeaknessStats(userId) {
     const rows = await query(
       `SELECT
-         COALESCE(pt.tag, p.tier, '기타') AS label,
+         COALESCE(pt.tag, p.tier, 'other') AS label,
          COUNT(*) AS attempts,
          SUM(CASE WHEN s.result = 'correct' THEN 1 ELSE 0 END) AS correct,
          SUM(CASE WHEN s.result IN ('wrong', 'timeout', 'error', 'compile') THEN 1 ELSE 0 END) AS misses,
@@ -76,7 +76,7 @@ export const Submission = {
        LEFT JOIN problems p ON p.id = s.problem_id
        LEFT JOIN problem_tags pt ON pt.problem_id = p.id
        WHERE s.user_id = ?
-       GROUP BY COALESCE(pt.tag, p.tier, '기타')
+       GROUP BY COALESCE(pt.tag, p.tier, 'other')
        HAVING attempts >= 2
        ORDER BY (misses / attempts) DESC, misses DESC, attempts DESC
        LIMIT 8`,
@@ -90,7 +90,7 @@ export const Submission = {
       const accuracy = attempts > 0 ? Math.round((correct / attempts) * 100) : 0;
       const missRate = attempts > 0 ? Math.round((misses / attempts) * 100) : 0;
       return {
-        label: row.label || '기타',
+        label: row.label || 'other',
         attempts,
         correct,
         misses,
@@ -98,8 +98,8 @@ export const Submission = {
         missRate,
         priority: misses >= 3 && missRate >= 50 ? 'high' : missRate >= 35 ? 'medium' : 'low',
         recommendation: misses > 0
-          ? `${row.label || '기타'} 유형은 최근 오답률이 ${missRate}%입니다. 같은 태그의 쉬운 문제 2개를 먼저 재풀이하세요.`
-          : `${row.label || '기타'} 유형은 안정적입니다. 더 높은 난이도로 확장하세요.`,
+          ? `${row.label || 'other'} type has a recent error rate of ${missRate}%. Try re-solving 2 easier problems with the same tag first.`
+          : `${row.label || 'other'} type is stable. Try expanding to higher difficulty problems.`,
         lastSubmittedAt: row.last_submitted_at || null,
       };
     });
@@ -152,7 +152,7 @@ export const Submission = {
       avgSolveTime: Math.round(totalSolveTime / validRows.length),
       fastestSolve: fastestRow ? {
         problemId: fastestRow.problemId,
-        problemTitle: fastestProblem?.title || `문제 #${fastestRow.problemId}`,
+        problemTitle: fastestProblem?.title || `Problem #${fastestRow.problemId}`,
         timeSec: fastestRow.solveTimeSec,
       } : null,
       totalSolveTime,
@@ -182,7 +182,7 @@ export const Submission = {
       }
     }
 
-    throw new Error('공유 링크 생성에 실패했습니다.');
+    throw new Error('Failed to create share link.');
   },
 
   async getSharedSubmissionBySlug(slug) {
@@ -205,7 +205,7 @@ export const Submission = {
       createdAt: shared.created_at || null,
       submissionId: submission.id,
       problemId: submission.problem_id,
-      problemTitle: problem?.title || `문제 #${submission.problem_id}`,
+      problemTitle: problem?.title || `Problem #${submission.problem_id}`,
       problemTier: problem?.tier || null,
       username: user?.username || 'anonymous',
       lang: submission.lang,
@@ -228,28 +228,28 @@ export const Submission = {
     const text = String(detail || '').toLowerCase();
     if (result === 'timeout') {
       return {
-        cause: '시간 초과',
-        action: '반복 횟수와 시간 복잡도를 먼저 줄여보세요.',
+        cause: 'Time Limit Exceeded',
+        action: 'Try reducing iteration count and time complexity first.',
         priority: 'high',
       };
     }
     if (result === 'compile') {
       return {
-        cause: '컴파일 오류',
-        action: '언어 선택, import, 함수명, 입출력 형식을 확인하세요.',
+        cause: 'Compile Error',
+        action: 'Check language selection, imports, function names, and I/O format.',
         priority: 'medium',
       };
     }
     if (result === 'error' || text.includes('runtime')) {
       return {
-        cause: '런타임 오류',
-        action: '빈 입력, 인덱스 범위, 0 나누기 같은 예외 케이스를 재현하세요.',
+        cause: 'Runtime Error',
+        action: 'Reproduce edge cases like empty input, index out of bounds, or division by zero.',
         priority: 'medium',
       };
     }
     return {
-      cause: '오답',
-      action: '예제를 손으로 추적하고 최소/최대 경계 케이스를 추가하세요.',
+      cause: 'Wrong Answer',
+      action: 'Trace through examples by hand and add min/max boundary cases.',
       priority: 'high',
     };
   },
@@ -298,7 +298,7 @@ export const Submission = {
       return {
         submissionId: row.id,
         problemId: row.problem_id,
-        problemTitle: row.problem_title || `문제 #${row.problem_id}`,
+        problemTitle: row.problem_title || `Problem #${row.problem_id}`,
         tier: row.tier || 'unranked',
         difficulty: row.difficulty ?? null,
         lang: row.lang,
@@ -309,7 +309,7 @@ export const Submission = {
         tags: String(row.tags || '').split(',').map((tag) => tag.trim()).filter(Boolean).slice(0, 4),
         detail: row.detail || '',
         submittedAt: row.submitted_at,
-        date: new Date(row.submitted_at).toLocaleString('ko-KR'),
+        date: new Date(row.submitted_at).toLocaleString('en-US'),
       };
     });
   },
@@ -393,7 +393,7 @@ export const Submission = {
       time: row.time_ms ? `${row.time_ms}ms` : '-',
       mem: row.memory_mb ? `${row.memory_mb}MB` : '-',
       detail: row.detail,
-      date: new Date(row.submitted_at).toLocaleString('ko-KR'),
+      date: new Date(row.submitted_at).toLocaleString('en-US'),
       isMine: row.user_id === viewerId,
       submissionsPublic: Boolean(row.submissions_public),
     }));

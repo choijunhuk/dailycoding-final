@@ -50,7 +50,7 @@ router.patch('/users/:id/reset-password', auth, adminOnly, validateBody(adminRes
     await redis.del(`auth:refresh:${req.params.id}`);
     await clearAuthStatus(Number(req.params.id));
     await logAdminAction(req, 'user.password-reset', 'user', Number(req.params.id), {});
-    res.json({ message: '비밀번호가 리셋됐습니다.' });
+    res.json({ message: 'Password has been reset.' });
   } catch (err) {
     return internalError(res);
   }
@@ -58,12 +58,12 @@ router.patch('/users/:id/reset-password', auth, adminOnly, validateBody(adminRes
 
 router.patch('/users/:id/ban', auth, adminOnly, async (req, res) => {
   try {
-    const reason = req.body.reason || '규정 위반';
+    const reason = req.body.reason || 'Terms of service violation';
     await User.update(Number(req.params.id), { banned_at: nowMySQL(), ban_reason: reason });
     await redis.del(`auth:refresh:${req.params.id}`);
     await clearAuthStatus(Number(req.params.id));
     await logAdminAction(req, 'user.ban', 'user', Number(req.params.id), { reason });
-    res.json({ message: '밴 처리됐습니다.' });
+    res.json({ message: 'User has been banned.' });
   } catch (err) {
     return internalError(res);
   }
@@ -74,7 +74,7 @@ router.patch('/users/:id/unban', auth, adminOnly, async (req, res) => {
     await run('UPDATE users SET banned_at=NULL, ban_reason=NULL WHERE id=?', [Number(req.params.id)]);
     await clearAuthStatus(Number(req.params.id));
     await logAdminAction(req, 'user.unban', 'user', Number(req.params.id), {});
-    res.json({ message: '밴이 해제됐습니다.' });
+    res.json({ message: 'User has been unbanned.' });
   } catch (err) {
     return internalError(res);
   }
@@ -82,11 +82,11 @@ router.patch('/users/:id/unban', auth, adminOnly, async (req, res) => {
 
 router.delete('/users/:id', auth, adminOnly, async (req, res) => {
   const id = Number(req.params.id);
-  if (id === req.user.id) return errorResponse(res, 400, 'VALIDATION_ERROR', '자신은 삭제할 수 없습니다.');
+  if (id === req.user.id) return errorResponse(res, 400, 'VALIDATION_ERROR', 'You cannot delete your own account.');
   try {
     await User.delete(id);
     await clearAuthStatus(id);
-    res.json({ message: '삭제됐습니다.' });
+    res.json({ message: 'User has been deleted.' });
   } catch (err) {
     return internalError(res);
   }

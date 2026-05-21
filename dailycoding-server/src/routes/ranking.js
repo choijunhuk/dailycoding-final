@@ -57,7 +57,7 @@ export function normalizeTeamRankingRow(row = {}, index = 0) {
   return {
     id: row.id,
     rank: index + 1,
-    name: row.name || '소속',
+    name: row.name || 'Team',
     avatar_emoji: row.avatar_emoji || row.avatarEmoji || teamAvatarEmoji(row.name),
     avatarEmoji: row.avatar_emoji || row.avatarEmoji || teamAvatarEmoji(row.name),
     member_count: memberCount,
@@ -133,7 +133,7 @@ router.get('/season', auth, async (req, res) => {
     res.json(payload);
   } catch (err) {
     console.error('[ranking/season]', err.message);
-    res.status(500).json({ message: '서버 오류' });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -173,7 +173,7 @@ router.get('/battle', auth, async (req, res) => {
     res.json(payload);
   } catch (err) {
     console.error('[ranking/battle]', err);
-    res.status(500).json({ message: '배틀 랭킹을 불러오지 못했습니다.' });
+    res.status(500).json({ message: 'Failed to load battle ranking.' });
   }
 });
 
@@ -205,7 +205,7 @@ router.get('/collaboration', auth, async (req, res) => {
     res.json(payload);
   } catch (err) {
     console.error('[ranking/collaboration]', err);
-    res.status(500).json({ message: '협업 랭킹을 불러오지 못했습니다.' });
+    res.status(500).json({ message: 'Failed to load collaboration ranking.' });
   }
 });
 
@@ -250,7 +250,7 @@ router.get('/overall', auth, async (req, res) => {
     res.json(payload);
   } catch (err) {
     console.error('[ranking/overall]', err);
-    res.status(500).json({ message: '종합 랭킹을 불러오지 못했습니다.' });
+    res.status(500).json({ message: 'Failed to load overall ranking.' });
   }
 });
 
@@ -312,7 +312,7 @@ router.get('/', auth, async (req, res) => {
     res.json(payload);
   } catch (err) {
     console.error('[ranking]', err.message);
-    res.status(500).json({ message: '서버 오류' });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -356,7 +356,7 @@ router.get('/teams', auth, async (req, res) => {
     res.json(result);
   } catch (err) {
     console.error('[ranking/teams]', err.message);
-    res.status(500).json({ message: '소속 랭킹을 불러오지 못했습니다.' });
+    res.status(500).json({ message: 'Failed to load team ranking.' });
   }
 });
 

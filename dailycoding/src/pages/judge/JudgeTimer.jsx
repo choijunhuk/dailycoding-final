@@ -28,10 +28,10 @@ const JudgeTimer = forwardRef(({ onReset }, ref) => {
   return (
     <div style={{display:'flex',alignItems:'center',gap:6,marginLeft:8,padding:'3px 10px',borderRadius:6,background:timerOn?'rgba(121,192,255,.08)':'var(--bg3)',border:'1px solid var(--border)'}}>
       <span className="mono" style={{fontSize:13,fontWeight:700,color:timerOn?'var(--blue)':'var(--text3)',minWidth:42}}>{formatTimer(timerSec)}</span>
-      <button aria-label={timerOn ? '타이머 일시정지' : '타이머 시작'} onClick={()=>setTimerOn(p=>!p)} style={{background:'none',border:'none',cursor:'pointer',fontSize:12,color:timerOn?'var(--red)':'var(--green)',fontWeight:700}}>
+      <button aria-label={timerOn ? 'Pause Timer' : 'Start Timer'} onClick={()=>setTimerOn(p=>!p)} style={{background:'none',border:'none',cursor:'pointer',fontSize:12,color:timerOn?'var(--red)':'var(--green)',fontWeight:700}}>
         {timerOn?'⏸':'▶'}
       </button>
-      <button aria-label="타이머 초기화" onClick={()=>{setTimerOn(false);setTimerSec(0); if(onReset) onReset();}} style={{background:'none',border:'none',cursor:'pointer',fontSize:11,color:'var(--text3)'}}>↺</button>
+      <button aria-label="Reset Timer" onClick={()=>{setTimerOn(false);setTimerSec(0); if(onReset) onReset();}} style={{background:'none',border:'none',cursor:'pointer',fontSize:11,color:'var(--text3)'}}>↺</button>
     </div>
   );
 });

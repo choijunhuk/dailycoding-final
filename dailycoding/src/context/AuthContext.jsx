@@ -34,7 +34,7 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const handleAuthExpired = (event) => {
       setUser(null);
-      setError(event.detail?.message || '세션이 만료되었습니다. 다시 로그인해주세요.');
+      setError(event.detail?.message || 'Session expired. Please log in again.');
       setLoading(false);
     };
     window.addEventListener(AUTH_EXPIRED_EVENT, handleAuthExpired);
@@ -49,7 +49,7 @@ export function AuthProvider({ children }) {
       setError('');
       return true;
     } catch (err) {
-      setError(err.response?.data?.message || '로그인에 실패했습니다.');
+      setError(err.response?.data?.message || 'Login failed.');
       return false;
     }
   };
@@ -64,7 +64,7 @@ export function AuthProvider({ children }) {
       if (referralCode) localStorage.removeItem('referralCode');
       return true;
     } catch (err) {
-      setError(err.response?.data?.message || '회원가입에 실패했습니다.');
+      setError(err.response?.data?.message || 'Registration failed.');
       return false;
     }
   };

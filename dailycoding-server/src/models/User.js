@@ -2,7 +2,6 @@ import { nowMySQL, toMySQL } from '../config/dateutil.js';
 import { query, queryOne, insert, run } from '../config/mysql.js';
 import bcrypt from 'bcryptjs';
 import { redis } from '../config/redis.js';
-import { Reward } from './Reward.js';
 import { TIER_ORDER, TIER_POINTS, TIER_THRESHOLDS } from '../shared/constants.js';
 import { DEFAULT_PROFILE_BACKGROUND_SLUG, LEGACY_PROFILE_BACKGROUND_SLUGS } from '../config/profileBackgroundSeeds.js';
 import { getActivePromotionSeries, getNextTier, openPromotionSeries, recordPromotionWin } from '../services/promotionService.js';
@@ -346,7 +345,11 @@ export const User = {
     let nextTier = oldTier;
     const activePromotion = await getActivePromotionSeries(userId);
 
-    if (activePromotion?.status === 'in_progress' && activePromotion.to_tier === computedTier) {
+    if (oldTier === 'unranked' && computedTier !== 'unranked') {
+      // First placement should not require a promotion series; otherwise users
+      // with positive rating can stay visibly unranked after solving.
+      nextTier = computedTier;
+    } else if (activePromotion?.status === 'in_progress' && activePromotion.to_tier === computedTier) {
       const updatedSeries = await recordPromotionWin(userId, computedTier);
       nextTier = updatedSeries?.status === 'promoted' ? computedTier : oldTier;
     } else if (TIER_ORDER.indexOf(computedTier) > TIER_ORDER.indexOf(oldTier)) {
@@ -362,10 +365,10 @@ export const User = {
     await run('UPDATE users SET tier=? WHERE id=?', [nextTier, userId]);
     if (nextTier !== oldTier) {
       await emitFriendMilestone(userId, {
-        username: updUser?.username || '친구',
+        username: updUser?.username || 'friend',
         event: 'tier_up',
         tier: nextTier,
-        message: `${updUser?.username || '친구'}님이 ${nextTier} 티어로 승급했습니다!`,
+        message: `${updUser?.username || 'friend'} has been promoted to ${nextTier} tier!`,
       });
     }
 
@@ -381,10 +384,10 @@ export const User = {
 
     if ([7, 30, 100, 365].includes(streak)) {
       await emitFriendMilestone(userId, {
-        username: updUser?.username || '친구',
+        username: updUser?.username || 'friend',
         event: 'streak',
         streak,
-        message: `${updUser?.username || '친구'}님이 ${streak}일 연속 풀이를 달성했습니다!`,
+        message: `${updUser?.username || 'friend'} has achieved a ${streak}-day solving streak!`,
       });
     }
 
@@ -469,7 +472,7 @@ export const User = {
   // settings JSON을 깊은 병합으로 업데이트
   async updateSettings(id, patch) {
     const user = await this.findById(id);
-    if (!user) throw Object.assign(new Error('유저 없음'), { status: 404 });
+    if (!user) throw Object.assign(new Error('User not found'), { status: 404 });
 
     const defaults = this.getDefaultSettings();
     const current = safeParseJSON(user.settings, {});
@@ -497,11 +500,11 @@ export const User = {
   // 닉네임 설정/변경 — 30일 쿨다운 적용 (최초 설정 시에는 제한 없음)
   async setNickname(id, nickname) {
     const user = await queryOne('SELECT nickname, nickname_changed_at FROM users WHERE id = ?', [id]);
-    if (!user) throw Object.assign(new Error('유저 없음'), { status: 404 });
+    if (!user) throw Object.assign(new Error('User not found'), { status: 404 });
 
     // 중복 확인
     const conflict = await queryOne('SELECT id FROM users WHERE nickname = ? AND id != ?', [nickname, id]);
-    if (conflict) throw Object.assign(new Error('이미 사용 중인 닉네임입니다.'), { status: 409 });
+    if (conflict) throw Object.assign(new Error('Nickname already in use.'), { status: 409 });
 
     // 30일 쿨다운 (최초 설정 시 nickname_changed_at이 NULL이므로 통과)
     if (user.nickname_changed_at) {
@@ -510,7 +513,7 @@ export const User = {
       if (diffDays < 30) {
         const remaining = Math.ceil(30 - diffDays);
         throw Object.assign(
-          new Error(`닉네임은 30일마다 변경할 수 있습니다. ${remaining}일 후에 다시 시도해주세요.`),
+          new Error(`Nickname can only be changed every 30 days. Please try again in ${remaining} day(s).`),
           { status: 429 }
         );
       }
@@ -526,7 +529,7 @@ export const User = {
     const VALID = new Set(['public', 'followers', 'private']);
     if (VALID.has(profile_visibility)) updates.profile_visibility = profile_visibility;
     if (VALID.has(post_visibility))    updates.post_visibility    = post_visibility;
-    if (Object.keys(updates).length === 0) throw Object.assign(new Error('변경할 설정값이 없습니다.'), { status: 400 });
+    if (Object.keys(updates).length === 0) throw Object.assign(new Error('No settings to update.'), { status: 400 });
     return this.update(id, updates);
   },
 

@@ -10,12 +10,12 @@ import './AdminPage.css';
 
 const TIER_OPTIONS = ['bronze','silver','gold','platinum','diamond'];
 const PROBLEM_TYPE_OPTIONS = [
-  { value: 'coding', label: '일반 풀이' },
-  { value: 'fill-blank', label: '빈칸 채우기' },
-  { value: 'bug-fix', label: '틀린부분 찾기' },
-  { value: 'troubleshooting', label: '트러블슈팅' },
-  { value: 'performance-fix', label: '성능 개선' },
-  { value: 'refactor-fix', label: '리팩터링' },
+  { value: 'coding', label: 'Coding' },
+  { value: 'fill-blank', label: 'Fill in the Blank' },
+  { value: 'bug-fix', label: 'Bug Fix' },
+  { value: 'troubleshooting', label: 'Troubleshooting' },
+  { value: 'performance-fix', label: 'Performance Fix' },
+  { value: 'refactor-fix', label: 'Refactoring' },
 ];
 const TAG_OPTIONS  = ['수학','다이나믹 프로그래밍','그래프 이론','문자열','구현','소수','BFS','DFS','입출력','탐욕','정렬','이분 탐색','트리','스택/큐'];
 const TIER_COLORS  = { bronze:'#cd7f32', silver:'#c0c0c0', gold:'#ffd700', platinum:'#00e5cc', diamond:'#b9f2ff' };
@@ -138,26 +138,26 @@ export default function AdminPage() {
   }, [activeTab, communityFilter]);
 
   const handleCommunityApprove = async (id) => {
-    if (!window.confirm('이 문제를 승인하고 공식 문제로 등록하시겠습니까?')) return;
+    if (!window.confirm('Approve this problem and register it as an official problem?')) return;
     try {
       await api.post(`/community-problems/admin/${id}/approve`);
-      toast?.show('✅ 문제가 등록되었습니다.', 'success');
+      toast?.show('✅ Problem registered.', 'success');
       setCommunitySubmissions(s => s.filter(x => x.id !== id));
       setCommunityDetail(null);
     } catch (err) {
-      toast?.show(err.response?.data?.message || '승인 실패', 'error');
+      toast?.show(err.response?.data?.message || 'Approval failed', 'error');
     }
   };
 
   const handleCommunityReject = async (id) => {
     try {
       await api.post(`/community-problems/admin/${id}/reject`, { note: communityRejectNote });
-      toast?.show('반려되었습니다.', 'success');
+      toast?.show('Rejected.', 'success');
       setCommunitySubmissions(s => s.filter(x => x.id !== id));
       setCommunityDetail(null);
       setCommunityRejectNote('');
     } catch (err) {
-      toast?.show(err.response?.data?.message || '반려 실패', 'error');
+      toast?.show(err.response?.data?.message || 'Rejection failed', 'error');
     }
   };
 
@@ -165,17 +165,17 @@ export default function AdminPage() {
     try {
       await api.patch(`/admin/flagged-submissions/${id}/review`);
       setFlaggedSubmissions(rows => rows.map(row => row.id === id ? { ...row, reviewed: 1 } : row));
-      toast?.show('검토 완료 처리했습니다.', 'success');
+      toast?.show('Marked as reviewed.', 'success');
     } catch (err) {
-      toast?.show(err.response?.data?.message || '검토 처리 실패', 'error');
+      toast?.show(err.response?.data?.message || 'Failed to mark as reviewed', 'error');
     }
   };
 
   if (!isAdmin) return (
     <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'calc(100vh - 54px)',flexDirection:'column',gap:12}}>
       <div style={{fontSize:48}}>🚫</div>
-      <p style={{color:'var(--text2)'}}>관리자만 접근할 수 있습니다.</p>
-      <button className="btn btn-primary" onClick={()=>navigate('/')}>돌아가기</button>
+      <p style={{color:'var(--text2)'}}>Admin access only.</p>
+      <button className="btn btn-primary" onClick={()=>navigate('/')}>Go Back</button>
     </div>
   );
 
@@ -317,7 +317,7 @@ export default function AdminPage() {
         examples:d.examples?.length?d.examples:[{input:'',output:''}], testcases:makeEmptyCases(),
         hint:d.hint||'', solution:d.solution||'', specialConfig,
       });
-    } catch { addNotification('❌ AI 생성 실패. 다시 시도해주세요.'); toast?.show('❌ AI 생성 실패', 'error'); }
+    } catch { addNotification('❌ AI generation failed. Please try again.'); toast?.show('❌ AI generation failed', 'error'); }
     setAiGenerating(false);
   };
 
@@ -326,36 +326,36 @@ export default function AdminPage() {
     const specialConfig = buildSpecialConfigPayload();
     if (form.problemType === 'fill-blank') {
       if (!specialConfig?.codeTemplate?.trim()) {
-        toast?.show('빈칸 채우기 문제에는 코드 템플릿이 필요합니다.', 'warning');
+        toast?.show('Fill in the Blank problems require a code template.', 'warning');
         return;
       }
       if (!Array.isArray(specialConfig?.blanks) || specialConfig.blanks.length === 0) {
-        toast?.show('빈칸 정답을 쉼표 또는 줄바꿈으로 하나 이상 입력해주세요.', 'warning');
+        toast?.show('Enter at least one blank answer separated by commas or newlines.', 'warning');
         return;
       }
     }
     if (form.problemType === 'bug-fix') {
       if (!specialConfig?.buggyCode?.trim()) {
-        toast?.show('틀린부분 찾기 문제에는 버그 코드가 필요합니다.', 'warning');
+        toast?.show('Bug Fix problems require buggy code.', 'warning');
         return;
       }
       if (!Array.isArray(specialConfig?.keywords) || specialConfig.keywords.length === 0) {
-        toast?.show('정답 키워드를 쉼표 또는 줄바꿈으로 하나 이상 입력해주세요.', 'warning');
+        toast?.show('Enter at least one answer keyword separated by commas or newlines.', 'warning');
         return;
       }
     }
     if (isTroubleshootingForm) {
       const scenario = buildTroubleshootingPayload();
       if (!scenario.scenarioTitle.trim()) {
-        toast?.show('시나리오 제목을 입력해주세요.', 'warning');
+        toast?.show('Please enter a scenario title.', 'warning');
         return;
       }
       if (!scenario.initialFiles.length) {
-        toast?.show('트러블슈팅 파일을 하나 이상 추가해주세요.', 'warning');
+        toast?.show('Add at least one troubleshooting file.', 'warning');
         return;
       }
       if (!scenario.visibleTests.length && !scenario.hiddenTests.length) {
-        toast?.show('visible 또는 hidden test를 하나 이상 입력해주세요.', 'warning');
+        toast?.show('Add at least one visible or hidden test.', 'warning');
         return;
       }
     }
@@ -376,20 +376,20 @@ export default function AdminPage() {
         const res = await api.put(`/problems/${editTarget}`, payload);
         savedProblem = res.data;
         setProblems(p=>p.map(pr=>pr.id===editTarget?res.data:pr));
-        toast?.show(`✏️ "${form.title}" 수정됐습니다.`, 'info');
+        toast?.show(`✏️ "${form.title}" updated.`, 'info');
         loadProblems();
       } else {
         const res = await api.post('/problems', payload);
         savedProblem = res.data;
         setProblems(p=>[res.data,...p]);
-        toast?.show(`🆕 "${form.title}" 문제가 등록됐습니다!`, 'success');
+        toast?.show(`🆕 "${form.title}" problem registered!`, 'success');
         loadProblems();
       }
       if (isTroubleshootingForm && savedProblem?.id) {
         await api.post(`/admin/problems/${savedProblem.id}/troubleshooting`, buildTroubleshootingPayload());
       }
       setView('list'); setEditTarget(null); setForm(createEmptyForm()); setAiPreview(null); setAiPanel(false);
-    } catch (err) { toast?.show('❌ 저장 실패: '+(err.response?.data?.message||''), 'error'); }
+    } catch (err) { toast?.show('❌ Save failed: '+(err.response?.data?.message||''), 'error'); }
     setSaving(false);
   };
 
@@ -467,32 +467,32 @@ export default function AdminPage() {
     try {
       const { data } = await api.put('/admin/battle-settings', battleSettings);
       setBattleSettings(data);
-      toast?.show('⚔️ 배틀 설정이 즉시 반영되었습니다.', 'success');
+      toast?.show('⚔️ Battle settings applied immediately.', 'success');
     } catch (err) {
-      toast?.show(err.response?.data?.message || '배틀 설정 저장 실패', 'error');
+      toast?.show(err.response?.data?.message || 'Failed to save battle settings', 'error');
     } finally {
       setBattleSettingsSaving(false);
     }
   };
 
-  const handleDelete = (id, title) => setConfirmModal({ msg:`"${title}" 문제를 삭제하시겠습니까?`, onConfirm: async () => { try { await api.delete(`/problems/${id}`); setProblems(p=>p.filter(pr=>pr.id!==id)); loadProblems(); toast?.show('🗑 문제 삭제됨', 'info'); } catch(err) { toast?.show('❌ 삭제 실패: '+(err.response?.data?.message||err.message), 'error'); } } });
-  const handleDeleteContest = (id, name) => setConfirmModal({ msg:`"${name}" 대회를 삭제하시겠습니까?`, onConfirm: async () => { try { await api.delete(`/contests/${id}`); setContests(p=>p.filter(c=>c.id!==id)); loadContests(); toast?.show('🗑 대회 삭제됨', 'info'); } catch(err) { toast?.show('❌ 삭제 실패: '+(err.response?.data?.message||err.message), 'error'); } } });
+  const handleDelete = (id, title) => setConfirmModal({ msg:`Delete problem "${title}"?`, onConfirm: async () => { try { await api.delete(`/problems/${id}`); setProblems(p=>p.filter(pr=>pr.id!==id)); loadProblems(); toast?.show('🗑 Problem deleted', 'info'); } catch(err) { toast?.show('❌ Delete failed: '+(err.response?.data?.message||err.message), 'error'); } } });
+  const handleDeleteContest = (id, name) => setConfirmModal({ msg:`Delete contest "${name}"?`, onConfirm: async () => { try { await api.delete(`/contests/${id}`); setContests(p=>p.filter(c=>c.id!==id)); loadContests(); toast?.show('🗑 Contest deleted', 'info'); } catch(err) { toast?.show('❌ Delete failed: '+(err.response?.data?.message||err.message), 'error'); } } });
   const handleContestStart = async (id) => {
     try {
       await api.patch(`/contests/${id}/start`);
       setContests(p=>p.map(c=>c.id===id?{...c,status:'live'}:c));
-      toast?.show('🔴 대회 시작!', 'success');
+      toast?.show('🔴 Contest started!', 'success');
     } catch {
-      toast?.show('대회 시작 처리 실패', 'error');
+      toast?.show('Failed to start contest', 'error');
     }
   };
   const handleContestEnd = async (id) => {
     try {
       await api.patch(`/contests/${id}/end`);
       setContests(p=>p.map(c=>c.id===id?{...c,status:'ended'}:c));
-      toast?.show('🏁 대회 종료', 'info');
+      toast?.show('🏁 Contest ended', 'info');
     } catch {
-      toast?.show('대회 종료 처리 실패', 'error');
+      toast?.show('Failed to end contest', 'error');
     }
   };
   const handleRoleChange = async (uid, role) => {
@@ -500,15 +500,15 @@ export default function AdminPage() {
       await api.patch(`/auth/users/${uid}/role`,{role});
       setUsers(p=>p.map(u=>u.id===uid?{...u,role}:u));
     } catch {
-      toast?.show('권한 변경 실패', 'error');
+      toast?.show('Failed to change role', 'error');
     }
   };
-  const handleDeleteUser = (uid, name) => setConfirmModal({ msg:`"${name}" 유저를 삭제하시겠습니까?`, onConfirm: async () => {
+  const handleDeleteUser = (uid, name) => setConfirmModal({ msg:`Delete user "${name}"?`, onConfirm: async () => {
     try {
       await api.delete(`/auth/users/${uid}`);
       setUsers(p=>p.filter(u=>u.id!==uid));
     } catch {
-      toast?.show('유저 삭제 실패', 'error');
+      toast?.show('Failed to delete user', 'error');
     }
   } });
   const handleResetPw = (uid, name) => {
@@ -520,21 +520,21 @@ export default function AdminPage() {
     if (!pwInput || pwInput.length < 8) return;
     try {
       await api.patch(`/auth/users/${pwModal.uid}/reset-password`, { newPassword: pwInput });
-      toast?.show(`🔒 ${pwModal.name} 비밀번호 리셋됨`, 'success');
+      toast?.show(`🔒 ${pwModal.name} password reset`, 'success');
       setPwModal(null);
     } catch (err) {
-      toast?.show('❌ ' + (err.response?.data?.message || '실패'), 'error');
+      toast?.show('❌ ' + (err.response?.data?.message || 'Failed'), 'error');
     }
   };
 
   const handleClearCache = async (target) => {
     setClearing(target);
     try {
-      const labelMap = { all: '전체', leaderboards: '랭킹', heatmaps: '잔디', problems: '문제' };
+      const labelMap = { all: 'All', leaderboards: 'Ranking', heatmaps: 'Activity', problems: 'Problem' };
       await api.post('/admin/cache/clear', { target });
-      toast?.show(`✅ ${labelMap[target] || target} 캐시가 초기화되었습니다.`, 'success');
+      toast?.show(`✅ ${labelMap[target] || target} cache cleared.`, 'success');
     } catch (err) {
-      toast?.show('❌ 캐시 초기화 실패', 'error');
+      toast?.show('❌ Failed to clear cache', 'error');
     } finally {
       setClearing(null);
     }
@@ -542,7 +542,7 @@ export default function AdminPage() {
 
   const handleSaveWeeklyChallenge = async () => {
     if (!weeklyForm.problemId) {
-      toast?.show('문제 ID를 입력해주세요.', 'warning');
+      toast?.show('Please enter a problem ID.', 'warning');
       return;
     }
     setWeeklySaving(true);
@@ -553,9 +553,9 @@ export default function AdminPage() {
       });
       const { data } = await api.get('/weekly');
       setWeeklyChallenge(data);
-      toast?.show('🏆 이번 주 챌린지가 설정되었습니다.', 'success');
+      toast?.show('🏆 Weekly challenge has been set.', 'success');
     } catch (err) {
-      toast?.show(err.response?.data?.message || '주간 챌린지 설정 실패', 'error');
+      toast?.show(err.response?.data?.message || 'Failed to set weekly challenge', 'error');
     } finally {
       setWeeklySaving(false);
     }
@@ -566,24 +566,24 @@ export default function AdminPage() {
     <div className="form-group">
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
         <label>{icon} {label}</label>
-        <button type="button" className="btn btn-ghost btn-sm" onClick={()=>f(fieldKey,[...items,{input:'',output:''}])}>+ 추가</button>
+        <button type="button" className="btn btn-ghost btn-sm" onClick={()=>f(fieldKey,[...items,{input:'',output:''}])}>+ Add</button>
       </div>
       {items.map((ex,i)=>(
         <div key={i} style={{background:'var(--bg3)',border:`1px solid ${color}30`,borderRadius:8,padding:12,marginBottom:8}}>
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
             <span style={{fontSize:12,fontWeight:700,color}}>{label} {i+1}</span>
-            <button type="button" onClick={()=>f(fieldKey,items.filter((_,j)=>j!==i))} style={{background:'none',border:'none',color:'var(--red)',cursor:'pointer',fontSize:13}}>✕ 삭제</button>
+            <button type="button" onClick={()=>f(fieldKey,items.filter((_,j)=>j!==i))} style={{background:'none',border:'none',color:'var(--red)',cursor:'pointer',fontSize:13}}>✕ Delete</button>
           </div>
           <div className="cf-row" style={{margin:0,gap:8}}>
             <div style={{flex:1}}>
-              <div style={{fontSize:11,fontWeight:700,color:'var(--text2)',marginBottom:4,textTransform:'uppercase',letterSpacing:.5}}>입력</div>
-              <textarea rows={3} className="mono" placeholder="입력값" value={ex.input}
+              <div style={{fontSize:11,fontWeight:700,color:'var(--text2)',marginBottom:4,textTransform:'uppercase',letterSpacing:.5}}>Input</div>
+              <textarea rows={3} className="mono" placeholder="Input value" value={ex.input}
                 onChange={e=>{ const arr=[...items]; arr[i]={...arr[i],input:e.target.value}; f(fieldKey,arr); }}
                 style={{resize:'vertical',color:'var(--green)',width:'100%'}}/>
             </div>
             <div style={{flex:1}}>
-              <div style={{fontSize:11,fontWeight:700,color:'var(--text2)',marginBottom:4,textTransform:'uppercase',letterSpacing:.5}}>출력</div>
-              <textarea rows={3} className="mono" placeholder="출력값" value={ex.output}
+              <div style={{fontSize:11,fontWeight:700,color:'var(--text2)',marginBottom:4,textTransform:'uppercase',letterSpacing:.5}}>Output</div>
+              <textarea rows={3} className="mono" placeholder="Output value" value={ex.output}
                 onChange={e=>{ const arr=[...items]; arr[i]={...arr[i],output:e.target.value}; f(fieldKey,arr); }}
                 style={{resize:'vertical',color:'var(--green)',width:'100%'}}/>
             </div>

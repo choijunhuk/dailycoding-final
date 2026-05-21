@@ -74,7 +74,7 @@ export function initSocketServer(httpServer, allowedOrigins) {
       const safeMessage = String(message || '').slice(0, 100).replace(/[<>]/g, '').trim();
       if (!safeMessage) return;
       io.to(`battle:${safeRoomId}`).emit('battle:spectator_chat', {
-        username: socket.data.username || socket.user?.username || '익명',
+        username: socket.data.username || socket.user?.username || 'Anonymous',
         message: safeMessage,
         at: Date.now(),
       });
@@ -161,21 +161,21 @@ export function initSocketServer(httpServer, allowedOrigins) {
       const now = Date.now();
       const lastSubmit = submitRateLimits.get(socket.data.userId) || 0;
       if (now - lastSubmit < SUBMIT_COOLDOWN_MS) {
-        if (typeof ack === 'function') ack({ ok: false, message: '잠시 후 다시 제출해주세요.' });
+        if (typeof ack === 'function') ack({ ok: false, message: 'Please wait a moment before submitting again.' });
         return;
       }
       submitRateLimits.set(socket.data.userId, now);
       try {
         const stateBefore = await AlgorithmBattle.ensureNotExpired(roomId);
-        if (!stateBefore) throw new Error('방을 찾을 수 없습니다.');
+        if (!stateBefore) throw new Error('Room not found.');
         if (!stateBefore.participants.some((player) => player.userId === socket.data.userId)) {
-          throw new Error('방 참가자만 제출할 수 있습니다.');
+          throw new Error('Only room participants can submit.');
         }
-        if (stateBefore.room.status !== 'playing') throw new Error('진행 중인 배틀이 아닙니다.');
+        if (stateBefore.room.status !== 'playing') throw new Error('This battle is not currently in progress.');
         const problem = await Problem.findById(stateBefore.room.problemId);
-        if (!problem) throw new Error('배틀 문제를 찾을 수 없습니다.');
+        if (!problem) throw new Error('Battle problem not found.');
         const judgeRuntime = await getCachedJudgeRuntime({ logOnRefresh: true });
-        if (judgeRuntime.mode === 'unavailable') throw new Error('현재 서버에서 채점 런타임을 사용할 수 없습니다.');
+        if (judgeRuntime.mode === 'unavailable') throw new Error('The judge runtime is currently unavailable on this server.');
         const requester = await User.findById(socket.data.userId);
         const { execution, displayLang, normalizedLang } = await executeSubmissionFlow({
           problem,
@@ -326,7 +326,7 @@ export function initSocketServer(httpServer, allowedOrigins) {
       if (algorithmRoomId) {
         try {
           const { event, state } = await AlgorithmBattle.recordActivity(algorithmRoomId, socket.data.userId, {
-            activity: isTyping ? '코드 작성 중' : '생각 중',
+            activity: isTyping ? 'Writing code' : 'Thinking',
           });
           socket.to(`battle:${algorithmRoomId}`).emit('battle:activity', event);
           io.to(`battle:${algorithmRoomId}`).emit('battle:room:update', state);

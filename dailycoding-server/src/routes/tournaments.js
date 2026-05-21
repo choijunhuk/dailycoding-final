@@ -17,7 +17,7 @@ router.get('/', async (req, res) => {
 router.post('/', auth, requireVerified, async (req, res) => {
   try {
     const name = String(req.body?.name || '').trim();
-    if (!name) return errorResponse(res, 400, 'VALIDATION_ERROR', '토너먼트 이름이 필요합니다.');
+    if (!name) return errorResponse(res, 400, 'VALIDATION_ERROR', 'Tournament name is required.');
     const bannedTags = Array.isArray(req.body?.bannedTags) ? req.body.bannedTags.map(String) : [];
     const tournament = await Tournament.create({
       name,
@@ -40,7 +40,7 @@ router.post('/', auth, requireVerified, async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const tournament = await Tournament.getById(Number(req.params.id));
-    if (!tournament) return errorResponse(res, 404, 'NOT_FOUND', '토너먼트를 찾을 수 없습니다.');
+    if (!tournament) return errorResponse(res, 404, 'NOT_FOUND', 'Tournament not found.');
     res.json(tournament);
   } catch (err) {
     console.error('[tournaments/detail]', err.message);
@@ -86,11 +86,11 @@ router.delete('/:id', auth, requireVerified, async (req, res) => {
 router.post('/:id/matches/:matchId/winner', auth, adminOnly, async (req, res) => {
   try {
     const winnerId = Number(req.body?.winnerId);
-    if (!winnerId) return errorResponse(res, 400, 'VALIDATION_ERROR', 'winnerId가 필요합니다.');
+    if (!winnerId) return errorResponse(res, 400, 'VALIDATION_ERROR', 'winnerId is required.');
     const tournament = await Tournament.advanceWinner(Number(req.params.id), Number(req.params.matchId), winnerId, {
       battleId: req.body?.battleId || null,
     });
-    if (!tournament) return errorResponse(res, 404, 'NOT_FOUND', '매치를 찾을 수 없습니다.');
+    if (!tournament) return errorResponse(res, 404, 'NOT_FOUND', 'Match not found.');
     res.json(tournament);
   } catch (err) {
     console.error('[tournaments/winner]', err.message);

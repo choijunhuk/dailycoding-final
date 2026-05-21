@@ -71,7 +71,7 @@ function evaluateSpecialSubmission(problem, body) {
       correct,
       lang: 'fill-blank',
       storedCode: JSON.stringify(userAnswers.map((v) => String(v ?? '').trim())),
-      detail: correct ? '모든 빈칸이 정답입니다.' : '일부 빈칸이 올바르지 않습니다.',
+      detail: correct ? 'All blanks are correct.' : 'Some blanks are incorrect.',
     };
   }
 
@@ -82,7 +82,7 @@ function evaluateSpecialSubmission(problem, body) {
         correct: false,
         lang: 'bug-fix',
         storedCode: '',
-        detail: '수정 코드를 입력해주세요.',
+        detail: 'Please enter the corrected code.',
       };
     }
     const correct = evaluateBugFixAnswer(config, answerText);
@@ -90,7 +90,7 @@ function evaluateSpecialSubmission(problem, body) {
       correct,
       lang: 'bug-fix',
       storedCode: answerText,
-      detail: correct ? '핵심 버그 포인트를 정확히 찾았습니다.' : '핵심 버그 포인트가 포함되어 있지 않습니다.',
+      detail: correct ? 'You identified the key bug correctly.' : 'The key bug point is not included.',
     };
   }
 
@@ -171,13 +171,13 @@ router.get('/tag-stats', auth, async (req, res) => {
 router.post('/', auth, requireVerified, async (req, res) => {
   const { problemId, lang, code } = req.body;
   if (!problemId || Number.isNaN(Number(problemId))) {
-    return errorResponse(res, 400, 'VALIDATION_ERROR', 'problemId는 필수입니다.');
+    return errorResponse(res, 400, 'VALIDATION_ERROR', 'problemId is required.');
   }
 
   const Problem = await getProblemModel();
   const User = await getUserModel();
   const prob = await Problem.findById(Number(problemId));
-  if (!prob) return errorResponse(res, 404, 'NOT_FOUND', '문제를 찾을 수 없습니다.');
+  if (!prob) return errorResponse(res, 404, 'NOT_FOUND', 'Problem not found.');
   const solveTimeSec = normalizeSolveTimeSecInput(req.body?.solveTimeSec);
 
   const requester = await User.findById(req.user.id);
@@ -188,7 +188,7 @@ router.post('/', auth, requireVerified, async (req, res) => {
     try {
       const evaluation = evaluateSpecialSubmission(prob, req.body);
       if (!evaluation) {
-        return errorResponse(res, 400, 'VALIDATION_ERROR', '지원하지 않는 특수 문제 유형입니다.');
+        return errorResponse(res, 400, 'VALIDATION_ERROR', 'Unsupported special problem type.');
       }
 
       const alreadySolved = await queryOne(
@@ -247,21 +247,21 @@ router.post('/', auth, requireVerified, async (req, res) => {
       });
     } catch (err) {
       console.error('[submissions/create:special]', err);
-      return internalError(res, err?.message || '서버 오류');
+      return internalError(res, err?.message || 'Server error');
     }
   }
 
   if (!lang || !code) {
-    return errorResponse(res, 400, 'VALIDATION_ERROR', '코딩 문제 제출에는 lang, code가 필요합니다.');
+    return errorResponse(res, 400, 'VALIDATION_ERROR', 'lang and code are required for coding problem submissions.');
   }
   if (String(code).length > 100000) {
-    return errorResponse(res, 400, 'VALIDATION_ERROR', 'code는 100000자 이하여야 합니다.');
+    return errorResponse(res, 400, 'VALIDATION_ERROR', 'code must be 100000 characters or fewer.');
   }
 
   try {
     const judgeRuntime = await getCachedJudgeRuntime({ logOnRefresh: true });
     if (judgeRuntime.mode === 'unavailable') {
-      return errorResponse(res, 503, 'INTERNAL_ERROR', '현재 서버에서 채점 런타임을 사용할 수 없습니다.', {
+      return errorResponse(res, 503, 'INTERNAL_ERROR', 'The judge runtime is currently unavailable on this server.', {
         supportedLanguages: judgeRuntime.supportedLanguages || [],
       });
     }
@@ -318,7 +318,7 @@ router.post('/', auth, requireVerified, async (req, res) => {
       return res.status(err.status).json(err.body);
     }
     console.error('[submissions/create]', err);
-    return internalError(res, err?.message || '서버 오류');
+    return internalError(res, err?.message || 'Server error');
   }
 });
 
@@ -328,7 +328,7 @@ router.post('/run', auth, requireVerified, validateBody(runSchema), async (req, 
 
   const Problem = await getProblemModel();
   const prob = await Problem.findById(Number(problemId));
-  if (!prob) return errorResponse(res, 404, 'NOT_FOUND', '문제를 찾을 수 없습니다.');
+  if (!prob) return errorResponse(res, 404, 'NOT_FOUND', 'Problem not found.');
 
   const User = await getUserModel();
   const requester = await User.findById(req.user.id);
@@ -337,7 +337,7 @@ router.post('/run', auth, requireVerified, validateBody(runSchema), async (req, 
   try {
     const judgeRuntime = await getCachedJudgeRuntime({ logOnRefresh: true });
     if (judgeRuntime.mode === 'unavailable') {
-      return errorResponse(res, 503, 'INTERNAL_ERROR', '현재 서버에서 채점 런타임을 사용할 수 없습니다.', {
+      return errorResponse(res, 503, 'INTERNAL_ERROR', 'The judge runtime is currently unavailable on this server.', {
         supportedLanguages: judgeRuntime.supportedLanguages || [],
       });
     }
@@ -368,7 +368,7 @@ router.post('/run', auth, requireVerified, validateBody(runSchema), async (req, 
       return res.status(err.status).json(err.body);
     }
     console.error('[submissions/run]', err);
-    return internalError(res, err?.message || '서버 오류');
+    return internalError(res, err?.message || 'Server error');
   }
 });
 
@@ -379,17 +379,17 @@ router.get('/', auth, async (req, res) => {
     const targetUserId = userId == null ? null : Number(userId);
 
     if (userId != null && !Number.isInteger(targetUserId)) {
-      return errorResponse(res, 400, 'VALIDATION_ERROR', '유효하지 않은 사용자 ID입니다.');
+      return errorResponse(res, 400, 'VALIDATION_ERROR', 'Invalid user ID.');
     }
 
     if (targetUserId && targetUserId !== req.user.id) {
       const User = await getUserModel();
       const targetUser = await User.findById(targetUserId);
       if (!targetUser) {
-        return errorResponse(res, 404, 'NOT_FOUND', '사용자를 찾을 수 없습니다.');
+        return errorResponse(res, 404, 'NOT_FOUND', 'User not found.');
       }
       if (!targetUser.submissions_public) {
-        return errorResponse(res, 403, 'FORBIDDEN', '이 사용자의 제출 기록은 비공개입니다.');
+        return errorResponse(res, 403, 'FORBIDDEN', 'This user\'s submission history is private.');
       }
     }
 
@@ -397,7 +397,7 @@ router.get('/', auth, async (req, res) => {
     res.json(rows);
   } catch (err) {
     console.error('[submissions/list]', err);
-    return internalError(res, err?.message || '제출 기록을 불러오지 못했습니다.');
+    return internalError(res, err?.message || 'Failed to load submission history.');
   }
 });
 
@@ -423,12 +423,12 @@ router.get('/recovery', auth, async (req, res) => {
       count: recoveryQueue.length,
       items: recoveryQueue,
       summary: recoveryQueue.length > 0
-        ? '최근 실패한 문제를 먼저 복구하면 같은 시간 대비 실력 상승 효율이 높습니다.'
-        : '미해결 오답이 없습니다. 새로운 문제나 배틀로 난이도를 올려보세요.',
+        ? 'Recovering recently failed problems first is more efficient for skill improvement per unit time.'
+        : 'No unresolved wrong answers. Try new problems or battles to increase the difficulty.',
     });
   } catch (err) {
     console.error('[submissions/recovery]', err);
-    return internalError(res, err?.message || '오답 복구 큐를 불러오지 못했습니다.');
+    return internalError(res, err?.message || 'Failed to load the wrong answer recovery queue.');
   }
 });
 
@@ -457,7 +457,7 @@ router.post('/:submissionId/reviews', auth, requireVerified, async (req, res) =>
       return errorResponse(res, status, status === 403 ? 'FORBIDDEN' : 'VALIDATION_ERROR', err.message);
     }
     console.error('[submissions/reviews/create]', err);
-    return internalError(res, err?.message || '리뷰를 생성하지 못했습니다.');
+    return internalError(res, err?.message || 'Failed to create the review.');
   }
 });
 
@@ -466,10 +466,10 @@ router.post('/:id/share', auth, requireVerified, async (req, res) => {
     const submissionId = Number(req.params.id);
     const submission = await Submission.getWithCode(submissionId);
     if (!submission) {
-      return errorResponse(res, 404, 'NOT_FOUND', '제출을 찾을 수 없습니다.');
+      return errorResponse(res, 404, 'NOT_FOUND', 'Submission not found.');
     }
     if (submission.user_id !== req.user.id) {
-      return errorResponse(res, 403, 'FORBIDDEN', '본인 제출만 공유할 수 있습니다.');
+      return errorResponse(res, 403, 'FORBIDDEN', 'You can only share your own submissions.');
     }
 
     const shared = await Submission.createShare(submissionId);
@@ -488,11 +488,11 @@ router.post('/:id/share', auth, requireVerified, async (req, res) => {
 router.get('/:id/code', auth, async (req, res) => {
   try {
     const sub = await Submission.getWithCode(Number(req.params.id));
-    if (!sub) return errorResponse(res, 404, 'NOT_FOUND', '없음');
+    if (!sub) return errorResponse(res, 404, 'NOT_FOUND', 'Not found.');
     const User = await getUserModel();
     const requester = await User.findById(req.user.id);
     if (sub.user_id !== req.user.id && !sub.submissions_public && requester?.role !== 'admin') {
-      return errorResponse(res, 403, 'FORBIDDEN', '접근 권한이 없습니다.');
+      return errorResponse(res, 403, 'FORBIDDEN', 'Access denied.');
     }
     res.json({ code: sub.code, lang: sub.lang });
   } catch { return internalError(res); }

@@ -15,12 +15,12 @@ const router = Router();
 
 export function parseRefreshTokenValue(refreshToken) {
   if (typeof refreshToken !== 'string') {
-    return { errorCode: 'INVALID_TOKEN', message: '유효하지 않은 리프레시 토큰입니다.' };
+    return { errorCode: 'INVALID_TOKEN', message: 'Invalid refresh token.' };
   }
 
   const dotIndex = refreshToken.indexOf('.');
   if (dotIndex === -1) {
-    return { errorCode: 'INVALID_TOKEN', message: '유효하지 않은 리프레시 토큰입니다.' };
+    return { errorCode: 'INVALID_TOKEN', message: 'Invalid refresh token.' };
   }
 
   const userId = refreshToken.slice(0, dotIndex);
@@ -28,11 +28,11 @@ export function parseRefreshTokenValue(refreshToken) {
   const parsedUserId = Number(userId);
 
   if (!Number.isInteger(parsedUserId) || parsedUserId <= 0) {
-    return { errorCode: 'INVALID_TOKEN', message: '유효하지 않은 토큰 형식입니다.' };
+    return { errorCode: 'INVALID_TOKEN', message: 'Invalid token format.' };
   }
 
   if (!token) {
-    return { errorCode: 'INVALID_TOKEN', message: '유효하지 않은 리프레시 토큰입니다.' };
+    return { errorCode: 'INVALID_TOKEN', message: 'Invalid refresh token.' };
   }
 
   return { userId: parsedUserId, token };
@@ -42,7 +42,7 @@ router.post('/register', validateBody(registerSchema), async (req, res) => {
   try {
     const { email, password, username, referralCode } = req.body;
     const existing = await User.findByEmail(email);
-    if (existing) return errorResponse(res, 409, 'VALIDATION_ERROR', '이미 사용 중인 이메일입니다.');
+    if (existing) return errorResponse(res, 409, 'VALIDATION_ERROR', 'Email already in use.');
     const newUser = await User.create({ email, password, username });
     await attachReferralCode(referralCode, newUser.id);
     (async () => {
@@ -67,7 +67,7 @@ router.post('/register', validateBody(registerSchema), async (req, res) => {
     res.status(201).json({ token: accessToken, user: { ...User.safe(newUser), email_verified: false } });
   } catch (err) {
     if (err.code === 'ER_DUP_ENTRY') {
-      return errorResponse(res, 409, 'VALIDATION_ERROR', '이미 사용 중인 이메일 또는 닉네임입니다.');
+      return errorResponse(res, 409, 'VALIDATION_ERROR', 'Email or username already in use.');
     }
     console.error('[register]', err.message);
     return internalError(res);
@@ -79,10 +79,10 @@ router.post('/login', validateBody(loginSchema), async (req, res) => {
     const { email, password } = req.body;
     const user = await User.findByEmail(email);
     if (!user || !await User.checkPassword(user, password)) {
-      return errorResponse(res, 401, 'UNAUTHORIZED', '이메일 또는 비밀번호가 올바르지 않습니다.');
+      return errorResponse(res, 401, 'UNAUTHORIZED', 'Invalid email or password.');
     }
     if (user.banned_at) {
-      return errorResponse(res, 403, 'FORBIDDEN', `계정이 정지됐습니다. 사유: ${user.ban_reason || '규정 위반'}`);
+      return errorResponse(res, 403, 'FORBIDDEN', `Account suspended. Reason: ${user.ban_reason || 'Terms of service violation'}`);
     }
     await User.update(user.id, { last_login: new Date().toISOString().slice(0, 19).replace('T', ' ') });
     await clearAuthStatus(user.id);
@@ -96,7 +96,7 @@ router.post('/login', validateBody(loginSchema), async (req, res) => {
 
 router.post('/refresh', async (req, res) => {
   const { refreshToken } = req.cookies;
-  if (!refreshToken) return errorResponse(res, 401, 'UNAUTHORIZED', '로그인이 필요합니다.');
+  if (!refreshToken) return errorResponse(res, 401, 'UNAUTHORIZED', 'Login required.');
 
   try {
     const parsedToken = parseRefreshTokenValue(refreshToken);
@@ -111,18 +111,18 @@ router.post('/refresh', async (req, res) => {
       const inGrace = await redis.get(`auth:refresh:grace:${userId}:${token}`);
       if (inGrace) {
         const user = await User.findById(userId);
-        if (!user || user.banned_at) return errorResponse(res, 401, 'UNAUTHORIZED', '인증 실패');
+        if (!user || user.banned_at) return errorResponse(res, 401, 'UNAUTHORIZED', 'Authentication failed.');
         return res.json({ token: (await import('./helpers.js')).makeToken(user) });
       }
 
       await redis.del(`auth:refresh:${userId}`);
       clearAuthCookies(res);
-      return errorResponse(res, 401, 'UNAUTHORIZED', '보안 정책에 의해 로그아웃되었습니다. 다시 로그인해주세요.');
+      return errorResponse(res, 401, 'UNAUTHORIZED', 'Logged out due to security policy. Please log in again.');
     }
 
     const user = await User.findById(userId);
-    if (!user) return errorResponse(res, 401, 'UNAUTHORIZED', '유저를 찾을 수 없습니다.');
-    if (user.banned_at) return errorResponse(res, 403, 'FORBIDDEN', '정지된 계정입니다.');
+    if (!user) return errorResponse(res, 401, 'UNAUTHORIZED', 'User not found.');
+    if (user.banned_at) return errorResponse(res, 403, 'FORBIDDEN', 'Account suspended.');
 
     const accessToken = await issueTokens(res, user);
     res.json({ token: accessToken });
@@ -139,7 +139,7 @@ router.post('/logout', async (req, res) => {
     await clearAuthStatus(parsedToken.userId);
   }
   clearAuthCookies(res);
-  res.status(200).json({ message: '로그아웃됐습니다.' });
+  res.status(200).json({ message: 'Logged out successfully.' });
 });
 
 
@@ -147,7 +147,7 @@ router.patch('/onboarding/complete', auth, async (req, res) => {
   try {
     await run('UPDATE users SET onboarding_completed = 1 WHERE id = ?', [req.user.id]);
     const user = await User.findById(req.user.id);
-    if (!user) return errorResponse(res, 404, 'NOT_FOUND', '유저 없음');
+    if (!user) return errorResponse(res, 404, 'NOT_FOUND', 'User not found.');
     return res.json({ user: User.safe(user) });
   } catch (err) {
     console.error('[onboarding/complete]', err.message);
@@ -168,7 +168,7 @@ router.get('/top100', auth, async (req, res) => {
 router.get('/me', auth, async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
-    if (!user) return errorResponse(res, 404, 'NOT_FOUND', '유저 없음');
+    if (!user) return errorResponse(res, 404, 'NOT_FOUND', 'User not found.');
     const [solvedIds, bookmarkRows] = await Promise.all([
       User.getSolvedIds(req.user.id),
       User.getBookmarks(req.user.id),

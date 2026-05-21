@@ -79,12 +79,12 @@ export function DonutChart({ data, total }) {
         ? <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--bg3)" strokeWidth={r - ir} />
         : segments.map((segment, index) => <path key={index} d={segment.d} fill={segment.fill} />)}
       <text x={cx} y={cy - 7} textAnchor="middle" fill="var(--text)" fontSize="24" fontWeight="800" fontFamily="Space Mono,monospace">{total}</text>
-      <text x={cx} y={cy + 13} textAnchor="middle" fill="var(--text3)" fontSize="11">문제 해결</text>
+      <text x={cx} y={cy + 13} textAnchor="middle" fill="var(--text3)" fontSize="11">Solved</text>
     </svg>
   );
 }
 
-const HEATMAP_LEVEL_LABELS = ['없음', '적음 (1문제)', '보통 (2-3문제)', '많음 (4-5문제)', '매우 많음 (6문제+)'];
+const HEATMAP_LEVEL_LABELS = ['None', 'Low (1 problem)', 'Medium (2-3 problems)', 'High (4-5 problems)', 'Very High (6+ problems)'];
 
 export function YearHeatmap({ cells, onCellHover }) {
   const cell = 11;
@@ -115,7 +115,7 @@ export function YearHeatmap({ cells, onCellHover }) {
           onMouseEnter={(e) => onCellHover?.({ ...cellData, clientX: e.clientX, clientY: e.clientY })}
           onMouseLeave={() => onCellHover?.(null)}
         >
-          <title>{`${cellData.date} · ${HEATMAP_LEVEL_LABELS[cellData.level]}${cellData.count > 0 ? ` (총 ${cellData.count}개)` : ''}`}</title>
+          <title>{`${cellData.date} · ${HEATMAP_LEVEL_LABELS[cellData.level]}${cellData.count > 0 ? ` (total ${cellData.count})` : ''}`}</title>
         </rect>
       ))}
     </svg>

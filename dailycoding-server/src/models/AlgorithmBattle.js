@@ -7,6 +7,9 @@ const DEFAULT_DURATION_SEC = 300;
 const DEFAULT_MAX_PLAYERS = 2;
 const MAX_PLAYERS = 6;
 const LOBBY_TIMEOUT_MS = 5 * 60 * 1000;
+const DRAFT_BAN_TIER_LIMIT = 1;
+const DRAFT_BAN_TAG_LIMIT = 2;
+const DRAFT_PICK_TAG_LIMIT = 1;
 
 const BATTLE_MODES = {
   'sort-speed': {
@@ -92,9 +95,9 @@ const BATTLE_MODES = {
   'draft-ban': {
     key: 'draft-ban',
     title: '🚫 밴픽전',
-    description: '호스트가 티어와 알고리즘 태그를 밴하거나 특정 범위로 제한한 뒤 시작하는 전략형 1:1 대결.',
+    description: '게임 시작 후 양쪽 플레이어가 티어/태그를 밴픽하고, 그 결과로 문제가 확정되는 전략형 1:1 대결.',
     winCondition: 'hp-knockout',
-    rules: ['문제 시작 전 티어/태그 조건 적용', '밴한 티어와 태그는 문제 후보에서 제외', '선택 태그만 모드에서는 해당 알고리즘 문제만 출제', '정답 제출 → 상대 HP 감소 + 문제 효과 발동'],
+    rules: ['방 생성 시 문제 조건을 미리 달지 않음', '양쪽 준비 완료 후 밴픽 단계 진입', '각 플레이어가 티어/태그 밴과 선호 태그 픽을 제출', '밴픽 결과로 문제 확정 후 정답 제출 → 상대 HP 감소 + 문제 효과 발동'],
     maxPlayers: 2,
     durationSec: 600,
     itemsEnabled: true,
@@ -104,6 +107,7 @@ const BATTLE_MODES = {
     activityEnabled: true,
     itemCooldownSec: 18,
     problemCount: 1,
+    draftEnabled: true,
   },
 };
 
@@ -249,14 +253,87 @@ function getBattleModeConfig(mode, overrides = {}) {
 
 function getRoomConfig(room, events = []) {
   const configEvent = [...(events || [])].reverse().find((event) => event.type === 'room.config');
-  const problemFilters = sanitizeProblemFilters({
-    ...(configEvent?.payload?.problemFilters || {}),
-    bannedTags: configEvent?.payload?.problemFilters?.bannedTags || configEvent?.payload?.bannedTags || [],
+  const draftCompletedEvent = [...(events || [])].reverse().find((event) => event.type === 'draft.completed');
+  const baseFilters = configEvent?.payload?.problemFilters || {};
+  const completedFilters = draftCompletedEvent?.payload?.problemFilters || null;
+  const problemFilters = sanitizeProblemFilters(completedFilters || {
+    ...baseFilters,
+    bannedTags: baseFilters?.bannedTags || configEvent?.payload?.bannedTags || [],
   });
   return getBattleModeConfig(room?.mode || 'sort-speed', {
     bannedTags: problemFilters.bannedTags,
     problemFilters,
   });
+}
+
+function getEffectiveProblemFilters(events = []) {
+  const configEvent = [...(events || [])].reverse().find((event) => event.type === 'room.config');
+  const draftCompletedEvent = [...(events || [])].reverse().find((event) => event.type === 'draft.completed');
+  if (draftCompletedEvent?.payload?.problemFilters) {
+    return sanitizeProblemFilters(draftCompletedEvent.payload.problemFilters);
+  }
+  return sanitizeProblemFilters({
+    ...(configEvent?.payload?.problemFilters || {}),
+    bannedTags: configEvent?.payload?.problemFilters?.bannedTags || configEvent?.payload?.bannedTags || [],
+  });
+}
+
+function getLatestDraftSelections(participants = [], events = []) {
+  const participantIds = new Set(participants.map((player) => Number(player.userId)));
+  const byUserId = new Map();
+  for (const event of events || []) {
+    if (event.type !== 'draft.selection' || !participantIds.has(Number(event.userId))) continue;
+    byUserId.set(Number(event.userId), {
+      userId: Number(event.userId),
+      bannedTiers: normalizeTierList(event.payload?.bannedTiers).slice(0, DRAFT_BAN_TIER_LIMIT),
+      bannedTags: normalizeTagList(event.payload?.bannedTags, DRAFT_BAN_TAG_LIMIT),
+      pickedTags: normalizeTagList(event.payload?.pickedTags, DRAFT_PICK_TAG_LIMIT),
+      createdAt: event.createdAt,
+    });
+  }
+  return [...byUserId.values()];
+}
+
+function buildProblemFiltersFromDraftSelections(selections = []) {
+  const bannedTiers = [];
+  const bannedTags = [];
+  const requiredTags = [];
+  for (const selection of selections) {
+    bannedTiers.push(...(selection.bannedTiers || []));
+    bannedTags.push(...(selection.bannedTags || []));
+    requiredTags.push(...(selection.pickedTags || []));
+  }
+  return sanitizeProblemFilters({
+    tierMode: 'auto',
+    bannedTiers,
+    bannedTags,
+    requiredTags,
+  });
+}
+
+function buildDraftState(room, participants = [], events = []) {
+  if (room?.mode !== 'draft-ban') return null;
+  const draftStarted = events.some((event) => event.type === 'draft.started');
+  const draftCompleted = [...(events || [])].reverse().find((event) => event.type === 'draft.completed');
+  const selections = getLatestDraftSelections(participants, events);
+  const requiredCount = Math.max(2, participants.length || 2);
+  const submittedCount = selections.length;
+  const everyoneReady = participants.length >= 2 && participants.every((player) => player.isReady);
+  const phase = room.status === 'playing' || draftCompleted
+    ? 'completed'
+    : draftStarted
+      ? 'active'
+      : everyoneReady
+        ? 'active'
+        : 'waiting';
+  return {
+    phase,
+    requiredCount,
+    submittedCount,
+    isComplete: Boolean(draftCompleted),
+    selections,
+    problemFilters: draftCompleted?.payload?.problemFilters || null,
+  };
 }
 
 function getActivityByUserId(participants = [], events = []) {
@@ -635,10 +712,12 @@ export const AlgorithmBattle = {
 
     const normalizedMode = normalizeMode(mode);
     const modeConfig = getBattleModeConfig(normalizedMode);
-    const normalizedProblemFilters = sanitizeProblemFilters({
-      ...(problemFilters || {}),
-      bannedTags: problemFilters?.bannedTags || bannedTags,
-    });
+    const normalizedProblemFilters = normalizedMode === 'draft-ban'
+      ? sanitizeProblemFilters({})
+      : sanitizeProblemFilters({
+        ...(problemFilters || {}),
+        bannedTags: problemFilters?.bannedTags || bannedTags,
+      });
 
     let resolvedProblemId = null;
     let problemIdsJson = null;
@@ -816,6 +895,7 @@ export const AlgorithmBattle = {
       room,
       participants,
       config: getRoomConfig(room, events),
+      draft: buildDraftState(room, participants, events),
       activityByUserId: getActivityByUserId(participants, events),
       events,
       submissions,
@@ -883,8 +963,64 @@ export const AlgorithmBattle = {
     await this.recordEvent(roomId, userId, 'player.ready', {});
     const participants = await this.getParticipants(roomId);
     if (participants.length >= 2 && participants.every((p) => p.isReady)) {
-      await this.startRoom(roomId);
+      if (room.mode === 'draft-ban') {
+        await this.beginDraft(roomId);
+      } else {
+        await this.startRoom(roomId);
+      }
     }
+    return this.getRoomState(roomId);
+  },
+
+  async beginDraft(roomId) {
+    const room = await this.getRoom(roomId);
+    if (!room || room.mode !== 'draft-ban' || room.status !== 'waiting') return room;
+    const participants = await this.getParticipants(roomId);
+    if (participants.length < 2 || !participants.every((player) => player.isReady)) {
+      const err = new Error('양쪽 플레이어가 준비 완료해야 밴픽을 시작할 수 있습니다.');
+      err.status = 400;
+      throw err;
+    }
+    const events = await this.getEvents(roomId);
+    if (!events.some((event) => event.type === 'draft.started')) {
+      await run('UPDATE battle_rooms SET lobby_expires_at = ? WHERE id = ?', [toMySQL(new Date(Date.now() + LOBBY_TIMEOUT_MS)), roomId]);
+      await this.recordEvent(roomId, null, 'draft.started', {
+        banTierLimit: DRAFT_BAN_TIER_LIMIT,
+        banTagLimit: DRAFT_BAN_TAG_LIMIT,
+        pickTagLimit: DRAFT_PICK_TAG_LIMIT,
+      });
+    }
+    return this.getRoom(roomId);
+  },
+
+  async submitDraftSelection(roomId, userId, { bannedTiers = [], bannedTags = [], pickedTags = [] } = {}) {
+    const { room } = await this.requireParticipant(roomId, userId);
+    if (room.mode !== 'draft-ban') {
+      const err = new Error('밴픽전에서만 사용할 수 있습니다.');
+      err.status = 400;
+      throw err;
+    }
+    if (room.status !== 'waiting') {
+      return this.getRoomState(roomId);
+    }
+
+    await this.beginDraft(roomId);
+    const selection = {
+      bannedTiers: normalizeTierList(bannedTiers).slice(0, DRAFT_BAN_TIER_LIMIT),
+      bannedTags: normalizeTagList(bannedTags, DRAFT_BAN_TAG_LIMIT),
+      pickedTags: normalizeTagList(pickedTags, DRAFT_PICK_TAG_LIMIT),
+    };
+    await this.recordEvent(roomId, userId, 'draft.selection', selection);
+
+    const participants = await this.getParticipants(roomId);
+    const events = await this.getEvents(roomId);
+    const selections = getLatestDraftSelections(participants, events);
+    if (participants.length >= 2 && selections.length >= participants.length) {
+      const problemFilters = buildProblemFiltersFromDraftSelections(selections);
+      await this.recordEvent(roomId, null, 'draft.completed', { problemFilters, selections });
+      await this.startRoom(roomId, { allowDraftStart: true });
+    }
+
     return this.getRoomState(roomId);
   },
 
@@ -900,12 +1036,8 @@ export const AlgorithmBattle = {
     const participants = await this.getParticipants(roomId);
     const profiles = await Promise.all(participants.map((player) => getBattleProfile(player.userId)));
     const events = await this.getEvents(roomId);
-    const configEvent = [...(events || [])].reverse().find((event) => event.type === 'room.config');
     const baseRange = resolveBattleProblemRange(profiles, currentRoom);
-    const filters = sanitizeProblemFilters({
-      ...(configEvent?.payload?.problemFilters || {}),
-      bannedTags: configEvent?.payload?.problemFilters?.bannedTags || configEvent?.payload?.bannedTags || [],
-    });
+    const filters = getEffectiveProblemFilters(events);
     const range = resolveBattleProblemFilters(baseRange, filters);
     const ids = await findProblemIds(problemCount, range);
     const primaryProblemId = ids[0] || null;
@@ -926,7 +1058,7 @@ export const AlgorithmBattle = {
     return this.getRoom(roomId);
   },
 
-  async startRoom(roomId) {
+  async startRoom(roomId, { allowDraftStart = false } = {}) {
     const room = await this.getRoom(roomId);
     if (!room || room.status !== 'waiting') return room;
     const participants = await this.getParticipants(roomId);
@@ -934,6 +1066,10 @@ export const AlgorithmBattle = {
       const err = new Error('상대가 들어온 뒤 시작할 수 있습니다.');
       err.status = 400;
       throw err;
+    }
+    if (room.mode === 'draft-ban' && !allowDraftStart) {
+      await this.beginDraft(roomId);
+      return this.getRoom(roomId);
     }
     await this.ensureRoomProblems(roomId, room);
     await run('UPDATE battle_rooms SET status = ?, started_at = ? WHERE id = ?', ['playing', nowMySQL(), roomId]);

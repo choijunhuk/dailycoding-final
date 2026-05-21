@@ -4,7 +4,6 @@ import { Battle } from '../models/Battle.js';
 import { AlgorithmBattle } from '../models/AlgorithmBattle.js';
 import { Tournament } from '../models/Tournament.js';
 import { User }   from '../models/User.js';
-import { Reward } from '../models/Reward.js';
 import { errorResponse, internalError } from '../middleware/errorHandler.js';
 import { normalizeJudgeLanguage } from '../services/judge.js';
 import { getCachedJudgeRuntime } from '../services/judgeRuntimeCache.js';
@@ -33,7 +32,7 @@ router.get('/public/active-count', async (req, res) => {
 router.get('/:id/replay', async (req, res) => {
   try {
     const replay = await Battle.getReplay(req.params.id);
-    if (!replay) return errorResponse(res, 404, 'NOT_FOUND', '리플레이를 찾을 수 없습니다.');
+    if (!replay) return errorResponse(res, 404, 'NOT_FOUND', 'Replay not found.');
     res.json(replay);
   } catch (err) {
     console.error('[battles/replay]', err.message);
@@ -66,7 +65,7 @@ async function getProblemModel() {
 }
 
 // 배틀 종료 시 승자/패자 결정 헬퍼 (팀 배틀 대응)
-function resolveWinner(players, _teams) {
+function resolveWinner(players) {
   if (!players || typeof players !== 'object') {
     return { winnerTeamId: null, loserTeamId: null, teamScores: {} };
   }
@@ -227,7 +226,7 @@ router.post('/rooms', async (req, res) => {
     res.status(201).json(state);
   } catch (err) {
     console.error('[algorithm-battles/create]', err);
-    return internalError(res, err?.message || '배틀 방 생성 실패');
+    return internalError(res, err?.message || 'Failed to create battle room');
   }
 });
 
@@ -235,7 +234,7 @@ router.post('/rooms', async (req, res) => {
 router.get('/rooms/join-by-code/:code', async (req, res) => {
   try {
     const state = await AlgorithmBattle.joinByCode(req.params.code, req.user.id);
-    if (!state) return errorResponse(res, 404, 'NOT_FOUND', '방을 찾을 수 없습니다.');
+    if (!state) return errorResponse(res, 404, 'NOT_FOUND', 'Room not found.');
     emitBattleRoomUpdate(req.app.get('io'), state);
     res.json({ state, roomId: state.room.id });
   } catch (err) {
@@ -249,7 +248,7 @@ router.get('/rooms/join-by-code/:code', async (req, res) => {
 router.post('/rooms/:roomId/activity', async (req, res) => {
   try {
     const { event, state } = await AlgorithmBattle.recordActivity(req.params.roomId, req.user.id, {
-      activity: req.body?.activity || '집중 중',
+      activity: req.body?.activity || 'Focused',
       message: req.body?.message || '',
     });
     emitBattleEvent(req.app.get('io'), state, 'battle:activity', event);
@@ -311,7 +310,7 @@ router.post('/rooms/:roomId/item', async (req, res) => {
 router.get('/rooms/:roomId', async (req, res) => {
   try {
     const state = await AlgorithmBattle.ensureNotExpired(req.params.roomId);
-    if (!state) return errorResponse(res, 404, 'NOT_FOUND', '방을 찾을 수 없습니다.');
+    if (!state) return errorResponse(res, 404, 'NOT_FOUND', 'Room not found.');
     res.json(state);
   } catch (err) {
     console.error('[algorithm-battles/get]', err);
@@ -322,7 +321,7 @@ router.get('/rooms/:roomId', async (req, res) => {
 router.post('/rooms/:roomId/join', async (req, res) => {
   try {
     const state = await AlgorithmBattle.joinRoom(req.params.roomId, req.user.id);
-    if (!state) return errorResponse(res, 404, 'NOT_FOUND', '방을 찾을 수 없습니다.');
+    if (!state) return errorResponse(res, 404, 'NOT_FOUND', 'Room not found.');
     emitBattleRoomUpdate(req.app.get('io'), state);
     res.json(state);
   } catch (err) {
@@ -337,7 +336,7 @@ router.post('/rooms/:roomId/ready', async (req, res) => {
   try {
     const before = await AlgorithmBattle.getRoom(req.params.roomId);
     const state = await AlgorithmBattle.markReady(req.params.roomId, req.user.id);
-    if (!state) return errorResponse(res, 404, 'NOT_FOUND', '방을 찾을 수 없습니다.');
+    if (!state) return errorResponse(res, 404, 'NOT_FOUND', 'Room not found.');
     const io = req.app.get('io');
     emitBattleRoomUpdate(io, state);
     if (before?.status === 'waiting' && state.room.status === 'playing') {
@@ -353,27 +352,51 @@ router.post('/rooms/:roomId/ready', async (req, res) => {
   }
 });
 
+router.post('/rooms/:roomId/draft', async (req, res) => {
+  try {
+    const before = await AlgorithmBattle.getRoom(req.params.roomId);
+    const state = await AlgorithmBattle.submitDraftSelection(req.params.roomId, req.user.id, {
+      bannedTiers: req.body?.bannedTiers || [],
+      bannedTags: req.body?.bannedTags || [],
+      pickedTags: req.body?.pickedTags || [],
+    });
+    if (!state) return errorResponse(res, 404, 'NOT_FOUND', 'Room not found.');
+    const io = req.app.get('io');
+    emitBattleRoomUpdate(io, state);
+    if (before?.status === 'waiting' && state.room.status === 'playing') {
+      io?.to(`battle:${state.room.id}`).emit('battle:countdown', { seconds: 3 });
+      io?.to(`battle:${state.room.id}`).emit('battle:started', state);
+    }
+    res.json(state);
+  } catch (err) {
+    const status = err.status || 500;
+    if (status < 500) return errorResponse(res, status, 'VALIDATION_ERROR', err.message);
+    console.error('[algorithm-battles/draft]', err);
+    return internalError(res);
+  }
+});
+
 router.post('/rooms/:roomId/submit', async (req, res) => {
   try {
     const { code, language, problemId } = req.body || {};
-    if (!code || !language) return errorResponse(res, 400, 'VALIDATION_ERROR', 'code, language 필요');
-    if (String(code).length > 100_000) return errorResponse(res, 400, 'VALIDATION_ERROR', '코드가 너무 큽니다. (최대 100KB)');
+    if (!code || !language) return errorResponse(res, 400, 'VALIDATION_ERROR', 'code and language are required');
+    if (String(code).length > 100_000) return errorResponse(res, 400, 'VALIDATION_ERROR', 'Code is too large. (max 100KB)');
 
     const stateBefore = await AlgorithmBattle.ensureNotExpired(req.params.roomId);
-    if (!stateBefore) return errorResponse(res, 404, 'NOT_FOUND', '방을 찾을 수 없습니다.');
-    if (stateBefore.room.status !== 'playing') return errorResponse(res, 400, 'VALIDATION_ERROR', '진행 중인 배틀이 아닙니다.');
+    if (!stateBefore) return errorResponse(res, 404, 'NOT_FOUND', 'Room not found.');
+    if (stateBefore.room.status !== 'playing') return errorResponse(res, 400, 'VALIDATION_ERROR', 'The battle is not in progress.');
     if (!stateBefore.participants.some((player) => player.userId === req.user.id)) {
-      return errorResponse(res, 403, 'FORBIDDEN', '방 참가자만 제출할 수 있습니다.');
+      return errorResponse(res, 403, 'FORBIDDEN', 'Only room participants may submit.');
     }
     const effectiveProblemId = (stateBefore.room.mode === 'territory' && problemId)
       ? Number(problemId)
       : stateBefore.room.problemId;
     const prob = await getProblemModel().then((Problem) => Problem.findById(effectiveProblemId));
-    if (!prob) return errorResponse(res, 404, 'NOT_FOUND', '배틀 문제를 찾을 수 없습니다.');
+    if (!prob) return errorResponse(res, 404, 'NOT_FOUND', 'Battle problem not found.');
 
     const judgeRuntime = await getCachedJudgeRuntime({ logOnRefresh: true });
     if (judgeRuntime.mode === 'unavailable') {
-      return errorResponse(res, 503, 'INTERNAL_ERROR', '현재 서버에서 채점 런타임을 사용할 수 없습니다.', {
+      return errorResponse(res, 503, 'INTERNAL_ERROR', 'The judge runtime is currently unavailable on this server.', {
         supportedLanguages: judgeRuntime.supportedLanguages || [],
       });
     }
@@ -439,7 +462,7 @@ router.post('/rooms/:roomId/submit', async (req, res) => {
 router.post('/rooms/:roomId/leave', async (req, res) => {
   try {
     const state = await AlgorithmBattle.leaveRoom(req.params.roomId, req.user.id);
-    if (!state) return errorResponse(res, 404, 'NOT_FOUND', '방을 찾을 수 없습니다.');
+    if (!state) return errorResponse(res, 404, 'NOT_FOUND', 'Room not found.');
     emitBattleRoomUpdate(req.app.get('io'), state);
     res.json(state);
   } catch (err) {
@@ -451,9 +474,9 @@ router.post('/rooms/:roomId/leave', async (req, res) => {
 router.post('/rooms/:roomId/finish', async (req, res) => {
   try {
     const current = await AlgorithmBattle.getRoomState(req.params.roomId);
-    if (!current) return errorResponse(res, 404, 'NOT_FOUND', '방을 찾을 수 없습니다.');
+    if (!current) return errorResponse(res, 404, 'NOT_FOUND', 'Room not found.');
     if (!current.participants.some((player) => player.userId === req.user.id)) {
-      return errorResponse(res, 403, 'FORBIDDEN', '방 참가자만 종료할 수 있습니다.');
+      return errorResponse(res, 403, 'FORBIDDEN', 'Only room participants may end the battle.');
     }
     const state = await AlgorithmBattle.finishRoom(req.params.roomId, { reason: req.body?.reason || 'manual' });
     const io = req.app.get('io');
@@ -470,19 +493,19 @@ router.delete('/rooms/:roomId', async (req, res) => {
   try {
     const { roomId } = req.params;
     const state = await AlgorithmBattle.getRoomState(roomId);
-    if (!state) return errorResponse(res, 404, 'NOT_FOUND', '방을 찾을 수 없습니다.');
+    if (!state) return errorResponse(res, 404, 'NOT_FOUND', 'Room not found.');
     if (Number(state.room.createdBy) !== Number(req.user.id)) {
       console.warn(`[delete-room] 403 roomId=${roomId} createdBy=${state.room.createdBy} userId=${req.user.id}`);
-      return errorResponse(res, 403, 'FORBIDDEN', '방장만 삭제할 수 있습니다.');
+      return errorResponse(res, 403, 'FORBIDDEN', 'Only the room host may delete the room.');
     }
     if (state.room.status !== 'waiting') {
       console.warn(`[delete-room] 409 roomId=${roomId} status=${state.room.status}`);
-      return errorResponse(res, 409, 'CONFLICT', '대기 중인 방만 삭제할 수 있습니다.');
+      return errorResponse(res, 409, 'CONFLICT', 'Only waiting rooms can be deleted.');
     }
     await run("UPDATE battle_rooms SET status = 'finished' WHERE id = ? AND status = 'waiting'", [roomId]);
     const io = req.app.get('io');
     if (io) io.to(`battle:${roomId}`).emit('battle:room:deleted', { roomId });
-    res.json({ message: '방이 삭제됐습니다.' });
+    res.json({ message: 'Room deleted.' });
   } catch (err) {
     console.error('[algorithm-battles/delete-room]', err);
     return internalError(res);
@@ -493,22 +516,22 @@ router.post('/:id/rematch', async (req, res) => {
   try {
     const historyRow = await Battle.getHistory(req.user.id, 100);
     const matched = historyRow.find((row) => String(row.roomId) === String(req.params.id));
-    if (!matched) return errorResponse(res, 404, 'NOT_FOUND', '해당 배틀 히스토리를 찾을 수 없습니다.');
+    if (!matched) return errorResponse(res, 404, 'NOT_FOUND', 'Battle history not found.');
 
     let invited = matched.opponentId ? await User.findById(Number(matched.opponentId)) : null;
     if (!invited && matched.opponentName) {
       invited = await User.findByUsername(matched.opponentName);
     }
     if (!invited) {
-      return errorResponse(res, 404, 'NOT_FOUND', '상대방 정보를 찾을 수 없습니다.');
+      return errorResponse(res, 404, 'NOT_FOUND', 'Opponent not found.');
     }
     if (invited.id === req.user.id) {
-      return errorResponse(res, 400, 'VALIDATION_ERROR', '자기 자신과는 리매치를 만들 수 없습니다.');
+      return errorResponse(res, 400, 'VALIDATION_ERROR', 'You cannot rematch yourself.');
     }
 
     const existing = await Battle.getInvite(invited.id);
     if (existing) {
-      return errorResponse(res, 409, 'VALIDATION_ERROR', '상대방이 이미 다른 배틀 초대를 받은 상태입니다.');
+      return errorResponse(res, 409, 'VALIDATION_ERROR', 'The opponent already has a pending battle invitation.');
     }
 
     const inviter = await User.findById(req.user.id);
@@ -525,8 +548,8 @@ router.post('/:id/rematch', async (req, res) => {
       });
     }
     pushToUser(invited.id, {
-      title: 'DailyCoding 리매치 요청',
-      body: `${inviter.username}님이 다시 배틀을 신청했습니다.`,
+      title: 'DailyCoding Rematch Request',
+      body: `${inviter.username} has challenged you to a rematch.`,
       url: `/battle?room=${room.id}`,
     }).catch(() => {});
 
@@ -555,20 +578,20 @@ router.get('/invite', async (req, res) => {
 router.post('/invite', async (req, res) => {
   try {
     const { username, language, battleMode } = req.body;
-    if (!username) return errorResponse(res, 400, 'VALIDATION_ERROR', 'username 필요');
+    if (!username) return errorResponse(res, 400, 'VALIDATION_ERROR', 'username is required');
     const normalizedLanguage = normalizeJudgeLanguage(language || '') || null;
     if (language && !normalizedLanguage) {
-      return errorResponse(res, 400, 'VALIDATION_ERROR', '지원하지 않는 배틀 언어입니다.');
+      return errorResponse(res, 400, 'VALIDATION_ERROR', 'Unsupported battle language.');
     }
     const normalizedBattleMode = battleMode === 'race' ? 'race' : 'time';
 
     const invited = await User.findByUsername(username);
-    if (!invited) return errorResponse(res, 404, 'NOT_FOUND', '해당 사용자를 찾을 수 없습니다.');
-    if (invited.id === req.user.id) return errorResponse(res, 400, 'VALIDATION_ERROR', '자기 자신에게는 신청할 수 없습니다.');
+    if (!invited) return errorResponse(res, 404, 'NOT_FOUND', 'User not found.');
+    if (invited.id === req.user.id) return errorResponse(res, 400, 'VALIDATION_ERROR', 'You cannot challenge yourself.');
 
     // 이미 대기 중인 초대가 있으면 거부
     const existing = await Battle.getInvite(invited.id);
-    if (existing) return errorResponse(res, 409, 'VALIDATION_ERROR', '상대방이 이미 다른 배틀 초대를 받은 상태입니다.');
+    if (existing) return errorResponse(res, 409, 'VALIDATION_ERROR', 'The opponent already has a pending battle invitation.');
 
     const inviter = await User.findById(req.user.id);
     const room = await Battle.createRoom(
@@ -577,8 +600,8 @@ router.post('/invite', async (req, res) => {
       { preferredLanguage: normalizedLanguage, battleMode: normalizedBattleMode }
     );
     pushToUser(invited.id, {
-      title: 'DailyCoding 배틀 초대',
-      body: `${inviter.username}님이 배틀을 신청했습니다.`,
+      title: 'DailyCoding Battle Invitation',
+      body: `${inviter.username} has challenged you to a battle.`,
       url: `/battle?room=${room.id}`,
     }).catch(() => {});
     res.json({ roomId: room.id });
@@ -592,7 +615,7 @@ router.post('/accept/:roomId', async (req, res) => {
   try {
     const { roomId } = req.params;
     const waitingRoom = await Battle.getRoom(roomId);
-    if (!waitingRoom) return errorResponse(res, 404, 'NOT_FOUND', '방을 찾을 수 없습니다.');
+    if (!waitingRoom) return errorResponse(res, 404, 'NOT_FOUND', 'Room not found.');
     const tc = waitingRoom.tournamentConfig || {};
     const problems = await Battle.selectProblems({
       preferredLanguage: waitingRoom.preferredLanguage || null,
@@ -601,7 +624,7 @@ router.post('/accept/:roomId', async (req, res) => {
       bannedTags: tc.bannedTags || [],
     });
     const room = await Battle.acceptInvite(req.user.id, roomId, problems);
-    if (!room) return errorResponse(res, 400, 'VALIDATION_ERROR', '유효하지 않은 방입니다.');
+    if (!room) return errorResponse(res, 400, 'VALIDATION_ERROR', 'Invalid room.');
 
     // Notify both players that the battle has started
     const io = req.app.get('io');
@@ -629,12 +652,12 @@ router.post('/decline/:roomId', async (req, res) => {
 router.get('/room/:roomId', async (req, res) => {
   try {
     const room = await Battle.getRoom(req.params.roomId);
-    if (!room) return errorResponse(res, 404, 'NOT_FOUND', '방을 찾을 수 없습니다.');
-    
+    if (!room) return errorResponse(res, 404, 'NOT_FOUND', 'Room not found.');
+
     // 참가자도 아니고 관전 허용된 방도 아니면 거부 (일단 모든 활성 방은 관전 가능으로 설정)
     const isPlayer = room.playerIds.includes(req.user.id);
     if (!isPlayer && room.status !== 'active' && room.status !== 'ended') {
-      return errorResponse(res, 403, 'FORBIDDEN', '접근 권한이 없습니다.');
+      return errorResponse(res, 403, 'FORBIDDEN', 'Access denied.');
     }
     
     // 관전자로 추가 (기록용)
