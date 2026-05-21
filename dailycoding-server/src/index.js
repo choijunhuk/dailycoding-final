@@ -876,7 +876,7 @@ async function seedGrowthCollections() {
       item.name,
       item.description,
       item.rarity,
-      item.icon,
+      item.icon ?? '',
       item.category || null,
       item.sort_order || 0,
     ]);
