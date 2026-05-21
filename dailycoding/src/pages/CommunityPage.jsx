@@ -9,7 +9,7 @@ import './CommunityPage.css'
 const BOARD_META = {
   qna: { label: 'Q&A', tone: 'var(--blue)', desc: '질문과 답변을 위한 공간' },
   tech: { label: 'Tech Discussion', tone: 'var(--green)', desc: '구현 전략, 성능, 아키텍처를 토론하는 공간' },
-  lounge: { label: 'Lounge', tone: 'var(--purple)', desc: '자유로운 대화와 회고를 위한 공간' },
+  lounge: { label: '라운지', tone: 'var(--purple)', desc: '자유로운 대화와 회고를 위한 공간' },
 }
 
 function parseTags(raw) {
@@ -786,12 +786,12 @@ export default function CommunityPage() {
             </div>
 
             <div className="card" style={{ padding: 18 }}>
-              <SectionTitle title="Notes" desc="Current feature scope" />
+              <SectionTitle title="안내" desc="현재 기능 범위" />
               <div style={{ display: 'grid', gap: 10, fontSize: 12, color: 'var(--text2)', lineHeight: 1.6 }}>
-                <div>• Anonymous posts appear as anonymous to everyone except the author.</div>
-                <div>• The reply button prefills a mention instead of nesting replies.</div>
-                <div>• In the Q&amp;A board, authors can accept a comment as the answer.</div>
-                <div>• Blocking users can be done directly from a post detail page.</div>
+                <div>• 익명 게시글은 작성자 본인 외에는 모두에게 익명으로 표시됩니다.</div>
+                <div>• 답글 버튼은 중첩 대신 멘션을 자동 입력합니다.</div>
+                <div>• Q&amp;A 게시판에서 작성자는 댓글을 채택할 수 있습니다.</div>
+                <div>• 사용자 차단은 게시글 상세 페이지에서 바로 할 수 있습니다.</div>
               </div>
             </div>
           </aside>
