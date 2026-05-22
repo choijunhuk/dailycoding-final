@@ -219,6 +219,7 @@ router.post('/rooms', async (req, res) => {
       durationSec: req.body?.durationSec || null,
       isPrivate: Boolean(req.body?.isPrivate),
       preferredLanguage: req.body?.preferredLanguage || null,
+      workshopModeId: req.body?.workshopModeId || null,
       bannedTags: Array.isArray(req.body?.bannedTags) ? req.body.bannedTags : [],
       problemFilters: req.body?.problemFilters || null,
     });
@@ -226,6 +227,9 @@ router.post('/rooms', async (req, res) => {
     res.status(201).json(state);
   } catch (err) {
     console.error('[algorithm-battles/create]', err);
+    if (err?.status && err.status < 500) {
+      return errorResponse(res, err.status, 'VALIDATION_ERROR', err.message || 'Failed to create battle room');
+    }
     return internalError(res, err?.message || 'Failed to create battle room');
   }
 });

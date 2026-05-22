@@ -52,6 +52,8 @@ const GameHubPage = lazy(() => import('./pages/GameHubPage'));
 const TournamentPage = lazy(() => import('./pages/TournamentPage'));
 const BadgesPage = lazy(() => import('./pages/BadgesPage'));
 const CompetePage = lazy(() => import('./pages/CompetePage'));
+const WorkshopPage = lazy(() => import('./pages/WorkshopPage'));
+const WorkshopGalleryPage = lazy(() => import('./pages/WorkshopGalleryPage'));
 
 function RouteFallback({ isJudge }) {
   if (isJudge) {
@@ -190,6 +192,9 @@ function AppInner() {
                 <Route path="/reviews"     element={<ReviewsPage />} />
                 <Route path="/reviews/:id" element={<ReviewsPage />} />
                 <Route path="/battle"      element={<AlgorithmBattlePage />} />
+                <Route path="/workshop"    element={<WorkshopPage />} />
+                <Route path="/workshop/:id" element={<WorkshopPage />} />
+                <Route path="/workshop-gallery" element={<WorkshopGalleryPage />} />
                 <Route path="/game"        element={<GameHubPage />} />
                 <Route path="/battle/:id/replay" element={<BattlePage />} />
                 <Route path="/battle/:roomId" element={<AlgorithmBattlePage />} />

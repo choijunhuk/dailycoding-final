@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import { insert, isConnected, query, queryOne, run } from '../config/mysql.js';
 import { nowMySQL, toMySQL } from '../config/dateutil.js';
+import { BattleMode } from './BattleMode.js';
 
 const ROOM_PREFIX = 'algo_';
 const DEFAULT_DURATION_SEC = 300;
@@ -251,6 +252,25 @@ function getBattleModeConfig(mode, overrides = {}) {
   };
 }
 
+function getWorkshopOverrides(workshopMode) {
+  const config = workshopMode?.config || null;
+  if (!config) return {};
+  return {
+    workshopMode: {
+      id: workshopMode.id,
+      name: workshopMode.name,
+      description: workshopMode.description,
+      authorId: workshopMode.authorId,
+      config,
+    },
+    workshopModeId: workshopMode.id,
+    workshopRules: config.rules || [],
+    baseHp: config.baseHp || 100,
+    durationSec: config.timeLimit || undefined,
+    itemsEnabled: Boolean(config.allowItems),
+  };
+}
+
 function getRoomConfig(room, events = []) {
   const configEvent = [...(events || [])].reverse().find((event) => event.type === 'room.config');
   const draftCompletedEvent = [...(events || [])].reverse().find((event) => event.type === 'draft.completed');
@@ -263,6 +283,7 @@ function getRoomConfig(room, events = []) {
   return getBattleModeConfig(room?.mode || 'sort-speed', {
     bannedTags: problemFilters.bannedTags,
     problemFilters,
+    ...getWorkshopOverrides(configEvent?.payload?.workshopMode),
   });
 }
 
@@ -697,6 +718,7 @@ export const AlgorithmBattle = {
     preferredLanguage = null,
     bannedTags = [],
     problemFilters = null,
+    workshopModeId = null,
   } = {}) {
     if (creatorId) {
       const existingActive = await queryOne(
@@ -711,7 +733,18 @@ export const AlgorithmBattle = {
     }
 
     const normalizedMode = normalizeMode(mode);
-    const modeConfig = getBattleModeConfig(normalizedMode);
+    const workshopMode = workshopModeId ? await BattleMode.findById(workshopModeId) : null;
+    if (workshopModeId && !workshopMode) {
+      const err = new Error('워크샵 모드를 찾을 수 없습니다.');
+      err.status = 404;
+      throw err;
+    }
+    if (workshopMode && !workshopMode.isPublic && Number(workshopMode.authorId) !== Number(creatorId)) {
+      const err = new Error('사용할 수 없는 워크샵 모드입니다.');
+      err.status = 403;
+      throw err;
+    }
+    const modeConfig = getBattleModeConfig(normalizedMode, getWorkshopOverrides(workshopMode));
     const normalizedProblemFilters = normalizedMode === 'draft-ban'
       ? sanitizeProblemFilters({})
       : sanitizeProblemFilters({
@@ -742,7 +775,7 @@ export const AlgorithmBattle = {
       [
         id, normalizedMode, resolvedProblemId, problemIdsJson, '{}', 'waiting',
         clampInt(maxPlayers ?? modeConfig.maxPlayers, modeConfig.maxPlayers, 2, MAX_PLAYERS),
-        clampInt(durationSec ?? modeConfig.durationSec, modeConfig.durationSec, 60, 1200),
+        clampInt(durationSec ?? modeConfig.durationSec, modeConfig.durationSec, 60, 7200),
         creatorId || null, now, isPrivate ? 1 : 0, inviteCodeVal,
         preferredLanguage || null, lobbyExpiresAt,
       ]
@@ -752,6 +785,7 @@ export const AlgorithmBattle = {
       mode: normalizedMode,
       bannedTags: normalizedProblemFilters.bannedTags,
       problemFilters: normalizedProblemFilters,
+      workshopMode,
       deferredProblemSelection: !problemId,
     });
     return this.getRoomState(id);
@@ -1071,9 +1105,13 @@ export const AlgorithmBattle = {
       await this.beginDraft(roomId);
       return this.getRoom(roomId);
     }
+    const configEvents = await this.getEvents(roomId, { limit: 30 });
+    const configEvent = [...configEvents].reverse().find((event) => event.type === 'room.config');
     await this.ensureRoomProblems(roomId, room);
     await run('UPDATE battle_rooms SET status = ?, started_at = ? WHERE id = ?', ['playing', nowMySQL(), roomId]);
     await this.recordEvent(roomId, null, 'room.started', {});
+    const workshopModeId = configEvent?.payload?.workshopMode?.id;
+    if (workshopModeId) await BattleMode.incrementPlayCount(workshopModeId).catch(() => null);
     return this.getRoom(roomId);
   },
 

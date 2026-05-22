@@ -1,0 +1,22 @@
+CREATE TABLE IF NOT EXISTS battle_modes (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  description TEXT,
+  author_id INT,
+  config JSON NOT NULL,
+  is_public TINYINT(1) DEFAULT 1,
+  play_count INT DEFAULT 0,
+  like_count INT DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS battle_mode_likes (
+  user_id INT NOT NULL,
+  mode_id INT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (user_id, mode_id),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (mode_id) REFERENCES battle_modes(id) ON DELETE CASCADE
+);

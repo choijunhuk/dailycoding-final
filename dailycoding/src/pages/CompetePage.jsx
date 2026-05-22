@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Swords, Trophy, Zap } from 'lucide-react';
+import { Swords, Trophy, Wrench, Zap } from 'lucide-react';
 
 const COMPETE_MODES = [
   {
@@ -15,6 +15,13 @@ const COMPETE_MODES = [
     icon: Trophy,
     accent: 'var(--yellow)',
     desc: 'Top 8 / Top 16 싱글 엘리미네이션 브래킷 — 매치를 이기면 다음 라운드로 자동 진출합니다.',
+  },
+  {
+    title: '워크샵',
+    href: '/workshop-gallery',
+    icon: Wrench,
+    accent: 'var(--purple)',
+    desc: '커스텀 배틀 모드를 만들고 공유하세요. 이벤트·조건·액션 블록으로 나만의 룰을 정의합니다.',
   },
   {
     title: '코딩 테스트',

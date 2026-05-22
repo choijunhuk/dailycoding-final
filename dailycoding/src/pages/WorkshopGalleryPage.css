@@ -1,0 +1,194 @@
+.workshop-gallery-page {
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  padding: 32px 28px 48px;
+}
+
+.wg-header,
+.wg-toolbar,
+.wg-grid,
+.wg-empty {
+  max-width: 1180px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.wg-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.wg-header p {
+  margin: 0 0 6px;
+  color: var(--purple);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.wg-header h1 {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 900;
+}
+
+.wg-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.wg-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.wg-tabs button,
+.wg-like {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg2);
+  color: var(--text2);
+  padding: 9px 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.wg-tabs button.active {
+  color: var(--purple);
+  border-color: color-mix(in srgb, var(--purple) 45%, var(--border));
+  background: color-mix(in srgb, var(--purple) 14%, var(--bg2));
+}
+
+.wg-search {
+  min-width: 240px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg2);
+  color: var(--text3);
+}
+
+.wg-search input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  padding: 10px 0;
+  font: inherit;
+}
+
+.wg-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.wg-card {
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+  min-height: 260px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.wg-card-icon {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  color: var(--purple);
+  background: color-mix(in srgb, var(--purple) 14%, var(--bg));
+  border: 1px solid color-mix(in srgb, var(--purple) 35%, var(--border));
+  border-radius: 8px;
+}
+
+.wg-card-main {
+  flex: 1;
+}
+
+.wg-card h2 {
+  margin: 0 0 7px;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.wg-card p {
+  margin: 0;
+  color: var(--text2);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.wg-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.wg-stats span {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 5px 8px;
+  color: var(--text3);
+  background: var(--bg);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.wg-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.wg-like {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.wg-like.active {
+  color: var(--red);
+  border-color: color-mix(in srgb, var(--red) 40%, var(--border));
+}
+
+.wg-empty {
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  padding: 34px;
+  text-align: center;
+  color: var(--text3);
+  background: var(--bg2);
+}
+
+@media (max-width: 720px) {
+  .workshop-gallery-page {
+    padding: 24px 16px 40px;
+  }
+
+  .wg-header,
+  .wg-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .wg-search {
+    width: 100%;
+  }
+}

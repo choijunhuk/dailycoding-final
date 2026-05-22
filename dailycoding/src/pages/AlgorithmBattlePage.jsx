@@ -1,7 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { io } from 'socket.io-client';
-import { Copy, MessageCircle, Play, Plus, Shield, Smile, Swords, Trophy, Zap, Lock, Unlock, Clock } from 'lucide-react';
+import { Copy, MessageCircle, Play, Plus, Shield, Smile, Swords, Trophy, Zap, Lock, Unlock, Clock, Wrench } from 'lucide-react';
 import api from '../api.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
@@ -70,6 +70,26 @@ const DEFAULT_PROBLEM_FILTERS = {
   bannedTiers: [],
   requiredTags: [],
   bannedTags: [],
+};
+
+const WORKSHOP_EVENT_LABELS = {
+  ON_CORRECT_ANSWER: '정답 제출 시',
+  ON_WRONG_ANSWER: '오답 제출 시',
+  ON_COMPILE_ERROR: '컴파일 오류 시',
+  ON_OPPONENT_CORRECT: '상대방 정답 시',
+  ON_OPPONENT_WRONG: '상대방 오답 시',
+  ON_TIMER_HALF: '시간 절반 경과 시',
+  ON_TIMER_LOW: '시간 60초 미만 시',
+  ON_BATTLE_START: '배틀 시작 시',
+  ON_HP_BELOW_50: '내 HP 50 미만 시',
+  ON_HP_BELOW_25: '내 HP 25 미만 시',
+};
+
+const WORKSHOP_ITEM_LABELS = {
+  shield: '방어막',
+  bomb: '폭탄',
+  heal: '회복',
+  freeze: '정지',
 };
 
 
@@ -197,7 +217,8 @@ function formatSocialEvent(event, myId, participantById = {}) {
 }
 
 function PlayerCard({ player, me, attacking, activity, showHp = true }) {
-  const hpPct = Math.max(0, Math.min(100, player.characterHp || 0));
+  const maxHp = Math.max(1, Number(player.maxHp || 100));
+  const hpPct = Math.max(0, Math.min(100, ((player.characterHp || 0) / maxHp) * 100));
   return (
     <div className={`ab-player-card ${me ? 'me' : ''} ${attacking ? 'attacking' : ''}`}>
       <div className="ab-player-head">
@@ -218,6 +239,36 @@ function PlayerCard({ player, me, attacking, activity, showHp = true }) {
       {player.isReady && <div className="ab-ready">READY</div>}
     </div>
   );
+}
+
+function getWorkshopHp(player, runtime, baseHp, hasWorkshop) {
+  if (!player) return 0;
+  const key = String(player.userId);
+  if (runtime.hpByUserId[key] != null) return Number(runtime.hpByUserId[key]);
+  return hasWorkshop ? Number(baseHp || 100) : Number(player.characterHp || 0);
+}
+
+function checkWorkshopCondition(condition, state) {
+  const type = condition?.type || 'always';
+  if (type === 'always') return true;
+  const value = Number(condition?.value || 0);
+  if (type === 'hp_below') return state.myHp < value;
+  if (type === 'hp_above') return state.myHp > value;
+  if (type === 'opponent_hp_below') return state.opponentHp < value;
+  if (type === 'time_remaining_below') return state.timeRemaining < value;
+  if (type === 'solved_count_above') return state.solvedCount > value;
+  if (type === 'wrong_streak_above') return state.wrongStreak > value;
+  return false;
+}
+
+function formatWorkshopMessage(action, actorName = '워크샵') {
+  if (action?.type === 'MODIFY_HP') return `${actorName}: HP ${Number(action.value) >= 0 ? '+' : ''}${action.value}`;
+  if (action?.type === 'SET_HP') return `${actorName}: HP ${action.value}로 설정`;
+  if (action?.type === 'ADD_TIME') return `${actorName}: 시간 ${Number(action.value) >= 0 ? '+' : ''}${action.value}초`;
+  if (action?.type === 'GRANT_ITEM') return `${actorName}: ${WORKSHOP_ITEM_LABELS[action.item] || action.item} 지급`;
+  if (action?.type === 'DOUBLE_DAMAGE') return `${actorName}: ${action.duration}초 동안 데미지 2배`;
+  if (action?.type === 'FREEZE_OPPONENT') return `${actorName}: ${action.duration}초 동안 상대 타이머 정지`;
+  return action?.text || '워크샵 효과가 발동했습니다.';
 }
 
 function TerritoryBar({ problems, claims, myId, onSelect, selectedIdx }) {
@@ -386,7 +437,9 @@ export default function AlgorithmBattlePage() {
   const [battleModes, setBattleModes] = useState(FALLBACK_MODES);
   const [bannableTags, setBannableTags] = useState(FALLBACK_BANNABLE_TAGS);
   const [problemTiers, setProblemTiers] = useState(FALLBACK_PROBLEM_TIERS);
+  const [workshopModes, setWorkshopModes] = useState([]);
   const [selectedMode, setSelectedMode] = useState('duel-effects');
+  const [selectedWorkshopModeId, setSelectedWorkshopModeId] = useState(searchParams.get('workshopModeId') || '');
   const [selectedDuration, setSelectedDuration] = useState(300);
   const [preferredLanguage, setPreferredLanguage] = useState(user?.defaultLanguage || 'python');
   const [isPrivate, setIsPrivate] = useState(false);
@@ -417,15 +470,33 @@ export default function AlgorithmBattlePage() {
   const [draftBannedTags, setDraftBannedTags] = useState([]);
   const [draftPickedTags, setDraftPickedTags] = useState([]);
   const [draftSubmitting, setDraftSubmitting] = useState(false);
+  const [workshopRuntime, setWorkshopRuntime] = useState({
+    hpByUserId: {},
+    timeDeltaSec: 0,
+    messages: [],
+    grantedItems: [],
+    effects: {},
+  });
 
   const lastActivityRef = useRef(0);
   const lobbyExpiredRef = useRef(false);
   const finishedRef = useRef(false);
   const chatFeedRef = useRef(null);
+  const processedWorkshopSubmissionsRef = useRef(new Set());
+  const workshopTimerFlagsRef = useRef({ half: false, low: false });
+  const workshopHpFlagsRef = useRef({});
+  const workshopWrongStreakRef = useRef({});
 
   // ── 파생 상태
   const currentRoom = state?.room || null;
   const config = state?.config || FALLBACK_MODES.find((m) => m.key === currentRoom?.mode) || FALLBACK_MODES[0];
+  const workshopRules = config?.workshopRules || config?.workshopMode?.config?.rules || [];
+  const hasWorkshopMode = workshopRules.length > 0 || Boolean(config?.workshopMode);
+  const workshopBaseHp = Number(config?.baseHp || config?.workshopMode?.config?.baseHp || 100);
+  const selectedWorkshopMode = useMemo(
+    () => workshopModes.find((mode) => String(mode.id) === String(selectedWorkshopModeId)) || null,
+    [selectedWorkshopModeId, workshopModes]
+  );
   const participants = state?.participants || [];
   const events = state?.events || [];
   const activityByUserId = state?.activityByUserId || {};
@@ -447,9 +518,21 @@ export default function AlgorithmBattlePage() {
     () => Object.fromEntries(participants.map((player) => [String(player.userId), player])),
     [participants]
   );
+  const displayedParticipants = useMemo(
+    () => participants.map((player) => ({
+      ...player,
+      maxHp: hasWorkshopMode ? workshopBaseHp : 100,
+      characterHp: getWorkshopHp(player, workshopRuntime, workshopBaseHp, hasWorkshopMode),
+    })),
+    [hasWorkshopMode, participants, workshopBaseHp, workshopRuntime]
+  );
+  const displayedParticipantById = useMemo(
+    () => Object.fromEntries(displayedParticipants.map((player) => [String(player.userId), player])),
+    [displayedParticipants]
+  );
   const sortedParticipants = useMemo(
-    () => [...participants].sort((a, b) => b.score - a.score || b.characterHp - a.characterHp),
-    [participants]
+    () => [...displayedParticipants].sort((a, b) => b.score - a.score || b.characterHp - a.characterHp),
+    [displayedParticipants]
   );
   const combatEvents = useMemo(
     () => events.filter((e) => COMBAT_EVENT_TYPES.has(e.type)),
@@ -486,6 +569,87 @@ export default function AlgorithmBattlePage() {
     [problemFilters, problemTiers]
   );
 
+  const runWorkshopEvent = useCallback((eventName, perspectiveUserId, actorUserId = perspectiveUserId) => {
+    if (!workshopRules.length || !perspectiveUserId) return;
+    const perspective = displayedParticipantById[String(perspectiveUserId)];
+    if (!perspective) return;
+    const opponent = displayedParticipants.find((player) => player.userId !== Number(perspectiveUserId));
+    const actor = displayedParticipantById[String(actorUserId)] || perspective;
+    const stateForRule = {
+      myHp: Number(perspective.characterHp || 0),
+      opponentHp: Number(opponent?.characterHp || 0),
+      timeRemaining: Math.max(0, timeLeft(currentRoom) + Number(workshopRuntime.timeDeltaSec || 0)),
+      solvedCount: (state?.submissions || []).filter((submission) => submission.userId === Number(perspectiveUserId) && submission.isCorrect).length,
+      wrongStreak: Number(workshopWrongStreakRef.current[String(perspectiveUserId)] || 0),
+    };
+
+    const matchingRules = workshopRules.filter((rule) => rule.event === eventName && checkWorkshopCondition(rule.condition, stateForRule));
+    if (matchingRules.length === 0) return;
+
+    setWorkshopRuntime((prev) => {
+      const next = {
+        ...prev,
+        hpByUserId: { ...prev.hpByUserId },
+        messages: [...prev.messages],
+        grantedItems: [...prev.grantedItems],
+        effects: { ...prev.effects },
+      };
+      const resolveTargets = (target) => {
+        if (target === 'both') return displayedParticipants.map((player) => player.userId);
+        if (target === 'opponent') return displayedParticipants.filter((player) => player.userId !== Number(perspectiveUserId)).map((player) => player.userId);
+        return [Number(perspectiveUserId)];
+      };
+      const currentHp = (targetId) => {
+        const key = String(targetId);
+        if (next.hpByUserId[key] != null) return Number(next.hpByUserId[key]);
+        const target = displayedParticipantById[key];
+        return hasWorkshopMode ? workshopBaseHp : Number(target?.characterHp || 0);
+      };
+
+      for (const rule of matchingRules) {
+        const action = rule.action || {};
+        if (action.type === 'MODIFY_HP') {
+          for (const targetId of resolveTargets(action.target || 'self')) {
+            const key = String(targetId);
+            next.hpByUserId[key] = Math.max(0, Math.min(999, currentHp(targetId) + Number(action.value || 0)));
+          }
+        } else if (action.type === 'SET_HP') {
+          for (const targetId of resolveTargets(action.target || 'self')) {
+            const key = String(targetId);
+            next.hpByUserId[key] = Math.max(0, Math.min(999, Number(action.value || 0)));
+          }
+        } else if (action.type === 'ADD_TIME') {
+          next.timeDeltaSec = Math.max(-3600, Math.min(3600, Number(next.timeDeltaSec || 0) + Number(action.value || 0)));
+        } else if (action.type === 'GRANT_ITEM') {
+          next.grantedItems.push({ userId: Number(perspectiveUserId), item: action.item, at: Date.now() });
+        } else if (action.type === 'DOUBLE_DAMAGE') {
+          next.effects[`damage:${perspectiveUserId}`] = Date.now() + Number(action.duration || 0) * 1000;
+        } else if (action.type === 'FREEZE_OPPONENT') {
+          for (const targetId of resolveTargets('opponent')) {
+            next.effects[`freeze:${targetId}`] = Date.now() + Number(action.duration || 0) * 1000;
+          }
+        }
+        next.messages.push({
+          id: `${Date.now()}_${rule.id}_${next.messages.length}`,
+          eventName,
+          text: action.type === 'SHOW_MESSAGE' ? action.text : formatWorkshopMessage(action, actor.username || '워크샵'),
+        });
+      }
+      next.messages = next.messages.slice(-12);
+      next.grantedItems = next.grantedItems.slice(-12);
+      return next;
+    });
+  }, [
+    currentRoom,
+    displayedParticipantById,
+    displayedParticipants,
+    hasWorkshopMode,
+    state?.submissions,
+    workshopBaseHp,
+    workshopRules,
+    workshopRuntime.timeDeltaSec,
+  ]);
+
   // ── 방 목록 폴링
   const loadRooms = useCallback(async () => {
     try {
@@ -516,6 +680,15 @@ export default function AlgorithmBattlePage() {
     } catch { setBattleModes(FALLBACK_MODES); }
   }, []);
 
+  const loadWorkshopModes = useCallback(async () => {
+    try {
+      const { data } = await api.get('/battle-modes', { params: { limit: 50, sort: 'like_count' } });
+      setWorkshopModes(data.modes || []);
+    } catch {
+      setWorkshopModes([]);
+    }
+  }, []);
+
   const loadRoom = useCallback(async (id = roomId) => {
     if (!id) return;
     setLoading(true);
@@ -532,11 +705,17 @@ export default function AlgorithmBattlePage() {
 
     useEffect(() => {
       loadBattleModes();
+      loadWorkshopModes();
       if (roomId) return;
       loadRooms();
       const t = setInterval(loadRooms, 4000);
       return () => clearInterval(t);
-  }, [loadBattleModes, loadRooms, roomId]);
+  }, [loadBattleModes, loadRooms, loadWorkshopModes, roomId]);
+
+  useEffect(() => {
+    const queryWorkshopModeId = searchParams.get('workshopModeId');
+    if (queryWorkshopModeId) setSelectedWorkshopModeId(queryWorkshopModeId);
+  }, [searchParams]);
 
   useEffect(() => {
     if (!roomId) { setState(null); return; }
@@ -610,12 +789,71 @@ export default function AlgorithmBattlePage() {
   // ── 게임 타임아웃 체크
   useEffect(() => {
     if (!currentRoom || currentRoom.status !== 'playing') return;
-    if (timeLeft(currentRoom) <= 0) {
+    if (Math.max(0, timeLeft(currentRoom) + Number(workshopRuntime.timeDeltaSec || 0)) <= 0) {
       if (finishedRef.current) return;
       finishedRef.current = true;
       api.post(`/battles/rooms/${currentRoom.id}/finish`, { reason: 'timeout' }).catch(() => { /* best-effort timeout finish */ });
     }
-  }, [clock, currentRoom]);
+  }, [clock, currentRoom, workshopRuntime.timeDeltaSec]);
+
+  useEffect(() => {
+    if (!hasWorkshopMode || currentRoom?.status !== 'playing') return;
+    const hasStarted = events.some((event) => event.type === 'room.started');
+    if (!hasStarted || workshopRuntime.messages.some((message) => message.eventName === 'ON_BATTLE_START')) return;
+    for (const player of participants) runWorkshopEvent('ON_BATTLE_START', player.userId, player.userId);
+  }, [currentRoom?.status, events, hasWorkshopMode, participants, runWorkshopEvent, workshopRuntime.messages]);
+
+  useEffect(() => {
+    if (!hasWorkshopMode || currentRoom?.status !== 'playing' || !latestSubmission?.id) return;
+    if (processedWorkshopSubmissionsRef.current.has(latestSubmission.id)) return;
+    processedWorkshopSubmissionsRef.current.add(latestSubmission.id);
+
+    const actorId = Number(latestSubmission.userId);
+    if (!actorId) return;
+    const detail = String(latestSubmission.detail || '').toLowerCase();
+    const compileFailed = !latestSubmission.isCorrect && (detail.includes('compile') || detail.includes('컴파일'));
+    workshopWrongStreakRef.current[String(actorId)] = latestSubmission.isCorrect
+      ? 0
+      : Number(workshopWrongStreakRef.current[String(actorId)] || 0) + 1;
+
+    const actorEvent = latestSubmission.isCorrect ? 'ON_CORRECT_ANSWER' : compileFailed ? 'ON_COMPILE_ERROR' : 'ON_WRONG_ANSWER';
+    runWorkshopEvent(actorEvent, actorId, actorId);
+    const opponentEvent = latestSubmission.isCorrect ? 'ON_OPPONENT_CORRECT' : 'ON_OPPONENT_WRONG';
+    for (const player of participants) {
+      if (player.userId !== actorId) runWorkshopEvent(opponentEvent, player.userId, actorId);
+    }
+  }, [currentRoom?.status, hasWorkshopMode, latestSubmission, participants, runWorkshopEvent]);
+
+  useEffect(() => {
+    if (!hasWorkshopMode || currentRoom?.status !== 'playing') return;
+    const remaining = Math.max(0, timeLeft(currentRoom) + Number(workshopRuntime.timeDeltaSec || 0));
+    if (!workshopTimerFlagsRef.current.half && remaining <= Number(currentRoom.durationSec || 0) / 2) {
+      workshopTimerFlagsRef.current.half = true;
+      for (const player of participants) runWorkshopEvent('ON_TIMER_HALF', player.userId, player.userId);
+    }
+    if (!workshopTimerFlagsRef.current.low && remaining < 60) {
+      workshopTimerFlagsRef.current.low = true;
+      for (const player of participants) runWorkshopEvent('ON_TIMER_LOW', player.userId, player.userId);
+    }
+  }, [clock, currentRoom, hasWorkshopMode, participants, runWorkshopEvent, workshopRuntime.timeDeltaSec]);
+
+  useEffect(() => {
+    if (!hasWorkshopMode || currentRoom?.status !== 'playing') return;
+    for (const player of displayedParticipants) {
+      const key = String(player.userId);
+      const hp = Number(player.characterHp || 0);
+      const flags = workshopHpFlagsRef.current[key] || {};
+      if (!flags.hp50 && hp < 50) {
+        flags.hp50 = true;
+        runWorkshopEvent('ON_HP_BELOW_50', player.userId, player.userId);
+      }
+      if (!flags.hp25 && hp < 25) {
+        flags.hp25 = true;
+        runWorkshopEvent('ON_HP_BELOW_25', player.userId, player.userId);
+      }
+      workshopHpFlagsRef.current[key] = flags;
+    }
+  }, [currentRoom?.status, displayedParticipants, hasWorkshopMode, runWorkshopEvent]);
 
   // ── 로비 만료 체크 (대기 중 방) — 한 번만 실행
   useEffect(() => {
@@ -625,6 +863,11 @@ export default function AlgorithmBattlePage() {
     setDraftBannedTier('');
     setDraftBannedTags([]);
     setDraftPickedTags([]);
+    setWorkshopRuntime({ hpByUserId: {}, timeDeltaSec: 0, messages: [], grantedItems: [], effects: {} });
+    processedWorkshopSubmissionsRef.current = new Set();
+    workshopTimerFlagsRef.current = { half: false, low: false };
+    workshopHpFlagsRef.current = {};
+    workshopWrongStreakRef.current = {};
   }, [roomId]);
 
   // ── 채팅 자동 스크롤
@@ -684,9 +927,10 @@ export default function AlgorithmBattlePage() {
         const { data } = await api.post('/battles/rooms', {
           mode: selectedMode,
           maxPlayers: 2,
-          durationSec: modeConfig?.key === 'territory' ? 600 : selectedDuration,
+          durationSec: selectedWorkshopMode?.config?.timeLimit || (modeConfig?.key === 'territory' ? 600 : selectedDuration),
           isPrivate,
           preferredLanguage,
+          workshopModeId: selectedWorkshopModeId || null,
           bannedTags: roomProblemFilters.bannedTags,
           problemFilters: roomProblemFilters,
         });
@@ -976,6 +1220,23 @@ export default function AlgorithmBattlePage() {
             </div>
 
             <div className="ab-option-group">
+              <label>워크샵 모드</label>
+              <select
+                value={selectedWorkshopModeId}
+                onChange={(e) => setSelectedWorkshopModeId(e.target.value)}
+                className="ab-lang-select"
+              >
+                <option value="">사용 안 함</option>
+                {workshopModes.map((mode) => (
+                  <option key={mode.id} value={mode.id}>{mode.name}</option>
+                ))}
+              </select>
+              <button type="button" className="btn btn-ghost btn-sm" onClick={() => navigate('/workshop-gallery')}>
+                <Wrench size={13} /> 갤러리
+              </button>
+            </div>
+
+            <div className="ab-option-group">
               <label>비공개 방</label>
               <button
                 type="button"
@@ -987,6 +1248,18 @@ export default function AlgorithmBattlePage() {
               {isPrivate && <p className="ab-private-hint">방 생성 후 초대 코드를 공유하세요.</p>}
             </div>
           </div>
+
+          {selectedWorkshopMode && (
+            <div className="ab-draft-lobby-note">
+              <Wrench size={16} />
+              <div>
+                <strong>{selectedWorkshopMode.name}</strong>
+                <span>
+                  기본 HP {selectedWorkshopMode.config?.baseHp || 100} · 제한 시간 {fmtSec(selectedWorkshopMode.config?.timeLimit || selectedDuration)} · 룰 {(selectedWorkshopMode.config?.rules || []).length}개
+                </span>
+              </div>
+            </div>
+          )}
 
           {selectedMode === 'draft-ban' ? (
             <div className="ab-draft-lobby-note">
@@ -1252,6 +1525,7 @@ export default function AlgorithmBattlePage() {
   const resultTone = isSpectatorResult || !hasOpponent ? 'neutral' : isDraw ? 'draw' : didWin ? 'win' : 'lose';
   const opponentLabel = opponents.map((player) => player.username).join(', ') || 'No opponent';
   const winnerLabel = topScoreCount === 1 ? sortedParticipants[0]?.username : null;
+  const displayedRoomTimeLeft = Math.max(0, timeLeft(currentRoom) + Number(workshopRuntime.timeDeltaSec || 0));
   const resultSummary = isSpectatorResult
     ? winnerLabel ? `Winner: ${winnerLabel} · Final ${topScore}pts` : 'Draw'
     : isTerritoryMode
@@ -1272,7 +1546,7 @@ export default function AlgorithmBattlePage() {
                 : currentRoom?.status === 'playing'
                   ? config?.winCondition === 'first-correct'
                   ? '⚡ First correct → instant win'
-                  : `⏱ ${fmtSec(timeLeft(currentRoom))}`
+                  : `⏱ ${fmtSec(displayedRoomTimeLeft)}`
                 : 'Ended'}
           </span>
         </div>
@@ -1319,6 +1593,11 @@ export default function AlgorithmBattlePage() {
           <div style={{ fontWeight:700, marginBottom:8 }}>📋 {config.title} Rules</div>
           <ul style={{ margin:0, paddingLeft:18, display:'flex', flexDirection:'column', gap:4 }}>
             {config.rules.map((rule, i) => <li key={i} style={{ color:'var(--text2)' }}>{rule}</li>)}
+            {workshopRules.map((rule, i) => (
+              <li key={`workshop-${rule.id || i}`} style={{ color:'var(--purple)' }}>
+                {WORKSHOP_EVENT_LABELS[rule.event] || rule.event} → {rule.action?.type || '액션'}
+              </li>
+            ))}
           </ul>
         </div>
       )}
@@ -1356,7 +1635,7 @@ export default function AlgorithmBattlePage() {
         <aside className="ab-left">
           <div className="ab-section-title">Players</div>
           <div className="ab-player-list">
-            {participants.map((player) => (
+            {displayedParticipants.map((player) => (
               <PlayerCard
                 key={player.userId}
                 player={player}
@@ -1372,7 +1651,7 @@ export default function AlgorithmBattlePage() {
             <>
               <div className="ab-section-title" style={{ marginTop: 12 }}>Territory Status</div>
               <div className="ab-territory-score">
-                {participants.map((p) => {
+                  {displayedParticipants.map((p) => {
                   const count = Object.values(territoryClaims).filter((uid) => uid === p.userId).length;
                   return (
                     <div key={p.userId} className="ab-territory-score-row">
@@ -1517,6 +1796,23 @@ export default function AlgorithmBattlePage() {
             </>
           )}
 
+          {hasWorkshopMode && (
+            <>
+              <div className="ab-section-title">워크샵 효과</div>
+              <div className="ab-submit-card">
+                <strong>{config?.workshopMode?.name || '워크샵 모드'}</strong>
+                <span>
+                  기본 HP {workshopBaseHp} · 룰 {workshopRules.length}개 · 시간 보정 {Number(workshopRuntime.timeDeltaSec || 0) >= 0 ? '+' : ''}{workshopRuntime.timeDeltaSec || 0}초
+                </span>
+                {workshopRuntime.grantedItems.length > 0 && (
+                  <p>
+                    지급 아이템: {workshopRuntime.grantedItems.slice(-4).map((item) => WORKSHOP_ITEM_LABELS[item.item] || item.item).join(', ')}
+                  </p>
+                )}
+              </div>
+            </>
+          )}
+
           {/* 제출 결과 */}
           <div className="ab-section-title">{txt('제출 결과', 'Submission Result')}</div>
           {submissionResult && (
@@ -1545,9 +1841,20 @@ export default function AlgorithmBattlePage() {
           {/* 전투 로그 */}
           <div className="ab-section-title">{txt('전투 로그', 'Battle Log')}</div>
           <div className="ab-combat-log">
-            {combatEvents.length === 0
+            {combatEvents.length === 0 && workshopRuntime.messages.length === 0
               ? <div className="ab-log-empty">{txt('아직 활동이 없습니다.', 'No activity yet.')}</div>
-              : [...combatEvents].reverse().map((event) => {
+              : (
+                <>
+                  {[...workshopRuntime.messages].reverse().map((message) => (
+                    <div key={message.id} className="ab-log-entry" style={{ borderLeft: '2px solid var(--purple)' }}>
+                      <span className="ab-log-emoji">🛠️</span>
+                      <div>
+                        <strong>{WORKSHOP_EVENT_LABELS[message.eventName] || '워크샵'}</strong>
+                        <span>{message.text}</span>
+                      </div>
+                    </div>
+                  ))}
+                  {[...combatEvents].reverse().map((event) => {
                 const fmt = formatCombatEvent(event, user?.id, participantById);
                 if (!fmt) return null;
                 return (
@@ -1559,7 +1866,9 @@ export default function AlgorithmBattlePage() {
                     </div>
                   </div>
                 );
-              })}
+                  })}
+                </>
+              )}
           </div>
 
           {/* 채팅 + 이모트 */}
