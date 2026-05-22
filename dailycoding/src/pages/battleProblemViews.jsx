@@ -90,7 +90,7 @@ export function FillBlankProblem({ problem, answer, onChange, locked, correct })
                   onChange(next);
                 }}
                 disabled={locked || correct === true}
-                placeholder={`Blank ${index + 1}`}
+                placeholder={`${index + 1}번 빈칸`}
                 style={{ width: `${Math.max(80, (blanks[index]?.length || 4) * 12)}px` }}
               />
             )}
@@ -114,7 +114,7 @@ export function BugFixProblem({ problem, answer, onChange, locked, correct }) {
           value={answer || ''}
           onChange={(event) => onChange(event.target.value)}
           disabled={locked || correct === true}
-          placeholder="Enter the corrected line"
+          placeholder="수정된 줄을 입력하세요"
         />
       </div>
     </div>

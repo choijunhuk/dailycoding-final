@@ -476,7 +476,7 @@ export default function ProblemsPage() {
           <div className="problems-quality-card primary">
             <div className="quality-card-icon"><CheckCircle2 size={18} /></div>
             <div className="quality-card-body">
-              <div className="quality-card-label">Learning Progress</div>
+              <div className="quality-card-label">학습 진행도</div>
               <div className="quality-card-value">{completionPct}%</div>
               <div className="quality-progress"><div style={{ width:`${completionPct}%` }} /></div>
             </div>

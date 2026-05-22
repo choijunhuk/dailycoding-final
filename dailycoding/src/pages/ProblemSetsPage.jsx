@@ -3,16 +3,19 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { BookOpen, Copy, Link, Plus, Trash2, Edit3, Check, X, ExternalLink } from 'lucide-react';
 import api from '../api.js';
 import { useToast } from '../context/ToastContext.jsx';
+import { useLang } from '../context/LangContext.jsx';
+import { formatWithLang, pickLangText } from '../utils/languageMode.js';
 
 const FRONTEND_BASE = window.location.origin;
 
-function ProblemSetCard({ set, onEdit, onDelete, onShare, onRevokeShare }) {
+function ProblemSetCard({ set, onEdit, onDelete, onShare, onRevokeShare, lang }) {
   const navigate = useNavigate();
   const toast = useToast();
+  const txt = (ko, en) => pickLangText(lang, ko, en);
 
   const copyLink = () => {
     const url = `${FRONTEND_BASE}/problem-sets/shared/${set.shareToken}`;
-    navigator.clipboard?.writeText(url).then(() => toast?.show('링크 복사됨!', 'success'));
+    navigator.clipboard?.writeText(url).then(() => toast?.show(txt('링크가 복사되었습니다!', 'Link copied!'), 'success'));
   };
 
   return (
@@ -29,7 +32,7 @@ function ProblemSetCard({ set, onEdit, onDelete, onShare, onRevokeShare }) {
             <div style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 4 }}>{set.description}</div>
           )}
           <div style={{ fontSize: 12, color: 'var(--text3)' }}>
-            문제 {set.problemIds?.length || 0}개 · {new Date(set.updatedAt || set.createdAt).toLocaleDateString('ko-KR')}
+            {set.problemIds?.length || 0}{txt('문제', ' problems')} · {formatWithLang(lang, set.updatedAt || set.createdAt)}
           </div>
         </div>
         <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
@@ -62,20 +65,20 @@ function ProblemSetCard({ set, onEdit, onDelete, onShare, onRevokeShare }) {
         {set.shareToken ? (
           <>
             <button className="btn btn-ghost" style={{ padding: '6px 12px', fontSize: 12, color: 'var(--green)' }} onClick={copyLink}>
-              <Copy size={13} /> 링크 복사
+              <Copy size={13} /> {txt('링크 복사', 'Copy Link')}
             </button>
             <button className="btn btn-ghost" style={{ padding: '6px 12px', fontSize: 12 }}
               onClick={() => navigate(`/problem-sets/shared/${set.shareToken}`)}>
-              <ExternalLink size={13} /> 미리보기
+              <ExternalLink size={13} /> {txt('미리보기', 'Preview')}
             </button>
             <button className="btn btn-ghost" style={{ padding: '6px 12px', fontSize: 12, color: 'var(--red)' }}
               onClick={() => onRevokeShare(set.id)}>
-              <X size={13} /> 링크 해제
+              <X size={13} /> {txt('링크 해제', 'Revoke Link')}
             </button>
           </>
         ) : (
           <button className="btn btn-ghost" style={{ padding: '6px 12px', fontSize: 12 }} onClick={() => onShare(set.id)}>
-            <Link size={13} /> 공유 링크 생성
+            <Link size={13} /> {txt('공유 링크 만들기', 'Create Share Link')}
           </button>
         )}
       </div>
@@ -83,15 +86,16 @@ function ProblemSetCard({ set, onEdit, onDelete, onShare, onRevokeShare }) {
   );
 }
 
-function EditModal({ set, onSave, onClose }) {
+function EditModal({ set, onSave, onClose, lang }) {
   const [name, setName] = useState(set?.name || '');
   const [description, setDescription] = useState(set?.description || '');
   const [problemIdsText, setProblemIdsText] = useState((set?.problemIds || []).join(', '));
   const [saving, setSaving] = useState(false);
   const toast = useToast();
+  const txt = (ko, en) => pickLangText(lang, ko, en);
 
   const handleSave = async () => {
-    if (!name.trim()) return toast?.show('이름을 입력해주세요.', 'error');
+    if (!name.trim()) return toast?.show(txt('이름을 입력해주세요.', 'Please enter a name.'), 'error');
     const problemIds = problemIdsText.split(/[\s,]+/).map(Number).filter((n) => Number.isFinite(n) && n > 0);
     setSaving(true);
     await onSave({ name: name.trim(), description: description.trim(), problemIds });
@@ -107,31 +111,31 @@ function EditModal({ set, onSave, onClose }) {
         background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 14,
         padding: 28, width: '100%', maxWidth: 560,
       }}>
-        <h2 style={{ margin: '0 0 20px', fontSize: 20 }}>{set?.id ? '문제 세트 편집' : '새 문제 세트'}</h2>
+        <h2 style={{ margin: '0 0 20px', fontSize: 20 }}>{set?.id ? txt('문제 세트 편집', 'Edit Problem Set') : txt('새 문제 세트', 'New Problem Set')}</h2>
         <div style={{ marginBottom: 14 }}>
           <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: 'var(--text2)', marginBottom: 6 }}>
-            세트 이름 *
+            {txt('세트 이름', 'Set Name')} *
           </label>
           <input className="input" style={{ width: '100%' }} value={name}
-            onChange={(e) => setName(e.target.value)} placeholder="예: 그래프 알고리즘 모음" maxLength={200} />
+            onChange={(e) => setName(e.target.value)} placeholder={txt('예: 그래프 알고리즘 모음', 'e.g. Graph Algorithm Collection')} maxLength={200} />
         </div>
         <div style={{ marginBottom: 14 }}>
-          <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: 'var(--text2)', marginBottom: 6 }}>설명 (선택)</label>
+          <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: 'var(--text2)', marginBottom: 6 }}>{txt('설명 (선택)', 'Description (optional)')}</label>
           <textarea className="input" style={{ width: '100%', minHeight: 80, resize: 'vertical' }}
-            value={description} onChange={(e) => setDescription(e.target.value)} placeholder="이 문제 세트에 대한 설명" />
+            value={description} onChange={(e) => setDescription(e.target.value)} placeholder={txt('이 문제 세트에 대한 설명', 'Description of this problem set')} />
         </div>
         <div style={{ marginBottom: 20 }}>
           <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: 'var(--text2)', marginBottom: 6 }}>
-            문제 ID 목록 (쉼표 또는 공백으로 구분)
+            {txt('문제 ID 목록 (쉼표 또는 공백으로 구분)', 'Problem ID List (comma or space separated)')}
           </label>
           <textarea className="input mono" style={{ width: '100%', minHeight: 80, resize: 'vertical', fontSize: 13 }}
             value={problemIdsText} onChange={(e) => setProblemIdsText(e.target.value)}
-            placeholder="예: 1001, 1002, 1003" />
+            placeholder="예) 1001, 1002, 1003" />
         </div>
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-          <button className="btn btn-ghost" onClick={onClose}>취소</button>
+          <button className="btn btn-ghost" onClick={onClose}>{txt('취소', 'Cancel')}</button>
           <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
-            {saving ? '저장 중...' : <><Check size={15} /> 저장</>}
+            {saving ? txt('저장 중...', 'Saving...') : <><Check size={15} /> {txt('저장', 'Save')}</>}
           </button>
         </div>
       </div>
@@ -145,11 +149,13 @@ function SharedSetView({ token }) {
   const [importing, setImporting] = useState(false);
   const navigate = useNavigate();
   const toast = useToast();
+  const { lang } = useLang();
+  const txt = (ko, en) => pickLangText(lang, ko, en);
 
   useEffect(() => {
     api.get(`/problem-sets/shared/${token}`)
       .then((r) => setSet(r.data))
-      .catch(() => toast?.show('문제 세트를 찾을 수 없습니다.', 'error'))
+      .catch(() => toast?.show(txt('문제 세트를 찾을 수 없습니다.', 'Problem set not found.'), 'error'))
       .finally(() => setLoading(false));
   }, [token, toast]);
 
@@ -157,24 +163,24 @@ function SharedSetView({ token }) {
     setImporting(true);
     try {
       await api.post('/problem-sets', {
-        name: `[가져옴] ${set.name}`,
+        name: `${txt('[가져옴]', '[Imported]')} ${set.name}`,
         description: set.description,
         problemIds: set.problemIds,
       });
-      toast?.show('문제 세트를 내 목록으로 가져왔습니다!', 'success');
+      toast?.show(txt('문제 세트를 내 목록으로 가져왔습니다!', 'Problem set imported to your list!'), 'success');
       navigate('/problem-sets');
     } catch (err) {
-      toast?.show(err.response?.data?.message || '가져오기 실패', 'error');
+      toast?.show(err.response?.data?.message || txt('가져오기 실패', 'Import failed.'), 'error');
     }
     setImporting(false);
   };
 
-  if (loading) return <div style={{ padding: 40, textAlign: 'center', color: 'var(--text3)' }}>불러오는 중...</div>;
-  if (!set) return <div style={{ padding: 40, textAlign: 'center', color: 'var(--text3)' }}>문제 세트를 찾을 수 없습니다.</div>;
+  if (loading) return <div style={{ padding: 40, textAlign: 'center', color: 'var(--text3)' }}>{txt('로딩 중...', 'Loading...')}</div>;
+  if (!set) return <div style={{ padding: 40, textAlign: 'center', color: 'var(--text3)' }}>{txt('문제 세트를 찾을 수 없습니다.', 'Problem set not found.')}</div>;
 
   return (
     <div style={{ maxWidth: 700, margin: '0 auto', padding: '32px 16px' }}>
-      <button className="btn btn-ghost" style={{ marginBottom: 20 }} onClick={() => navigate(-1)}>← 뒤로</button>
+      <button className="btn btn-ghost" style={{ marginBottom: 20 }} onClick={() => navigate(-1)}>← {txt('뒤로', 'Back')}</button>
       <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 14, padding: '24px 28px' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 16 }}>
           <div>
@@ -182,10 +188,10 @@ function SharedSetView({ token }) {
             {set.description && <p style={{ margin: 0, color: 'var(--text2)', fontSize: 14 }}>{set.description}</p>}
           </div>
           <button className="btn btn-primary" onClick={importSet} disabled={importing} style={{ flexShrink: 0 }}>
-            {importing ? '가져오는 중...' : '내 세트로 가져오기'}
+            {importing ? txt('가져오는 중...', 'Importing...') : txt('내 세트로 가져오기', 'Import to My Sets')}
           </button>
         </div>
-        <div style={{ fontSize: 13, color: 'var(--text3)', marginBottom: 16 }}>문제 {set.problemIds?.length || 0}개</div>
+        <div style={{ fontSize: 13, color: 'var(--text3)', marginBottom: 16 }}>{set.problemIds?.length || 0}{txt('문제', ' problems')}</div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
           {(set.problemIds || []).map((pid) => (
             <a key={pid} href={`/problems/${pid}`} onClick={(e) => { e.preventDefault(); navigate(`/problems/${pid}`); }}
@@ -206,6 +212,8 @@ function SharedSetView({ token }) {
 export default function ProblemSetsPage() {
   const { token } = useParams();
   const toast = useToast();
+  const { lang } = useLang();
+  const txt = (ko, en) => pickLangText(lang, ko, en);
   const [sets, setSets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editModal, setEditModal] = useState(null);
@@ -218,7 +226,7 @@ export default function ProblemSetsPage() {
       const { data } = await api.get('/problem-sets');
       setSets(data.sets || []);
     } catch {
-      toast?.show('불러오기 실패', 'error');
+      toast?.show(txt('불러오기 실패', 'Failed to load.'), 'error');
     } finally {
       setLoading(false);
     }
@@ -232,26 +240,26 @@ export default function ProblemSetsPage() {
     try {
       if (editModal?.id) {
         await api.put(`/problem-sets/${editModal.id}`, { name, description, problemIds });
-        toast?.show('저장됨!', 'success');
+        toast?.show(txt('저장됐습니다!', 'Saved!'), 'success');
       } else {
         await api.post('/problem-sets', { name, description, problemIds });
-        toast?.show('문제 세트가 생성되었습니다!', 'success');
+        toast?.show(txt('문제 세트가 생성되었습니다!', 'Problem set created!'), 'success');
       }
       setEditModal(null);
       load();
     } catch (err) {
-      toast?.show(err.response?.data?.message || '저장 실패', 'error');
+      toast?.show(err.response?.data?.message || txt('저장 실패', 'Save failed.'), 'error');
     }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('정말 삭제하시겠습니까?')) return;
+    if (!window.confirm(txt('정말 삭제할까요?', 'Are you sure you want to delete this?'))) return;
     try {
       await api.delete(`/problem-sets/${id}`);
-      toast?.show('삭제됨', 'success');
+      toast?.show(txt('삭제됐습니다.', 'Deleted.'), 'success');
       load();
     } catch {
-      toast?.show('삭제 실패', 'error');
+      toast?.show(txt('삭제 실패', 'Delete failed.'), 'error');
     }
   };
 
@@ -259,40 +267,40 @@ export default function ProblemSetsPage() {
     try {
       const { data } = await api.post(`/problem-sets/${id}/share`);
       const url = `${FRONTEND_BASE}/problem-sets/shared/${data.token}`;
-      navigator.clipboard?.writeText(url).then(() => toast?.show('공유 링크가 복사되었습니다!', 'success'));
+      navigator.clipboard?.writeText(url).then(() => toast?.show(txt('공유 링크가 복사되었습니다!', 'Share link copied!'), 'success'));
       load();
     } catch {
-      toast?.show('공유 링크 생성 실패', 'error');
+      toast?.show(txt('공유 링크 생성 실패', 'Failed to create share link.'), 'error');
     }
   };
 
   const handleRevokeShare = async (id) => {
-    if (!window.confirm('공유 링크를 해제하시겠습니까?')) return;
+    if (!window.confirm(txt('공유 링크를 해제할까요?', 'Revoke the share link?'))) return;
     try {
       await api.delete(`/problem-sets/${id}/share`);
-      toast?.show('공유 링크가 해제되었습니다.', 'success');
+      toast?.show(txt('공유 링크가 해제되었습니다.', 'Share link revoked.'), 'success');
       load();
     } catch {
-      toast?.show('실패', 'error');
+      toast?.show(txt('실패했습니다.', 'Failed.'), 'error');
     }
   };
 
   const handleImportUrl = async () => {
     const match = importUrl.match(/\/problem-sets\/shared\/([a-f0-9]+)/);
-    if (!match) return toast?.show('올바른 공유 링크를 입력해주세요.', 'error');
+    if (!match) return toast?.show(txt('올바른 공유 링크를 입력해주세요.', 'Please enter a valid share link.'), 'error');
     setImporting(true);
     try {
       const { data: sharedSet } = await api.get(`/problem-sets/shared/${match[1]}`);
       await api.post('/problem-sets', {
-        name: `[가져옴] ${sharedSet.name}`,
+        name: `${txt('[가져옴]', '[Imported]')} ${sharedSet.name}`,
         description: sharedSet.description,
         problemIds: sharedSet.problemIds,
       });
-      toast?.show('문제 세트를 가져왔습니다!', 'success');
+      toast?.show(txt('문제 세트를 가져왔습니다!', 'Problem set imported!'), 'success');
       setImportUrl('');
       load();
     } catch (err) {
-      toast?.show(err.response?.data?.message || '가져오기 실패', 'error');
+      toast?.show(err.response?.data?.message || txt('가져오기 실패', 'Import failed.'), 'error');
     }
     setImporting(false);
   };
@@ -300,20 +308,20 @@ export default function ProblemSetsPage() {
   return (
     <div style={{ maxWidth: 900, margin: '0 auto', padding: '32px 16px' }}>
       {editModal !== null && (
-        <EditModal set={editModal} onSave={handleSave} onClose={() => setEditModal(null)} />
+        <EditModal set={editModal} onSave={handleSave} onClose={() => setEditModal(null)} lang={lang} />
       )}
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 28, flexWrap: 'wrap' }}>
         <div>
           <h1 style={{ margin: '0 0 4px', fontSize: 24, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 10 }}>
-            <BookOpen size={22} /> 내 문제 세트
+            <BookOpen size={22} /> {txt('내 문제 세트', 'My Problem Sets')}
           </h1>
           <p style={{ margin: 0, fontSize: 13, color: 'var(--text2)' }}>
-            자주 풀어볼 문제들을 세트로 모아두고, 링크로 공유할 수 있습니다.
+            {txt('연습하고 싶은 문제를 세트로 모으고 링크로 공유하세요.', 'Collect problems you want to practice into sets and share them via link.')}
           </p>
         </div>
         <button className="btn btn-primary" onClick={() => setEditModal({})}>
-          <Plus size={15} /> 새 세트 만들기
+          <Plus size={15} /> {txt('새 세트', 'New Set')}
         </button>
       </div>
 
@@ -328,15 +336,15 @@ export default function ProblemSetsPage() {
           style={{ flex: 1, minWidth: 200 }}
           value={importUrl}
           onChange={(e) => setImportUrl(e.target.value)}
-          placeholder="공유 링크를 붙여넣어 문제 세트 가져오기"
+          placeholder={txt('가져올 문제 세트 공유 링크를 붙여넣으세요', 'Paste a share link to import a problem set')}
         />
         <button className="btn btn-primary" onClick={handleImportUrl} disabled={!importUrl.trim() || importing}
           style={{ flexShrink: 0 }}>
-          {importing ? '가져오는 중...' : '가져오기'}
+          {importing ? txt('가져오는 중...', 'Importing...') : txt('가져오기', 'Import')}
         </button>
       </div>
 
-      {loading && <div style={{ textAlign: 'center', padding: 40, color: 'var(--text3)' }}>불러오는 중...</div>}
+      {loading && <div style={{ textAlign: 'center', padding: 40, color: 'var(--text3)' }}>{txt('로딩 중...', 'Loading...')}</div>}
 
       {!loading && sets.length === 0 && (
         <div style={{
@@ -344,9 +352,9 @@ export default function ProblemSetsPage() {
           borderRadius: 12, color: 'var(--text3)',
         }}>
           <BookOpen size={32} style={{ marginBottom: 12, opacity: 0.4 }} />
-          <p style={{ margin: '0 0 16px' }}>아직 만든 문제 세트가 없습니다.</p>
+          <p style={{ margin: '0 0 16px' }}>{txt('아직 문제 세트가 없습니다.', 'You have no problem sets yet.')}</p>
           <button className="btn btn-primary" onClick={() => setEditModal({})}>
-            <Plus size={15} /> 첫 번째 세트 만들기
+            <Plus size={15} /> {txt('첫 세트 만들기', 'Create Your First Set')}
           </button>
         </div>
       )}
@@ -356,6 +364,7 @@ export default function ProblemSetsPage() {
           <ProblemSetCard
             key={set.id}
             set={set}
+            lang={lang}
             onEdit={(s) => setEditModal(s)}
             onDelete={handleDelete}
             onShare={handleShare}

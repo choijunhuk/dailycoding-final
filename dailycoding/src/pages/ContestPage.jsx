@@ -339,8 +339,8 @@ export default function ContestPage() {
             <button type="button" onClick={() => setCustomForm((prev) => ({ ...prev, [keyName]: prev[keyName].filter((_, idx) => idx !== index) }))} style={{background:'none',border:'none',color:'var(--red)',cursor:'pointer'}}>✕</button>
           </div>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
-            <textarea rows={3} value={item.input} placeholder="Input" onChange={(e) => setCustomForm((prev) => ({ ...prev, [keyName]: prev[keyName].map((entry, idx) => idx === index ? { ...entry, input:e.target.value } : entry) }))} style={{width:'100%',resize:'vertical'}} />
-            <textarea rows={3} value={item.output} placeholder="Output" onChange={(e) => setCustomForm((prev) => ({ ...prev, [keyName]: prev[keyName].map((entry, idx) => idx === index ? { ...entry, output:e.target.value } : entry) }))} style={{width:'100%',resize:'vertical'}} />
+            <textarea rows={3} value={item.input} placeholder="입력" onChange={(e) => setCustomForm((prev) => ({ ...prev, [keyName]: prev[keyName].map((entry, idx) => idx === index ? { ...entry, input:e.target.value } : entry) }))} style={{width:'100%',resize:'vertical'}} />
+            <textarea rows={3} value={item.output} placeholder="출력" onChange={(e) => setCustomForm((prev) => ({ ...prev, [keyName]: prev[keyName].map((entry, idx) => idx === index ? { ...entry, output:e.target.value } : entry) }))} style={{width:'100%',resize:'vertical'}} />
           </div>
         </div>
       ))}
@@ -526,11 +526,11 @@ export default function ContestPage() {
             <div className="modal-form">
               <div className="form-group">
                 <label>Contest Name *</label>
-                <input placeholder="Contest name" value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))} />
+                <input placeholder="콘테스트 이름" value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))} />
               </div>
               <div className="form-group">
                 <label>Description</label>
-                <textarea rows={2} placeholder="Contest description..." value={form.desc} onChange={e=>setForm(p=>({...p,desc:e.target.value}))} style={{resize:'vertical'}} />
+                <textarea rows={2} placeholder="콘테스트 설명..." value={form.desc} onChange={e=>setForm(p=>({...p,desc:e.target.value}))} style={{resize:'vertical'}} />
               </div>
               <div className="modal-row">
                 <div className="form-group">
@@ -561,7 +561,7 @@ export default function ContestPage() {
                 {form.privacy === 'private' && (
                   <div className="form-group" style={{flex:2}}>
                     <label>Security Code (Password)</label>
-                    <input placeholder="Numbers or letters" value={form.securityCode} onChange={e=>setForm(p=>({...p,securityCode:e.target.value}))} />
+                    <input placeholder="숫자 또는 문자" value={form.securityCode} onChange={e=>setForm(p=>({...p,securityCode:e.target.value}))} />
                   </div>
                 )}
               </div>
@@ -578,7 +578,7 @@ export default function ContestPage() {
                           ...prev,
                           rewardRules: prev.rewardRules.map((entry, ridx) => ridx === idx ? { ...entry, rankFrom: e.target.value } : entry),
                         }))}
-                        placeholder="From"
+                        placeholder="시작"
                       />
                       <input
                         type="number"
@@ -588,7 +588,7 @@ export default function ContestPage() {
                           ...prev,
                           rewardRules: prev.rewardRules.map((entry, ridx) => ridx === idx ? { ...entry, rankTo: e.target.value } : entry),
                         }))}
-                        placeholder="To"
+                        placeholder="종료"
                       />
                       <select
                         value={rule.rewardCode}
@@ -702,17 +702,17 @@ export default function ContestPage() {
               {showCustomForm && (
                 <div style={{display:'flex',flexDirection:'column',gap:10}}>
                   <div style={{display:'grid',gridTemplateColumns:'2fr 1fr 1fr',gap:10}}>
-                    <input placeholder="Problem title" value={customForm.title} onChange={(e) => setCustomField('title', e.target.value)} />
+                    <input placeholder="문제 제목" value={customForm.title} onChange={(e) => setCustomField('title', e.target.value)} />
                     <select value={customForm.tier} onChange={(e) => setCustomField('tier', e.target.value)}>
                       {CONTEST_TIER_OPTIONS.map((tier) => <option key={tier} value={tier}>{tier}</option>)}
                     </select>
                     <input type="number" min="1" max="10" value={customForm.difficulty} onChange={(e) => setCustomField('difficulty', e.target.value)} />
                   </div>
                   <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
-                    <input type="number" min="1" placeholder="Time limit (s)" value={customForm.timeLimit} onChange={(e) => setCustomField('timeLimit', e.target.value)} />
-                    <input type="number" min="32" placeholder="Memory limit (MB)" value={customForm.memLimit} onChange={(e) => setCustomField('memLimit', e.target.value)} />
+                    <input type="number" min="1" placeholder="시간 제한 (초)" value={customForm.timeLimit} onChange={(e) => setCustomField('timeLimit', e.target.value)} />
+                    <input type="number" min="32" placeholder="메모리 제한 (MB)" value={customForm.memLimit} onChange={(e) => setCustomField('memLimit', e.target.value)} />
                   </div>
-                  <textarea rows={3} placeholder="Problem description" value={customForm.desc} onChange={(e) => setCustomField('desc', e.target.value)} style={{resize:'vertical'}} />
+                  <textarea rows={3} placeholder="문제 설명" value={customForm.desc} onChange={(e) => setCustomField('desc', e.target.value)} style={{resize:'vertical'}} />
                   <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
                     <textarea rows={2} placeholder="Input description" value={customForm.inputDesc} onChange={(e) => setCustomField('inputDesc', e.target.value)} style={{resize:'vertical'}} />
                     <textarea rows={2} placeholder="Output description" value={customForm.outputDesc} onChange={(e) => setCustomField('outputDesc', e.target.value)} style={{resize:'vertical'}} />
@@ -858,7 +858,7 @@ export default function ContestPage() {
             <div style={{display:'flex',flexDirection:'column',gap:10}}>
               <div className="form-group">
                 <label style={{fontSize:12,color:'var(--text3)',marginBottom:4,display:'block'}}>Contest Name *</label>
-                <input placeholder="e.g. Algorithm Master Challenge" value={requestForm.name} onChange={e=>setRequestForm(p=>({...p,name:e.target.value}))} />
+                <input placeholder="예) 알고리즘 마스터 챌린지" value={requestForm.name} onChange={e=>setRequestForm(p=>({...p,name:e.target.value}))} />
               </div>
               <div className="form-group">
                 <label style={{fontSize:12,color:'var(--text3)',marginBottom:4,display:'block'}}>Contest Description</label>
@@ -1123,9 +1123,9 @@ function VirtualContestView({ payload, onExit }) {
           ))}
         </div>
         <div className="lv-ranking card">
-          <div className="lv-panel-title">🏆 My Virtual Progress</div>
+          <div className="lv-panel-title">🏆 내 가상 진행도</div>
           <div className="lr-row me">
-            <span style={{flex:1,fontWeight:700}}>Problems Solved</span>
+            <span style={{flex:1,fontWeight:700}}>풀린 문제</span>
             <span className="mono" style={{color:'var(--blue)',fontWeight:700}}>{solvedIds.size}/{probs.length}</span>
           </div>
           <div style={{padding:'12px 16px',display:'grid',gap:10}}>
@@ -1138,7 +1138,7 @@ function VirtualContestView({ payload, onExit }) {
             <textarea
               value={code}
               onChange={(e) => setCode(e.target.value)}
-              placeholder="Paste your code here and submit. Results are not counted toward global rating or the official leaderboard."
+              placeholder="코드를 붙여넣고 제출하세요. 결과는 글로벌 랭킹이나 공식 리더보드에 반영되지 않습니다."
               rows={10}
               disabled={remainingSec === 0}
               style={{width:'100%',minHeight:180,fontFamily:'var(--font-mono)',fontSize:13,borderRadius:12,border:'1px solid var(--border)',background:'var(--bg)',color:'var(--text)',padding:12}}

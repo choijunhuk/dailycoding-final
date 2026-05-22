@@ -253,7 +253,7 @@ export default function CodeEditor({
               style={{ minHeight: 240 }}
               value={bugFixAnswer}
               onChange={(e) => setBugFixAnswer(e.target.value)}
-              placeholder="Enter the fixed code or the key corrected lines."
+              placeholder="수정된 코드 또는 핵심 수정 줄을 입력하세요."
             />
           </div>
         )}
@@ -263,7 +263,7 @@ export default function CodeEditor({
         <div style={{ display:'grid', gridTemplateRows:isBuildProblem ? '140px 1fr' : '1fr', height:'100%' }}>
           {isBuildProblem && (
             <div style={{ height:'100%', padding:16, overflowY:'auto', background:'var(--bg2)', borderBottom:'1px solid var(--border)' }}>
-              <div style={{ color:'var(--text3)', fontSize:12, marginBottom:4 }}>뼈대 코드 (수정 불가 영역)</div>
+              <div style={{ color:'var(--text3)', fontSize:12, marginBottom:4 }}>Skeleton code (read-only)</div>
               <pre className="io-box mono" style={{ margin:0 }}>{problem.starterCode || '// YOUR CODE HERE'}</pre>
             </div>
           )}
@@ -273,7 +273,7 @@ export default function CodeEditor({
               value={code}
               onChange={(e) => setCode(e.target.value)}
               spellCheck={false}
-              aria-label="모바일 코드 편집기"
+              aria-label="Mobile code editor"
             />
           ) : (
             <Editor

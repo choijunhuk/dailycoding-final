@@ -13,7 +13,10 @@ const LANG_OPTIONS = [
   { value: 'java', label: 'Java', monaco: 'java' },
 ];
 
-const TYPE_LABEL = { coding: '코딩', 'fill-blank': '빈칸', 'bug-fix': '버그수정' };
+const TYPE_LABEL = {
+  ko: { coding: '코딩', 'fill-blank': '빈칸 채우기', 'bug-fix': '틀린부분 찾기' },
+  en: { coding: 'Coding', 'fill-blank': 'Fill-Blank', 'bug-fix': 'Bug-Fix' },
+};
 const TYPE_COLOR = { coding: 'var(--blue)', 'fill-blank': 'var(--green)', 'bug-fix': 'var(--orange)' };
 
 function parseConfig(raw) {
@@ -26,13 +29,13 @@ function formatDuration(sec) {
   const total = Math.max(0, Number(sec) || 0);
   const min = Math.floor(total / 60);
   const rest = total % 60;
-  return min > 0 ? `${min}분 ${rest}초` : `${rest}초`;
+  return min > 0 ? `${min}m ${rest}s` : `${rest}s`;
 }
 
 export default function ExamPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const [exam, setExam] = useState(null);
   const [attemptId, setAttemptId] = useState(null);
   const [timeLeft, setTimeLeft] = useState(0);
@@ -137,10 +140,10 @@ export default function ExamPage() {
             <div style={{ display:'grid', gap:14, marginBottom:16 }}>
               <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(130px, 1fr))', gap:10 }}>
                 {[
-                  { label:'정답률', value:`${result.report.accuracy}%`, color:'var(--green)' },
-                  { label:'소요 시간', value:formatDuration(result.report.timeUsedSec), color:'var(--blue)' },
-                  { label:'시간 사용률', value:`${result.report.paceRate}%`, color:'var(--yellow)' },
-                  { label:'미풀이', value:`${result.report.emptyCount}문제`, color:'var(--text3)' },
+                  { label:'Accuracy', value:`${result.report.accuracy}%`, color:'var(--green)' },
+                  { label:'Time Used', value:formatDuration(result.report.timeUsedSec), color:'var(--blue)' },
+                  { label:'Pace Rate', value:`${result.report.paceRate}%`, color:'var(--yellow)' },
+                  { label:'Unanswered', value:`${result.report.emptyCount} problems`, color:'var(--text3)' },
                 ].map((item) => (
                   <div key={item.label} style={{ padding:'12px 14px', border:'1px solid var(--border)', borderRadius:10, background:'var(--bg3)' }}>
                     <div style={{ fontSize:11, color:'var(--text3)', marginBottom:5 }}>{item.label}</div>
@@ -149,16 +152,16 @@ export default function ExamPage() {
                 ))}
               </div>
               <div style={{ padding:'14px 16px', border:'1px solid var(--border)', borderRadius:10, background:'var(--bg3)', fontSize:13, lineHeight:1.7 }}>
-                <div style={{ fontWeight:800, color:'var(--text)', marginBottom:4 }}>모의코테 리포트</div>
+                <div style={{ fontWeight:800, color:'var(--text)', marginBottom:4 }}>Mock Exam Report</div>
                 <div style={{ color:'var(--text2)' }}>{result.report.summary}</div>
                 <div style={{ color:'var(--blue)', marginTop:6 }}>{result.report.nextPractice}</div>
               </div>
               {(result.report.weakTags?.length > 0 || result.report.weakTypes?.length > 0) && (
                 <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(220px, 1fr))', gap:10 }}>
                   <div style={{ padding:'12px 14px', border:'1px solid var(--border)', borderRadius:10, background:'var(--bg3)' }}>
-                    <div style={{ fontSize:12, fontWeight:800, marginBottom:8 }}>취약 태그</div>
+                    <div style={{ fontSize:12, fontWeight:800, marginBottom:8 }}>Weak Tags</div>
                     {(result.report.weakTags || []).length === 0
-                      ? <div style={{ fontSize:12, color:'var(--text3)' }}>뚜렷한 취약 태그가 없습니다.</div>
+                      ? <div style={{ fontSize:12, color:'var(--text3)' }}>No notable weak tags.</div>
                       : result.report.weakTags.map((tag) => (
                         <div key={tag.label} style={{ display:'flex', justifyContent:'space-between', gap:10, fontSize:12, color:'var(--text2)', marginBottom:6 }}>
                           <span>{tag.label}</span>
@@ -167,9 +170,9 @@ export default function ExamPage() {
                       ))}
                   </div>
                   <div style={{ padding:'12px 14px', border:'1px solid var(--border)', borderRadius:10, background:'var(--bg3)' }}>
-                    <div style={{ fontSize:12, fontWeight:800, marginBottom:8 }}>문제 유형별 실수</div>
+                    <div style={{ fontSize:12, fontWeight:800, marginBottom:8 }}>Mistakes by Type</div>
                     {(result.report.weakTypes || []).length === 0
-                      ? <div style={{ fontSize:12, color:'var(--text3)' }}>유형별 실수가 없습니다.</div>
+                      ? <div style={{ fontSize:12, color:'var(--text3)' }}>No mistakes by type.</div>
                       : result.report.weakTypes.map((type) => (
                         <div key={type.label} style={{ display:'flex', justifyContent:'space-between', gap:10, fontSize:12, color:'var(--text2)', marginBottom:6 }}>
                           <span>{TYPE_LABEL[type.label] || type.label}</span>
@@ -234,7 +237,7 @@ export default function ExamPage() {
             <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, overflowY: 'auto' }}>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
                 <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 999, background: 'var(--bg3)', color: TYPE_COLOR[problemType], fontWeight: 700 }}>
-                  {TYPE_LABEL[problemType] || problemType}
+                      {TYPE_LABEL[lang]?.[problemType] || TYPE_LABEL.en[problemType] || problemType}
                 </span>
                 {activeProblem?.preferredLanguage && (
                   <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 999, background: 'rgba(88,166,255,.1)', color: 'var(--blue)', fontWeight: 700 }}>
@@ -254,7 +257,7 @@ export default function ExamPage() {
               )}
               {problemType === 'fill-blank' && specialConfig?.codeTemplate && (
                 <div>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text3)', marginBottom: 6 }}>코드 템플릿</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text3)', marginBottom: 6 }}>Code Template</div>
                   <pre style={{
                     background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 8,
                     padding: 12, fontSize: 12, overflowX: 'auto', fontFamily: 'Space Mono, monospace',
@@ -265,7 +268,7 @@ export default function ExamPage() {
               {problemType === 'bug-fix' && specialConfig?.buggyCode && (
                 <div>
                   <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text3)', marginBottom: 6 }}>
-                    버그 코드
+                    Buggy Code
                     {activeProblem?.preferredLanguage && (
                       <span style={{ fontWeight: 400, marginLeft: 6, color: 'var(--text2)' }}>
                         ({activeProblem.preferredLanguage})
@@ -278,7 +281,7 @@ export default function ExamPage() {
                     whiteSpace: 'pre-wrap', lineHeight: 1.6,
                   }}>{specialConfig.buggyCode}</pre>
                   {specialConfig?.hint && (
-                    <p style={{ marginTop: 8, color: 'var(--text2)', fontSize: 13 }}>💡 힌트: {specialConfig.hint}</p>
+                    <p style={{ marginTop: 8, color: 'var(--text2)', fontSize: 13 }}>💡 Hint: {specialConfig.hint}</p>
                   )}
                 </div>
               )}
@@ -313,14 +316,14 @@ export default function ExamPage() {
 
               {problemType === 'fill-blank' && (
                 <div style={{ flex: 1, overflowY: 'auto' }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12, color: 'var(--text2)' }}>빈칸 답안 입력</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12, color: 'var(--text2)' }}>Fill in the Blanks</div>
                   {(Array.isArray(specialConfig?.blanks) ? specialConfig.blanks : []).map((_, index) => (
                     <div key={index} style={{ marginBottom: 10 }}>
-                      <label style={{ fontSize: 12, color: 'var(--text3)', display: 'block', marginBottom: 4 }}>빈칸 {index + 1}</label>
+                      <label style={{ fontSize: 12, color: 'var(--text3)', display: 'block', marginBottom: 4 }}>Blank {index + 1}</label>
                       <input
                         value={currentAnswer.blankAnswers?.[index] || ''}
                         onChange={e => setBlankAnswer(index, e.target.value)}
-                        placeholder={`빈칸 ${index + 1} 값 입력`}
+                        placeholder={`${index + 1}번 빈칸에 값을 입력하세요`}
                         style={{
                           width: '100%', padding: '8px 12px', borderRadius: 8,
                           border: '1px solid var(--border)', background: 'var(--bg3)',
@@ -331,18 +334,18 @@ export default function ExamPage() {
                     </div>
                   ))}
                   {(!specialConfig?.blanks || specialConfig.blanks.length === 0) && (
-                    <div style={{ color: 'var(--text3)', fontSize: 13 }}>빈칸 정보를 불러올 수 없습니다.</div>
+                    <div style={{ color: 'var(--text3)', fontSize: 13 }}>Could not load blank info.</div>
                   )}
                 </div>
               )}
 
               {problemType === 'bug-fix' && (
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8, color: 'var(--text2)' }}>수정된 코드 입력</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8, color: 'var(--text2)' }}>Enter Fixed Code</div>
                   <textarea
                     value={currentAnswer.answer || ''}
                     onChange={e => setBugAnswer(e.target.value)}
-                    placeholder="버그를 수정한 코드를 입력하세요..."
+                    placeholder="수정된 코드를 입력하세요..."
                     style={{
                       flex: 1, minHeight: 280, padding: 12, borderRadius: 8,
                       border: '1px solid var(--border)', background: 'var(--bg3)',

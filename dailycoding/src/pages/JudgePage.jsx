@@ -482,9 +482,9 @@ export default function JudgePage() {
     if (!problem?.id) return
     try {
       const data = await toggleBookmark(problem.id)
-      toast?.show(data?.bookmarked ? 'Bookmarked.' : 'Bookmark removed.', 'info')
+      toast?.show(data?.bookmarked ? '🔖 북마크에 추가했습니다.' : '북마크를 해제했습니다.', 'info')
     } catch (err) {
-      toast?.show(err?.response?.data?.message || 'Failed to update bookmark.', 'error')
+      toast?.show(err?.response?.data?.message || '북마크 처리에 실패했습니다.', 'error')
     }
   }
 
@@ -995,7 +995,7 @@ export default function JudgePage() {
                   </div>
                 )}
                 <textarea rows={3} value={commentText} onChange={e=>setCommentText(e.target.value)}
-                  placeholder="Share your question or approach..." style={{resize:'vertical',marginBottom:8}} disabled={!user?.emailVerified} />
+                  placeholder="질문이나 풀이 접근 방식을 공유하세요..." style={{resize:'vertical',marginBottom:8}} disabled={!user?.emailVerified} />
                 <button className="btn btn-primary btn-sm" onClick={postComment} disabled={commentLoading||!commentText.trim()||!user?.emailVerified}>
                   {commentLoading?<span className="spinner"/>:'Post Comment'}
                 </button>
@@ -1072,7 +1072,7 @@ export default function JudgePage() {
               <textarea
                 value={problemNote}
                 onChange={e=>setProblemNote(e.target.value)}
-                placeholder="Jot down anything here..."
+                placeholder="여기에 메모를 자유롭게 적어보세요..."
                 style={{
                   width:'100%', minHeight:'400px', padding:'16px', borderRadius:10,
                   background:'var(--bg3)', border:'1px solid var(--border)',

@@ -686,7 +686,7 @@ export default function AdminPage() {
         <div className="card fade-up" style={{overflow:'hidden'}}>
           <div style={{padding:'12px 16px',borderBottom:'1px solid var(--border)'}}>
             <input
-              placeholder="🔍 Search username or email..."
+              placeholder="🔍 유저명 또는 이메일 검색..."
               value={userSearch}
               onChange={e=>setUserSearch(e.target.value)}
               style={{width:'100%',padding:'8px 12px',fontSize:13,borderRadius:8,border:'1px solid var(--border)',background:'var(--bg3)',color:'var(--text)'}}
@@ -935,7 +935,7 @@ export default function AdminPage() {
                   type="number"
                   value={weeklyForm.problemId}
                   onChange={(e) => setWeeklyForm((prev) => ({ ...prev, problemId: e.target.value }))}
-                  placeholder="e.g. 12"
+                  placeholder="예) 12"
                 />
               </div>
               <div className="form-group">
@@ -1183,7 +1183,7 @@ export default function AdminPage() {
                 value={pwInput}
                 onChange={e=>setPwInput(e.target.value)}
                 onKeyDown={e=>e.key==='Enter'&&confirmResetPw()}
-                placeholder="Enter new password"
+                placeholder="새 비밀번호 입력"
                 autoFocus
                 style={{width:'100%',marginTop:6}}
               />
@@ -1278,7 +1278,7 @@ export default function AdminPage() {
               </div>
               <div className="form-group">
                 <label>Answer List (comma-separated)</label>
-                <input placeholder="e.g. 1, 1, 2" value={form.specialConfig.blanksText} onChange={e=>sf('blanksText',e.target.value)} />
+                <input placeholder="예) 1, 1, 2" value={form.specialConfig.blanksText} onChange={e=>sf('blanksText',e.target.value)} />
               </div>
             </>
           )}
@@ -1291,7 +1291,7 @@ export default function AdminPage() {
               </div>
               <div className="form-group">
                 <label>Answer Keywords (comma-separated)</label>
-                <input placeholder="e.g. n - i - 1, arr[0]" value={form.specialConfig.keywordsText} onChange={e=>sf('keywordsText',e.target.value)} />
+                <input placeholder="예) n - i - 1, arr[0]" value={form.specialConfig.keywordsText} onChange={e=>sf('keywordsText',e.target.value)} />
               </div>
               <div className="form-group">
                 <label>Explanation</label>
@@ -1305,7 +1305,7 @@ export default function AdminPage() {
               <div className="cf-row">
                 <div className="form-group" style={{ flex:1 }}>
                   <label>Scenario Title</label>
-                  <input value={form.specialConfig.scenarioTitle} onChange={e=>sf('scenarioTitle', e.target.value)} placeholder="e.g. Slow API Response Time" />
+                  <input value={form.specialConfig.scenarioTitle} onChange={e=>sf('scenarioTitle', e.target.value)} placeholder="예) API 응답 속도 저하" />
                 </div>
                 <div className="form-group" style={{ flex:1 }}>
                   <label>Evaluation Mode</label>
@@ -1337,7 +1337,7 @@ export default function AdminPage() {
                       </label>
                       <button type="button" className="btn btn-ghost btn-sm" onClick={()=>removeTroubleshootingFile(index)} style={{ alignSelf:'flex-end' }}>삭제</button>
                     </div>
-                    <textarea className="mono" rows={8} value={file.content} onChange={e=>updateTroubleshootingFile(index, { content:e.target.value })} placeholder="File content" style={{ resize:'vertical' }} />
+                    <textarea className="mono" rows={8} value={file.content} onChange={e=>updateTroubleshootingFile(index, { content:e.target.value })} placeholder="파일 내용" style={{ resize:'vertical' }} />
                   </div>
                 ))}
               </div>

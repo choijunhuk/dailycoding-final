@@ -339,7 +339,7 @@ export default function CommunityPage() {
       await api.post(`/community/${activeBoard}/${postId}/scrap`)
       await Promise.all([refreshPosts(), selectedPost?.id === postId ? refreshDetail(postId) : Promise.resolve()])
     } catch {
-      toast?.show('Failed to process bookmark.', 'error')
+      toast?.show('북마크 처리에 실패했습니다.', 'error')
     }
   }
 
@@ -566,8 +566,8 @@ export default function CommunityPage() {
                     style={{ border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', borderRadius: 14, padding: '12px 14px', fontFamily: 'inherit', fontSize: 13, lineHeight: 1.7, resize: 'vertical', outline: 'none' }}
                   />
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                    <div style={{ fontSize: 12, color: 'var(--text3)' }}>Mention notifications, Q&A acceptance, and likes/bookmarks are all connected.</div>
-                    <button onClick={submitReply} disabled={replyBusy} style={{ border: 'none', background: 'var(--green)', color: 'var(--bg)', borderRadius: 12, padding: '10px 14px', cursor: replyBusy ? 'default' : 'pointer', fontFamily: 'inherit', fontWeight: 800, opacity: replyBusy ? 0.55 : 1 }}>{replyBusy ? 'Posting...' : 'Post Comment'}</button>
+                    <div style={{ fontSize: 12, color: 'var(--text3)' }}>멘션 알림, Q&A 채택, 좋아요/북마크가 모두 연결됩니다.</div>
+                    <button onClick={submitReply} disabled={replyBusy} style={{ border: 'none', background: 'var(--green)', color: 'var(--bg)', borderRadius: 12, padding: '10px 14px', cursor: replyBusy ? 'default' : 'pointer', fontFamily: 'inherit', fontWeight: 800, opacity: replyBusy ? 0.55 : 1 }}>{replyBusy ? '게시 중...' : '댓글 게시'}</button>
                   </div>
                 </div>
               </section>
