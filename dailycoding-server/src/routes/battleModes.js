@@ -1,9 +1,19 @@
 import { Router } from 'express';
-import { auth, requireVerified } from '../middleware/auth.js';
+import jwt from 'jsonwebtoken';
+import { auth, requireVerified, SECRET } from '../middleware/auth.js';
 import { BattleMode } from '../models/BattleMode.js';
 import { errorResponse, internalError } from '../middleware/errorHandler.js';
 
 const router = Router();
+
+async function getOptionalUserId(req) {
+  const header = req.headers.authorization;
+  if (!header?.startsWith('Bearer ')) return null;
+  try {
+    const decoded = jwt.verify(header.slice(7), SECRET, { algorithms: ['HS256'], issuer: 'dailycoding', audience: 'dailycoding-client' });
+    return Number(decoded?.id) || null;
+  } catch { return null; }
+}
 
 function handleBattleModeError(res, err, fallback = '워크샵 모드를 처리하지 못했습니다.') {
   if (err?.status && err.status < 500) {
@@ -15,13 +25,14 @@ function handleBattleModeError(res, err, fallback = '워크샵 모드를 처리�
 
 router.get('/', async (req, res) => {
   try {
+    const viewerId = await getOptionalUserId(req);
     const modes = await BattleMode.findAll({
       limit: req.query.limit,
       offset: req.query.offset,
       sort: req.query.sort,
       search: req.query.q,
       isPublic: true,
-      viewerId: req.user?.id || null,
+      viewerId,
     });
     res.json({ modes });
   } catch (err) {
