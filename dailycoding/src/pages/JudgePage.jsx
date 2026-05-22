@@ -1231,7 +1231,7 @@ export default function JudgePage() {
 
           {bottomTab === 'custom' && (
             <div className="custom-body">
-              <textarea className="custom-input mono" placeholder="Enter custom input here..." value={customInput} onChange={e => setCustomInput(e.target.value)} />
+              <textarea className="custom-input mono" placeholder="커스텀 입력값을 입력하세요..." value={customInput} onChange={e => setCustomInput(e.target.value)} />
               <button className="btn btn-ghost btn-sm" style={{ marginTop: 8, alignSelf: 'flex-start' }}
                 onClick={() => runCode({ input: customInput })}>▶ Run</button>
             </div>

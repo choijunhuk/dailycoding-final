@@ -714,8 +714,8 @@ export default function ContestPage() {
                   </div>
                   <textarea rows={3} placeholder="문제 설명" value={customForm.desc} onChange={(e) => setCustomField('desc', e.target.value)} style={{resize:'vertical'}} />
                   <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
-                    <textarea rows={2} placeholder="Input description" value={customForm.inputDesc} onChange={(e) => setCustomField('inputDesc', e.target.value)} style={{resize:'vertical'}} />
-                    <textarea rows={2} placeholder="Output description" value={customForm.outputDesc} onChange={(e) => setCustomField('outputDesc', e.target.value)} style={{resize:'vertical'}} />
+                    <textarea rows={2} placeholder="입력 설명" value={customForm.inputDesc} onChange={(e) => setCustomField('inputDesc', e.target.value)} style={{resize:'vertical'}} />
+                    <textarea rows={2} placeholder="출력 설명" value={customForm.outputDesc} onChange={(e) => setCustomField('outputDesc', e.target.value)} style={{resize:'vertical'}} />
                   </div>
                   <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
                     {CONTEST_TAG_OPTIONS.map((tag) => (
@@ -741,7 +741,7 @@ export default function ContestPage() {
                   <div style={{fontSize:12,color:'var(--orange)',fontWeight:700}}>No limit on hidden test cases. Input/output will be visible on the problem detail page.</div>
                   {renderContestCaseEditor('Hidden Test Case', customForm.testcases, 'testcases', 'var(--orange)')}
                   <textarea rows={2} placeholder="Hint" value={customForm.hint} onChange={(e) => setCustomField('hint', e.target.value)} style={{resize:'vertical'}} />
-                  <textarea rows={4} placeholder="Model Answer" value={customForm.solution} onChange={(e) => setCustomField('solution', e.target.value)} style={{resize:'vertical'}} />
+                  <textarea rows={4} placeholder="모범 답안" value={customForm.solution} onChange={(e) => setCustomField('solution', e.target.value)} style={{resize:'vertical'}} />
                   <div style={{display:'flex',justifyContent:'flex-end'}}>
                     <button className="btn btn-primary btn-sm" onClick={handleCreateCustomProblem} disabled={customSaving || !customForm.title.trim() || !customForm.desc.trim()}>
                       {customSaving ? <span className="spinner"/> : 'Add Contest Problem'}
@@ -933,7 +933,7 @@ export default function ContestPage() {
             <div className="form-group">
               <input 
                 type="password" 
-                placeholder="Security code"
+                placeholder="보안 코드"
                 autoFocus
                 value={pinValue} 
                 onChange={e=>setPinValue(e.target.value)} 

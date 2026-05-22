@@ -582,13 +582,13 @@ export default function AdminPage() {
           <div className="cf-row" style={{margin:0,gap:8}}>
             <div style={{flex:1}}>
               <div style={{fontSize:11,fontWeight:700,color:'var(--text2)',marginBottom:4,textTransform:'uppercase',letterSpacing:.5}}>Input</div>
-              <textarea rows={3} className="mono" placeholder="Input value" value={ex.input}
+              <textarea rows={3} className="mono" placeholder="입력값" value={ex.input}
                 onChange={e=>{ const arr=[...items]; arr[i]={...arr[i],input:e.target.value}; f(fieldKey,arr); }}
                 style={{resize:'vertical',color:'var(--green)',width:'100%'}}/>
             </div>
             <div style={{flex:1}}>
               <div style={{fontSize:11,fontWeight:700,color:'var(--text2)',marginBottom:4,textTransform:'uppercase',letterSpacing:.5}}>Output</div>
-              <textarea rows={3} className="mono" placeholder="Output value" value={ex.output}
+              <textarea rows={3} className="mono" placeholder="출력값" value={ex.output}
                 onChange={e=>{ const arr=[...items]; arr[i]={...arr[i],output:e.target.value}; f(fieldKey,arr); }}
                 style={{resize:'vertical',color:'var(--green)',width:'100%'}}/>
             </div>
@@ -1102,7 +1102,7 @@ export default function AdminPage() {
                   <div style={{display:'flex',gap:10,flexWrap:'wrap',alignItems:'flex-start'}}>
                     <button className="btn btn-success" onClick={()=>handleCommunityApprove(communityDetail.id)}>✅ {txt('승인 및 문제 등록', 'Approve & Register Problem')}</button>
                     <div style={{display:'flex',flexDirection:'column',gap:6,flex:1,minWidth:200}}>
-                      <input className="input" placeholder="Rejection reason (optional)" value={communityRejectNote}
+                      <input className="input" placeholder="거절 사유 (선택)" value={communityRejectNote}
                         onChange={e=>setCommunityRejectNote(e.target.value)} />
                       <button className="btn btn-danger btn-sm" onClick={()=>handleCommunityReject(communityDetail.id)}>❌ Reject</button>
                     </div>
@@ -1287,7 +1287,7 @@ export default function AdminPage() {
             <>
               <div className="form-group">
                 <label>Buggy Code</label>
-                <textarea rows={6} className="mono" placeholder="Code with bugs" value={form.specialConfig.buggyCode} onChange={e=>sf('buggyCode',e.target.value)} style={{resize:'vertical'}} />
+                <textarea rows={6} className="mono" placeholder="버그가 있는 코드" value={form.specialConfig.buggyCode} onChange={e=>sf('buggyCode',e.target.value)} style={{resize:'vertical'}} />
               </div>
               <div className="form-group">
                 <label>Answer Keywords (comma-separated)</label>
@@ -1295,7 +1295,7 @@ export default function AdminPage() {
               </div>
               <div className="form-group">
                 <label>Explanation</label>
-                <textarea rows={3} placeholder="Explain what was wrong" value={form.specialConfig.explanation} onChange={e=>sf('explanation',e.target.value)} style={{resize:'vertical'}} />
+                <textarea rows={3} placeholder="무엇이 잘못되었는지 설명" value={form.specialConfig.explanation} onChange={e=>sf('explanation',e.target.value)} style={{resize:'vertical'}} />
               </div>
             </>
           )}
@@ -1316,7 +1316,7 @@ export default function AdminPage() {
               </div>
               <div className="form-group">
                 <label>Scenario Description</label>
-                <textarea rows={4} value={form.specialConfig.scenarioDescription} onChange={e=>sf('scenarioDescription', e.target.value)} placeholder="Describe the issue, goals, and constraints." style={{ resize:'vertical' }} />
+                <textarea rows={4} value={form.specialConfig.scenarioDescription} onChange={e=>sf('scenarioDescription', e.target.value)} placeholder="문제 상황, 목표, 제약 조건을 설명하세요." style={{ resize:'vertical' }} />
               </div>
 
               <div>

@@ -54,7 +54,7 @@ export default function TestResultPanel({
             <div style={{ marginTop:10, padding:'10px 12px', background:'rgba(248,81,73,.04)', border:'1px solid rgba(248,81,73,.15)', borderRadius:8 }}>
               <div style={{ fontSize:12, fontWeight:700, color:'var(--red)', marginBottom:6 }}>📝 Wrong Answer Notes</div>
               <textarea rows={2} value={wrongNote} onChange={e=>setWrongNote(e.target.value)}
-                placeholder="Note why you got this wrong..."
+                placeholder="왜 틀렸는지 메모하세요..."
                 style={{ resize:'vertical', fontSize:12, marginBottom:6 }} />
               <button className="btn btn-ghost btn-sm" onClick={saveWrongNote} style={{ fontSize:11 }}>💾 Save</button>
             </div>
