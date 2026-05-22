@@ -7,9 +7,9 @@ import { PLAN_META } from '../data/pricingPlans.js'
 import api from '../api.js'
 
 const TESTIMONIALS = [
-  { name: 'KimDev', tier: 'gold', text: 'Solving one problem a day has made a noticeable difference in my skills.', company: 'Kakao Intern' },
-  { name: 'LeeCoding', tier: 'platinum', text: 'Seeing which wrong answers to retry keeps my review backlog from piling up.', company: 'Startup Employee' },
-  { name: 'ParkAlgo', tier: 'silver', text: 'Tracking my daily routine is more motivating than battles. I keep coming back.', company: 'Graduate Student' },
+  { name: 'KimDev', tier: 'gold', text: '하루 한 문제씩 꾸준히 풀었더니 실력이 눈에 띄게 달라졌어요.', company: '카카오 인턴' },
+  { name: 'LeeCoding', tier: 'platinum', text: '어떤 오답을 다시 풀어야 할지 바로 보여줘서 복습 목록이 쌓이지 않아요.', company: '스타트업 재직' },
+  { name: 'ParkAlgo', tier: 'silver', text: '배틀보다 데일리 루틴 추적이 더 동기부여가 돼요. 계속 돌아오게 됩니다.', company: '대학원생' },
 ]
 
 const TIERS = [
@@ -26,48 +26,48 @@ const TIERS = [
 ]
 
 const STATS = [
-  { value: 5000, suffix: '+', label: 'Problems Solved' },
-  { value: 1200, suffix: '+', label: 'Members' },
-  { value: 98, suffix: '%', label: 'Accuracy' },
-  { value: 5, suffix: '', label: 'Battle Modes' },
+  { value: 5000, suffix: '+', label: '풀린 문제 수' },
+  { value: 1200, suffix: '+', label: '멤버 수' },
+  { value: 98, suffix: '%', label: '정확도' },
+  { value: 5, suffix: '', label: '배틀 모드' },
 ]
 
 const STEPS = [
-  { id: 1, title: 'Sign Up', desc: 'Create an account in 30 seconds and start solving problems right away.' },
-  { id: 2, title: 'Run Your Daily Routine', desc: 'Handle recommended problems, wrong-answer recovery, and daily missions all in one screen.' },
-  { id: 3, title: 'Earn XP & Profile Rewards', desc: 'Unlock badges, titles, and profile backgrounds with XP that is separate from your ranking score.' },
+  { id: 1, title: '회원가입', desc: '30초만에 계정을 만들고 바로 문제를 풀기 시작하세요.' },
+  { id: 2, title: '데일리 루틴 실행', desc: '추천 문제, 오답 복습, 데일리 미션을 한 화면에서 처리하세요.' },
+  { id: 3, title: 'XP와 프로필 보상 획득', desc: '랭킹 점수와 별개로 XP로 뱃지, 칭호, 프로필 배경을 해금하세요.' },
 ]
 
 const DIFFERENTIATORS = [
   {
     icon: Target,
-    title: 'A Daily Routine That Shows You What to Do',
-    desc: 'It does not stop at handing you a problem list — the dashboard connects recommended problems, missions, and weekly challenges in one flow.',
-    tag: 'Daily loop',
+    title: '무엇을 해야 할지 알려주는 데일리 루틴',
+    desc: '문제 목록만 던져주는 것에 그치지 않고 — 대시보드가 추천 문제, 미션, 주간 챌린지를 하나의 흐름으로 연결합니다.',
+    tag: '데일리 루프',
   },
   {
     icon: RotateCcw,
-    title: 'A Recovery Queue That Tackles Wrong Answers',
-    desc: 'Recent failed submissions are organized by root cause and linked to retry attempts and an AI wrong-answer coach.',
-    tag: 'Recovery',
+    title: '오답을 해결하는 복습 큐',
+    desc: '최근 틀린 제출을 원인별로 정리하고 재도전 및 AI 오답 코치와 연결합니다.',
+    tag: '복습',
   },
   {
     icon: Swords,
-    title: 'Extend Solo Practice into Battles',
-    desc: 'Real-time 1v1 battles, ghost races, and the daily dungeon let you check your solving speed and accuracy even under short bursts of pressure.',
-    tag: 'Battle',
+    title: '혼자 연습에서 배틀로 확장',
+    desc: '실시간 1v1 배틀, 고스트 레이스, 데일리 던전으로 짧은 압박 속에서 풀이 속도와 정확도를 확인하세요.',
+    tag: '배틀',
   },
   {
     icon: Bot,
-    title: 'A Submission Coach You Use Only When Needed',
-    desc: 'Hints and code review work as supporting tools alongside your submission history. The focus stays on your solve record and review routine.',
-    tag: 'Coach',
+    title: '필요할 때만 쓰는 제출 코치',
+    desc: '힌트와 코드 리뷰가 제출 기록 옆에 보조 도구로 작동합니다. 핵심은 풀이 기록과 복습 루틴입니다.',
+    tag: '코치',
   },
   {
     icon: Star,
-    title: 'XP Rewards That Leave Your Ranking Untouched',
-    desc: 'Daily missions accumulate as personal growth rewards — badges, titles, and profile backgrounds — not as ranking points with competitive stakes.',
-    tag: 'Rewards',
+    title: '랭킹에 영향 없는 XP 보상',
+    desc: '데일리 미션이 뱃지, 칭호, 프로필 배경이라는 개인 성장 보상으로 쌓입니다 — 경쟁 점수가 아닌 성장의 증거로.',
+    tag: '보상',
   },
 ]
 
@@ -195,9 +195,9 @@ export default function LandingPage({ onLogin, onSignup, onPricing }) {
             <span className="gradient-text">DailyCoding</span>
           </button>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-            <button className="btn btn-ghost" onClick={onPricing}>Pricing</button>
-            <button className="btn btn-ghost" onClick={onLogin}>Log In</button>
-            <button className="btn btn-primary" onClick={onSignup}>Get Started Free</button>
+            <button className="btn btn-ghost" onClick={onPricing}>요금제</button>
+            <button className="btn btn-ghost" onClick={onLogin}>로그인</button>
+            <button className="btn btn-primary" onClick={onSignup}>무료 시작</button>
             <button className="btn btn-ghost" onClick={toggleTheme} aria-label="theme toggle">
               {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
             </button>
@@ -208,32 +208,32 @@ export default function LandingPage({ onLogin, onSignup, onPricing }) {
           <div className="animate-fade-in-up">
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '8px 14px', borderRadius: 999, background: 'rgba(121,192,255,.1)', border: '1px solid rgba(121,192,255,.2)', color: 'var(--blue)', fontSize: 12, fontWeight: 700, marginBottom: 20 }}>
               <Swords size={14} />
-              Real-time 1v1 algorithm battles unlike any other coding platform
+              다른 코딩 플랫폼에는 없는 실시간 1v1 알고리즘 배틀
             </div>
             <h1 style={{ fontSize: 'clamp(42px, 8vw, 72px)', lineHeight: 1.03, fontWeight: 900, letterSpacing: 0, marginBottom: 18 }}>
-              <span className="gradient-text">Battle in Real Time,</span><br />
-              Build a Daily Coding Habit
+              <span className="gradient-text">실시간으로 배틀하고,</span><br />
+              데일리 코딩 습관을 만드세요
             </h1>
             <p style={{ fontSize: 18, color: 'var(--text2)', lineHeight: 1.75, maxWidth: 640, marginBottom: 28 }}>
-              Train under solving pressure with 5 real-time battle modes featuring HP, items, problem effects, and territory capture.
-              Between battles, stay consistent with daily problems, wrong-answer recovery, and XP rewards.
+              HP, 아이템, 문제 이펙트, 영토 점령 등 5가지 실시간 배틀 모드로 압박 속에서 실력을 키우세요.
+              배틀 사이에는 데일리 문제, 오답 복습, XP 보상으로 꾸준함을 유지하세요.
             </p>
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 24 }}>
               <button className="btn btn-primary pulse-cta" onClick={onSignup} style={{ padding: '14px 22px', fontSize: 15 }}>
-                Get Started Free <ArrowRight size={16} />
+                무료 시작 <ArrowRight size={16} />
               </button>
               <button className="btn btn-ghost" onClick={() => document.getElementById('landing-demo')?.scrollIntoView({ behavior: 'smooth' })} style={{ padding: '14px 22px', fontSize: 15 }}>
-                See Demo <PlayCircle size={16} />
+                데모 보기 <PlayCircle size={16} />
               </button>
             </div>
             <div style={{display:'flex',gap:10,flexWrap:'wrap',marginBottom:24}}>
-              {['⚡ Speed', '💀 Survival', '✨ Effects', '🎒 Items', '🏴 Territory', '👻 Ghost', '🐉 Dungeon'].map((mode) => (
+              {['⚡ 스피드', '💀 서바이벌', '✨ 이펙트', '🎒 아이템', '🏴 영토', '👻 고스트', '🐉 던전'].map((mode) => (
                 <span key={mode} style={{padding:'7px 10px',borderRadius:999,background:'var(--bg2)',border:'1px solid var(--border)',fontSize:12,fontWeight:800,color:'var(--text2)'}}>
                   {mode}
                 </span>
               ))}
               <span style={{padding:'7px 10px',borderRadius:999,background:'rgba(248,81,73,.1)',border:'1px solid rgba(248,81,73,.24)',fontSize:12,fontWeight:900,color:'var(--red)'}}>
-                {activeBattleCount == null ? '-' : activeBattleCount.toLocaleString()} battles live now
+                {activeBattleCount == null ? '-' : activeBattleCount.toLocaleString()}개 배틀 진행 중
               </span>
             </div>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
@@ -249,8 +249,8 @@ export default function LandingPage({ onLogin, onSignup, onPricing }) {
             <div className="card card-hover glow-blue" style={{ padding: 18, background: 'rgba(13,17,23,.75)', border: '1px solid rgba(121,192,255,.18)' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
                 <div>
-                  <div style={{ fontSize: 11, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: 1 }}>Live Battle Preview</div>
-                  <div style={{ fontSize: 15, fontWeight: 800, marginTop: 4 }}>HP 100 · Item Brawl</div>
+                  <div style={{ fontSize: 11, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: 1 }}>실시간 배틀 미리보기</div>
+                  <div style={{ fontSize: 15, fontWeight: 800, marginTop: 4 }}>HP 100 · 아이템 배틀</div>
                 </div>
                 <span className="badge badge-blue">LIVE</span>
               </div>
@@ -263,11 +263,11 @@ export default function LandingPage({ onLogin, onSignup, onPricing }) {
                 </div>
                 <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,padding:'12px 14px',borderBottom:'1px solid rgba(121,192,255,.1)'}}>
                   <div style={{padding:10,borderRadius:12,background:'rgba(63,185,80,.08)',border:'1px solid rgba(63,185,80,.18)'}}>
-                    <div style={{fontSize:11,color:'var(--text3)'}}>You</div>
+                    <div style={{fontSize:11,color:'var(--text3)'}}>나</div>
                     <div style={{fontWeight:900,color:'#56d364'}}>HP 72 · 320 pts</div>
                   </div>
                   <div style={{padding:10,borderRadius:12,background:'rgba(248,81,73,.08)',border:'1px solid rgba(248,81,73,.18)'}}>
-                    <div style={{fontSize:11,color:'var(--text3)'}}>Opponent</div>
+                    <div style={{fontSize:11,color:'var(--text3)'}}>상대방</div>
                     <div style={{fontWeight:900,color:'#f85149'}}>HP 41 · 280 pts</div>
                   </div>
                 </div>
@@ -278,12 +278,12 @@ export default function LandingPage({ onLogin, onSignup, onPricing }) {
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10, marginTop: 14 }}>
                 <div style={{ padding: '12px 14px', borderRadius: 14, background: 'rgba(86,211,100,.08)', border: '1px solid rgba(86,211,100,.18)' }}>
-                  <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 6 }}>Correct</div>
-                  <div style={{ fontSize: 13, fontWeight: 700 }}>⚔️ Opponent HP -28</div>
+                  <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 6 }}>정답</div>
+                  <div style={{ fontSize: 13, fontWeight: 700 }}>⚔️ 상대 HP -28</div>
                 </div>
                 <div style={{ padding: '12px 14px', borderRadius: 14, background: 'rgba(121,192,255,.08)', border: '1px solid rgba(121,192,255,.18)' }}>
-                  <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 6 }}>Territory</div>
-                  <div style={{ fontSize: 13, fontWeight: 700 }}>5 problems captured</div>
+                  <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 6 }}>영토</div>
+                  <div style={{ fontSize: 13, fontWeight: 700 }}>5문제 점령</div>
                 </div>
               </div>
             </div>
@@ -306,10 +306,10 @@ export default function LandingPage({ onLogin, onSignup, onPricing }) {
 
       <section style={{ maxWidth: 1120, margin: '0 auto', padding: '72px 24px 16px' }}>
         <div style={{ marginBottom: 34 }}>
-          <div style={{ fontSize: 12, color: 'var(--blue)', fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 10 }}>Why DailyCoding</div>
-          <h2 style={{ fontSize: 'clamp(28px, 5vw, 42px)', fontWeight: 900, marginBottom: 10 }}>Not just a site with lots of problems — a platform that brings you back to solve them again</h2>
+          <div style={{ fontSize: 12, color: 'var(--blue)', fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 10 }}>왜 데일리코딩인가</div>
+          <h2 style={{ fontSize: 'clamp(28px, 5vw, 42px)', fontWeight: 900, marginBottom: 10 }}>문제만 많은 사이트가 아닌 — 다시 풀게 만드는 플랫폼</h2>
           <p style={{ maxWidth: 720, color: 'var(--text2)', lineHeight: 1.7 }}>
-            Unlike Codeforces-style contest culture, solved.ac-style tier info, or HackerRank-style AI grading, DailyCoding focuses on connecting your daily routine, wrong-answer recovery, AI coach, and battles in a single flow.
+            Codeforces식 대회 문화, solved.ac식 티어 정보, HackerRank식 AI 채점과 달리 데일리코딩은 데일리 루틴, 오답 복습, AI 코치, 배틀을 하나의 흐름으로 연결합니다.
           </p>
         </div>
         <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(230px, 1fr))', gap:16 }}>
@@ -335,9 +335,9 @@ export default function LandingPage({ onLogin, onSignup, onPricing }) {
 
       <section style={{ maxWidth: 1120, margin: '0 auto', padding: '80px 24px 24px' }}>
         <div style={{ textAlign: 'center', marginBottom: 44 }}>
-          <div style={{ fontSize: 12, color: 'var(--blue)', fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 10 }}>Social Proof</div>
-          <h2 style={{ fontSize: 'clamp(28px, 5vw, 42px)', fontWeight: 900, marginBottom: 10 }}>Chosen first by developers who are serious about growth</h2>
-          <p style={{ maxWidth: 620, margin: '0 auto', color: 'var(--text2)', lineHeight: 1.7 }}>DailyCoding ties learning, feedback, and competition into one flow so you can focus on real skill improvement.</p>
+          <div style={{ fontSize: 12, color: 'var(--blue)', fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 10 }}>사용자 후기</div>
+          <h2 style={{ fontSize: 'clamp(28px, 5vw, 42px)', fontWeight: 900, marginBottom: 10 }}>성장에 진심인 개발자들이 먼저 선택했습니다</h2>
+          <p style={{ maxWidth: 620, margin: '0 auto', color: 'var(--text2)', lineHeight: 1.7 }}>데일리코딩은 학습, 피드백, 경쟁을 하나의 흐름으로 엮어 진짜 실력 향상에 집중할 수 있게 합니다.</p>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 18 }}>
           {TESTIMONIALS.map((item, index) => (
@@ -355,8 +355,8 @@ export default function LandingPage({ onLogin, onSignup, onPricing }) {
 
       <section style={{ maxWidth: 1120, margin: '0 auto', padding: '56px 24px 24px' }}>
         <div style={{ textAlign: 'center', marginBottom: 36 }}>
-          <div style={{ fontSize: 12, color: 'var(--blue)', fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 10 }}>How It Works</div>
-          <h2 style={{ fontSize: 'clamp(28px, 5vw, 42px)', fontWeight: 900, marginBottom: 10 }}>How does it work?</h2>
+          <div style={{ fontSize: 12, color: 'var(--blue)', fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 10 }}>사용 방법</div>
+          <h2 style={{ fontSize: 'clamp(28px, 5vw, 42px)', fontWeight: 900, marginBottom: 10 }}>어떻게 시작하나요?</h2>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 18, alignItems: 'stretch' }}>
           {STEPS.map((step, index) => (
@@ -376,16 +376,16 @@ export default function LandingPage({ onLogin, onSignup, onPricing }) {
         <div className="card" style={{ padding: '26px 24px', background: 'linear-gradient(135deg, rgba(121,192,255,.08), rgba(210,168,255,.08))' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 18 }}>
             <div>
-              <div style={{ fontSize: 11, color: 'var(--blue)', fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 10 }}>Pricing Preview</div>
-              <div style={{ fontSize: 28, fontWeight: 900, marginBottom: 8 }}>Ready to upgrade to a commercial plan anytime</div>
+              <div style={{ fontSize: 11, color: 'var(--blue)', fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 10 }}>요금제 미리보기</div>
+              <div style={{ fontSize: 28, fontWeight: 900, marginBottom: 8 }}>언제든 유료 플랜으로 업그레이드 가능합니다</div>
               <div style={{ color: 'var(--text2)', lineHeight: 1.7 }}>
-                {PLAN_META.pro.name} ${PLAN_META.pro.monthlyPrice}/mo · ${PLAN_META.pro.annualPrice}/yr,{' '}
-                {PLAN_META.team.name} ${PLAN_META.team.monthlyPrice}/mo · ${PLAN_META.team.annualPrice}/yr.
+                {PLAN_META.pro.name} {PLAN_META.pro.compactPrice} ·{' '}
+                {PLAN_META.team.name} {PLAN_META.team.compactPrice}.
               </div>
             </div>
             <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(180px, 1fr))', gap:12 }}>
               {[
-                { name:'Free', price:'Free', accent:'var(--text3)' },
+                { name:'무료', price:'Free', accent:'var(--text3)' },
                 { name:PLAN_META.pro.name, price:PLAN_META.pro.compactPrice, accent:'var(--blue)' },
                 { name:PLAN_META.team.name, price:PLAN_META.team.compactPrice, accent:'#f2cc60' },
               ].map((plan) => (
@@ -396,8 +396,8 @@ export default function LandingPage({ onLogin, onSignup, onPricing }) {
               ))}
             </div>
             <div style={{ display:'flex', gap:12, flexWrap:'wrap' }}>
-              <button className="btn btn-ghost" onClick={onPricing}>View Pricing</button>
-              <button className="btn btn-primary" onClick={onSignup}>Get Started</button>
+              <button className="btn btn-ghost" onClick={onPricing}>요금제 보기</button>
+              <button className="btn btn-primary" onClick={onSignup}>시작하기</button>
             </div>
           </div>
         </div>
@@ -406,16 +406,16 @@ export default function LandingPage({ onLogin, onSignup, onPricing }) {
       <footer style={{ background: 'var(--bg2)', borderTop: '1px solid var(--border)' }}>
         <div style={{ maxWidth: 1120, margin: '0 auto', padding: '36px 24px 24px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 24 }}>
           {[
-            { title: 'Product', links: ['Problems', 'Ranking', 'Pricing', 'Community'] },
-            { title: 'Resources', links: ['Help', 'Contact', 'API Status', 'Guide'] },
-            { title: 'Company', links: ['Terms of Service', 'Privacy Policy', 'Student Discount', 'Careers'] },
-            { title: 'Social', links: ['GitHub', 'Discord', 'Blog', 'Instagram'] },
+            { title: '서비스', links: ['문제', '랭킹', '요금제', '커뮤니티'] },
+            { title: '리소스', links: ['도움말', '문의', 'API 상태', '가이드'] },
+            { title: '회사', links: ['이용약관', '개인정보처리방침', '학생 할인', '채용'] },
+            { title: '소셜', links: ['GitHub', 'Discord', '블로그', 'Instagram'] },
           ].map((group) => (
             <div key={group.title}>
               <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 12 }}>{group.title}</div>
               <div style={{ display: 'grid', gap: 8 }}>
                 {group.links.map((link) => (
-                  <button key={link} onClick={link === 'Pricing' ? onPricing : undefined} style={{ background: 'none', border: 'none', padding: 0, textAlign: 'left', color: 'var(--text2)', cursor: link === 'Pricing' ? 'pointer' : 'default', fontSize: 13 }}>
+                  <button key={link} onClick={link === '요금제' ? onPricing : undefined} style={{ background: 'none', border: 'none', padding: 0, textAlign: 'left', color: 'var(--text2)', cursor: link === '요금제' ? 'pointer' : 'default', fontSize: 13 }}>
                     {link}
                   </button>
                 ))}
@@ -425,7 +425,7 @@ export default function LandingPage({ onLogin, onSignup, onPricing }) {
         </div>
         <div style={{ maxWidth: 1120, margin: '0 auto', padding: '0 24px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', color: 'var(--text3)', fontSize: 12 }}>
           <div>© 2026 DailyCoding. All rights reserved.</div>
-          <button className="btn btn-ghost" onClick={toggleTheme}>{theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />} Toggle Theme</button>
+          <button className="btn btn-ghost" onClick={toggleTheme}>{theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />} 테마 변경</button>
         </div>
       </footer>
     </div>

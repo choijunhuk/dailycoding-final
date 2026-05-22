@@ -628,7 +628,7 @@ export default function ContestPage() {
               </div>
             </div>
             <div className="modal-actions">
-              <button className="btn btn-ghost" onClick={()=>setShowCreate(false)}>Cancel</button>
+              <button className="btn btn-ghost" onClick={()=>setShowCreate(false)}>취소</button>
               <button className="btn btn-primary" onClick={handleCreate} disabled={creating||!form.name.trim()}>
                 {creating?<span className="spinner"/>:'Create Contest →'}
               </button>
@@ -762,11 +762,11 @@ export default function ContestPage() {
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.7)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center'}}
           onClick={e=>e.target===e.currentTarget&&setDeleteConfirmId(null)}>
           <div className="card card-pad-lg" style={{minWidth:320}}>
-            <h3 style={{marginBottom:8}}>⚠️ Delete Contest</h3>
-            <p style={{fontSize:13,color:'var(--text2)',marginBottom:20}}>Are you sure you want to delete this contest? This cannot be undone.</p>
+            <h3 style={{marginBottom:8}}>⚠️ 콘테스트 삭제</h3>
+            <p style={{fontSize:13,color:'var(--text2)',marginBottom:20}}>이 콘테스트를 삭제하시겠습니까? 되돌릴 수 없습니다.</p>
             <div style={{display:'flex',gap:10,justifyContent:'flex-end'}}>
-              <button className="btn btn-ghost" onClick={()=>setDeleteConfirmId(null)}>Cancel</button>
-              <button className="btn btn-primary" style={{background:'var(--red)',borderColor:'var(--red)'}} onClick={confirmDelete}>Delete</button>
+              <button className="btn btn-ghost" onClick={()=>setDeleteConfirmId(null)}>취소</button>
+              <button className="btn btn-primary" style={{background:'var(--red)',borderColor:'var(--red)'}} onClick={confirmDelete}>삭제</button>
             </div>
           </div>
         </div>
@@ -874,9 +874,9 @@ export default function ContestPage() {
               </div>
             </div>
             <div className="modal-actions" style={{marginTop:20}}>
-              <button className="btn btn-ghost" onClick={()=>setShowRequestForm(false)}>Cancel</button>
+              <button className="btn btn-ghost" onClick={()=>setShowRequestForm(false)}>취소</button>
               <button className="btn btn-primary" onClick={handleSubmitCreationRequest} disabled={!requestForm.name.trim()||submittingRequest}>
-                {submittingRequest ? <span className="spinner"/> : 'Submit Request'}
+                {submittingRequest ? <span className="spinner"/> : '신청 제출'}
               </button>
             </div>
           </div>
@@ -918,7 +918,7 @@ export default function ContestPage() {
               }
             </div>
             <div className="modal-actions">
-              <button className="btn btn-ghost" onClick={()=>setShowCreationRequests(false)}>Close</button>
+              <button className="btn btn-ghost" onClick={()=>setShowCreationRequests(false)}>닫기</button>
             </div>
           </div>
         </div>

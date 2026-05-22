@@ -765,9 +765,9 @@ export default function Dashboard() {
                   <div style={{fontSize:11,color:'var(--text3)',fontWeight:700,marginBottom:4,textTransform:'uppercase',letterSpacing:.5}}>
                     {t('recommendedProblems')}
                   </div>
-                  <h3 style={{fontSize:17,fontWeight:800,margin:0}}>Recommended Problems</h3>
+                  <h3 style={{fontSize:17,fontWeight:800,margin:0}}>추천 문제</h3>
                 </div>
-                <button className="btn btn-ghost btn-sm" onClick={()=>navigate('/problems')}>View All</button>
+                <button className="btn btn-ghost btn-sm" onClick={()=>navigate('/problems')}>전체 보기</button>
               </div>
               <div className="dashboard-problem-rail">
                 {recommendedProblems.map((problem) => (

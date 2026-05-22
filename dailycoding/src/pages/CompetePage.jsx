@@ -3,25 +3,25 @@ import { Swords, Trophy, Zap } from 'lucide-react';
 
 const COMPETE_MODES = [
   {
-    title: 'Coding Battle',
+    title: '코딩 배틀',
     href: '/battle',
     icon: Swords,
     accent: 'var(--red)',
-    desc: 'Real-time 1v1 or team matches — compete in 5 modes including HP, items, effects, and conquest.',
+    desc: '실시간 1v1 또는 팀 대전 — HP, 아이템, 이펙트, 정복 등 5가지 모드로 경쟁하세요.',
   },
   {
-    title: 'Tournament',
+    title: '토너먼트',
     href: '/tournaments',
     icon: Trophy,
     accent: 'var(--yellow)',
-    desc: 'Top 8 / Top 16 single-elimination brackets — win your matches and advance to the next round automatically.',
+    desc: 'Top 8 / Top 16 싱글 엘리미네이션 브래킷 — 매치를 이기면 다음 라운드로 자동 진출합니다.',
   },
   {
-    title: 'Contest',
+    title: '코딩 테스트',
     href: '/contest',
     icon: Zap,
     accent: 'var(--blue)',
-    desc: 'Solve multiple problems within a set time limit and sharpen your coding test skills.',
+    desc: '제한 시간 내 여러 문제를 풀며 실전 코딩 테스트 실력을 키우세요.',
   },
 ];
 
@@ -46,11 +46,11 @@ export default function CompetePage() {
             fontSize: 12,
             fontWeight: 800,
           }}>
-            ⚔️ COMPETE
+            ⚔️ 경쟁
           </span>
-          <h1 style={{ fontSize: 30, fontWeight: 900, margin: '14px 0 8px' }}>Compete Hub</h1>
+          <h1 style={{ fontSize: 30, fontWeight: 900, margin: '14px 0 8px' }}>경쟁 허브</h1>
           <p style={{ color: 'var(--text2)', fontSize: 15, lineHeight: 1.7, maxWidth: 720, margin: 0 }}>
-            From real-time battles to tournaments and contests, start all of DailyCoding's competitive modes in one place.
+            실시간 배틀부터 토너먼트, 코딩 테스트까지 데일리코딩의 모든 경쟁 모드를 한곳에서 시작하세요.
           </p>
         </div>
 
@@ -89,7 +89,7 @@ export default function CompetePage() {
               </div>
               <div style={{ flex: 1 }} />
               <Link to={href} className="btn btn-primary" style={{ justifyContent: 'center', textDecoration: 'none' }}>
-                Get Started
+                시작하기
               </Link>
             </article>
           ))}

@@ -1418,8 +1418,8 @@ export default function AlgorithmBattlePage() {
                 />
               ) : (
                 <div className="ab-wait-panel">
-                  <strong>{loading ? 'Loading...' : 'Waiting'}</strong>
-                  <span>When both players are ready, {isDraftBanRoom ? 'the draft phase will begin.' : 'problems will be finalized and the game will start.'}</span>
+                  <strong>{loading ? '로딩 중...' : '대기 중'}</strong>
+                  <span>양쪽 플레이어가 준비되면 {isDraftBanRoom ? '드래프트 단계가 시작됩니다.' : '문제가 확정되고 게임이 시작됩니다.'}</span>
                 </div>
               )
             ) : (
@@ -1437,14 +1437,14 @@ export default function AlgorithmBattlePage() {
                     <p>{activeProblem.desc}</p>
                     {activeProblem.examples?.[0] && (
                       <div className="ab-example">
-                        <pre><b>Input</b>{'\n'}{activeProblem.examples[0].input}</pre>
-                        <pre><b>Output</b>{'\n'}{activeProblem.examples[0].output}</pre>
+                        <pre><b>입력</b>{'\n'}{activeProblem.examples[0].input}</pre>
+                        <pre><b>출력</b>{'\n'}{activeProblem.examples[0].output}</pre>
                       </div>
                     )}
                   </div>
                 ) : (
                   <div className="ab-problem">
-                    <p style={{ color: 'var(--text3)' }}>{loading ? 'Loading...' : 'Finalizing problems...'}</p>
+                    <p style={{ color: 'var(--text3)' }}>{loading ? '로딩 중...' : '문제 확정 중...'}</p>
                   </div>
                 )}
 
@@ -1632,14 +1632,14 @@ export default function AlgorithmBattlePage() {
       {currentRoom?.status === 'finished' && (
         <div className={`ab-result-overlay ${resultTone}`}>
           <div className="ab-result-modal">
-            <div className="ab-result-kicker">{config?.title || 'Algorithm Battle'} Result</div>
+            <div className="ab-result-kicker">{config?.title || '알고리즘 배틀'} 결과</div>
             <div className="ab-result-icon">{resultTone === 'win' ? '🏆' : resultTone === 'draw' ? '🤝' : resultTone === 'lose' ? '💥' : '⏱️'}</div>
-            <h2>{isTerritoryMode && didWin ? 'Territory Victory!' : resultTitle}</h2>
+            <h2>{isTerritoryMode && didWin ? '영토 점령 승리!' : resultTitle}</h2>
             <p>
               {isSpectatorResult
                 ? resultSummary
                 : !hasOpponent
-                ? 'No opponent — result not counted.'
+                ? '상대방 없음 — 결과가 반영되지 않습니다.'
                 : `vs ${opponentLabel} · ${resultSummary}`}
             </p>
             <div className="ab-result-scoreboard">

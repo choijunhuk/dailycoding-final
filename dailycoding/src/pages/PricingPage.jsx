@@ -268,14 +268,14 @@ export default function PricingPage() {
                   }}
                 >
                   {loadingPlan === plan.id
-                    ? 'Redirecting...'
+                    ? '이동 중...'
                     : plan.id === currentTier
-                      ? 'Current Plan'
+                      ? '현재 플랜'
                       : plan.id === 'free'
-                        ? 'Get Started Free'
+                        ? '무료로 시작'
                         : user
-                          ? (billingPeriod === 'annual' ? 'Start Annual Plan' : 'Choose This Plan')
-                          : 'Sign Up to Start'}
+                          ? (billingPeriod === 'annual' ? '연간 플랜 시작' : '이 플랜 선택')
+                          : '회원가입 후 시작'}
                 </button>
               </div>
             );

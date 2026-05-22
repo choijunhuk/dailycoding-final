@@ -576,10 +576,10 @@ export default function ProfilePage() {
       <div className="profile-learning-activity card">
         {[
           { label:'Problems Solved', value: learningActivity?.solvedProblems ?? solvedProblemsMain.length, color:'var(--green)' },
-          { label:'XP Level', value: `Lv.${learningActivity?.xpLevel ?? 1}`, color:'var(--orange)' },
-          { label:'Battle Win Rate', value: `${learningActivity?.battleWinRate ?? 0}%`, color:'var(--red)' },
-          { label:'Reviews Approved', value: learningActivity?.reviewAcceptedCount ?? 0, color:'var(--blue)' },
-          { label:'Collaboration Score', value: learningActivity?.collaborationScore ?? 0, color:'var(--purple)' },
+          { label:'XP 레벨', value: `Lv.${learningActivity?.xpLevel ?? 1}`, color:'var(--orange)' },
+          { label:'배틀 승률', value: `${learningActivity?.battleWinRate ?? 0}%`, color:'var(--red)' },
+          { label:'리뷰 채택 수', value: learningActivity?.reviewAcceptedCount ?? 0, color:'var(--blue)' },
+          { label:'협업 점수', value: learningActivity?.collaborationScore ?? 0, color:'var(--purple)' },
         ].map((item) => (
           <div key={item.label} className="profile-learning-stat">
             <div style={{ color:item.color }}>{item.value}</div>

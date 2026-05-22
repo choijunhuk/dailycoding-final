@@ -27,8 +27,8 @@ import {
 
 function formatAcceptanceSummary(problem, rate) {
   const submitCount = Number(problem?.submissions ?? problem?.submit_count ?? 0)
-  const rateText = rate == null ? 'No data' : `${Number(rate).toFixed(1)}%`
-  return `Acceptance rate: ${rateText} (${submitCount.toLocaleString()} submissions)`
+  const rateText = rate == null ? '데이터 없음' : `${Number(rate).toFixed(1)}%`
+  return `정답률: ${rateText} (${submitCount.toLocaleString()} 제출)`
 }
 
 export default function ProblemsPage() {
@@ -42,7 +42,7 @@ export default function ProblemsPage() {
 
   const normalizeProblemTypeFilter = (type) => type === 'algorithm' ? 'coding' : type
   const getTypeLabel = (type) => {
-    const map = { algorithm: 'Algorithm', coding: t('typeLabelCoding'), 'fill-blank': t('typeLabelFillBlank'), 'bug-fix': t('typeLabelBugFix'), troubleshooting: 'Troubleshooting', 'performance-fix': 'Performance Fix', 'refactor-fix': 'Refactoring' }
+    const map = { algorithm: '알고리즘', coding: t('typeLabelCoding'), 'fill-blank': t('typeLabelFillBlank'), 'bug-fix': t('typeLabelBugFix'), troubleshooting: '트러블슈팅', 'performance-fix': '성능 최적화', 'refactor-fix': '리팩터링' }
     return map[type] || type
   }
   const getTypeShort = (type) => {
@@ -507,9 +507,9 @@ export default function ProblemsPage() {
           <div className="problems-quality-card">
             <div className="quality-card-icon"><Filter size={18} /></div>
             <div className="quality-card-body">
-              <div className="quality-card-label">Current Results</div>
+              <div className="quality-card-label">현재 결과</div>
               <div className="quality-card-value">{effectiveList.total || 0}</div>
-              <div className="quality-card-sub">{activeFilterCount > 0 ? `${activeFilterCount} filter${activeFilterCount !== 1 ? "s" : ""}` : 'View All'}</div>
+              <div className="quality-card-sub">{activeFilterCount > 0 ? `${activeFilterCount}개 필터` : '전체 보기'}</div>
             </div>
           </div>
         </div>
@@ -518,12 +518,12 @@ export default function ProblemsPage() {
         <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
           {[
             { key: 'all', label: t('allTypes'), icon: '📋' },
-            { key: 'algorithm', label: 'Algorithm', icon: '💻', type: 'coding' },
-            { key: 'fill-blank', label: 'Fill in the Blank', icon: '✏️' },
-            { key: 'bug-fix', label: 'Find the Bug', icon: '🐛' },
-            { key: 'troubleshooting', label: 'Troubleshooting', icon: '🛠️' },
-            { key: 'performance-fix', label: 'Performance Fix', icon: '⚡' },
-            { key: 'refactor-fix', label: 'Refactoring', icon: '♻️' },
+            { key: 'algorithm', label: '알고리즘', icon: '💻', type: 'coding' },
+            { key: 'fill-blank', label: '빈칸 채우기', icon: '✏️' },
+            { key: 'bug-fix', label: '버그 찾기', icon: '🐛' },
+            { key: 'troubleshooting', label: '트러블슈팅', icon: '🛠️' },
+            { key: 'performance-fix', label: '성능 최적화', icon: '⚡' },
+            { key: 'refactor-fix', label: '리팩터링', icon: '♻️' },
           ].map(({ key, label, icon, type }) => {
             const countType = type || key;
             const count = key === 'all' ? PROBLEMS.length : PROBLEMS.filter(p => (p.problemType || 'coding') === countType).length;
@@ -707,8 +707,8 @@ export default function ProblemsPage() {
           <div>
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:8, marginBottom:10 }}>
               <div>
-                <div style={{ fontSize:13, fontWeight:800, color:'var(--text)' }}>Find Learning Paths by Algorithm Tags</div>
-                <div style={{ fontSize:11, color:'var(--text3)', marginTop:2 }}>Filter by topic — DP, Graph, Binary Search, and more.</div>
+                <div style={{ fontSize:13, fontWeight:800, color:'var(--text)' }}>알고리즘 태그로 학습 경로 찾기</div>
+                <div style={{ fontSize:11, color:'var(--text3)', marginTop:2 }}>주제별 필터 — DP, 그래프, 이분 탐색 등.</div>
               </div>
               <span style={{ fontSize:11, color:'var(--blue)', fontWeight:800 }}>{algorithmTags.length} tags</span>
             </div>

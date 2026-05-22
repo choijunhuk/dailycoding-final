@@ -47,8 +47,8 @@ function getProblemAcceptanceRate(problem) {
 function formatAcceptanceStat(problem) {
   const submitCount = getProblemCount(problem, 'submissions', 'submit_count');
   const rate = getProblemAcceptanceRate(problem);
-  const rateText = rate == null ? 'No data' : `${rate.toFixed(1)}%`;
-  return `Acceptance Rate ${rateText} (${submitCount.toLocaleString()} submissions)`;
+  const rateText = rate == null ? '데이터 없음' : `${rate.toFixed(1)}%`;
+  return `정답률 ${rateText} (${submitCount.toLocaleString()} 제출)`;
 }
 
 
@@ -990,8 +990,8 @@ export default function JudgePage() {
                 )}
                 {replyTo && (
                   <div style={{marginBottom:8,fontSize:12,color:'var(--text2)'}}>
-                    Replying to <strong>{replyTo.username}</strong>
-                    <button onClick={() => setReplyTo(null)} style={{marginLeft:8,background:'none',border:'none',color:'var(--blue)',cursor:'pointer',fontSize:12}}>Cancel</button>
+                    <strong>{replyTo.username}</strong>님에게 답글 중
+                    <button onClick={() => setReplyTo(null)} style={{marginLeft:8,background:'none',border:'none',color:'var(--blue)',cursor:'pointer',fontSize:12}}>취소</button>
                   </div>
                 )}
                 <textarea rows={3} value={commentText} onChange={e=>setCommentText(e.target.value)}

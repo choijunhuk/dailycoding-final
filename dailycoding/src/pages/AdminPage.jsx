@@ -706,7 +706,7 @@ export default function AdminPage() {
                     <td><select value={u.role} onChange={e=>handleRoleChange(u.id,e.target.value)} style={{padding:'3px 6px',fontSize:12,width:'auto'}}><option value="user">User</option><option value="admin">Admin</option></select></td>
                     <td style={{display:'flex',gap:4}}>
                       <button className="btn btn-sm" style={{background:'rgba(227,179,65,.1)',color:'var(--yellow)',border:'1px solid rgba(227,179,65,.3)',fontSize:11}} onClick={()=>handleResetPw(u.id,u.username)}>PW</button>
-                      <button className="btn btn-sm" style={{background:'rgba(248,81,73,.1)',color:'var(--red)',border:'1px solid rgba(248,81,73,.3)'}} onClick={()=>handleDeleteUser(u.id,u.username)}>Delete</button>
+                      <button className="btn btn-sm" style={{background:'rgba(248,81,73,.1)',color:'var(--red)',border:'1px solid rgba(248,81,73,.3)'}} onClick={()=>handleDeleteUser(u.id,u.username)}>삭제</button>
                     </td>
                   </tr>
                 ))}
@@ -1166,7 +1166,7 @@ export default function AdminPage() {
             <div className="modal-actions" style={{display:'flex',gap:10,justifyContent:'flex-end'}}>
               <button className="btn btn-ghost" onClick={()=>setConfirmModal(null)}>{txt('취소', 'Cancel')}</button>
               <button className="btn btn-primary" style={{background:'var(--red)',borderColor:'var(--red)'}}
-                onClick={async()=>{ await confirmModal.onConfirm(); setConfirmModal(null); }}>Delete</button>
+                onClick={async()=>{ await confirmModal.onConfirm(); setConfirmModal(null); }}>삭제</button>
             </div>
           </div>
         </div>
@@ -1190,7 +1190,7 @@ export default function AdminPage() {
             </div>
             <div className="modal-actions" style={{marginTop:16,display:'flex',gap:10,justifyContent:'flex-end'}}>
               <button className="btn btn-ghost" onClick={()=>setPwModal(null)}>{txt('취소', 'Cancel')}</button>
-              <button className="btn btn-primary" onClick={confirmResetPw} disabled={!pwInput||pwInput.length<8}>Confirm</button>
+              <button className="btn btn-primary" onClick={confirmResetPw} disabled={!pwInput||pwInput.length<8}>확인</button>
             </div>
           </div>
         </div>
@@ -1333,9 +1333,9 @@ export default function AdminPage() {
                       </div>
                       <label style={{ display:'flex', alignItems:'center', gap:8, fontSize:12, color:'var(--text2)', marginTop:22 }}>
                         <input type="checkbox" checked={file.editable !== false} onChange={e=>updateTroubleshootingFile(index, { editable:e.target.checked })} />
-                        User Editable
+                        사용자 편집 가능
                       </label>
-                      <button type="button" className="btn btn-ghost btn-sm" onClick={()=>removeTroubleshootingFile(index)} style={{ alignSelf:'flex-end' }}>Delete</button>
+                      <button type="button" className="btn btn-ghost btn-sm" onClick={()=>removeTroubleshootingFile(index)} style={{ alignSelf:'flex-end' }}>삭제</button>
                     </div>
                     <textarea className="mono" rows={8} value={file.content} onChange={e=>updateTroubleshootingFile(index, { content:e.target.value })} placeholder="File content" style={{ resize:'vertical' }} />
                   </div>

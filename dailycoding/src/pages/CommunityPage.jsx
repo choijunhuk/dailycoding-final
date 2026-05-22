@@ -545,8 +545,8 @@ export default function CommunityPage() {
                           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                             <button onClick={() => likeReply(reply.id)} style={{ border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', borderRadius: 10, padding: '7px 10px', cursor: 'pointer', fontWeight: 700 }}>👍 {reply.like_count || 0}</button>
                             <button onClick={() => setReplyDraft(`@${reply.nickname || reply.username} `)} style={{ border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', borderRadius: 10, padding: '7px 10px', cursor: 'pointer', fontWeight: 700 }}>답글</button>
-                            {canAccept ? <button onClick={() => acceptReply(reply.id)} style={{ border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--green)', borderRadius: 10, padding: '7px 10px', cursor: 'pointer', fontWeight: 800 }}>Accept</button> : null}
-                            {canDelete ? <button onClick={() => deleteReply(reply.id)} style={{ border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--red)', borderRadius: 10, padding: '7px 10px', cursor: 'pointer', fontWeight: 700 }}>Delete</button> : null}
+                            {canAccept ? <button onClick={() => acceptReply(reply.id)} style={{ border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--green)', borderRadius: 10, padding: '7px 10px', cursor: 'pointer', fontWeight: 800 }}>채택</button> : null}
+                            {canDelete ? <button onClick={() => deleteReply(reply.id)} style={{ border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--red)', borderRadius: 10, padding: '7px 10px', cursor: 'pointer', fontWeight: 700 }}>삭제</button> : null}
                           </div>
                         </div>
                         <div style={{ marginTop: 12, fontSize: 14, color: 'var(--text2)', lineHeight: 1.75, whiteSpace: 'pre-wrap' }}>{reply.content}</div>

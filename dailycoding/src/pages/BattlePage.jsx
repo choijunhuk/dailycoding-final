@@ -899,7 +899,7 @@ export default function BattlePage() {
                     setLobbyPhase('idle');
                     setRoomId(null);
                     setInviteError('');
-                  }}>Cancel</button>
+                  }}>취소</button>
                 </div>
               )}
 
