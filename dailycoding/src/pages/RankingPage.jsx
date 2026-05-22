@@ -6,6 +6,7 @@ import api from '../api.js';
 import { useRankingData } from '../hooks/useRankingData.js';
 import { getTierImageUrl, getTierGlowStyle } from '../utils/tierImage.js';
 import { useLang } from '../context/LangContext.jsx';
+import { pickLangText } from '../utils/languageMode.js';
 import { TIER_THRESHOLDS, TIER_ORDER } from '../data/constants.js';
 import ProfileAvatar from '../components/ProfileAvatar';
 import './RankingPage.css';
@@ -103,6 +104,7 @@ export default function RankingPage() {
   const navigate = useNavigate();
   const toast = useToast();
   const { t, lang } = useLang();
+  const txt = (ko, en) => pickLangText(lang, ko, en);
   const locale = lang === 'ko' ? 'ko-KR' : 'en-US';
   const [mode,         setMode]         = useState('global');
   const [page,         setPage]         = useState(1);
@@ -264,6 +266,14 @@ export default function RankingPage() {
   const myPage = myRank ? Math.ceil(myRank / limit) : null;
   const currentLoading = mode === 'global' ? loading : mode === 'season' ? seasonLoading : mode === 'teams' ? teamLoading : platformLoading;
   const currentError = mode === 'global' ? error : mode === 'season' ? seasonError : mode === 'teams' ? teamError : platformError;
+  const modeLabel = (value) => ({
+    global: txt('알고리즘 랭킹', 'Algorithm Ranking'),
+    season: t('rankingSeasonMode'),
+    battle: txt('배틀 랭킹', 'Battle Ranking'),
+    collaboration: txt('협업 랭킹', 'Collaboration Ranking'),
+    overall: txt('종합 랭킹', 'Overall Ranking'),
+    teams: txt('팀 랭킹', 'Team Ranking'),
+  }[value] || value);
   const pageNumbers = Array.from({ length: Math.min(5, pagination.totalPages || 1) }, (_, index) => {
     const start = Math.max(1, Math.min((pagination.totalPages || 1) - 4, page - 2));
     return start + index;
@@ -279,29 +289,32 @@ export default function RankingPage() {
         </h1>
         <p style={{ color: 'var(--text2)', fontSize: 13, margin: 0 }}>
           {['battle', 'collaboration', 'overall'].includes(mode)
-            ? (platformLoading ? '...' : `${mode === 'battle' ? '배틀' : mode === 'collaboration' ? '협업' : '전체'} 리더보드에 ${rankers.length.toLocaleString(locale)}명이 등록되어 있습니다.`)
+            ? (platformLoading ? '...' : txt(
+              `${modeLabel(mode)}에 ${rankers.length.toLocaleString(locale)}명이 등록되어 있습니다.`,
+              `${rankers.length.toLocaleString(locale)} players are listed on ${modeLabel(mode)}.`,
+            ))
             : mode === 'season'
             ? (seasonLoading ? '...' : t('rankingSeasonSummary').replace('{season}', seasonPayload.season || t('rankingThisSeason')).replace('{count}', rankers.length.toLocaleString()))
             : (loading ? '...' : t('rankingGlobalSummary').replace('{count}', rankers.length.toLocaleString()))}
         </p>
         <div style={{ display:'flex', gap:8, marginTop:12, alignItems:'center', flexWrap:'wrap' }}>
           <button className="btn btn-ghost btn-sm" onClick={() => setMode('global')} style={{ opacity: mode === 'global' ? 1 : 0.6 }}>
-            Algorithm Ranking
+            {modeLabel('global')}
           </button>
           <button className="btn btn-ghost btn-sm" onClick={() => setMode('season')} style={{ opacity: mode === 'season' ? 1 : 0.6 }}>
             {t('rankingSeasonMode')}
           </button>
           <button className="btn btn-ghost btn-sm" onClick={() => setMode('battle')} style={{ opacity: mode === 'battle' ? 1 : 0.6 }}>
-            Battle Ranking
+            {modeLabel('battle')}
           </button>
           <button className="btn btn-ghost btn-sm" onClick={() => setMode('collaboration')} style={{ opacity: mode === 'collaboration' ? 1 : 0.6 }}>
-            Collaboration Ranking
+            {modeLabel('collaboration')}
           </button>
           <button className="btn btn-ghost btn-sm" onClick={() => setMode('overall')} style={{ opacity: mode === 'overall' ? 1 : 0.6 }}>
-            Overall Ranking
+            {modeLabel('overall')}
           </button>
           <button className="btn btn-ghost btn-sm" onClick={() => setMode('teams')} style={{ opacity: mode === 'teams' ? 1 : 0.6 }}>
-            🏢 Team Ranking
+            🏢 {modeLabel('teams')}
           </button>
           {mode === 'season' && seasonPayload.remainingDays != null && (
             <span style={{ fontSize:12, color:'var(--text3)' }}>
@@ -508,14 +521,14 @@ export default function RankingPage() {
           )}
           {!teamLoading && teamError && (
             <div style={{ marginBottom: 16, padding: '14px 16px', borderRadius: 14, background: 'rgba(248,81,73,.08)', border: '1px solid rgba(248,81,73,.2)', color: 'var(--text2)' }}>
-              Failed to load team rankings. Please try again later.
+              {txt('팀 랭킹을 불러오지 못했습니다. 잠시 후 다시 시도하세요.', 'Failed to load team rankings. Please try again later.')}
             </div>
           )}
           {!teamLoading && !teamError && teamRankers.length === 0 && (
             <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--text3)' }}>
               <div style={{ fontSize: 40, marginBottom: 12 }}>🏢</div>
-              <div style={{ fontWeight: 700 }}>No teams registered.</div>
-              <div style={{ fontSize: 12, marginTop: 6 }}>Create a team and invite members.</div>
+              <div style={{ fontWeight: 700 }}>{txt('등록된 팀이 없습니다.', 'No teams registered.')}</div>
+              <div style={{ fontSize: 12, marginTop: 6 }}>{txt('팀을 만들고 멤버를 초대해 보세요.', 'Create a team and invite members.')}</div>
             </div>
           )}
           {!teamLoading && teamRankers.map((team) => (
@@ -526,24 +539,29 @@ export default function RankingPage() {
               <div style={{ fontSize: 28, flexShrink: 0 }}>{team.avatarEmoji || team.avatar_emoji || '🏢'}</div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 700, fontSize: 15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{team.name}</div>
-                <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>{team.memberCount ?? team.member_count} members · Weekly solved: {Number(team.weeklySolved ?? team.weekly_solved ?? 0).toLocaleString()}</div>
+                <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>
+                  {txt(
+                    `${team.memberCount ?? team.member_count}명 · 주간 해결: ${Number(team.weeklySolved ?? team.weekly_solved ?? 0).toLocaleString(locale)}`,
+                    `${team.memberCount ?? team.member_count} members · Weekly solved: ${Number(team.weeklySolved ?? team.weekly_solved ?? 0).toLocaleString(locale)}`,
+                  )}
+                </div>
               </div>
               <div style={{ display: 'flex', gap: 20, flexShrink: 0, textAlign: 'center' }}>
                 <div>
                   <div className="mono" style={{ fontWeight: 800, fontSize: 15, color: 'var(--blue)' }}>{Number(team.teamScore ?? team.team_score ?? 0).toLocaleString()}</div>
-                  <div style={{ fontSize: 10, color: 'var(--text3)' }}>Team Score</div>
+                  <div style={{ fontSize: 10, color: 'var(--text3)' }}>{txt('팀 점수', 'Team Score')}</div>
                 </div>
                 <div>
                   <div className="mono" style={{ fontWeight: 800, fontSize: 15, color: 'var(--purple)' }}>{Number(team.avgRating ?? team.avg_rating ?? 0).toLocaleString()}</div>
-                  <div style={{ fontSize: 10, color: 'var(--text3)' }}>Avg Rating</div>
+                  <div style={{ fontSize: 10, color: 'var(--text3)' }}>{txt('평균 레이팅', 'Avg Rating')}</div>
                 </div>
                 <div>
                   <div className="mono" style={{ fontWeight: 800, fontSize: 15, color: 'var(--green)' }}>{Number(team.totalSolved ?? team.total_solved ?? 0).toLocaleString()}</div>
-                  <div style={{ fontSize: 10, color: 'var(--text3)' }}>Total Solved</div>
+                  <div style={{ fontSize: 10, color: 'var(--text3)' }}>{txt('총 해결', 'Total Solved')}</div>
                 </div>
                 <div>
                   <div className="mono" style={{ fontWeight: 800, fontSize: 15, color: 'var(--yellow)' }}>{Number(team.topRating ?? team.top_rating ?? 0).toLocaleString()}</div>
-                  <div style={{ fontSize: 10, color: 'var(--text3)' }}>Top Rating</div>
+                  <div style={{ fontSize: 10, color: 'var(--text3)' }}>{txt('최고 레이팅', 'Top Rating')}</div>
                 </div>
               </div>
             </div>

@@ -22,6 +22,14 @@ const api = axios.create({
   headers: { 'ngrok-skip-browser-warning': 'true' },
 });
 
+api.interceptors.request.use((config) => {
+  const lang = localStorage.getItem('dc_lang') || 'en';
+  config.headers = config.headers || {};
+  config.headers['X-Language'] = lang;
+  config.headers['Accept-Language'] = lang === 'ko' ? 'ko-KR,ko;q=0.9,en;q=0.8' : 'en-US,en;q=0.9,ko;q=0.8';
+  return config;
+});
+
 // 401 시 refresh token으로 자동 재발급 — 실패 시에만 로그아웃
 let isRefreshing = false;
 let failedQueue = [];
@@ -38,7 +46,7 @@ function forceLogout(message) {
   }
   clearSessionMarker();
   window.dispatchEvent(new CustomEvent(AUTH_EXPIRED_EVENT, {
-    detail: { message: message || '세션이 만료되었습니다. 다시 로그인해주세요.', path: currentPath },
+    detail: { message: message || 'Your session has expired. Please log in again.', path: currentPath },
   }));
 }
 
@@ -60,8 +68,8 @@ api.interceptors.response.use(
       if (code !== 'QUOTA_EXCEEDED') {
         const sec = retryAfter ? parseInt(retryAfter, 10) : null;
         const message = sec
-          ? `요청이 너무 많습니다. ${sec}초 후 다시 시도해주세요.`
-          : '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.';
+          ? `Too many requests. Please try again in ${sec}s.`
+          : 'Too many requests. Please try again later.';
         window.dispatchEvent(new CustomEvent('dc:toast', {
           detail: { message, type: 'error' },
         }));
@@ -84,7 +92,7 @@ api.interceptors.response.use(
         return api(originalRequest);
       } catch {
         processQueue(new Error('refresh failed'));
-        forceLogout('세션이 만료되었습니다. 다시 로그인해주세요.');
+        forceLogout('Your session has expired. Please log in again.');
         return Promise.reject(err);
       } finally {
         isRefreshing = false;

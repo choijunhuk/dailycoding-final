@@ -13,7 +13,7 @@ router.post('/subscribe', auth, async (req, res) => {
   const endpoint = String(req.body?.endpoint || '').trim();
   const p256dh = String(req.body?.keys?.p256dh || '').trim();
   const authKey = String(req.body?.keys?.auth || '').trim();
-  if (!endpoint || !p256dh || !authKey) return res.status(400).json({ message: '구독 정보가 올바르지 않습니다.' });
+  if (!endpoint || !p256dh || !authKey) return res.status(400).json({ message: 'Invalid subscription information.' });
   await run(
     `INSERT INTO push_subscriptions (user_id, endpoint, p256dh, auth)
      VALUES (?,?,?,?)

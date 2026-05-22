@@ -66,11 +66,11 @@ test('team admins can promote, demote, and cannot remove the last admin', async 
 
   await assert.rejects(
     () => Team.setMemberRole(teamId, ownerId, 'member'),
-    /마지막 관리자/
+    /마지막 관리자|last admin/i
   );
   await assert.rejects(
     () => Team.removeMember(teamId, ownerId),
-    /마지막 관리자/
+    /마지막 관리자|last admin/i
   );
 });
 

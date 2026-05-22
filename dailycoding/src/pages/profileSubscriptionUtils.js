@@ -1,46 +1,57 @@
 import { PLAN_META } from '../data/pricingPlans.js';
+import { pickLangText } from '../utils/languageMode.js';
 
-export function buildPaymentFeedback(status) {
+export function buildPaymentFeedback(status, lang = 'ko') {
   if (status === 'success') {
     return {
       tone: 'success',
-      title: '결제가 완료되었습니다.',
-      body: '새 플랜이 반영됐는지 아래 구독 카드에서 바로 확인할 수 있습니다.',
+      title: pickLangText(lang, '결제가 완료되었습니다.', 'Payment successful.'),
+      body: pickLangText(lang, '아래 구독 카드에서 새 플랜이 활성화됐는지 확인하세요.', 'Check the subscription card below to confirm your new plan is active.'),
     };
   }
 
   if (status === 'cancelled') {
     return {
       tone: 'info',
-      title: '결제가 취소되었습니다.',
-      body: '플랜 비교를 다시 보고 원할 때 다시 결제를 진행하면 됩니다.',
+      title: pickLangText(lang, '결제가 취소되었습니다.', 'Payment cancelled.'),
+      body: pickLangText(lang, '플랜 비교를 확인한 뒤 준비되면 다시 구독하세요.', 'Review the plan comparison and subscribe again whenever you are ready.'),
     };
   }
 
   return null;
 }
 
-export function getProfileUpgradePlans() {
+export function getProfileUpgradePlans(lang = 'ko') {
   return [
     {
       id: 'pro',
       name: PLAN_META.pro.name,
       price: PLAN_META.pro.detailPrice,
       color: PLAN_META.pro.accent,
-      features: ['무제한 AI 힌트', '광고 제거', '배틀 우선 매칭', '상세 분석 리포트'],
+      features: [
+        pickLangText(lang, '무제한 AI 힌트', 'Unlimited AI Hints'),
+        pickLangText(lang, '광고 제거', 'Ad-free'),
+        pickLangText(lang, '우선 배틀 매칭', 'Priority Battle Matching'),
+        pickLangText(lang, '상세 분석 리포트', 'Detailed Analysis Reports'),
+      ],
     },
     {
       id: 'team',
       name: PLAN_META.team.name,
       price: PLAN_META.team.detailPrice,
       color: PLAN_META.team.accent,
-      features: ['프로 전체 포함', '팀 대시보드', '맞춤 콘테스트', 'API 접근'],
+      features: [
+        pickLangText(lang, 'Pro 모든 기능', 'Everything in Pro'),
+        pickLangText(lang, '팀 대시보드', 'Team Dashboard'),
+        pickLangText(lang, '커스텀 대회', 'Custom Contests'),
+        pickLangText(lang, 'API 접근', 'API Access'),
+      ],
     },
   ];
 }
 
-export function formatCurrentSubscriptionLabel(tier) {
-  if (!tier || tier === 'free') return '무료';
+export function formatCurrentSubscriptionLabel(tier, lang = 'ko') {
+  if (!tier || tier === 'free') return pickLangText(lang, '무료', 'Free');
   if (tier === 'pro') return PLAN_META.pro.name;
   if (tier === 'team') return PLAN_META.team.name;
   return String(tier).toUpperCase();

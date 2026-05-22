@@ -35,8 +35,10 @@ test('sortProblems supports newest and solved ordering', () => {
 });
 
 test('getProblemTypeMeta returns coding fallback', () => {
-  assert.equal(getProblemTypeMeta('fill-blank').short, '빈칸');
-  assert.equal(getProblemTypeMeta('unknown').short, '코딩');
+  assert.equal(getProblemTypeMeta('fill-blank', 'ko').short, '빈칸');
+  assert.equal(getProblemTypeMeta('unknown', 'ko').short, '코딩');
+  assert.equal(getProblemTypeMeta('fill-blank', 'en').short, 'Fill');
+  assert.equal(getProblemTypeMeta('unknown', 'en').short, 'Coding');
 });
 
 

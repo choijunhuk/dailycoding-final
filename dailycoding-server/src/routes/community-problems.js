@@ -12,12 +12,12 @@ const MAX_TC_FIELD_LEN = 50_000;
 
 function validateCases(arr) {
   if (!Array.isArray(arr)) return;
-  if (arr.length > MAX_TESTCASES) throw new Error('테스트케이스가 너무 많습니다.');
+  if (arr.length > MAX_TESTCASES) throw new Error('Too many test cases.');
   for (const tc of arr) {
     const inp = String(tc?.input || '');
     const out = String(tc?.output || '');
     if (inp.length > MAX_TC_FIELD_LEN || out.length > MAX_TC_FIELD_LEN) {
-      throw new Error('테스트케이스 필드가 너무 큽니다.');
+      throw new Error('Test case field is too large.');
     }
   }
 }
@@ -31,7 +31,7 @@ router.post('/', auth, requireVerified, async (req, res) => {
   try {
     const { title, description, hint, inputDesc, outputDesc, examples, testcases, tier, problemType, difficulty, tags } = req.body;
     if (!title?.trim() || !description?.trim()) {
-      return res.status(400).json({ message: '제목과 설명은 필수입니다.' });
+      return res.status(400).json({ message: 'Title and description are required.' });
     }
     const safeTier = ALLOWED_SUBMIT_TIERS.has(tier) ? tier : 'unranked';
     const safeType = ALLOWED_PROBLEM_TYPES.has(problemType) ? problemType : 'coding';
@@ -48,10 +48,10 @@ router.post('/', auth, requireVerified, async (req, res) => {
       difficulty: safeDiff,
       tags: Array.isArray(tags) ? tags.slice(0, 20) : [],
     });
-    res.status(201).json({ id, message: '문제가 검토 요청되었습니다.' });
+    res.status(201).json({ id, message: 'Problem submitted for review.' });
   } catch (err) {
     console.error('[community-problems/create]', err.message);
-    res.status(500).json({ message: '서버 오류' });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -62,7 +62,7 @@ router.get('/', auth, async (req, res) => {
     res.json(rows);
   } catch (err) {
     console.error('[community-problems/list]', err.message);
-    res.status(500).json({ message: '서버 오류' });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -79,7 +79,7 @@ router.get('/admin', auth, adminOnly, async (req, res) => {
     res.json({ rows, total });
   } catch (err) {
     console.error('[community-problems/admin/list]', err.message);
-    res.status(500).json({ message: '서버 오류' });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -87,13 +87,13 @@ router.get('/admin', auth, adminOnly, async (req, res) => {
 router.get('/admin/:id', auth, adminOnly, async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
-    if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ message: '잘못된 id입니다.' });
+    if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ message: 'Invalid id.' });
     const row = await CommunityProblem.findById(id);
-    if (!row) return res.status(404).json({ message: '제출 문제를 찾을 수 없습니다.' });
+    if (!row) return res.status(404).json({ message: 'Submitted problem not found.' });
     res.json(row);
   } catch (err) {
     console.error('[community-problems/admin/detail]', err.message);
-    res.status(500).json({ message: '서버 오류' });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -101,16 +101,16 @@ router.get('/admin/:id', auth, adminOnly, async (req, res) => {
 router.post('/admin/:id/approve', auth, adminOnly, async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
-    if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ message: '잘못된 id입니다.' });
+    if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ message: 'Invalid id.' });
     const submission = await CommunityProblem.findById(id);
-    if (!submission) return res.status(404).json({ message: '제출 문제를 찾을 수 없습니다.' });
-    if (submission.status !== 'pending') return res.status(400).json({ message: '이미 처리된 제출입니다.' });
+    if (!submission) return res.status(404).json({ message: 'Submission not found.' });
+    if (submission.status !== 'pending') return res.status(400).json({ message: 'This submission has already been processed.' });
 
     // validate submission fields before registering as official problem
-    if (!TIER_ORDER.includes(submission.tier)) return res.status(400).json({ message: '잘못된 tier 값입니다.' });
-    if (!ALLOWED_PROBLEM_TYPES.has(submission.problem_type)) return res.status(400).json({ message: '잘못된 problemType입니다.' });
+    if (!TIER_ORDER.includes(submission.tier)) return res.status(400).json({ message: 'Invalid tier value.' });
+    if (!ALLOWED_PROBLEM_TYPES.has(submission.problem_type)) return res.status(400).json({ message: 'Invalid problemType.' });
     const diff = Number(submission.difficulty);
-    if (!Number.isInteger(diff) || diff < 1 || diff > 10) return res.status(400).json({ message: '잘못된 difficulty 값입니다.' });
+    if (!Number.isInteger(diff) || diff < 1 || diff > 10) return res.status(400).json({ message: 'Invalid difficulty value.' });
     try {
       validateCases(submission.examples);
       validateCases(submission.testcases);
@@ -144,23 +144,23 @@ router.post('/admin/:id/approve', auth, adminOnly, async (req, res) => {
     } catch (approveErr) {
       // compensate: log orphan so operator can clean up
       console.error(`[community-problems/approve] CommunityProblem.approve failed after Problem.create (orphan problemId=${newProblemId}):`, approveErr.message);
-      return res.status(500).json({ message: '승인 처리 중 오류가 발생했습니다.' });
+      return res.status(500).json({ message: 'An error occurred while approving the submission.' });
     }
 
     // 제출자에게 알림
     await Notification.create(
       submission.user_id,
-      `✅ 제출하신 문제 "${submission.title}"이 등록되었습니다!`,
+      `✅ Your submitted problem "${submission.title}" has been approved and published!`,
       newProblemId ? `/problems/${newProblemId}` : '/problems'
     );
 
     // 캐시 무효화
     await redis.clearPrefix('problems:list:');
 
-    res.json({ message: '문제가 등록되었습니다.', problemId: newProblemId });
+    res.json({ message: 'Problem has been approved and published.', problemId: newProblemId });
   } catch (err) {
     console.error('[community-problems/approve]', err.message);
-    res.status(500).json({ message: '서버 오류' });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
@@ -168,24 +168,24 @@ router.post('/admin/:id/approve', auth, adminOnly, async (req, res) => {
 router.post('/admin/:id/reject', auth, adminOnly, async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
-    if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ message: '잘못된 id입니다.' });
+    if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ message: 'Invalid id.' });
     const submission = await CommunityProblem.findById(id);
-    if (!submission) return res.status(404).json({ message: '제출 문제를 찾을 수 없습니다.' });
-    if (submission.status !== 'pending') return res.status(400).json({ message: '이미 처리된 제출입니다.' });
+    if (!submission) return res.status(404).json({ message: 'Submission not found.' });
+    if (submission.status !== 'pending') return res.status(400).json({ message: 'This submission has already been processed.' });
 
     const note = (req.body.note || '').toString().trim().slice(0, 500);
     await CommunityProblem.reject(submission.id, req.user.id, note);
 
     await Notification.create(
       submission.user_id,
-      `❌ 제출하신 문제 "${submission.title}"이 반려되었습니다.${note ? ` 사유: ${note}` : ''}`,
+      `❌ Your problem submission "${submission.title}" has been rejected.${note ? ` Reason: ${note}` : ''}`,
       '/submit-problem'
     );
 
-    res.json({ message: '반려되었습니다.' });
+    res.json({ message: 'Rejected.' });
   } catch (err) {
     console.error('[community-problems/reject]', err.message);
-    res.status(500).json({ message: '서버 오류' });
+    res.status(500).json({ message: 'Server error' });
   }
 });
 

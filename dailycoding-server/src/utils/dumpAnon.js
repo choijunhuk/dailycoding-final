@@ -21,7 +21,7 @@ export function generateAnonId(userId) {
  * @returns {string} 'ㅇㅇ'
  */
 export function generateAnonName() {
-  return 'ㅇㅇ';
+  return 'anon';
 }
 
 /**

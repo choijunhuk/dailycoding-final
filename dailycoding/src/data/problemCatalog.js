@@ -2,11 +2,11 @@
 export const MIN_HIDDEN_TESTCASES = 10
 
 export const TIERS = {
-  bronze:   { label: '브론즈',   color: '#b87333', bg: 'rgba(184,115,51,.16)'  },
-  silver:   { label: '실버',     color: '#94a3b8', bg: 'rgba(148,163,184,.14)' },
-  gold:     { label: '골드',     color: '#f4c430', bg: 'rgba(244,196,48,.14)'  },
-  platinum: { label: '플래티넘', color: '#22c7b8', bg: 'rgba(34,199,184,.14)'  },
-  diamond:  { label: '다이아',   color: '#4ea8ff', bg: 'rgba(78,168,255,.14)' },
+  bronze:   { label: 'Bronze',   color: '#b87333', bg: 'rgba(184,115,51,.16)'  },
+  silver:   { label: 'Silver',   color: '#94a3b8', bg: 'rgba(148,163,184,.14)' },
+  gold:     { label: 'Gold',     color: '#f4c430', bg: 'rgba(244,196,48,.14)'  },
+  platinum: { label: 'Platinum', color: '#22c7b8', bg: 'rgba(34,199,184,.14)'  },
+  diamond:  { label: 'Diamond',  color: '#4ea8ff', bg: 'rgba(78,168,255,.14)' },
 }
 
 export const TIER_COLORS = {
@@ -993,11 +993,11 @@ const stringProblem = (config) => makeProblem({
 export const COMPANY_TAG_PREFIX = '기업:'
 export const COMPANY_TAGS = ['카카오', '네이버', '삼성', '라인', '쿠팡', '토스', '당근', '우아한형제들', '현대오토에버', 'NHN']
 export const ALGORITHM_TAG_GROUPS = [
-  { label: '기초', tags: ['입출력', '구현', '수학', '문자열', '정렬'] },
-  { label: '자료구조', tags: ['자료 구조', '해시', '스택', '큐', '우선순위 큐', '세그먼트 트리'] },
-  { label: '알고리즘', tags: ['그리디', '이분 탐색', '투 포인터', '누적 합', '다이나믹 프로그래밍'] },
-  { label: '그래프', tags: ['그래프 이론', 'BFS', 'DFS', '최단 경로', '트리', '유니온-파인드'] },
-  { label: '고급', tags: ['비트마스크', '백트래킹', 'SCC', 'LCA', 'FFT'] },
+  { label: 'Basics', tags: ['입출력', '구현', '수학', '문자열', '정렬'] },
+  { label: 'Data Structures', tags: ['자료 구조', '해시', '스택', '큐', '우선순위 큐', '세그먼트 트리'] },
+  { label: 'Algorithms', tags: ['그리디', '이분 탐색', '투 포인터', '누적 합', '다이나믹 프로그래밍'] },
+  { label: 'Graphs', tags: ['그래프 이론', 'BFS', 'DFS', '최단 경로', '트리', '유니온-파인드'] },
+  { label: 'Advanced', tags: ['비트마스크', '백트래킹', 'SCC', 'LCA', 'FFT'] },
 ]
 
 export function isCompanyTag(tag) {
@@ -1139,16 +1139,16 @@ function solveExpansionPattern(pattern, input) {
 }
 
 const EXPANSION_LEVELS = [
-  { label: '입문', difficultyOffset: 0 },
-  { label: '기본', difficultyOffset: 0 },
-  { label: '실전 A', difficultyOffset: 1 },
-  { label: '실전 B', difficultyOffset: 1 },
-  { label: '기업 기출형', difficultyOffset: 2 },
-  { label: '타임어택', difficultyOffset: 2 },
-  { label: '응용', difficultyOffset: 3 },
-  { label: '심화', difficultyOffset: 3 },
-  { label: '챌린지', difficultyOffset: 4 },
-  { label: '마스터', difficultyOffset: 4 },
+  { label: 'Beginner', difficultyOffset: 0 },
+  { label: 'Basic', difficultyOffset: 0 },
+  { label: 'Practice A', difficultyOffset: 1 },
+  { label: 'Practice B', difficultyOffset: 1 },
+  { label: 'Company Style', difficultyOffset: 2 },
+  { label: 'Time Attack', difficultyOffset: 2 },
+  { label: 'Applied', difficultyOffset: 3 },
+  { label: 'In-depth', difficultyOffset: 3 },
+  { label: 'Challenge', difficultyOffset: 4 },
+  { label: 'Master', difficultyOffset: 4 },
 ]
 
 const EXPANSION_PATTERNS = [

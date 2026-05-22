@@ -7,19 +7,19 @@ router.use(auth);
 router.use(requireVerified);
 
 const DUNGEON_BOSSES = [
-  { name: '입출력 고블린', emoji: '🟢', theme: 'warmup' },
-  { name: '그리디 와이번', emoji: '🐉', theme: 'greedy' },
-  { name: 'DP 골렘', emoji: '🪨', theme: 'dp' },
-  { name: '그래프 리치', emoji: '🧙', theme: 'graph' },
-  { name: '문자열 크라켄', emoji: '🦑', theme: 'string' },
+  { name: 'I/O Goblin', emoji: '🟢', theme: 'warmup' },
+  { name: 'Greedy Wyvern', emoji: '🐉', theme: 'greedy' },
+  { name: 'DP Golem', emoji: '🪨', theme: 'dp' },
+  { name: 'Graph Lich', emoji: '🧙', theme: 'graph' },
+  { name: 'String Kraken', emoji: '🦑', theme: 'string' },
 ];
 
 const TERRITORIES = [
-  { id: 'implementation', label: '구현 왕국', aliases: ['implementation', '구현', 'simulation', '시뮬레이션'] },
-  { id: 'math', label: '수학 성채', aliases: ['math', '수학', 'number-theory', '정수론'] },
-  { id: 'string', label: '문자열 숲', aliases: ['string', '문자열'] },
-  { id: 'graph', label: '그래프 전선', aliases: ['graph', '그래프', 'bfs', 'dfs'] },
-  { id: 'dp', label: 'DP 요새', aliases: ['dp', 'dynamic-programming', '동적계획법'] },
+  { id: 'implementation', label: 'Implementation Kingdom', aliases: ['implementation', '구현', 'simulation', '시뮬레이션'] },
+  { id: 'math', label: 'Math Citadel', aliases: ['math', '수학', 'number-theory', '정수론'] },
+  { id: 'string', label: 'String Forest', aliases: ['string', '문자열'] },
+  { id: 'graph', label: 'Graph Frontline', aliases: ['graph', '그래프', 'bfs', 'dfs'] },
+  { id: 'dp', label: 'DP Fortress', aliases: ['dp', 'dynamic-programming', '동적계획법'] },
 ];
 
 function toInt(value, fallback = 0) {
@@ -30,7 +30,7 @@ function toInt(value, fallback = 0) {
 function normalizeProblem(row = {}) {
   return {
     id: toInt(row.id || row.problem_id || row.problemId),
-    title: row.title || row.problem_title || '알고리즘 문제',
+    title: row.title || row.problem_title || 'Algorithm Problem',
     tier: row.tier || 'bronze',
     difficulty: toInt(row.difficulty, 1),
     solvedCount: toInt(row.solved_count || row.solvedCount, 0),
@@ -139,14 +139,14 @@ async function buildGhostChallenges(userId, limit = 12) {
       const targetTimeSec = Math.max(45, toInt(row.solve_time_sec, Math.ceil(toInt(row.time_ms, 180000) / 1000)) || 180);
       return {
         problemId: toInt(row.problem_id || row.id),
-        title: row.title || '고스트 챌린지',
+        title: row.title || 'Ghost Challenge',
         tier: row.tier || 'bronze',
         difficulty: toInt(row.difficulty, 1),
         rewardXp: Math.max(50, Math.round(targetTimeSec / 3)),
         mode: 'ghost-race',
         ghost: {
           userId: toInt(row.ghost_user_id || row.user_id, 0) || null,
-          username: row.ghost_username || '익명 고스트',
+          username: row.ghost_username || 'Anonymous Ghost',
           lang: row.lang || 'python',
           targetTimeSec,
           submittedAt: row.submitted_at || null,
@@ -174,7 +174,7 @@ async function buildGhostChallenges(userId, limit = 12) {
         mode: 'ghost-race',
         ghost: {
           userId: null,
-          username: '시스템 고스트',
+          username: 'System Ghost',
           lang: 'python',
           targetTimeSec,
           submittedAt: null,
@@ -248,7 +248,7 @@ async function buildSeasonConquest(userId) {
     mySolves: 0,
     controlled: false,
     progress: 0,
-    reward: '배틀 XP + 프로필 배지 진행도',
+    reward: 'Battle XP + Profile Badge Progress',
   }));
   const byId = new Map(territories.map((territory) => [territory.id, territory]));
 

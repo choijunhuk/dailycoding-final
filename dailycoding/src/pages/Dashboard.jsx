@@ -121,6 +121,7 @@ export default function Dashboard() {
     progression,
     solvedCount: solvedList.length,
     totalProblems: PROBLEMS.length,
+    lang,
   });
   const accuracy   = appProblems.length > 0
     ? Math.round((solvedList.length / Math.max(PROBLEMS.length,1)) * 100)

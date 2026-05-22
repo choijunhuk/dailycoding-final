@@ -10,14 +10,14 @@ router.get('/users/:id/activity', auth, async (req, res) => {
   const limit = Math.min(100, Math.max(1, Number.parseInt(req.query.limit, 10) || 20));
 
   if (!userId) {
-    return res.status(400).json({ message: '유효하지 않은 사용자입니다.' });
+    return res.status(400).json({ message: 'Invalid user.' });
   }
 
   try {
     const user = await queryOne('SELECT id, profile_visibility FROM users WHERE id = ?', [userId]);
-    if (!user) return res.status(404).json({ message: '유저를 찾을 수 없습니다.' });
+    if (!user) return res.status(404).json({ message: 'User not found.' });
     if (user.profile_visibility === 'private' && req.user.id !== userId) {
-      return res.status(403).json({ message: '비공개 프로필입니다.' });
+      return res.status(403).json({ message: 'This profile is private.' });
     }
 
     const [solveRows, postRows, battleRows] = await Promise.all([
@@ -64,7 +64,7 @@ router.get('/users/:id/activity', auth, async (req, res) => {
     });
   } catch (err) {
     console.error('[activity]', err);
-    res.status(500).json({ message: '활동 내역을 불러오지 못했습니다.' });
+    res.status(500).json({ message: 'Failed to load activity history.' });
   }
 });
 

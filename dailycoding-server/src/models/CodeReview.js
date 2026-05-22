@@ -12,12 +12,12 @@ const REJECT_PENALTY = 2;
 function limitText(value, max, field) {
   const text = stripUnsafeControls(value).trim();
   if (!text) {
-    const err = new Error(`${field}이(가) 필요합니다.`);
+    const err = new Error(`${field} is required.`);
     err.status = 400;
     throw err;
   }
   if (text.length > max) {
-    const err = new Error(`${field}은(는) ${max}자 이하여야 합니다.`);
+    const err = new Error(`${field} must be ${max} characters or fewer.`);
     err.status = 400;
     throw err;
   }
@@ -91,7 +91,7 @@ async function hydrateSubmission(row, { includeCode = false, viewerId = null } =
     userId: Number(row.user_id),
     username: author.username || `user#${row.user_id}`,
     problemId: Number(row.problem_id),
-    problemTitle: problem?.title || `문제 #${row.problem_id}`,
+    problemTitle: problem?.title || `Problem #${row.problem_id}`,
     tier: problem?.tier || 'unranked',
     difficulty: Number(problem?.difficulty || 0),
     lang: row.lang || '',
@@ -116,7 +116,7 @@ async function hydrateReview(row, { includeDetail = false } = {}) {
   ]);
   return {
     ...review,
-    problemTitle: problem?.title || submission?.problemTitle || `문제 #${review.problemId}`,
+    problemTitle: problem?.title || submission?.problemTitle || `Problem #${review.problemId}`,
     authorUsername: author?.username || `user#${review.authorId}`,
     reviewerUsername: reviewer?.username || `user#${review.reviewerId}`,
     submission,
@@ -177,7 +177,7 @@ async function adjustScore(userId, patch = {}) {
 
 function assertOpen(review) {
   if (!review || CLOSED_STATUSES.has(review.status)) {
-    const err = new Error('종료된 리뷰에는 추가 작업을 할 수 없습니다.');
+    const err = new Error('No further actions can be taken on a closed review.');
     err.status = 400;
     throw err;
   }
@@ -185,7 +185,7 @@ function assertOpen(review) {
 
 function assertAuthorOrAdmin(review, actor) {
   if (Number(review.authorId) !== Number(actor.id) && actor.role !== 'admin') {
-    const err = new Error('작성자 또는 관리자만 처리할 수 있습니다.');
+    const err = new Error('Only the author or an admin can perform this action.');
     err.status = 403;
     throw err;
   }
@@ -193,13 +193,13 @@ function assertAuthorOrAdmin(review, actor) {
 
 function assertReviewer(review, userId) {
   if (Number(review.reviewerId) !== Number(userId)) {
-    const err = new Error('리뷰 담당자만 개선 제안을 작성할 수 있습니다.');
+    const err = new Error('Only the assigned reviewer can submit suggestions.');
     err.status = 403;
     throw err;
   }
 }
 
-function assertReviewerOrAdmin(review, actor, message = '리뷰 담당자 또는 관리자만 처리할 수 있습니다.') {
+function assertReviewerOrAdmin(review, actor, message = 'Only the assigned reviewer or an admin can perform this action.') {
   if (Number(review.reviewerId) !== Number(actor.id) && actor.role !== 'admin') {
     const err = new Error(message);
     err.status = 403;
@@ -300,23 +300,23 @@ export const CodeReview = {
   async createReview(submissionId, reviewerId) {
     const submission = await getSubmission(submissionId);
     if (!submission) {
-      const err = new Error('제출을 찾을 수 없습니다.');
+      const err = new Error('Submission not found.');
       err.status = 404;
       throw err;
     }
     if (Number(submission.user_id) === Number(reviewerId)) {
-      const err = new Error('자기 자신의 제출은 리뷰 점수를 받을 수 없습니다.');
+      const err = new Error('You cannot earn review points on your own submission.');
       err.status = 400;
       throw err;
     }
     if (submission.result !== 'correct') {
-      const err = new Error('정답 제출만 리뷰할 수 있습니다.');
+      const err = new Error('Only correct submissions can be reviewed.');
       err.status = 400;
       throw err;
     }
     const author = await getUser(submission.user_id);
     if (!author || author.submissions_public === 0) {
-      const err = new Error('비공개 제출은 리뷰할 수 없습니다.');
+      const err = new Error('Private submissions cannot be reviewed.');
       err.status = 403;
       throw err;
     }
@@ -325,7 +325,7 @@ export const CodeReview = {
       [Number(reviewerId), Number(submission.problem_id), 'correct']
     );
     if (!reviewerSolved) {
-      const err = new Error('먼저 같은 문제를 맞힌 뒤 리뷰할 수 있습니다.');
+      const err = new Error('You must solve the same problem correctly before reviewing it.');
       err.status = 403;
       throw err;
     }
@@ -379,13 +379,13 @@ export const CodeReview = {
     assertOpen(review);
     const allowed = review.authorId === Number(userId) || review.reviewerId === Number(userId);
     if (!allowed) {
-      const err = new Error('리뷰 참여자만 댓글을 작성할 수 있습니다.');
+      const err = new Error('Only review participants can post comments.');
       err.status = 403;
       throw err;
     }
     await insert(
       'INSERT INTO code_review_comments (review_id, user_id, content, created_at) VALUES (?,?,?,?)',
-      [Number(reviewId), Number(userId), limitText(content, 5000, '댓글'), nowMySQL()]
+      [Number(reviewId), Number(userId), limitText(content, 5000, 'Comment'), nowMySQL()]
     );
     await run('UPDATE code_reviews SET updated_at = ? WHERE id = ?', [nowMySQL(), Number(reviewId)]);
     return this.getReview(reviewId);
@@ -397,7 +397,7 @@ export const CodeReview = {
     assertOpen(review);
     assertReviewer(review, userId);
     if (review.authorId === Number(userId)) {
-      const err = new Error('자기 제출에는 개선 제안 점수를 받을 수 없습니다.');
+      const err = new Error('You cannot earn suggestion points on your own submission.');
       err.status = 400;
       throw err;
     }
@@ -410,7 +410,7 @@ export const CodeReview = {
         Number(userId),
         optionalText(payload.filePath || payload.file_path || 'solution', 255) || 'solution',
         optionalText(payload.originalCode || payload.original_code || review.submission?.code || '', 100000),
-        limitText(payload.suggestedCode || payload.suggested_code, 100000, '제안 코드'),
+        limitText(payload.suggestedCode || payload.suggested_code, 100000, 'Suggested code'),
         optionalText(payload.reason, 2000),
         'pending',
         nowMySQL(),
@@ -428,7 +428,7 @@ export const CodeReview = {
     assertOpen(review);
     assertReviewer(review, userId);
     if (review.authorId === Number(userId)) {
-      const err = new Error('자기 제출에는 테스트 제안 점수를 받을 수 없습니다.');
+      const err = new Error('You cannot earn test suggestion points on your own submission.');
       err.status = 400;
       throw err;
     }
@@ -439,8 +439,8 @@ export const CodeReview = {
       [
         Number(reviewId),
         Number(userId),
-        limitText(payload.inputData || payload.input_data, 20000, '입력 데이터'),
-        limitText(payload.expectedOutput || payload.expected_output, 20000, '예상 출력'),
+        limitText(payload.inputData || payload.input_data, 20000, 'Input data'),
+        limitText(payload.expectedOutput || payload.expected_output, 20000, 'Expected output'),
         optionalText(payload.reason, 2000),
         'pending',
         nowMySQL(),
@@ -488,12 +488,12 @@ export const CodeReview = {
     if (!review) return null;
     assertAuthorOrAdmin(review, actor);
     if (review.status === 'rejected') {
-      const err = new Error('반려된 리뷰는 병합할 수 없습니다.');
+      const err = new Error('A rejected review cannot be merged.');
       err.status = 400;
       throw err;
     }
     if (review.status === CANCELLED_STATUS) {
-      const err = new Error('취소된 리뷰는 병합할 수 없습니다.');
+      const err = new Error('A cancelled review cannot be merged.');
       err.status = 400;
       throw err;
     }
@@ -509,7 +509,7 @@ export const CodeReview = {
   async cancel(reviewId, actor) {
     const review = await this.getReview(reviewId);
     if (!review) return null;
-    assertReviewerOrAdmin(review, actor, '리뷰 담당자 또는 관리자만 취소할 수 있습니다.');
+    assertReviewerOrAdmin(review, actor, 'Only the assigned reviewer or an admin can cancel the review.');
     assertOpen(review);
     await Promise.all([
       run('UPDATE code_suggestions SET status = ?, updated_at = ? WHERE review_id = ? AND status = ?', ['rejected', nowMySQL(), Number(reviewId), 'pending']),
@@ -525,9 +525,9 @@ export const CodeReview = {
   async reopen(reviewId, actor) {
     const review = await this.getReview(reviewId);
     if (!review) return null;
-    assertReviewerOrAdmin(review, actor, '리뷰 담당자 또는 관리자만 재요청할 수 있습니다.');
+    assertReviewerOrAdmin(review, actor, 'Only the assigned reviewer or an admin can reopen the review.');
     if (review.status !== CANCELLED_STATUS) {
-      const err = new Error('취소된 리뷰만 재요청할 수 있습니다.');
+      const err = new Error('Only cancelled reviews can be reopened.');
       err.status = 400;
       throw err;
     }
@@ -545,7 +545,7 @@ export const CodeReview = {
     const review = await this.getReview(reviewId);
     if (!review) return null;
     if (Number(review.reviewerId) !== Number(actor.id) && actor.role !== 'admin') {
-      const err = new Error('리뷰를 삭제할 권한이 없습니다.');
+      const err = new Error('You do not have permission to delete this review.');
       err.status = 403;
       throw err;
     }

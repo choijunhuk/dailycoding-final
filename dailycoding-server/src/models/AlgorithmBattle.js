@@ -14,10 +14,10 @@ const DRAFT_PICK_TAG_LIMIT = 1;
 const BATTLE_MODES = {
   'sort-speed': {
     key: 'sort-speed',
-    title: '⚡ 스피드전',
-    description: '먼저 정답을 제출한 플레이어가 즉시 승리하는 순수 속도 대결.',
+    title: '⚡ Speed Race',
+    description: 'The first player to submit a correct answer wins — pure speed.',
     winCondition: 'first-correct',
-    rules: ['같은 문제 1개를 동시에 풀기', '먼저 정답 제출한 플레이어 즉시 승리', '시간 내 정답 없으면 점수 비교'],
+    rules: ['Both players solve the same problem simultaneously', 'The first player to submit a correct answer wins immediately', 'If neither solves it in time, scores are compared'],
     maxPlayers: 2,
     durationSec: 300,
     itemsEnabled: false,
@@ -30,10 +30,10 @@ const BATTLE_MODES = {
   },
   'survival': {
     key: 'survival',
-    title: '💀 생존전',
-    description: '상대 HP를 0으로 만들면 승리! 정답 제출마다 공격력이 증가해 상대를 공격합니다.',
+    title: '💀 Survival',
+    description: 'Reduce your opponent\'s HP to 0 to win! Each correct answer increases your attack power.',
     winCondition: 'hp-knockout',
-    rules: ['같은 문제 1개를 동시에 풀기', '정답 제출 → 상대 HP 감소', '오답 제출 → 내 속도 감소', '상대 HP가 0이 되면 즉시 승리', '시간 종료 시 HP가 더 많은 플레이어 승리'],
+    rules: ['Both players solve the same problem simultaneously', 'Correct answer → opponent HP decreases', 'Wrong answer → your speed decreases', 'Win immediately when opponent HP reaches 0', 'Player with more HP wins when time runs out'],
     maxPlayers: 2,
     durationSec: 300,
     itemsEnabled: false,
@@ -46,10 +46,10 @@ const BATTLE_MODES = {
   },
   'duel-effects': {
     key: 'duel-effects',
-    title: '✨ 효과전',
-    description: '정답 제출 시 문제 태그 기반 버프/디버프가 발동! HP 전투 + 무작위 효과로 역전 가능.',
+    title: '✨ Effects Duel',
+    description: 'Submitting a correct answer triggers buffs/debuffs based on problem tags! Comeback possible with HP battle + random effects.',
     winCondition: 'hp-knockout',
-    rules: ['HP 전투 기본 규칙 동일', '정답 제출 시 문제 효과 발동 (버프/디버프)', '아이템 사용 가능 (쿨다운 20초)', '효과로 HP 회복·공격력 증가 등 역전 가능'],
+    rules: ['Same HP battle basic rules apply', 'Correct answer triggers problem effect (buff/debuff)', 'Items available (cooldown 20s)', 'Effects can reverse the outcome via HP recovery and attack boost'],
     maxPlayers: 2,
     durationSec: 300,
     itemsEnabled: true,
@@ -62,10 +62,10 @@ const BATTLE_MODES = {
   },
   'chaos-items': {
     key: 'chaos-items',
-    title: '🎒 아이템 난투',
-    description: '빠른 쿨다운 아이템으로 상대를 흔드는 HP 전투! 아이템 전략이 승패를 가릅니다.',
+    title: '🎒 Item Brawl',
+    description: 'HP battle where fast-cooldown items keep opponents off balance! Item strategy decides victory.',
     winCondition: 'hp-knockout',
-    rules: ['HP 전투 기본 규칙 동일', '아이템 쿨다운 12초 (효과전보다 빠름)', '실드·공격 아이템 적극 활용 권장', '아이템 없이는 불리한 모드'],
+    rules: ['Same HP battle basic rules apply', 'Item cooldown 12s (faster than Effects Duel)', 'Shield and attack items strongly recommended', 'Disadvantaged without items'],
     maxPlayers: 2,
     durationSec: 300,
     itemsEnabled: true,
@@ -78,10 +78,10 @@ const BATTLE_MODES = {
   },
   'territory': {
     key: 'territory',
-    title: '🏴 점령전',
-    description: '5개 문제 동시 공개! 먼저 풀면 내 영토. 더 많은 구역을 점령한 플레이어가 승리.',
+    title: '🏴 Territory Conquest',
+    description: '5 problems revealed simultaneously! Solve first to claim territory. The player who conquers the most zones wins.',
     winCondition: 'territory',
-    rules: ['5개 문제가 동시에 공개됨', '정답 제출 → 해당 문제 구역 점령', '5개 모두 점령 시 즉시 승리', '시간 종료 시 점령 수가 많은 플레이어 승리'],
+    rules: ['5 problems are revealed at the same time', 'Correct answer → claim that problem\'s zone', 'Claim all 5 zones to win immediately', 'Player with most zones claimed wins when time runs out'],
     maxPlayers: 2,
     durationSec: 600,
     itemsEnabled: false,
@@ -94,10 +94,10 @@ const BATTLE_MODES = {
   },
   'draft-ban': {
     key: 'draft-ban',
-    title: '🚫 밴픽전',
-    description: '게임 시작 후 양쪽 플레이어가 티어/태그를 밴픽하고, 그 결과로 문제가 확정되는 전략형 1:1 대결.',
+    title: '🚫 Draft Ban',
+    description: 'A strategic 1v1 where both players ban tiers/tags after the game starts, and the problem is determined by the draft result.',
     winCondition: 'hp-knockout',
-    rules: ['방 생성 시 문제 조건을 미리 달지 않음', '양쪽 준비 완료 후 밴픽 단계 진입', '각 플레이어가 티어/태그 밴과 선호 태그 픽을 제출', '밴픽 결과로 문제 확정 후 정답 제출 → 상대 HP 감소 + 문제 효과 발동'],
+    rules: ['No problem conditions set at room creation', 'Draft phase begins after both players are ready', 'Each player submits tier/tag bans and preferred tag picks', 'Problem is finalized from draft result; correct answer → opponent HP decreases + problem effect triggers'],
     maxPlayers: 2,
     durationSec: 600,
     itemsEnabled: true,
@@ -112,10 +112,10 @@ const BATTLE_MODES = {
 };
 
 const BATTLE_ITEMS = {
-  'lag-spike': { key: 'lag-spike', label: '렉 스파이크', description: '상대의 속도를 잠시 낮춥니다.' },
-  shield: { key: 'shield', label: '실드', description: '내 HP를 회복합니다.' },
-  'power-up': { key: 'power-up', label: '파워업', description: '내 공격력을 올립니다.' },
-  breakpoint: { key: 'breakpoint', label: '브레이크포인트', description: '상대의 공격력을 낮춥니다.' },
+  'lag-spike': { key: 'lag-spike', label: 'Lag Spike', description: 'Temporarily reduces opponent\'s speed.' },
+  shield: { key: 'shield', label: 'Shield', description: 'Restores your HP.' },
+  'power-up': { key: 'power-up', label: 'Power Up', description: 'Increases your attack power.' },
+  breakpoint: { key: 'breakpoint', label: 'Breakpoint', description: 'Reduces opponent\'s attack power.' },
 };
 
 const BATTLE_EMOTES = ['gg', 'nice', 'oops', 'focus', 'taunt'];
@@ -343,12 +343,12 @@ function getActivityByUserId(participants = [], events = []) {
   for (const event of events || []) {
     if (!event.userId || !participantIds.has(Number(event.userId)) || !activityTypes.has(event.type)) continue;
     const label =
-      event.type === 'player.chat' ? '채팅 중' :
-      event.type === 'player.emote' ? '이모트 사용' :
-      event.type === 'item.used' ? '아이템 사용' :
-      event.type === 'problem.effect' ? '문제 효과 발동' :
-      event.type === 'player.ready' ? '준비 완료' :
-      event.payload?.activity || '집중 중';
+      event.type === 'player.chat' ? 'Chatting' :
+      event.type === 'player.emote' ? 'Emote used' :
+      event.type === 'item.used' ? 'Item used' :
+      event.type === 'problem.effect' ? 'Problem effect triggered' :
+      event.type === 'player.ready' ? 'Ready' :
+      event.payload?.activity || 'Focusing';
     activity[String(event.userId)] = {
       userId: Number(event.userId),
       label,
@@ -494,15 +494,15 @@ export function resolveBattleProblemRange(profiles = [], room = {}) {
 function inferProblemEffect(problem) {
   const tags = [...(problem?.tags || []), problem?.title || ''].map((t) => String(t).toLowerCase()).join(' ');
   if (/그래프|graph|bfs|dfs|탐색|search|maze|path/.test(tags)) {
-    return { key: 'snare', label: '경로 봉쇄', target: 'opponents', description: '상대 속도를 낮춥니다.' };
+    return { key: 'snare', label: 'Path Block', target: 'opponents', description: 'Reduces opponent\'s speed.' };
   }
   if (/dp|dynamic|다이나믹|동적/.test(tags)) {
-    return { key: 'shield', label: '메모이제이션 실드', target: 'self', description: '내 HP를 회복합니다.' };
+    return { key: 'shield', label: 'Memoization Shield', target: 'self', description: 'Restores your HP.' };
   }
   if (/정렬|sort|수학|math/.test(tags)) {
-    return { key: 'haste', label: '정렬 가속', target: 'self', description: '내 속도와 공격력을 올립니다.' };
+    return { key: 'haste', label: 'Sort Acceleration', target: 'self', description: 'Increases your speed and attack power.' };
   }
-  return { key: 'precision', label: '정밀 타격', target: 'self', description: '내 공격력을 올립니다.' };
+  return { key: 'precision', label: 'Precision Strike', target: 'self', description: 'Increases your attack power.' };
 }
 
 export function calculateBattleScore({ isCorrect, executionTimeMs = null, memoryMb = null, elapsedSec = 0 }) {
@@ -644,11 +644,11 @@ export const AlgorithmBattle = {
       bannableTags: BANNABLE_TAGS,
       problemTiers: PROBLEM_TIERS,
       problemFilterPresets: [
-        { key: 'auto', label: '자동 추천' },
-        { key: 'min', label: '선택 티어 이상' },
-        { key: 'max', label: '선택 티어 이하' },
-        { key: 'range', label: '티어 구간' },
-        { key: 'only', label: '선택 티어만' },
+        { key: 'auto', label: 'Auto Recommend' },
+        { key: 'min', label: 'Selected tier and above' },
+        { key: 'max', label: 'Selected tier and below' },
+        { key: 'range', label: 'Tier range' },
+        { key: 'only', label: 'Selected tier only' },
       ],
     };
   },
@@ -704,7 +704,7 @@ export const AlgorithmBattle = {
         [creatorId]
       );
       if (existingActive) {
-        const err = new Error('이미 활성화된 배틀 방이 있습니다. 기존 방을 먼저 나가거나 종료해주세요.');
+        const err = new Error('You already have an active battle room. Please leave or finish the existing room first.');
         err.status = 409;
         throw err;
       }
@@ -908,21 +908,21 @@ export const AlgorithmBattle = {
     const room = await this.getRoom(roomId);
     if (!room) return null;
     if (room.status === 'finished') {
-      const err = new Error('이미 종료된 배틀입니다.');
+      const err = new Error('This battle has already ended.');
       err.status = 400;
       throw err;
     }
     const existing = await queryOne('SELECT * FROM battle_participants WHERE room_id = ? AND user_id = ?', [roomId, userId]);
     if (existing) return this.getRoomState(roomId);
     if (room.status !== 'waiting') {
-      const err = new Error('이미 시작된 배틀입니다.');
+      const err = new Error('This battle has already started.');
       err.status = 400;
       throw err;
     }
 
     const participants = await this.getParticipants(roomId);
     if (participants.length >= room.maxPlayers) {
-      const err = new Error('방 정원이 가득 찼습니다.');
+      const err = new Error('The room is full.');
       err.status = 409;
       throw err;
     }
@@ -942,7 +942,7 @@ export const AlgorithmBattle = {
       [String(inviteCode).toUpperCase()]
     );
     if (!row) {
-      const err = new Error('유효하지 않은 초대 코드이거나 이미 시작된 방입니다.');
+      const err = new Error('Invalid invite code or the room has already started.');
       err.status = 404;
       throw err;
     }
@@ -955,7 +955,7 @@ export const AlgorithmBattle = {
     if (room.status !== 'waiting') return this.getRoomState(roomId);
     const participant = await queryOne('SELECT * FROM battle_participants WHERE room_id = ? AND user_id = ?', [roomId, userId]);
     if (!participant) {
-      const err = new Error('방 참가자만 준비할 수 있습니다.');
+      const err = new Error('Only room participants can ready up.');
       err.status = 403;
       throw err;
     }
@@ -977,7 +977,7 @@ export const AlgorithmBattle = {
     if (!room || room.mode !== 'draft-ban' || room.status !== 'waiting') return room;
     const participants = await this.getParticipants(roomId);
     if (participants.length < 2 || !participants.every((player) => player.isReady)) {
-      const err = new Error('양쪽 플레이어가 준비 완료해야 밴픽을 시작할 수 있습니다.');
+      const err = new Error('Both players must be ready before the draft can begin.');
       err.status = 400;
       throw err;
     }
@@ -996,7 +996,7 @@ export const AlgorithmBattle = {
   async submitDraftSelection(roomId, userId, { bannedTiers = [], bannedTags = [], pickedTags = [] } = {}) {
     const { room } = await this.requireParticipant(roomId, userId);
     if (room.mode !== 'draft-ban') {
-      const err = new Error('밴픽전에서만 사용할 수 있습니다.');
+      const err = new Error('This action is only available in Draft Ban mode.');
       err.status = 400;
       throw err;
     }
@@ -1063,7 +1063,7 @@ export const AlgorithmBattle = {
     if (!room || room.status !== 'waiting') return room;
     const participants = await this.getParticipants(roomId);
     if (participants.length < 2) {
-      const err = new Error('상대가 들어온 뒤 시작할 수 있습니다.');
+      const err = new Error('The battle can start once an opponent has joined.');
       err.status = 400;
       throw err;
     }
@@ -1106,13 +1106,13 @@ export const AlgorithmBattle = {
     const room = await this.getRoom(roomId);
     if (!room) return null;
     if (room.status !== 'playing') {
-      const err = new Error('진행 중인 배틀이 아닙니다.');
+      const err = new Error('This battle is not currently in progress.');
       err.status = 400;
       throw err;
     }
     const participant = await queryOne('SELECT * FROM battle_participants WHERE room_id = ? AND user_id = ?', [roomId, userId]);
     if (!participant) {
-      const err = new Error('방 참가자만 제출할 수 있습니다.');
+      const err = new Error('Only room participants can submit.');
       err.status = 403;
       throw err;
     }
@@ -1193,18 +1193,18 @@ export const AlgorithmBattle = {
 
   async requireParticipant(roomId, userId, { allowWaiting = true } = {}) {
     const room = await this.getRoom(roomId);
-    if (!room) { const err = new Error('방을 찾을 수 없습니다.'); err.status = 404; throw err; }
-    if (room.status === 'finished') { const err = new Error('이미 종료된 배틀입니다.'); err.status = 400; throw err; }
-    if (!allowWaiting && room.status !== 'playing') { const err = new Error('진행 중인 배틀이 아닙니다.'); err.status = 400; throw err; }
+    if (!room) { const err = new Error('Room not found.'); err.status = 404; throw err; }
+    if (room.status === 'finished') { const err = new Error('This battle has already ended.'); err.status = 400; throw err; }
+    if (!allowWaiting && room.status !== 'playing') { const err = new Error('This battle is not currently in progress.'); err.status = 400; throw err; }
     const participant = await queryOne('SELECT * FROM battle_participants WHERE room_id = ? AND user_id = ?', [roomId, userId]);
-    if (!participant) { const err = new Error('방 참가자만 사용할 수 있습니다.'); err.status = 403; throw err; }
+    if (!participant) { const err = new Error('Only room participants can use this action.'); err.status = 403; throw err; }
     return { room, participant };
   },
 
-  async recordActivity(roomId, userId, { activity = '집중 중', message = '' } = {}) {
+  async recordActivity(roomId, userId, { activity = 'Focusing', message = '' } = {}) {
     await this.requireParticipant(roomId, userId);
     const event = await this.recordEvent(roomId, userId, 'player.activity', {
-      activity: sanitizeText(activity, 40) || '집중 중',
+      activity: sanitizeText(activity, 40) || 'Focusing',
       message: sanitizeText(message, 80),
     });
     await run('UPDATE battle_participants SET last_seen_at = ? WHERE room_id = ? AND user_id = ?', [nowMySQL(), roomId, userId]);
@@ -1214,9 +1214,9 @@ export const AlgorithmBattle = {
   async recordChat(roomId, userId, { message = '' } = {}) {
     const { room } = await this.requireParticipant(roomId, userId);
     const config = getRoomConfig(room);
-    if (!config.chatEnabled) { const err = new Error('이 모드에서는 채팅을 사용할 수 없습니다.'); err.status = 400; throw err; }
+    if (!config.chatEnabled) { const err = new Error('Chat is not available in this mode.'); err.status = 400; throw err; }
     const text = sanitizeText(message, 220);
-    if (!text) { const err = new Error('메시지가 비어 있습니다.'); err.status = 400; throw err; }
+    if (!text) { const err = new Error('Message cannot be empty.'); err.status = 400; throw err; }
     const event = await this.recordEvent(roomId, userId, 'player.chat', { message: text });
     return { event, state: await this.getRoomState(roomId) };
   },
@@ -1224,9 +1224,9 @@ export const AlgorithmBattle = {
   async recordEmote(roomId, userId, { emote = '' } = {}) {
     const { room } = await this.requireParticipant(roomId, userId);
     const config = getRoomConfig(room);
-    if (!config.emotesEnabled) { const err = new Error('이 모드에서는 이모트를 사용할 수 없습니다.'); err.status = 400; throw err; }
+    if (!config.emotesEnabled) { const err = new Error('Emotes are not available in this mode.'); err.status = 400; throw err; }
     const normalized = sanitizeText(emote, 20).toLowerCase();
-    if (!BATTLE_EMOTES.includes(normalized)) { const err = new Error('지원하지 않는 이모트입니다.'); err.status = 400; throw err; }
+    if (!BATTLE_EMOTES.includes(normalized)) { const err = new Error('Unsupported emote.'); err.status = 400; throw err; }
     const event = await this.recordEvent(roomId, userId, 'player.emote', { emote: normalized });
     return { event, state: await this.getRoomState(roomId) };
   },
@@ -1234,15 +1234,15 @@ export const AlgorithmBattle = {
   async useItem(roomId, userId, { itemType = '' } = {}) {
     const { room, participant } = await this.requireParticipant(roomId, userId, { allowWaiting: false });
     const config = getRoomConfig(room);
-    if (!config.itemsEnabled) { const err = new Error('이 모드에서는 아이템을 사용할 수 없습니다.'); err.status = 400; throw err; }
+    if (!config.itemsEnabled) { const err = new Error('Items are not available in this mode.'); err.status = 400; throw err; }
     const item = BATTLE_ITEMS[sanitizeText(itemType, 30)];
-    if (!item) { const err = new Error('지원하지 않는 아이템입니다.'); err.status = 400; throw err; }
+    if (!item) { const err = new Error('Unsupported item.'); err.status = 400; throw err; }
 
     const cooldownMs = Number(config.itemCooldownSec || 20) * 1000;
     const state = await this.getRoomState(roomId);
     const recentItem = [...(state.events || [])].reverse().find((e) => e.userId === Number(userId) && e.type === 'item.used');
     if (recentItem?.createdAt && Date.now() - new Date(recentItem.createdAt).getTime() < cooldownMs) {
-      const err = new Error('아이템 쿨다운 중입니다.'); err.status = 429; throw err;
+      const err = new Error('Item is on cooldown.'); err.status = 429; throw err;
     }
 
     const opponents = state.participants.filter((p) => p.userId !== Number(userId));

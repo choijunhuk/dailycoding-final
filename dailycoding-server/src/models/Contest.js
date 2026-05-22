@@ -61,7 +61,7 @@ function norm(c) {
     desc:         c.description ?? '',
     status:       STATUS_MAP[c.status] || c.status,
     duration:     c.duration_min  ?? c.duration ?? 60,
-    privacy:      c.privacy === 'private' ? '비공개' : '공개',
+    privacy:      c.privacy === 'private' ? 'Private' : 'Public',
     joinType:     c.join_type ?? 'direct',
     securityCode: c.security_code ?? null,
     max:          c.max_users    ?? c.max ?? 20,
@@ -454,13 +454,13 @@ export const Contest = {
   async startVirtualRun(userId, contestId) {
     const contest = await this.findById(contestId);
     if (!contest) {
-      const err = new Error('대회를 찾을 수 없습니다.');
+      const err = new Error('Contest not found.');
       err.status = 404;
       throw err;
     }
     const problems = await this.getProblems(contestId);
     if (!problems.length) {
-      const err = new Error('버추얼 대회에 사용할 문제가 없습니다.');
+      const err = new Error('No problems available for the virtual contest.');
       err.status = 400;
       throw err;
     }

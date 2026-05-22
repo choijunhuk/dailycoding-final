@@ -12,7 +12,7 @@ test('coding problems still require minimum hidden testcases', () => {
   });
 
   assert.equal(result.payload, undefined);
-  assert.match(result.error, /히든 테스트케이스는 최소/);
+  assert.match(result.error, /히든 테스트케이스는 최소|At least 10 hidden test cases/i);
 });
 
 test('fill-blank problems normalize special config without hidden testcase requirement', () => {
@@ -44,7 +44,7 @@ test('bug-fix problems require at least one keyword and buggy code', () => {
       keywords: [],
     },
   });
-  assert.match(missingKeywords.error, /정답 키워드/);
+  assert.match(missingKeywords.error, /정답 키워드|answer keyword/i);
 
   const valid = normalizeProblemMutationPayload({
     problemType: 'bug-fix',

@@ -16,7 +16,7 @@ const router = Router();
 // AI Quota Middleware — atomically INCR first, DECR if over limit (eliminates TOCTOU race)
 const checkAiQuota = async (req, res, next) => {
   const user = await User.findById(req.user.id);
-  if (!user) return res.status(401).json({ message: '유저를 찾을 수 없습니다.' });
+  if (!user) return res.status(401).json({ message: 'User not found.' });
   req.aiUser = user;
   if (user.role === 'admin') return next();
   const tier = user.subscription_tier || 'free';
@@ -30,7 +30,7 @@ const checkAiQuota = async (req, res, next) => {
   if (newCount > AI_DAILY_QUOTA) {
     await redis.decr(key);
     return res.status(429).json({
-      message: `오늘 AI 사용 가능 횟수 ${AI_DAILY_QUOTA}회를 모두 소진했습니다.`,
+      message: `You have used all ${AI_DAILY_QUOTA} AI requests available today.`,
       code: 'QUOTA_EXCEEDED',
     });
   }
@@ -107,24 +107,24 @@ router.post('/analyze', auth, requireVerified, serveAnalyzeCache, async (req, re
   const unsolved = allProblems.filter(p => !solvedIds.has(p.id)).slice(0, 3);
 
   const fallback = {
-    level: `${user?.username||'유저'}님은 ${user?.tier||'bronze'} 수준입니다.`,
-    strengths: ['꾸준한 학습', '문제 해결 의지'],
-    weaknesses: ['알고리즘 다양성', '시간 복잡도 최적화'],
+    level: `${user?.username||'User'} is at the ${user?.tier||'bronze'} level.`,
+    strengths: ['Consistent learning', 'Problem-solving drive'],
+    weaknesses: ['Algorithm diversity', 'Time complexity optimization'],
     recommend: unsolved.map(p=>p.title),
-    motivationMsg: `🔥 ${user?.streak||0}일 스트릭! 계속 화이팅!`,
-    nextMilestone: `레이팅 ${(user?.rating||800)+200}점 달성`,
+    motivationMsg: `🔥 ${user?.streak||0}-day streak! Keep it up!`,
+    nextMilestone: `Reach rating ${(user?.rating||800)+200}`,
   };
 
-  const prompt = `코딩학습 분석 보고서를 JSON으로 작성하세요. 
-유저상태: 티어 ${user?.tier}, 레이팅 ${user?.rating}점, 연속 스트릭 ${user?.streak}일. 
-추천대상 문제: ${unsolved.map(p=>p.title).join(', ')}.
-필수 필드: {
-  "level": "유저의 현재 상태 요약 한 줄",
-  "strengths": ["강점1", "강점2"],
-  "weaknesses": ["약점1", "약점2"],
-  "recommend": ["문제제목1", "문제제목2", "문제제목3"],
-  "motivationMsg": "유저를 위한 동기부여 메시지 한 줄",
-  "nextMilestone": "다음 목표 지점"
+  const prompt = `Write a coding learning analysis report as JSON.
+User status: tier ${user?.tier}, rating ${user?.rating}, current streak ${user?.streak} days.
+Recommended problems: ${unsolved.map(p=>p.title).join(', ')}.
+Required fields: {
+  "level": "One-line summary of the user's current status",
+  "strengths": ["strength1", "strength2"],
+  "weaknesses": ["weakness1", "weakness2"],
+  "recommend": ["problemTitle1", "problemTitle2", "problemTitle3"],
+  "motivationMsg": "One-line motivational message for the user",
+  "nextMilestone": "Next goal milestone"
 }`;
 
   const aiResult = await askAIWithMeta(req.user.id, prompt, fallback, 300);
@@ -143,13 +143,13 @@ router.post('/chat', auth, requireVerified, checkAiQuota, async (req, res) => {
             || messages[messages.length - 1]?.content
             || '';
 
-  const prompt = `당신은 친절한 알고리즘 멘토입니다. 
-유저 정보: ${user?.tier} 티어, 레이팅 ${user?.rating}점.
-유저 질문: ${last.slice(0, 400)}
-위 질문에 대해 한국어로 명확하고 교육적인 답변을 3문장 이내의 JSON으로 반환하세요.
-반환형식: {"text": "답변 내용"}`;
+  const prompt = `You are a friendly algorithm mentor.
+User info: ${user?.tier} tier, rating ${user?.rating}.
+User question: ${last.slice(0, 400)}
+Return a clear, educational answer to the above question in 3 sentences or fewer as JSON.
+Format: {"text": "answer content"}`;
 
-  const aiResult = await askAIWithMeta(req.user.id, prompt, { text: 'AI 사용 가능 횟수가 모두 소진되었습니다.' }, 250);
+  const aiResult = await askAIWithMeta(req.user.id, prompt, { text: 'All available AI requests have been used up.' }, 250);
   const result = aiResult.data;
   
   if (aiResult.source === 'ai') {
@@ -163,53 +163,53 @@ router.post('/chat', auth, requireVerified, checkAiQuota, async (req, res) => {
 router.post('/submission-coach', auth, requireVerified, checkAiQuota, async (req, res) => {
   const submissionId = Number(req.body?.submissionId);
   if (!Number.isInteger(submissionId) || submissionId <= 0) {
-    return res.status(400).json({ message: 'submissionId가 필요합니다.' });
+    return res.status(400).json({ message: 'submissionId is required.' });
   }
 
   try {
     const submission = await Submission.getWithCode(submissionId);
-    if (!submission) return res.status(404).json({ message: '제출을 찾을 수 없습니다.' });
-    if (submission.user_id !== req.user.id) return res.status(403).json({ message: '본인 제출만 분석할 수 있습니다.' });
+    if (!submission) return res.status(404).json({ message: 'Submission not found.' });
+    if (submission.user_id !== req.user.id) return res.status(403).json({ message: 'You can only analyze your own submissions.' });
 
     const problem = await Problem.findById(Number(submission.problem_id), req.user.id);
-    if (!problem) return res.status(404).json({ message: '문제를 찾을 수 없습니다.' });
+    if (!problem) return res.status(404).json({ message: 'Problem not found.' });
 
     const fallback = {
-      summary: '채점 결과와 코드를 기준으로 재도전 순서를 정리했습니다.',
+      summary: 'Organized retry steps based on the judge result and submitted code.',
       likelyCause: submission.result === 'timeout'
-        ? '시간 복잡도나 반복 구조가 입력 크기를 견디지 못했을 가능성이 큽니다.'
+        ? 'The time complexity or loop structure likely could not handle the input size.'
         : submission.result === 'compile'
-          ? '문법, import, 함수명, 입출력 형식 중 하나가 채점 환경과 맞지 않을 가능성이 큽니다.'
-          : '입출력 처리, 경계 조건, 조건 분기 중 하나를 먼저 의심해보세요.',
+          ? 'A syntax error, import, function name, or I/O format may not match the judge environment.'
+          : 'Check I/O handling, boundary conditions, or conditional branching first.',
       nextSteps: [
-        '예제 입력을 손으로 추적해서 실제 출력과 기대 출력을 비교하세요.',
-        '빈 입력, 최소/최대 입력, 중복 값 같은 경계 조건을 따로 테스트하세요.',
-        '수정 후 바로 제출하지 말고 실행 버튼으로 작은 케이스부터 확인하세요.',
+        'Manually trace the example input and compare actual vs expected output.',
+        'Test edge cases separately: empty input, min/max input, duplicate values.',
+        'Do not submit immediately after fixing — verify small cases with the run button first.',
       ],
-      testFocus: '예제와 다른 최소/최대 경계 케이스',
+      testFocus: 'Min/max boundary cases different from the examples',
       retryProblemId: problem.id,
     };
 
-    const prompt = `아래 코딩 문제 오답 제출을 분석해 JSON으로만 답하세요.
-문제 제목: ${problem.title}
-난이도: ${problem.tier}
-태그: ${(problem.tags || []).slice(0, 6).join(', ')}
-문제 설명: ${(problem.desc || '').slice(0, 700)}
-제출 언어: ${submission.lang}
-채점 결과: ${submission.result}
-채점 메시지: ${(submission.detail || '').slice(0, 500)}
-제출 코드:
+    const prompt = `Analyze the incorrect submission for the coding problem below and respond only in JSON.
+Problem title: ${problem.title}
+Difficulty: ${problem.tier}
+Tags: ${(problem.tags || []).slice(0, 6).join(', ')}
+Problem description: ${(problem.desc || '').slice(0, 700)}
+Submission language: ${submission.lang}
+Judge result: ${submission.result}
+Judge message: ${(submission.detail || '').slice(0, 500)}
+Submitted code:
 ${String(submission.code || '').slice(0, 3500)}
 
-필수 JSON 필드:
+Required JSON fields:
 {
-  "summary": "한 줄 요약",
-  "likelyCause": "가장 가능성 높은 실패 원인",
-  "nextSteps": ["재도전 단계1", "재도전 단계2", "재도전 단계3"],
-  "testFocus": "다음에 직접 만들어볼 테스트 케이스 방향",
+  "summary": "One-line summary",
+  "likelyCause": "Most likely cause of failure",
+  "nextSteps": ["retry step 1", "retry step 2", "retry step 3"],
+  "testFocus": "Direction for test cases to write next",
   "retryProblemId": ${problem.id}
 }
-정답 코드 전체를 직접 작성하지 말고, 사용자가 직접 고치도록 방향만 제시하세요.`;
+Do not write out the full correct solution — only guide the user toward fixing it themselves.`;
 
     const aiResult = await askAIWithMeta(req.user.id, prompt, fallback, 500);
     if (aiResult.source === 'ai') {
@@ -218,26 +218,26 @@ ${String(submission.code || '').slice(0, 3500)}
     return res.json({ ...aiResult.data, source: aiResult.source, reason: aiResult.reason || null });
   } catch (err) {
     console.error('[ai/submission-coach]', err.message);
-    return res.status(500).json({ message: '오답 코치를 불러오지 못했습니다.' });
+    return res.status(500).json({ message: 'Failed to load submission coach.' });
   }
 });
 
 // ── AI 힌트 ──────────────────────────────────────────────────────────────
 router.post('/hint', auth, requireVerified, checkAiQuota, async (req, res) => {
   const { problemId } = req.body;
-  if (!problemId) return res.status(400).json({ message: '문제 ID가 필요합니다.' });
+  if (!problemId) return res.status(400).json({ message: 'Problem ID is required.' });
 
   try {
     const problem = await Problem.findById(Number(problemId), req.user.id);
-    if (!problem) return res.status(404).json({ message: '문제를 찾을 수 없습니다.' });
+    if (!problem) return res.status(404).json({ message: 'Problem not found.' });
 
     const desc = (problem.description || problem.desc || '').slice(0, 500);
     const fallback = {
-      hint1: `"${problem.title}" 문제에서 요구하는 것이 정확히 무엇인지 파악하세요. 입력 범위와 출력 형식을 다시 확인해보세요.`,
-      hint2: `예제 입출력을 직접 손으로 추적해보세요. 패턴이 보이면 그것이 핵심 알고리즘의 단서입니다.`,
-      hint3: `문제를 작은 단위로 쪼개보세요. 각 단계를 독립적으로 해결한 뒤 합치는 방식으로 접근해보세요.`,
-      commonMistake: '인덱스 범위, 빈 입력, 정수 오버플로우 같은 엣지 케이스를 놓치지 마세요.',
-      relatedConcept: '완전탐색 또는 구현',
+      hint1: `Identify exactly what the "${problem.title}" problem is asking for. Re-check the input range and output format.`,
+      hint2: `Trace through the example inputs by hand. If you see a pattern, that is the clue to the core algorithm.`,
+      hint3: `Break the problem into smaller units. Try solving each step independently, then combine them.`,
+      commonMistake: 'Do not overlook edge cases such as index bounds, empty input, or integer overflow.',
+      relatedConcept: 'Brute force or implementation',
     };
     const contentHash = createProblemHintContentHash(problem, desc);
 
@@ -257,25 +257,25 @@ router.post('/hint', auth, requireVerified, checkAiQuota, async (req, res) => {
     }
 
     if (!hintData) {
-      const prompt = `다음 코딩 문제에 대해 3단계 점진적 힌트를 JSON으로 작성하세요 (한국어).
+      const prompt = `Write 3-level progressive hints for the following coding problem in English.
 
-문제 제목: ${problem.title}
-문제 설명: ${desc}
-난이도: ${problem.tier}
+Problem title: ${problem.title}
+Problem description: ${desc}
+Difficulty: ${problem.tier}
 
-규칙:
-- 코드나 정답을 직접 알려주지 마세요
-- 각 힌트는 이전 힌트보다 조금 더 구체적이어야 합니다
-- 이 특정 문제에 맞는 힌트를 작성하세요 (일반적인 조언 금지)
-- hint1은 문제 접근 방향만, hint2는 핵심 알고리즘/자료구조 언급, hint3은 구체적인 구현 전략
+Rules:
+- Do not reveal the answer or code directly
+- Each hint should be slightly more specific than the previous
+- Write hints specific to this problem (no generic advice)
+- hint1: approach direction only, hint2: name the key algorithm/data structure, hint3: concrete implementation strategy
 
-JSON 형식으로만 응답:
+Respond in JSON only:
 {
-  "hint1": "문제 접근 방향 (이 문제에 특화된 힌트)",
-  "hint2": "핵심 알고리즘/자료구조 이름과 왜 적합한지",
-  "hint3": "구체적인 구현 전략 (의사코드 수준)",
-  "commonMistake": "이 문제에서 자주 실수하는 부분",
-  "relatedConcept": "관련 알고리즘/개념 이름"
+  "hint1": "Approach direction (specific to this problem)",
+  "hint2": "Key algorithm/data structure and why it fits",
+  "hint3": "Concrete implementation strategy (pseudocode level)",
+  "commonMistake": "Common mistake on this problem",
+  "relatedConcept": "Related algorithm/concept name"
 }`;
       const aiResult = await askAIWithMeta(req.user.id, prompt, fallback, 600);
       hintData = aiResult.data;
@@ -301,7 +301,7 @@ JSON 형식으로만 응답:
     res.json({ ...hintData, remaining, source: cacheSource || 'fallback' });
   } catch (err) {
     console.error('[ai/hint]', err.message);
-    res.status(500).json({ message: '힌트 생성 실패' });
+    res.status(500).json({ message: 'Failed to generate hint.' });
   }
 });
 
@@ -316,31 +316,31 @@ router.post('/daily-quiz', auth, requireVerified, async (req, res) => {
     if (cached) return res.json(cached);
 
     const fallback = {
-      question: '배열에서 두 수의 합이 특정 값이 되는 쌍을 찾는 가장 효율적인 알고리즘의 시간 복잡도는?',
+      question: 'What is the time complexity of the most efficient algorithm to find pairs in an array whose sum equals a target value?',
       options: ['O(n²)', 'O(n log n)', 'O(n)', 'O(log n)'],
       answer: 2,
-      explanation: '해시맵을 사용하면 O(n)으로 풀 수 있습니다. 각 원소를 순회하며 (target - 현재값)이 해시맵에 있는지 확인합니다.',
-      topic: '해시맵, Two Sum',
+      explanation: 'Using a hash map, you can solve it in O(n). Iterate through each element and check whether (target - current value) exists in the hash map.',
+      topic: 'Hash map, Two Sum',
     };
 
     const tierTopics = {
-      unranked: '기초 자료구조와 알고리즘',
-      bronze: '배열, 문자열, 기초 정렬',
-      silver: '이분탐색, 그리디, DP 기초',
-      gold: '그래프, 트리, 동적 프로그래밍',
-      platinum: '고급 DP, 세그먼트 트리, 비트마스킹',
-      diamond: '고급 알고리즘, 수학적 최적화',
+      unranked: 'basic data structures and algorithms',
+      bronze: 'arrays, strings, basic sorting',
+      silver: 'binary search, greedy, basic DP',
+      gold: 'graphs, trees, dynamic programming',
+      platinum: 'advanced DP, segment trees, bitmask',
+      diamond: 'advanced algorithms, mathematical optimization',
     };
 
-    const prompt = `${tierTopics[user?.tier || 'bronze']} 관련 4지선다 퀴즈 1개를 JSON으로 작성하세요 (한국어).
-난이도: ${user?.tier || 'bronze'} 수준 개발자 대상.
-필수 필드:
+    const prompt = `Write 1 multiple-choice quiz question about ${tierTopics[user?.tier || 'bronze']} in English.
+Difficulty: aimed at a ${user?.tier || 'bronze'}-level developer.
+Required fields:
 {
-  "question": "질문",
-  "options": ["선택지0", "선택지1", "선택지2", "선택지3"],
-  "answer": 정답_인덱스(0~3),
-  "explanation": "정답 설명 (2-3문장)",
-  "topic": "관련 개념 키워드"
+  "question": "question text",
+  "options": ["option0", "option1", "option2", "option3"],
+  "answer": correct_index(0~3),
+  "explanation": "explanation (2-3 sentences)",
+  "topic": "related concept keyword"
 }`;
 
     const aiResult = await askAIWithMeta(req.user.id, prompt, fallback, 400);
@@ -351,43 +351,43 @@ router.post('/daily-quiz', auth, requireVerified, async (req, res) => {
     res.json(result);
   } catch (err) {
     console.error('[ai/daily-quiz]', err.message);
-    res.status(500).json({ message: '퀴즈 생성 실패' });
+    res.status(500).json({ message: 'Failed to generate quiz.' });
   }
 });
 
 // ── 코드 리뷰 ────────────────────────────────────────────────────────────
 router.post('/review', auth, requireVerified, checkAiQuota, async (req, res) => {
   const { problemId, code, lang } = req.body;
-  if (!code) return res.status(400).json({ message: '코드가 필요합니다.' });
+  if (!code) return res.status(400).json({ message: 'Code is required.' });
 
   try {
     const problem = problemId ? await Problem.findById(Number(problemId), req.user.id) : null;
 
     const fallback = {
       score: 70,
-      summary: '코드를 분석했습니다. 전반적으로 양호합니다.',
+      summary: 'Code analyzed. Overall looks good.',
       correctness: 75,
       timeComplexity: 65,
       spaceComplexity: 70,
-      improvements: ['변수명을 더 명확하게 작성해보세요.', '엣지 케이스를 추가로 확인해보세요.'],
+      improvements: ['Try using more descriptive variable names.', 'Consider checking additional edge cases.'],
       betterCode: null,
     };
 
-    const prompt = `다음 ${lang || '코드'}를 분석하고 코드 리뷰를 JSON으로 작성하세요 (한국어).
-${problem ? `문제: ${problem.title} (${problem.tier} 난이도)` : ''}
-코드:
+    const prompt = `Analyze the following ${lang || 'code'} and write a code review as JSON (in English).
+${problem ? `Problem: ${problem.title} (${problem.tier} difficulty)` : ''}
+Code:
 \`\`\`
 ${code.slice(0, 1000)}
 \`\`\`
-필수 필드:
+Required fields:
 {
-  "score": 0~100 종합 점수,
-  "summary": "한 줄 요약",
-  "correctness": 0~100 정확성 점수,
-  "timeComplexity": 0~100 시간복잡도 효율 점수,
-  "spaceComplexity": 0~100 공간복잡도 효율 점수,
-  "improvements": ["개선사항1", "개선사항2"],
-  "betterCode": "개선된 코드 문자열 또는 null"
+  "score": 0-100 overall score,
+  "summary": "one-line summary",
+  "correctness": 0-100 correctness score,
+  "timeComplexity": 0-100 time complexity efficiency score,
+  "spaceComplexity": 0-100 space complexity efficiency score,
+  "improvements": ["improvement1", "improvement2"],
+  "betterCode": "improved code string or null"
 }`;
 
     const aiResult = await askAIWithMeta(req.user.id, prompt, fallback, 600);
@@ -406,14 +406,14 @@ ${code.slice(0, 1000)}
     res.json(result);
   } catch (err) {
     console.error('[ai/review]', err.message);
-    res.status(500).json({ message: '코드 리뷰 실패' });
+    res.status(500).json({ message: 'Failed to perform code review.' });
   }
 });
 
 router.get('/walkthrough/:problemId', auth, requireVerified, async (req, res) => {
   const problemId = Number(req.params.problemId);
   if (!Number.isInteger(problemId) || problemId <= 0) {
-    return res.status(400).json({ message: '유효하지 않은 문제 ID입니다.' });
+    return res.status(400).json({ message: 'Invalid problem ID.' });
   }
 
   try {
@@ -424,13 +424,13 @@ router.get('/walkthrough/:problemId', auth, requireVerified, async (req, res) =>
         [req.user.id, problemId, 'correct']
       ),
     ]);
-    if (!user) return res.status(401).json({ message: '유저를 찾을 수 없습니다.' });
+    if (!user) return res.status(401).json({ message: 'User not found.' });
     if (!solved && (user.subscription_tier || 'free') === 'free') {
-      return res.status(403).json({ message: '문제를 먼저 풀거나 Pro 구독이 필요합니다.', requiresPro: true });
+      return res.status(403).json({ message: 'You must solve the problem first or have a Pro subscription.', requiresPro: true });
     }
 
     const problem = await Problem.findById(problemId, req.user.id);
-    if (!problem) return res.status(404).json({ message: '문제를 찾을 수 없습니다.' });
+    if (!problem) return res.status(404).json({ message: 'Problem not found.' });
 
     const desc = problem.description || problem.desc || '';
     const contentHash = createProblemHintContentHash(problem, desc);
@@ -441,19 +441,19 @@ router.get('/walkthrough/:problemId', auth, requireVerified, async (req, res) =>
     }
 
     const fallback = [
-      `## 접근법\n"${problem.title}" 문제는 입력/출력 조건을 먼저 분리한 뒤 필요한 자료구조를 고르는 것이 핵심입니다.`,
-      '## 핵심 아이디어\n예제와 경계 케이스를 손으로 추적하면서 반복되는 상태나 비교 기준을 찾으세요.',
-      '## 구현 단계\n1. 입력 파싱\n2. 핵심 로직 함수화\n3. 예제/경계 케이스 검증\n4. 시간복잡도 확인',
-      '## 시간복잡도\n문제의 입력 크기에 맞춰 O(n), O(n log n), O(n²) 중 허용 가능한 범위를 검토하세요.',
+      `## Approach\nFor "${problem.title}", the key is to first separate the input/output conditions and then choose the right data structure.`,
+      '## Core Idea\nTrace through the examples and edge cases by hand to find recurring states or comparison criteria.',
+      '## Implementation Steps\n1. Parse input\n2. Extract core logic into a function\n3. Verify with examples and edge cases\n4. Check time complexity',
+      '## Time Complexity\nReview which of O(n), O(n log n), or O(n²) is acceptable given the problem\'s input size.',
     ].join('\n\n');
-    const prompt = `다음 알고리즘 문제의 풀이 해설을 한국어 Markdown으로 작성하세요.
-구성은 반드시 접근법 → 핵심 아이디어 → 구현 단계 → 시간복잡도 순서로 작성하세요.
-정답 코드 전체를 길게 붙이지 말고, 학습자가 이해할 수 있는 설명 중심으로 작성하세요.
+    const prompt = `Write a solution walkthrough for the following algorithm problem in English Markdown.
+Structure must be: Approach → Core Idea → Implementation Steps → Time Complexity.
+Do not paste the full answer code; focus on explanations that help learners understand.
 
-제목: ${problem.title}
-난이도: ${problem.tier}
-태그: ${(problem.tags || []).slice?.(0, 8)?.join?.(', ') || ''}
-설명:
+Title: ${problem.title}
+Difficulty: ${problem.tier}
+Tags: ${(problem.tags || []).slice?.(0, 8)?.join?.(', ') || ''}
+Description:
 ${String(desc).slice(0, 2500)}`;
 
     const aiResult = await askAIWithMeta(req.user.id, prompt, fallback, 900);
@@ -466,7 +466,7 @@ ${String(desc).slice(0, 2500)}`;
     return res.json({ walkthrough, source: aiResult.source, reason: aiResult.reason || null });
   } catch (err) {
     console.error('[ai/walkthrough]', err.message);
-    return res.status(500).json({ message: '풀이 해설을 불러오지 못했습니다.' });
+    return res.status(500).json({ message: 'Failed to load solution walkthrough.' });
   }
 });
 
@@ -474,32 +474,32 @@ ${String(desc).slice(0, 2500)}`;
 router.post('/generate-problem', auth, adminOnly, async (req, res) => {
   const { tier = 'bronze', tags = [], difficulty = 50, topic = '', problemType = 'coding' } = req.body;
   const tagsStr = Array.isArray(tags) ? tags.join(', ') : tags;
-  const context = `티어: ${tier}  태그: ${tagsStr || '자유'}  난이도: ${difficulty}/100  주제: ${topic || '자유'}`;
+  const context = `Tier: ${tier}  Tags: ${tagsStr || 'any'}  Difficulty: ${difficulty}/100  Topic: ${topic || 'any'}`;
 
   const PROMPTS = {
     coding: {
-      prompt: `${context}\n${tier} 난이도의 알고리즘 코딩 문제를 JSON으로 작성하세요 (한국어).\n필수 필드:\n{\n  "title": "문제 제목",\n  "desc": "문제 설명 (2-4문장)",\n  "inputDesc": "입력 설명",\n  "outputDesc": "출력 설명",\n  "examples": [{"input": "입력1", "output": "출력1"}, {"input": "입력2", "output": "출력2"}],\n  "hint": "힌트",\n  "solution": "Python 모범 답안 코드",\n  "timeLimit": 1~5,\n  "memLimit": 128~512\n}`,
-      fallback: { title: `${tier} 알고리즘 문제`, desc: '두 수 A와 B가 주어졌을 때, A+B를 출력하시오.', inputDesc: '첫째 줄에 A와 B가 주어진다.', outputDesc: 'A+B를 출력한다.', examples: [{ input: '1 2', output: '3' }], hint: '두 수를 더하면 됩니다.', solution: 'a, b = map(int, input().split())\nprint(a + b)', timeLimit: 2, memLimit: 256 },
+      prompt: `${context}\nWrite a ${tier}-difficulty algorithm coding problem as JSON (in English).\nRequired fields:\n{\n  "title": "problem title",\n  "desc": "problem description (2-4 sentences)",\n  "inputDesc": "input description",\n  "outputDesc": "output description",\n  "examples": [{"input": "input1", "output": "output1"}, {"input": "input2", "output": "output2"}],\n  "hint": "hint",\n  "solution": "Python model solution code",\n  "timeLimit": 1-5,\n  "memLimit": 128-512\n}`,
+      fallback: { title: `${tier} Algorithm Problem`, desc: 'Given two integers A and B, print A+B.', inputDesc: 'The first line contains A and B.', outputDesc: 'Print A+B.', examples: [{ input: '1 2', output: '3' }], hint: 'Add the two numbers together.', solution: 'a, b = map(int, input().split())\nprint(a + b)', timeLimit: 2, memLimit: 256 },
     },
     'fill-blank': {
-      prompt: `${context}\n빈칸 채우기 문제를 JSON으로 작성하세요 (한국어). 코드에서 핵심 키워드 2~4개를 ___N___ 형태로 비워두세요.\n필수 필드:\n{\n  "title": "문제 제목",\n  "desc": "코드 설명 (1-2문장)",\n  "codeTemplate": "___1___ 형태로 빈칸이 있는 전체 코드",\n  "blanks": ["정답1", "정답2"],\n  "hint": "힌트"\n}`,
-      fallback: { title: '빈칸 채우기: 두 수의 합', desc: '두 수를 입력받아 합을 출력하는 코드의 빈칸을 채우세요.', codeTemplate: 'a, b = ___1___(int, input().split())\n___2___(a + b)', blanks: ['map', 'print'], hint: '정수 변환 함수와 출력 함수를 채우세요.' },
+      prompt: `${context}\nWrite a fill-in-the-blank problem as JSON (in English). Leave 2-4 key keywords in the code as ___N___ placeholders.\nRequired fields:\n{\n  "title": "problem title",\n  "desc": "code description (1-2 sentences)",\n  "codeTemplate": "full code with ___1___ style blanks",\n  "blanks": ["answer1", "answer2"],\n  "hint": "hint"\n}`,
+      fallback: { title: 'Fill in the Blank: Sum of Two Numbers', desc: 'Fill in the blanks to complete the code that reads two numbers and prints their sum.', codeTemplate: 'a, b = ___1___(int, input().split())\n___2___(a + b)', blanks: ['map', 'print'], hint: 'Fill in the integer conversion function and the print function.' },
     },
     'bug-fix': {
-      prompt: `${context}\n버그가 있는 코드 문제를 JSON으로 작성하세요 (한국어). 실제로 실행하면 잘못된 결과가 나오는 버그를 심으세요.\n필수 필드:\n{\n  "title": "문제 제목",\n  "desc": "코드 설명 및 버그 증상 (2-3문장)",\n  "buggyCode": "버그가 있는 전체 코드 (주석으로 버그 표시)",\n  "keywords": ["수정해야 할 키워드1", "키워드2"],\n  "explanation": "버그 원인과 수정 방법 설명",\n  "hint": "힌트"\n}`,
-      fallback: { title: '버그 찾기: 최댓값 오류', desc: '최댓값을 구하는 코드에 버그가 있습니다.', buggyCode: 'def find_max(arr):\n    max_val = 0  # 버그: 음수 배열에서 잘못 동작\n    for x in arr:\n        if x > max_val:\n            max_val = x\n    return max_val\nprint(find_max([-3, -1, -4]))', keywords: ['arr[0]', '-float(\'inf\')'], explanation: 'max_val을 0으로 초기화하면 모두 음수일 때 0이 반환됩니다.', hint: 'max_val 초기값을 바꾸세요.' },
+      prompt: `${context}\nWrite a buggy code problem as JSON (in English). Introduce a bug that produces wrong results when run.\nRequired fields:\n{\n  "title": "problem title",\n  "desc": "code description and bug symptom (2-3 sentences)",\n  "buggyCode": "full code with bug (mark bug with a comment)",\n  "keywords": ["keyword to fix1", "keyword2"],\n  "explanation": "explanation of the bug cause and how to fix it",\n  "hint": "hint"\n}`,
+      fallback: { title: 'Bug Fix: Max Value Error', desc: 'There is a bug in the code that finds the maximum value.', buggyCode: 'def find_max(arr):\n    max_val = 0  # bug: wrong for all-negative arrays\n    for x in arr:\n        if x > max_val:\n            max_val = x\n    return max_val\nprint(find_max([-3, -1, -4]))', keywords: ['arr[0]', '-float(\'inf\')'], explanation: 'Initializing max_val to 0 returns 0 when all elements are negative.', hint: 'Change the initial value of max_val.' },
     },
     troubleshooting: {
-      prompt: `${context}\n트러블슈팅 문제를 JSON으로 작성하세요 (한국어). 버그가 있는 Python 스크립트를 디버깅하는 시나리오입니다.\n필수 필드:\n{\n  "title": "문제 제목",\n  "desc": "문제 설명 (2-3문장)",\n  "scenarioTitle": "시나리오 제목",\n  "scenarioDescription": "시나리오 상황 설명 (3-5문장)",\n  "initialFiles": [{"path": "main.py", "content": "버그 있는 코드", "editable": true}],\n  "visibleTests": [{"name": "기본 테스트", "command": ["python3", "main.py"], "input": "", "expectedOutput": "기대 출력", "timeoutMs": 3000}],\n  "hint": "디버깅 힌트"\n}`,
-      fallback: { title: '트러블슈팅: NameError 디버깅', desc: 'Python 스크립트가 NameError로 실행에 실패합니다. 버그를 찾아 수정하세요.', scenarioTitle: 'NameError 디버깅', scenarioDescription: '사용자 입력을 처리하는 스크립트가 실행 시 NameError가 발생합니다.', initialFiles: [{ path: 'main.py', content: 'name = input()\nprint(f"Hello, {nane}!")  # 버그: 오타', editable: true }], visibleTests: [{ name: '기본 출력 테스트', command: ['python3', 'main.py'], input: 'World', expectedOutput: 'Hello, World!', timeoutMs: 3000 }], hint: '변수명 오타를 확인하세요.' },
+      prompt: `${context}\nWrite a troubleshooting problem as JSON (in English). The scenario involves debugging a Python script that has a bug.\nRequired fields:\n{\n  "title": "problem title",\n  "desc": "problem description (2-3 sentences)",\n  "scenarioTitle": "scenario title",\n  "scenarioDescription": "scenario situation description (3-5 sentences)",\n  "initialFiles": [{"path": "main.py", "content": "buggy code", "editable": true}],\n  "visibleTests": [{"name": "basic test", "command": ["python3", "main.py"], "input": "", "expectedOutput": "expected output", "timeoutMs": 3000}],\n  "hint": "debugging hint"\n}`,
+      fallback: { title: 'Troubleshooting: NameError Debug', desc: 'A Python script fails with a NameError. Find and fix the bug.', scenarioTitle: 'NameError Debugging', scenarioDescription: 'A script that processes user input raises a NameError at runtime.', initialFiles: [{ path: 'main.py', content: 'name = input()\nprint(f"Hello, {nane}!")  # bug: typo', editable: true }], visibleTests: [{ name: 'Basic output test', command: ['python3', 'main.py'], input: 'World', expectedOutput: 'Hello, World!', timeoutMs: 3000 }], hint: 'Check for a variable name typo.' },
     },
     'performance-fix': {
-      prompt: `${context}\n성능 개선 문제를 JSON으로 작성하세요 (한국어). O(n²) 이상의 느린 Python 코드를 더 빠르게 최적화하는 문제입니다.\n필수 필드:\n{\n  "title": "문제 제목",\n  "desc": "문제 설명 (2-3문장)",\n  "scenarioTitle": "시나리오 제목",\n  "scenarioDescription": "성능 문제 설명 (3-5문장)",\n  "initialFiles": [{"path": "main.py", "content": "느린 코드", "editable": true}],\n  "visibleTests": [{"name": "성능 테스트", "command": ["python3", "main.py"], "input": "", "expectedOutput": "기대 출력", "timeoutMs": 2000}],\n  "baselineTimeMs": 현재_예상_실행시간ms,\n  "targetResponseTimeMs": 목표_실행시간ms,\n  "hint": "최적화 힌트"\n}`,
-      fallback: { title: '성능 개선: 중복 제거 O(n²) → O(n)', desc: '중복 원소를 제거하는 코드가 너무 느립니다. O(n) 또는 O(n log n)으로 개선하세요.', scenarioTitle: '중복 제거 성능 문제', scenarioDescription: '리스트에서 중복을 제거하는 함수가 큰 입력에서 타임아웃이 발생합니다.', initialFiles: [{ path: 'main.py', content: 'def remove_duplicates(arr):\n    result = []\n    for x in arr:\n        if x not in result:  # O(n) 검색 → 전체 O(n²)\n            result.append(x)\n    return result\n\ndata = list(range(1000)) * 2\nprint(len(remove_duplicates(data)))', editable: true }], visibleTests: [{ name: '결과 검증', command: ['python3', 'main.py'], input: '', expectedOutput: '1000', timeoutMs: 2000 }], baselineTimeMs: 500, targetResponseTimeMs: 50, hint: 'set()을 활용하면 O(n)으로 중복을 제거할 수 있습니다.' },
+      prompt: `${context}\nWrite a performance improvement problem as JSON (in English). The task is to optimize slow Python code that runs in O(n²) or worse.\nRequired fields:\n{\n  "title": "problem title",\n  "desc": "problem description (2-3 sentences)",\n  "scenarioTitle": "scenario title",\n  "scenarioDescription": "performance problem description (3-5 sentences)",\n  "initialFiles": [{"path": "main.py", "content": "slow code", "editable": true}],\n  "visibleTests": [{"name": "performance test", "command": ["python3", "main.py"], "input": "", "expectedOutput": "expected output", "timeoutMs": 2000}],\n  "baselineTimeMs": current_expected_runtime_ms,\n  "targetResponseTimeMs": target_runtime_ms,\n  "hint": "optimization hint"\n}`,
+      fallback: { title: 'Performance Fix: Dedup O(n²) → O(n)', desc: 'The code that removes duplicates is too slow. Improve it to O(n) or O(n log n).', scenarioTitle: 'Duplicate Removal Performance Issue', scenarioDescription: 'A function that removes duplicates from a list times out on large inputs.', initialFiles: [{ path: 'main.py', content: 'def remove_duplicates(arr):\n    result = []\n    for x in arr:\n        if x not in result:  # O(n) search -> overall O(n²)\n            result.append(x)\n    return result\n\ndata = list(range(1000)) * 2\nprint(len(remove_duplicates(data)))', editable: true }], visibleTests: [{ name: 'Result validation', command: ['python3', 'main.py'], input: '', expectedOutput: '1000', timeoutMs: 2000 }], baselineTimeMs: 500, targetResponseTimeMs: 50, hint: 'Using set() removes duplicates in O(n).' },
     },
     'refactor-fix': {
-      prompt: `${context}\n리팩터링 문제를 JSON으로 작성하세요 (한국어). 동작은 하지만 중복/복잡한 Python 코드를 깔끔하게 개선하는 문제입니다.\n필수 필드:\n{\n  "title": "문제 제목",\n  "desc": "문제 설명 (2-3문장)",\n  "scenarioTitle": "시나리오 제목",\n  "scenarioDescription": "리팩터링 필요성 설명 (3-5문장)",\n  "initialFiles": [{"path": "main.py", "content": "지저분한 코드", "editable": true}],\n  "visibleTests": [{"name": "기능 검증", "command": ["python3", "main.py"], "input": "", "expectedOutput": "기대 출력", "timeoutMs": 3000}],\n  "hint": "리팩터링 힌트"\n}`,
-      fallback: { title: '리팩터링: 중복 조건문 개선', desc: '동일한 조건 검사가 중복되는 코드를 리팩터링하세요. 기능은 그대로 유지해야 합니다.', scenarioTitle: '중복 조건문 리팩터링', scenarioDescription: '각 학점을 판단하는 코드에 중복 로직이 너무 많습니다. 딕셔너리나 함수로 개선하세요.', initialFiles: [{ path: 'main.py', content: 'score = 85\nif score >= 90:\n    grade = "A"\nif score >= 80 and score < 90:\n    grade = "B"\nif score >= 70 and score < 80:\n    grade = "C"\nif score >= 60 and score < 70:\n    grade = "D"\nif score < 60:\n    grade = "F"\nprint(grade)', editable: true }], visibleTests: [{ name: '학점 출력 검증', command: ['python3', 'main.py'], input: '', expectedOutput: 'B', timeoutMs: 3000 }], hint: 'elif 체인이나 딕셔너리 매핑으로 조건을 단순화하세요.' },
+      prompt: `${context}\nWrite a refactoring problem as JSON (in English). The task is to clean up Python code that works but is duplicated or overly complex.\nRequired fields:\n{\n  "title": "problem title",\n  "desc": "problem description (2-3 sentences)",\n  "scenarioTitle": "scenario title",\n  "scenarioDescription": "explanation of why refactoring is needed (3-5 sentences)",\n  "initialFiles": [{"path": "main.py", "content": "messy code", "editable": true}],\n  "visibleTests": [{"name": "functionality check", "command": ["python3", "main.py"], "input": "", "expectedOutput": "expected output", "timeoutMs": 3000}],\n  "hint": "refactoring hint"\n}`,
+      fallback: { title: 'Refactor: Duplicate Conditionals', desc: 'Refactor the code with repeated condition checks. The functionality must stay the same.', scenarioTitle: 'Duplicate Conditionals Refactoring', scenarioDescription: 'The grade-checking code has too much duplicated logic. Simplify it with a dictionary or function.', initialFiles: [{ path: 'main.py', content: 'score = 85\nif score >= 90:\n    grade = "A"\nif score >= 80 and score < 90:\n    grade = "B"\nif score >= 70 and score < 80:\n    grade = "C"\nif score >= 60 and score < 70:\n    grade = "D"\nif score < 60:\n    grade = "F"\nprint(grade)', editable: true }], visibleTests: [{ name: 'Grade output validation', command: ['python3', 'main.py'], input: '', expectedOutput: 'B', timeoutMs: 3000 }], hint: 'Simplify conditions with an elif chain or dictionary mapping.' },
     },
   };
 
@@ -510,7 +510,7 @@ router.post('/generate-problem', auth, adminOnly, async (req, res) => {
     res.json({ ...result, problemType });
   } catch (err) {
     console.error('[ai/generate-problem]', err.message);
-    res.status(500).json({ message: '문제 생성 실패' });
+    res.status(500).json({ message: 'Failed to generate problem.' });
   }
 });
 

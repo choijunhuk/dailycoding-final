@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext.jsx'
 import { useLang } from '../context/LangContext.jsx'
 import api from '../api.js'
+import { pickLangText } from '../utils/languageMode.js'
 import { Bookmark, CheckCircle2, Filter, Grid, List, Search, Share2, Star, Target, X } from 'lucide-react'
 import {
   FALLBACK_TAGS,
@@ -25,10 +26,14 @@ import {
   VIEW_PAGE_SIZE,
 } from './problemsPageUtils.js'
 
-function formatAcceptanceSummary(problem, rate) {
+function formatAcceptanceSummary(problem, rate, lang) {
   const submitCount = Number(problem?.submissions ?? problem?.submit_count ?? 0)
-  const rateText = rate == null ? '데이터 없음' : `${Number(rate).toFixed(1)}%`
-  return `정답률: ${rateText} (${submitCount.toLocaleString()} 제출)`
+  const rateText = rate == null ? pickLangText(lang, '데이터 없음', 'No data') : `${Number(rate).toFixed(1)}%`
+  return pickLangText(
+    lang,
+    `정답률: ${rateText} (${submitCount.toLocaleString('ko-KR')} 제출)`,
+    `Acceptance: ${rateText} (${submitCount.toLocaleString('en-US')} submissions)`,
+  )
 }
 
 export default function ProblemsPage() {
@@ -37,16 +42,33 @@ export default function ProblemsPage() {
   const { solved, bookmarks, toggleBookmark, problems: appProblems } = useApp()
   const { isAdmin } = useAuth()
   const toast = useToast()
-  const { t } = useLang()
+  const { t, lang } = useLang()
+  const txt = useCallback((ko, en) => pickLangText(lang, ko, en), [lang])
   const PROBLEMS = appProblems.length > 0 ? appProblems : DEFAULT_PROBLEMS
 
   const normalizeProblemTypeFilter = (type) => type === 'algorithm' ? 'coding' : type
   const getTypeLabel = (type) => {
-    const map = { algorithm: '알고리즘', coding: t('typeLabelCoding'), 'fill-blank': t('typeLabelFillBlank'), 'bug-fix': t('typeLabelBugFix'), troubleshooting: '트러블슈팅', 'performance-fix': '성능 최적화', 'refactor-fix': '리팩터링' }
+    const map = {
+      algorithm: txt('알고리즘', 'Algorithm'),
+      coding: txt('알고리즘', 'Algorithm'),
+      'fill-blank': txt('빈칸 채우기', 'Fill in the Blank'),
+      'bug-fix': txt('버그 찾기', 'Bug Fix'),
+      troubleshooting: txt('트러블슈팅', 'Troubleshooting'),
+      'performance-fix': txt('성능 최적화', 'Performance Optimization'),
+      'refactor-fix': txt('리팩터링', 'Refactoring'),
+    }
     return map[type] || type
   }
   const getTypeShort = (type) => {
-    const map = { coding: t('typeShortCoding'), 'fill-blank': t('typeShortFillBlank'), 'bug-fix': t('typeShortBugFix') }
+    const map = {
+      algorithm: txt('알고리즘', 'Algorithm'),
+      coding: txt('알고리즘', 'Algorithm'),
+      'fill-blank': txt('빈칸', 'Blank'),
+      'bug-fix': txt('버그', 'Bug'),
+      troubleshooting: txt('트러블슈팅', 'Trouble'),
+      'performance-fix': txt('성능', 'Perf'),
+      'refactor-fix': txt('리팩터링', 'Refactor'),
+    }
     return map[type] || type
   }
 
@@ -295,7 +317,7 @@ export default function ProblemsPage() {
     search ? { key: 'search', label: `${t('chipSearch')}${search}` } : null,
     tier !== 'all' ? { key: 'tier', label: `${t('chipTier')}${TIERS[tier]?.label || tier}` } : null,
     problemType !== 'all' ? { key: 'problemType', label: `${t('chipType')}${getTypeLabel(problemType)}` } : null,
-    tag !== 'all' ? { key: 'tag', label: `${isCompanyTag(tag) ? 'Company: ' : t('chipTag')}${getTagLabel(tag)}` } : null,
+    tag !== 'all' ? { key: 'tag', label: `${isCompanyTag(tag) ? txt('기업: ', 'Company: ') : t('chipTag')}${getTagLabel(tag)}` } : null,
     status !== 'all' ? { key: 'status', label: `${t('chipStatus')}${status}` } : null,
     sort !== 'id' ? { key: 'sort', label: `${t('chipSort')}${sort}` } : null,
   ].filter(Boolean)
@@ -476,7 +498,7 @@ export default function ProblemsPage() {
           <div className="problems-quality-card primary">
             <div className="quality-card-icon"><CheckCircle2 size={18} /></div>
             <div className="quality-card-body">
-              <div className="quality-card-label">학습 진행도</div>
+              <div className="quality-card-label">{txt('학습 진행도', 'Learning Progress')}</div>
               <div className="quality-card-value">{completionPct}%</div>
               <div className="quality-progress"><div style={{ width:`${completionPct}%` }} /></div>
             </div>
@@ -485,10 +507,10 @@ export default function ProblemsPage() {
           <div className="problems-quality-card action">
             <div className="quality-card-icon"><Target size={18} /></div>
             <div className="quality-card-body">
-              <div className="quality-card-label">Next Problem</div>
-              <div className="quality-card-title">{nextProblem?.title || 'No pending problems'}</div>
+              <div className="quality-card-label">{txt('다음 문제', 'Next Problem')}</div>
+              <div className="quality-card-title">{nextProblem?.title || txt('대기 중인 문제가 없습니다', 'No pending problems')}</div>
               {nextProblem && (
-                <button onClick={() => go(nextProblem)} className="quality-inline-action">Solve</button>
+                <button onClick={() => go(nextProblem)} className="quality-inline-action">{t('solve')}</button>
               )}
             </div>
           </div>
@@ -499,7 +521,7 @@ export default function ProblemsPage() {
           >
             <div className="quality-card-icon"><Bookmark size={18} /></div>
             <div className="quality-card-body">
-              <div className="quality-card-label">Bookmark Queue</div>
+              <div className="quality-card-label">{txt('북마크 대기열', 'Bookmark Queue')}</div>
               <div className="quality-card-value">{bookmarkedCount}</div>
             </div>
           </button>
@@ -507,9 +529,13 @@ export default function ProblemsPage() {
           <div className="problems-quality-card">
             <div className="quality-card-icon"><Filter size={18} /></div>
             <div className="quality-card-body">
-              <div className="quality-card-label">현재 결과</div>
+              <div className="quality-card-label">{t('currentResults')}</div>
               <div className="quality-card-value">{effectiveList.total || 0}</div>
-              <div className="quality-card-sub">{activeFilterCount > 0 ? `${activeFilterCount}개 필터` : '전체 보기'}</div>
+              <div className="quality-card-sub">
+                {activeFilterCount > 0
+                  ? txt(`${activeFilterCount}개 필터`, `${activeFilterCount} filters`)
+                  : txt('전체 보기', 'Viewing all')}
+              </div>
             </div>
           </div>
         </div>
@@ -518,12 +544,12 @@ export default function ProblemsPage() {
         <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
           {[
             { key: 'all', label: t('allTypes'), icon: '📋' },
-            { key: 'algorithm', label: '알고리즘', icon: '💻', type: 'coding' },
-            { key: 'fill-blank', label: '빈칸 채우기', icon: '✏️' },
-            { key: 'bug-fix', label: '버그 찾기', icon: '🐛' },
-            { key: 'troubleshooting', label: '트러블슈팅', icon: '🛠️' },
-            { key: 'performance-fix', label: '성능 최적화', icon: '⚡' },
-            { key: 'refactor-fix', label: '리팩터링', icon: '♻️' },
+            { key: 'algorithm', label: getTypeLabel('algorithm'), icon: '💻', type: 'coding' },
+            { key: 'fill-blank', label: getTypeLabel('fill-blank'), icon: '✏️' },
+            { key: 'bug-fix', label: getTypeLabel('bug-fix'), icon: '🐛' },
+            { key: 'troubleshooting', label: getTypeLabel('troubleshooting'), icon: '🛠️' },
+            { key: 'performance-fix', label: getTypeLabel('performance-fix'), icon: '⚡' },
+            { key: 'refactor-fix', label: getTypeLabel('refactor-fix'), icon: '♻️' },
           ].map(({ key, label, icon, type }) => {
             const countType = type || key;
             const count = key === 'all' ? PROBLEMS.length : PROBLEMS.filter(p => (p.problemType || 'coding') === countType).length;
@@ -653,10 +679,10 @@ export default function ProblemsPage() {
             color: 'var(--text)', padding: '8px 12px', fontSize: 13, fontFamily: 'inherit', outline: 'none',
           }}>
             <option value="all">{tagLoading ? t('loadingTags') : t('allTags')}</option>
-            {algorithmTags.length > 0 && <optgroup label="Algorithm Tags">
+            {algorithmTags.length > 0 && <optgroup label={txt('알고리즘 태그', 'Algorithm Tags')}>
               {algorithmTags.map(item => <option key={item} value={item}>{item}</option>)}
             </optgroup>}
-            {companyTags.length > 0 && <optgroup label="Company Interview Tags">
+            {companyTags.length > 0 && <optgroup label={txt('기업 인터뷰 태그', 'Company Interview Tags')}>
               {companyTags.map(item => <option key={item} value={item}>{getTagLabel(item)}</option>)}
             </optgroup>}
           </select>
@@ -707,10 +733,10 @@ export default function ProblemsPage() {
           <div>
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:8, marginBottom:10 }}>
               <div>
-                <div style={{ fontSize:13, fontWeight:800, color:'var(--text)' }}>알고리즘 태그로 학습 경로 찾기</div>
-                <div style={{ fontSize:11, color:'var(--text3)', marginTop:2 }}>주제별 필터 — DP, 그래프, 이분 탐색 등.</div>
+                <div style={{ fontSize:13, fontWeight:800, color:'var(--text)' }}>{txt('알고리즘 태그로 학습 경로 찾기', 'Find learning paths by algorithm tag')}</div>
+                <div style={{ fontSize:11, color:'var(--text3)', marginTop:2 }}>{txt('주제별 필터 - DP, 그래프, 이분 탐색 등.', 'Topic filters - DP, graphs, binary search, and more.')}</div>
               </div>
-              <span style={{ fontSize:11, color:'var(--blue)', fontWeight:800 }}>{algorithmTags.length} tags</span>
+              <span style={{ fontSize:11, color:'var(--blue)', fontWeight:800 }}>{txt(`${algorithmTags.length}개 태그`, `${algorithmTags.length} tags`)}</span>
             </div>
             <div style={{ display:'flex', gap:7, flexWrap:'wrap' }}>
               {topDiscoveryTags.map((item) => {
@@ -732,10 +758,10 @@ export default function ProblemsPage() {
           <div>
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:8, marginBottom:10 }}>
               <div>
-                <div style={{ fontSize:13, fontWeight:800, color:'var(--text)' }}>Company Problem Tags</div>
-                <div style={{ fontSize:11, color:'var(--text3)', marginTop:2 }}>Problems targeting Kakao, Naver, Samsung, and other company interviews.</div>
+                <div style={{ fontSize:13, fontWeight:800, color:'var(--text)' }}>{txt('기업 문제 태그', 'Company Problem Tags')}</div>
+                <div style={{ fontSize:11, color:'var(--text3)', marginTop:2 }}>{txt('카카오, 네이버, 삼성 등 기업 인터뷰 대비 문제입니다.', 'Problems targeting Kakao, Naver, Samsung, and other company interviews.')}</div>
               </div>
-              <span style={{ fontSize:11, color:'var(--purple)', fontWeight:800 }}>{companyDiscoveryTags.length} companies</span>
+              <span style={{ fontSize:11, color:'var(--purple)', fontWeight:800 }}>{txt(`${companyDiscoveryTags.length}개 기업`, `${companyDiscoveryTags.length} companies`)}</span>
             </div>
             <div style={{ display:'flex', gap:7, flexWrap:'wrap' }}>
               {companyDiscoveryTags.map((item) => {
@@ -882,7 +908,7 @@ export default function ProblemsPage() {
         {!loading && paginated.length === 0 && (
           <div className="empty-state">
             <span className="empty-state-icon"><Search size={36} /></span>
-            <div>{t('noResults') || 'No problems match your criteria'}</div>
+            <div>{t('noResults') || txt('조건에 맞는 문제가 없습니다', 'No problems match your criteria')}</div>
             {activeChips.length > 0 && (
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'center' }}>
                 {activeChips.map((chip) => (
@@ -894,7 +920,7 @@ export default function ProblemsPage() {
               </div>
             )}
             <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-              <button onClick={clearFilters} className="btn btn-primary btn-sm">Reset Filters</button>
+              <button onClick={clearFilters} className="btn btn-primary btn-sm">{txt('필터 초기화', 'Reset Filters')}</button>
               <button onClick={handleRandomPick} disabled={randomLoading} className="btn btn-ghost btn-sm">
                 {randomLoading ? t('randomPicking') : t('randomPick')}
               </button>
@@ -929,7 +955,7 @@ export default function ProblemsPage() {
               const bookmarkedState = Boolean(problem.isBookmarked)
               const solvedCountForProblem = problem.solved || problem.solved_count || 0
               const rate = getAcceptanceRate(problem)
-              const rateSummary = formatAcceptanceSummary(problem, rate)
+              const rateSummary = formatAcceptanceSummary(problem, rate, lang)
               const typeMeta = PROBLEM_TYPE_META[problem.problemType || 'coding'] || PROBLEM_TYPE_META.coding
               const { algorithmTags: problemAlgorithmTags, companyTags: problemCompanyTags } = splitDiscoveryTags(problem.tags || [])
 
@@ -957,7 +983,7 @@ export default function ProblemsPage() {
                         <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 999, background: 'rgba(88,166,255,.1)', color: 'var(--blue)', border: '1px solid rgba(88,166,255,.2)' }}>{problem.preferredLanguage}</span>
                       )}
                       {problem.hasEditorial && (
-                        <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 999, background: 'rgba(86,211,100,.1)', color: 'var(--green)', border: '1px solid rgba(86,211,100,.2)' }}>Official Editorial</span>
+                        <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 999, background: 'rgba(86,211,100,.1)', color: 'var(--green)', border: '1px solid rgba(86,211,100,.2)' }}>{txt('공식 해설', 'Official Editorial')}</span>
                       )}
                     </div>
                     <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
@@ -1036,7 +1062,7 @@ export default function ProblemsPage() {
               const bookmarkedState = Boolean(problem.isBookmarked)
               const solvedCountForProblem = problem.solved || problem.solved_count || 0
               const rate = getAcceptanceRate(problem)
-              const rateSummary = formatAcceptanceSummary(problem, rate)
+              const rateSummary = formatAcceptanceSummary(problem, rate, lang)
               const typeMeta = PROBLEM_TYPE_META[problem.problemType || 'coding'] || PROBLEM_TYPE_META.coding
               const { algorithmTags: problemAlgorithmTags, companyTags: problemCompanyTags } = splitDiscoveryTags(problem.tags || [])
 
@@ -1080,7 +1106,7 @@ export default function ProblemsPage() {
                       ● {tierMeta.label}
                     </span>
                     {problem.hasEditorial && (
-                      <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 10, fontWeight: 700, background: 'rgba(86,211,100,.1)', color: 'var(--green)', border: '1px solid rgba(86,211,100,.2)' }}>Official Editorial</span>
+                      <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 10, fontWeight: 700, background: 'rgba(86,211,100,.1)', color: 'var(--green)', border: '1px solid rgba(86,211,100,.2)' }}>{txt('공식 해설', 'Official Editorial')}</span>
                     )}
                     {problemAlgorithmTags.slice(0, 2).map(item => (
                       <span key={item} style={{ padding: '2px 7px', borderRadius: 4, fontSize: 10, background: 'var(--bg3)', color: 'var(--text3)', border: '1px solid var(--border)' }}>{item}</span>

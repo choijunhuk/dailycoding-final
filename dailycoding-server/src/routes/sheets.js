@@ -38,7 +38,7 @@ router.get('/sheets', auth, async (req, res) => {
 router.get('/sheets/:id', auth, async (req, res) => {
   try {
     const row = await queryOne('SELECT * FROM problem_sheets WHERE id = ?', [req.params.id]);
-    if (!row) return errorResponse(res, 404, 'NOT_FOUND', '문제 세트를 찾을 수 없습니다.');
+    if (!row) return errorResponse(res, 404, 'NOT_FOUND', 'Problem set not found.');
     const problemIds = parseJsonList(row.problem_ids);
     const problems = [];
     for (const problemId of problemIds) {
@@ -72,7 +72,7 @@ router.get('/learning-paths', async (req, res) => {
 router.get('/learning-paths/:id', async (req, res) => {
   try {
     const row = await queryOne('SELECT * FROM learning_paths WHERE id = ?', [req.params.id]);
-    if (!row) return errorResponse(res, 404, 'NOT_FOUND', '학습 경로를 찾을 수 없습니다.');
+    if (!row) return errorResponse(res, 404, 'NOT_FOUND', 'Learning path not found.');
     const problemIds = parseJsonList(row.problem_ids);
     const problems = [];
     for (const problemId of problemIds) {

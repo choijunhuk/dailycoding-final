@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import api from '../api';
 import { useToast } from '../context/ToastContext';
 import { useLang } from '../context/LangContext.jsx';
+import { pickLangText } from '../utils/languageMode.js';
 import ProfileAvatar from '../components/ProfileAvatar';
 
 function fmtDate(value) {
@@ -28,7 +29,8 @@ export default function TeamDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const toast = useToast();
-  const { t } = useLang();
+  const { t, lang } = useLang();
+  const txt = (ko, en) => pickLangText(lang, ko, en);
   const [loading, setLoading] = useState(true);
   const [team, setTeam] = useState(null);
   const [teams, setTeams] = useState([]);
@@ -71,7 +73,7 @@ export default function TeamDashboard() {
       setInviteExpiresAt(null);
       setInviteCopied(false);
     } catch (err) {
-      toast.show(err.response?.data?.message || '소속 정보를 불러오지 못했습니다.', 'error');
+      toast.show(err.response?.data?.message || txt('소속 정보를 불러오지 못했습니다.', 'Failed to load affiliation info.'), 'error');
     } finally {
       setLoading(false);
     }
@@ -132,9 +134,9 @@ export default function TeamDashboard() {
     try {
       const { data } = await api.post(`/teams/members/${memberId}/role`, { role, teamId: team.id });
       setTeam(data.team);
-      toast.show(data.message || '역할을 변경했습니다.', 'success');
+      toast.show(data.message || txt('역할이 변경되었습니다.', 'Role updated.'), 'success');
     } catch (err) {
-      toast.show(err.response?.data?.message || '역할 변경 실패', 'error');
+      toast.show(err.response?.data?.message || txt('역할 변경 실패', 'Failed to update role.'), 'error');
     } finally {
       setBusy(false);
     }
@@ -155,14 +157,14 @@ export default function TeamDashboard() {
   };
 
   const handleLeave = async () => {
-    if (!window.confirm('소속에서 탈퇴하시겠습니까?') || busy) return;
+    if (!window.confirm(txt('정말 이 소속을 나가시겠습니까?', 'Are you sure you want to leave this affiliation?')) || busy) return;
     setBusy(true);
     try {
       await api.delete('/teams/leave', { data: { teamId: team.id } });
       await loadTeam(null);
-      toast.show('소속에서 탈퇴했습니다.', 'success');
+      toast.show(txt('소속을 나갔습니다.', 'You have left the affiliation.'), 'success');
     } catch (err) {
-      toast.show(err.response?.data?.message || '탈퇴 실패', 'error');
+      toast.show(err.response?.data?.message || txt('나가기 실패', 'Failed to leave.'), 'error');
     } finally {
       setBusy(false);
     }
@@ -176,23 +178,23 @@ export default function TeamDashboard() {
       setTeam(data.team);
       setTeams((prev) => prev.map((item) => Number(item.id) === Number(data.team.id) ? { ...item, name: data.team.name } : item));
       setEditingName(false);
-      toast.show(data.message || '이름이 변경되었습니다.', 'success');
+      toast.show(data.message || txt('이름이 변경되었습니다.', 'Name updated.'), 'success');
     } catch (err) {
-      toast.show(err.response?.data?.message || '이름 변경 실패', 'error');
+      toast.show(err.response?.data?.message || txt('이름 변경 실패', 'Failed to update name.'), 'error');
     } finally {
       setBusy(false);
     }
   };
 
   const handleDissolve = async () => {
-    if (!window.confirm(`"${team.name}" 소속을 정말 해산하시겠습니까? 모든 멤버가 소속에서 제거됩니다.`) || busy) return;
+    if (!window.confirm(txt(`"${team.name}" 소속을 해산할까요? 모든 멤버가 제거됩니다.`, `Are you sure you want to dissolve "${team.name}"? All members will be removed.`)) || busy) return;
     setBusy(true);
     try {
       await api.delete('/teams', { data: { teamId: team.id } });
       await loadTeam(null);
-      toast.show('소속이 해산되었습니다.', 'success');
+      toast.show(txt('소속이 해산되었습니다.', 'Affiliation dissolved.'), 'success');
     } catch (err) {
-      toast.show(err.response?.data?.message || '해산 실패', 'error');
+      toast.show(err.response?.data?.message || txt('해산 실패', 'Failed to dissolve.'), 'error');
     } finally {
       setBusy(false);
     }
@@ -209,8 +211,8 @@ export default function TeamDashboard() {
               <Users size={24} />
             </div>
             <div>
-              <h1 style={{ margin:0, fontSize:26, fontWeight:900 }}>무료 소속 만들기</h1>
-              <p style={{ margin:'4px 0 0', color:'var(--text2)', fontSize:13 }}>학교, 회사, 스터디 이름으로 소속을 만들고 멤버 풀이 활동을 함께 점검하세요.</p>
+              <h1 style={{ margin:0, fontSize:26, fontWeight:900 }}>{txt('무료 소속 만들기', 'Create a Free Affiliation')}</h1>
+              <p style={{ margin:'4px 0 0', color:'var(--text2)', fontSize:13 }}>{txt('학교, 회사, 스터디 그룹 이름으로 소속을 만들고 멤버들의 풀이 활동을 함께 추적하세요.', "Create an affiliation with your school, company, or study group name and track members' solve activity together.")}</p>
             </div>
           </div>
           <div style={{ display:'grid', gridTemplateColumns:'minmax(0, 1fr) auto', gap:10 }}>
@@ -221,11 +223,11 @@ export default function TeamDashboard() {
               maxLength={100}
             />
             <button className="btn btn-primary" onClick={handleCreateTeam} disabled={busy || !teamName.trim()}>
-              소속 만들기
+              {txt('소속 만들기', 'Create Affiliation')}
             </button>
           </div>
           <div style={{ color:'var(--text3)', fontSize:12, lineHeight:1.7 }}>
-            한 계정으로 여러 소속에 가입하거나 새 소속을 만들 수 있습니다. 생성자는 자동으로 관리자가 됩니다.
+            {txt('한 계정으로 여러 소속에 참여하거나 새 소속을 만들 수 있습니다. 생성자는 자동으로 관리자가 됩니다.', 'You can join multiple affiliations or create a new one with a single account. The creator is automatically set as admin.')}
           </div>
         </div>
       </div>
@@ -236,7 +238,7 @@ export default function TeamDashboard() {
     <div style={{ padding:'40px 28px', maxWidth:1180, margin:'0 auto' }}>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:16, marginBottom:24 }}>
         <div>
-          <div style={{ color:'var(--blue)', fontSize:12, fontWeight:900, textTransform:'uppercase', marginBottom:6 }}>Affiliation</div>
+          <div style={{ color:'var(--blue)', fontSize:12, fontWeight:900, textTransform:'uppercase', marginBottom:6 }}>{txt('소속', 'Affiliation')}</div>
           {editingName ? (
             <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
               <input
@@ -255,7 +257,7 @@ export default function TeamDashboard() {
             <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
               <h1 style={{ fontSize:28, fontWeight:900, margin:0 }}>{team.name}</h1>
               {isTeamAdmin && (
-                <button className="btn btn-ghost btn-sm" style={{ padding:'4px 8px' }} onClick={() => { setNewName(team.name); setEditingName(true); }} title="이름 변경">
+                <button className="btn btn-ghost btn-sm" style={{ padding:'4px 8px' }} onClick={() => { setNewName(team.name); setEditingName(true); }} title={txt('이름 변경', 'Rename')}>
                   <Pencil size={13} />
                 </button>
               )}
@@ -270,7 +272,7 @@ export default function TeamDashboard() {
             >
               {teams.map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.name} · {item.role === 'admin' ? '관리자' : '멤버'}
+                  {item.name} · {item.role === 'admin' ? txt('관리자', 'Admin') : txt('멤버', 'Member')}
                 </option>
               ))}
             </select>
@@ -278,7 +280,7 @@ export default function TeamDashboard() {
         </div>
         <div style={{ display:'flex', gap:8, flexWrap:'wrap', justifyContent:'flex-end' }}>
           <button className="btn btn-ghost btn-sm" onClick={loadTeam} disabled={busy}>
-            <RefreshCw size={14} /> 새로고침
+            <RefreshCw size={14} /> {txt('새로고침', 'Refresh')}
           </button>
           {isTeamAdmin && (
             <button className="btn btn-primary btn-sm" onClick={generateInviteLink} disabled={busy}>
@@ -287,12 +289,12 @@ export default function TeamDashboard() {
           )}
           {myMembership && !isOwner && (
             <button className="btn btn-ghost btn-sm" style={{ color:'var(--red)' }} onClick={handleLeave} disabled={busy}>
-              <LogOut size={14} /> 탈퇴
+              <LogOut size={14} /> {txt('나가기', 'Leave')}
             </button>
           )}
           {isOwner && (
             <button className="btn btn-ghost btn-sm" style={{ color:'var(--red)' }} onClick={handleDissolve} disabled={busy}>
-              <Trash2 size={14} /> 소속 해산
+              <Trash2 size={14} /> {txt('해산', 'Dissolve')}
             </button>
           )}
         </div>
@@ -310,13 +312,13 @@ export default function TeamDashboard() {
         marginBottom:22,
       }}>
         <input
-          placeholder="새 소속 만들기"
+          placeholder={txt('새 소속 만들기', 'Create new affiliation')}
           value={teamName}
           onChange={e => setTeamName(e.target.value)}
           maxLength={100}
         />
         <button className="btn btn-ghost btn-sm" onClick={handleCreateTeam} disabled={busy || !teamName.trim()}>
-          <Users size={14} /> 추가
+          <Users size={14} /> {txt('추가', 'Add')}
         </button>
       </div>
 
@@ -336,12 +338,12 @@ export default function TeamDashboard() {
                 <UserPlus size={18} />
               </div>
               <div>
-                <div style={{ fontWeight:900 }}>멤버 초대하기</div>
-                <div style={{ color:'var(--text2)', fontSize:12, marginTop:2 }}>초대 링크를 보내면 상대방이 로그인 후 바로 소속에 합류합니다.</div>
+                <div style={{ fontWeight:900 }}>{txt('멤버 초대', 'Invite Members')}</div>
+                <div style={{ color:'var(--text2)', fontSize:12, marginTop:2 }}>{txt('초대 링크를 보내면 로그인 후 바로 소속에 참여할 수 있습니다.', 'Send the invite link and they can join the affiliation immediately after logging in.')}</div>
               </div>
             </div>
             <button className="btn btn-primary btn-sm" onClick={generateInviteLink} disabled={busy}>
-              <LinkIcon size={14} /> 새 초대 링크 만들기
+              <LinkIcon size={14} /> {txt('새 초대 링크 생성', 'Generate New Invite Link')}
             </button>
           </div>
 
@@ -363,10 +365,10 @@ export default function TeamDashboard() {
                 {inviteLink}
               </div>
               <button className="btn btn-ghost btn-sm" onClick={copyInviteLink} disabled={busy}>
-                <Copy size={13} /> {inviteCopied ? '복사됨' : '복사'}
+                <Copy size={13} /> {inviteCopied ? txt('복사됨', 'Copied') : txt('복사', 'Copy')}
               </button>
               <div style={{ gridColumn:'1 / -1', color:'var(--text3)', fontSize:11 }}>
-                {inviteExpiresAt ? `${fmtDate(inviteExpiresAt)}까지 유효합니다.` : '초대 링크는 7일간 유효합니다.'}
+                {inviteExpiresAt ? txt(`${fmtDate(inviteExpiresAt)}까지 유효합니다.`, `Valid until ${fmtDate(inviteExpiresAt)}.`) : txt('초대 링크는 7일 동안 유효합니다.', 'Invite link is valid for 7 days.')}
               </div>
             </div>
           )}
@@ -374,16 +376,16 @@ export default function TeamDashboard() {
       )}
 
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(150px, 1fr))', gap:12, marginBottom:22 }}>
-        <StatCard label="멤버" value={team.stats?.memberCount ?? members.length} caption={`${team.stats?.activeMembers ?? 0}명 최근 활동`} />
-        <StatCard label={t('teamWeeklySolved')} value={team.stats?.weeklySolved ?? 0} caption="최근 7일 정답 제출" />
-        <StatCard label={t('teamAvgRating')} value={team.stats?.avgRating ?? 0} caption="소속 평균 레이팅" />
-        <StatCard label="관리자" value={adminCount} caption={isTeamAdmin ? '관리 권한 있음' : '조회 권한'} />
+        <StatCard label={txt('멤버', 'Members')} value={team.stats?.memberCount ?? members.length} caption={txt(`최근 활동 ${team.stats?.activeMembers ?? 0}명`, `${team.stats?.activeMembers ?? 0} recently active`)} />
+        <StatCard label={t('teamWeeklySolved')} value={team.stats?.weeklySolved ?? 0} caption={txt('최근 7일 정답 제출', 'Correct submissions in last 7 days')} />
+        <StatCard label={t('teamAvgRating')} value={team.stats?.avgRating ?? 0} caption={txt('소속 평균 레이팅', 'Affiliation average rating')} />
+        <StatCard label={txt('관리자', 'Admins')} value={adminCount} caption={isTeamAdmin ? txt('관리자 권한', 'Admin access') : txt('조회 권한', 'View access')} />
       </div>
 
       <div style={{ background:'var(--bg2)', border:'1px solid var(--border)', borderRadius:14, overflow:'hidden' }}>
         <div style={{ padding:'16px 20px', borderBottom:'1px solid var(--border)', display:'flex', justifyContent:'space-between', gap:12 }}>
           <strong>{t('teamMemberList')}</strong>
-          <span style={{ color:'var(--text3)', fontSize:12 }}>멤버별 풀이 활동 점검</span>
+          <span style={{ color:'var(--text3)', fontSize:12 }}>{txt('각 멤버의 풀이 활동을 추적합니다', "Track each member's solve activity")}</span>
         </div>
         <div style={{ overflowX:'auto' }}>
           <table style={{ width:'100%', borderCollapse:'collapse', fontSize:13, minWidth:820 }}>
@@ -391,10 +393,10 @@ export default function TeamDashboard() {
               <tr>
                 <th style={{ padding:'12px 16px' }}>{t('teamUserCol')}</th>
                 <th style={{ padding:'12px 16px' }}>{t('teamRoleCol')}</th>
-                <th style={{ padding:'12px 16px' }}>제출</th>
-                <th style={{ padding:'12px 16px' }}>정답</th>
-                <th style={{ padding:'12px 16px' }}>7일 정답</th>
-                <th style={{ padding:'12px 16px' }}>최근 제출</th>
+                <th style={{ padding:'12px 16px' }}>{txt('제출', 'Submissions')}</th>
+                <th style={{ padding:'12px 16px' }}>{txt('정답', 'Correct')}</th>
+                <th style={{ padding:'12px 16px' }}>{txt('7일 정답', '7-day Correct')}</th>
+                <th style={{ padding:'12px 16px' }}>{txt('마지막 제출', 'Last Submission')}</th>
                 <th style={{ padding:'12px 16px' }}>{t('teamJoinedAtCol')}</th>
                 <th style={{ padding:'12px 16px', textAlign:'right' }}>{t('teamActionCol')}</th>
               </tr>
@@ -440,11 +442,11 @@ export default function TeamDashboard() {
                         <div style={{ display:'flex', justifyContent:'flex-end', gap:6 }}>
                           {member.role === 'admin' ? (
                             <button className="btn btn-ghost btn-sm" onClick={() => updateMemberRole(member.id, 'member')} disabled={busy || isOnlyAdmin}>
-                              <ShieldOff size={13} /> 해제
+                              <ShieldOff size={13} /> {txt('강등', 'Demote')}
                             </button>
                           ) : (
                             <button className="btn btn-ghost btn-sm" onClick={() => updateMemberRole(member.id, 'admin')} disabled={busy}>
-                              <ShieldCheck size={13} /> 관리자
+                              <ShieldCheck size={13} /> {txt('관리자로 지정', 'Make Admin')}
                             </button>
                           )}
                           <button className="btn btn-ghost btn-sm" onClick={() => handleRemoveMember(member.id)} disabled={busy}>

@@ -9,15 +9,16 @@ import { pickLangText } from '../utils/languageMode.js';
 import './ReviewsPage.css';
 
 const STATUS_LABEL = {
-  ko: { open: '진행 중', approved: '승인됨', rejected: '거절됨', merged: '병합됨', cancelled: '취소됨' },
-  en: { open: 'Open', approved: 'Approved', rejected: 'Rejected', merged: 'Merged', cancelled: 'Cancelled' },
+  ko: { open: '진행 중', approved: '승인됨', rejected: '거절됨', merged: '병합됨', cancelled: '취소됨', correct: '정답', wrong: '오답' },
+  en: { open: 'Open', approved: 'Approved', rejected: 'Rejected', merged: 'Merged', cancelled: 'Cancelled', correct: 'Correct', wrong: 'Wrong' },
 };
 
 function splitLines(value) {
   return String(value || '').split('\n');
 }
 
-function DiffViewer({ original = '', suggested = '' }) {
+function DiffViewer({ original = '', suggested = '', lang = 'en' }) {
+  const txt = (ko, en) => pickLangText(lang, ko, en);
   const left = splitLines(original);
   const right = splitLines(suggested);
   const max = Math.max(left.length, right.length, 1);
@@ -30,7 +31,7 @@ function DiffViewer({ original = '', suggested = '' }) {
 
   return (
     <div className="review-diff">
-      <div className="review-diff-head"><span>Original</span><span>Suggested</span></div>
+      <div className="review-diff-head"><span>{txt('원본', 'Original')}</span><span>{txt('제안', 'Suggested')}</span></div>
       {rows.map((row) => (
         <div key={row.no} className={`review-diff-row ${row.changed ? 'changed' : ''}`}>
           <pre><b>{row.no}</b>{row.before || ' '}</pre>
@@ -51,7 +52,7 @@ export default function ReviewsPage() {
   const toast = useToast();
   const { user, isAdmin } = useAuth();
   const { lang } = useLang();
-  const txt = (ko, en) => pickLangText(lang, ko, en);
+  const txt = useCallback((ko, en) => pickLangText(lang, ko, en), [lang]);
   const [filters, setFilters] = useState({ status: 'all', lang: 'all', difficulty: '', problemId: '' });
   const [loading, setLoading] = useState(false);
   const [listData, setListData] = useState({ reviews: [], myCodeReviews: [], reviewableSubmissions: [], collaborationScore: null });
@@ -89,7 +90,7 @@ export default function ReviewsPage() {
     } finally {
       setLoading(false);
     }
-  }, [queryParams, toast]);
+  }, [queryParams, toast, txt]);
 
   const loadReview = useCallback(async () => {
     if (!id) return;
@@ -107,7 +108,7 @@ export default function ReviewsPage() {
     } finally {
       setLoading(false);
     }
-  }, [id, navigate, toast]);
+  }, [id, navigate, toast, txt]);
 
   useEffect(() => {
     if (isDetail) loadReview();
@@ -234,25 +235,25 @@ export default function ReviewsPage() {
             <section className="review-detail-head">
               <div>
                 <p>{review.problemTitle}</p>
-                <h1>{review.reviewerUsername} reviewing {review.authorUsername}'s submission</h1>
-                <span>Submission #{review.submissionId} · {review.submission?.lang} · {review.submission?.result}</span>
+                <h1>{txt(`${review.reviewerUsername}님이 ${review.authorUsername}님의 제출을 리뷰 중입니다`, `${review.reviewerUsername} reviewing ${review.authorUsername}'s submission`)}</h1>
+                <span>{txt('제출', 'Submission')} #{review.submissionId} · {review.submission?.lang} · {review.submission?.result}</span>
               </div>
               {canResolve && (
                 <div className="review-actions">
-                  <button disabled={isClosed} onClick={() => resolveReview('approve')}><Check size={15} />Approve</button>
-                  <button disabled={isClosed} onClick={() => resolveReview('reject')}><X size={15} />Reject</button>
-                  <button disabled={review.status === 'merged' || review.status === 'rejected'} onClick={() => resolveReview('merge')}><GitMerge size={15} />Merge</button>
+                  <button disabled={isClosed} onClick={() => resolveReview('approve')}><Check size={15} />{txt('승인', 'Approve')}</button>
+                  <button disabled={isClosed} onClick={() => resolveReview('reject')}><X size={15} />{txt('거절', 'Reject')}</button>
+                  <button disabled={review.status === 'merged' || review.status === 'rejected'} onClick={() => resolveReview('merge')}><GitMerge size={15} />{txt('병합', 'Merge')}</button>
                 </div>
               )}
             </section>
 
             <section className="review-grid">
               <div className="review-panel">
-                <h2>Original Code</h2>
+                <h2>{txt('원본 코드', 'Original Code')}</h2>
                 <pre className="review-code">{review.submission?.code || ''}</pre>
               </div>
               <div className="review-panel">
-                <h2>Suggested Code</h2>
+                <h2>{txt('제안 코드', 'Suggested Code')}</h2>
                 <textarea
                   disabled={isClosed}
                   value={codeForm.suggestedCode}
@@ -262,53 +263,53 @@ export default function ReviewsPage() {
                   disabled={isClosed}
                   value={codeForm.filePath}
                   onChange={(event) => setCodeForm((prev) => ({ ...prev, filePath: event.target.value }))}
-                  placeholder="파일 경로"
+                  placeholder={txt('파일 경로', 'File path')}
                 />
                 <input
                   disabled={isClosed}
                   value={codeForm.reason}
                   onChange={(event) => setCodeForm((prev) => ({ ...prev, reason: event.target.value }))}
-                  placeholder="변경 이유"
+                  placeholder={txt('변경 이유', 'Reason for change')}
                 />
-                <button disabled={isClosed} onClick={submitCodeSuggestion}><Plus size={15} />Add Code Suggestion</button>
+                <button disabled={isClosed} onClick={submitCodeSuggestion}><Plus size={15} />{txt('코드 제안 추가', 'Add Code Suggestion')}</button>
               </div>
             </section>
 
             <section className="review-panel">
-              <h2>Diff</h2>
-              <DiffViewer original={review.submission?.code || ''} suggested={firstSuggestion?.suggestedCode || codeForm.suggestedCode} />
-              {firstSuggestion?.reason && <p className="review-reason">Reason: {firstSuggestion.reason}</p>}
+              <h2>{txt('차이', 'Diff')}</h2>
+              <DiffViewer lang={lang} original={review.submission?.code || ''} suggested={firstSuggestion?.suggestedCode || codeForm.suggestedCode} />
+              {firstSuggestion?.reason && <p className="review-reason">{txt('이유', 'Reason')}: {firstSuggestion.reason}</p>}
             </section>
 
             <section className="review-lists">
               <div className="review-panel">
-                <h2>Code Suggestions</h2>
+                <h2>{txt('코드 제안', 'Code Suggestions')}</h2>
                 {(review.codeSuggestions || []).map((item) => (
                   <article key={item.id} className="review-item">
-                    <div><b>{item.filePath}</b><StatusPill status={item.status} /></div>
-                    <p>{item.reason || 'No reason provided'}</p>
+                    <div><b>{item.filePath}</b><StatusPill status={item.status} lang={lang} /></div>
+                    <p>{item.reason || txt('이유가 제공되지 않았습니다.', 'No reason provided')}</p>
                   </article>
                 ))}
-                {review.codeSuggestions?.length === 0 && <p className="muted">No code suggestions yet.</p>}
+                {review.codeSuggestions?.length === 0 && <p className="muted">{txt('아직 코드 제안이 없습니다.', 'No code suggestions yet.')}</p>}
               </div>
               <div className="review-panel">
-                <h2>Test Suggestions</h2>
-                <textarea disabled={isClosed} value={testForm.inputData} onChange={(event) => setTestForm((prev) => ({ ...prev, inputData: event.target.value }))} placeholder="입력" />
-                <textarea disabled={isClosed} value={testForm.expectedOutput} onChange={(event) => setTestForm((prev) => ({ ...prev, expectedOutput: event.target.value }))} placeholder="예상 출력" />
-                <input disabled={isClosed} value={testForm.reason} onChange={(event) => setTestForm((prev) => ({ ...prev, reason: event.target.value }))} placeholder="제안 이유" />
-                <button disabled={isClosed} onClick={submitTestSuggestion}><Plus size={15} />Add Test Suggestion</button>
+                <h2>{txt('테스트 제안', 'Test Suggestions')}</h2>
+                <textarea disabled={isClosed} value={testForm.inputData} onChange={(event) => setTestForm((prev) => ({ ...prev, inputData: event.target.value }))} placeholder={txt('입력', 'Input')} />
+                <textarea disabled={isClosed} value={testForm.expectedOutput} onChange={(event) => setTestForm((prev) => ({ ...prev, expectedOutput: event.target.value }))} placeholder={txt('예상 출력', 'Expected output')} />
+                <input disabled={isClosed} value={testForm.reason} onChange={(event) => setTestForm((prev) => ({ ...prev, reason: event.target.value }))} placeholder={txt('제안 이유', 'Suggestion reason')} />
+                <button disabled={isClosed} onClick={submitTestSuggestion}><Plus size={15} />{txt('테스트 제안 추가', 'Add Test Suggestion')}</button>
                 {(review.testSuggestions || []).map((item) => (
                   <article key={item.id} className="review-item">
-                    <div><b>Test #{item.id}</b><StatusPill status={item.status} /></div>
+                    <div><b>{txt('테스트', 'Test')} #{item.id}</b><StatusPill status={item.status} lang={lang} /></div>
                     <code>{item.inputData} → {item.expectedOutput}</code>
-                    <p>{item.reason || 'No reason provided'}</p>
+                    <p>{item.reason || txt('이유가 제공되지 않았습니다.', 'No reason provided')}</p>
                   </article>
                 ))}
               </div>
             </section>
 
             <section className="review-panel">
-              <h2>Comments</h2>
+              <h2>{txt('댓글', 'Comments')}</h2>
               <div className="review-comments">
                 {(review.comments || []).map((item) => (
                   <article key={item.id}>
@@ -318,8 +319,8 @@ export default function ReviewsPage() {
                 ))}
               </div>
               <div className="review-comment-form">
-                <input disabled={isClosed} value={comment} onChange={(event) => setComment(event.target.value)} placeholder="Write a review comment" />
-                <button disabled={isClosed} onClick={submitComment}><MessageSquare size={15} />Comment</button>
+                <input disabled={isClosed} value={comment} onChange={(event) => setComment(event.target.value)} placeholder={txt('리뷰 댓글을 입력하세요', 'Write a review comment')} />
+                <button disabled={isClosed} onClick={submitComment}><MessageSquare size={15} />{txt('댓글', 'Comment')}</button>
               </div>
             </section>
           </>
@@ -332,57 +333,57 @@ export default function ReviewsPage() {
     <main className="reviews-page">
       <section className="reviews-hero">
         <div>
-          <p>Code Review Collaboration</p>
-          <h1>Code Review & Improvement Suggestions</h1>
-          <span>Suggest code changes and test cases on other users' public submissions. Earn collaboration points when the author approves your suggestions.</span>
+          <p>{txt('코드 리뷰 협업', 'Code Review Collaboration')}</p>
+          <h1>{txt('코드 리뷰 및 개선 제안', 'Code Review & Improvement Suggestions')}</h1>
+          <span>{txt('다른 사용자의 공개 정답 제출에 코드 변경과 테스트 케이스를 제안하세요. 작성자가 승인하면 협업 점수를 얻습니다.', "Suggest code changes and test cases on other users' public submissions. Earn collaboration points when the author approves your suggestions.")}</span>
         </div>
         <div className="review-score-card">
           <b>{listData.collaborationScore?.totalScore || 0}</b>
-          <span>Collaboration Score</span>
-          <small>Approved {listData.collaborationScore?.acceptedCount || 0} · Contributed {listData.collaborationScore?.totalCount || 0}</small>
+          <span>{txt('협업 점수', 'Collaboration Score')}</span>
+          <small>{txt(`승인 ${listData.collaborationScore?.acceptedCount || 0} · 기여 ${listData.collaborationScore?.totalCount || 0}`, `Approved ${listData.collaborationScore?.acceptedCount || 0} · Contributed ${listData.collaborationScore?.totalCount || 0}`)}</small>
         </div>
       </section>
 
       <section className="reviews-filters">
         <select value={filters.status} onChange={(event) => setFilters((prev) => ({ ...prev, status: event.target.value }))}>
-          <option value="all">All Statuses</option>
-          <option value="open">Open</option>
-          <option value="approved">Approved</option>
-          <option value="rejected">Rejected</option>
-          <option value="merged">Merged</option>
-          <option value="cancelled">Cancelled</option>
+          <option value="all">{txt('전체 상태', 'All Statuses')}</option>
+          <option value="open">{STATUS_LABEL[lang].open}</option>
+          <option value="approved">{STATUS_LABEL[lang].approved}</option>
+          <option value="rejected">{STATUS_LABEL[lang].rejected}</option>
+          <option value="merged">{STATUS_LABEL[lang].merged}</option>
+          <option value="cancelled">{STATUS_LABEL[lang].cancelled}</option>
         </select>
         <select value={filters.lang} onChange={(event) => setFilters((prev) => ({ ...prev, lang: event.target.value }))}>
-          <option value="all">All Languages</option>
+          <option value="all">{txt('전체 언어', 'All Languages')}</option>
           <option value="python">python</option>
           <option value="javascript">javascript</option>
           <option value="cpp">cpp</option>
           <option value="java">java</option>
         </select>
-        <input value={filters.problemId} onChange={(event) => setFilters((prev) => ({ ...prev, problemId: event.target.value }))} placeholder="문제 ID" />
-        <button onClick={loadList}><RefreshCw size={15} />Apply Filter</button>
+        <input value={filters.problemId} onChange={(event) => setFilters((prev) => ({ ...prev, problemId: event.target.value }))} placeholder={txt('문제 ID', 'Problem ID')} />
+        <button onClick={loadList}><RefreshCw size={15} />{txt('필터 적용', 'Apply Filter')}</button>
       </section>
 
       <section className="review-columns">
         <div className="review-panel review-panel-scroll">
-          <h2>Reviewable Submissions <span className="review-count">{listData.reviewableSubmissions.length}</span></h2>
-          <p className="muted" style={{ marginBottom: 10, fontSize: 12 }}>You can review other users' correct submissions on problems you have solved.</p>
-          {loading && <p className="muted">Loading...</p>}
+          <h2>{txt('리뷰 가능한 제출', 'Reviewable Submissions')} <span className="review-count">{listData.reviewableSubmissions.length}</span></h2>
+          <p className="muted" style={{ marginBottom: 10, fontSize: 12 }}>{txt('내가 해결한 문제에서 다른 사용자의 정답 제출을 리뷰할 수 있습니다.', "You can review other users' correct submissions on problems you have solved.")}</p>
+          {loading && <p className="muted">{txt('불러오는 중...', 'Loading...')}</p>}
           {listData.reviewableSubmissions.map((submission) => (
             <article key={submission.id} className="review-card">
               <div>
                 <b>{submission.problemTitle}</b>
-                <StatusPill status={submission.result} />
+                <StatusPill status={submission.result} lang={lang} />
               </div>
               <p>{submission.username} · {submission.lang} · {submission.timeMs || '-'}ms · Code {submission.codeLength} bytes</p>
               <button onClick={() => submission.existingReviewId ? navigate(`/reviews/${submission.existingReviewId}`) : createReview(submission.id)}>
-                {submission.existingReviewId ? 'View Open Review' : 'Start Review'}
+                {submission.existingReviewId ? txt('진행 중인 리뷰 보기', 'View Open Review') : txt('리뷰 시작', 'Start Review')}
               </button>
             </article>
           ))}
           {!loading && listData.reviewableSubmissions.length === 0 && (
             <div className="review-empty">
-              No other users' submissions on problems you have solved yet. Solve more problems to find submissions to review.
+              {txt('내가 해결한 문제에 아직 리뷰할 수 있는 다른 사용자의 제출이 없습니다. 더 많은 문제를 풀면 리뷰 대상을 찾을 수 있습니다.', "No other users' submissions on problems you have solved yet. Solve more problems to find submissions to review.")}
             </div>
           )}
         </div>
@@ -390,20 +391,20 @@ export default function ReviewsPage() {
         <div className="review-panel-right">
           {listData.reviews.length > 0 && (
             <div className="review-panel review-panel-scroll" style={{ marginBottom: 16 }}>
-              <h2>Reviewed by Me <span className="review-count">{listData.reviews.length}</span></h2>
+              <h2>{txt('내가 리뷰한 코드', 'Reviewed by Me')} <span className="review-count">{listData.reviews.length}</span></h2>
               {listData.reviews.map((item) => (
                 <article key={item.id} className="review-card" onClick={() => navigate(`/reviews/${item.id}`)}>
                   <div>
                     <b>{item.problemTitle}</b>
-                    <StatusPill status={item.status} />
+                    <StatusPill status={item.status} lang={lang} />
                   </div>
-                  <p>Author: {item.authorUsername} · Reviewer: {item.reviewerUsername}</p>
+                  <p>{txt('작성자', 'Author')}: {item.authorUsername} · {txt('리뷰어', 'Reviewer')}: {item.reviewerUsername}</p>
                   <button
                     className="review-delete-btn"
                     onClick={(e) => { e.stopPropagation(); deleteReview(item.id); }}
-                    title="Delete review"
+                    title={txt('리뷰 삭제', 'Delete review')}
                   >
-                    <Trash2 size={13} /> Delete
+                    <Trash2 size={13} /> {txt('삭제', 'Delete')}
                   </button>
                 </article>
               ))}
@@ -411,17 +412,17 @@ export default function ReviewsPage() {
           )}
 
           <div className="review-panel review-panel-scroll">
-            <h2>Reviews of My Code <span className="review-count">{listData.myCodeReviews.length}</span></h2>
+            <h2>{txt('내 코드 리뷰', 'Reviews of My Code')} <span className="review-count">{listData.myCodeReviews.length}</span></h2>
             {listData.myCodeReviews.length > 0 ? listData.myCodeReviews.map((item) => (
               <article key={item.id} className="review-card" onClick={() => navigate(`/reviews/${item.id}`)}>
                 <div>
                   <b>{item.problemTitle}</b>
-                  <StatusPill status={item.status} />
+                  <StatusPill status={item.status} lang={lang} />
                 </div>
-                <p>Reviewer: {item.reviewerUsername}</p>
+                <p>{txt('리뷰어', 'Reviewer')}: {item.reviewerUsername}</p>
               </article>
             )) : (
-              <div className="review-empty">No reviews on your submissions yet.</div>
+              <div className="review-empty">{txt('아직 내 제출에 달린 리뷰가 없습니다.', 'No reviews on your submissions yet.')}</div>
             )}
           </div>
         </div>

@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { redis } from '../config/redis.js';
 
-// JWT_SECRET 미설정 시 명시적으로 오류 — 하드코딩 폴백 제거
+// Explicitly error if JWT_SECRET is not set — no hardcoded fallback
 const SECRET = process.env.JWT_SECRET;
 if (!SECRET) {
   console.error('❌ Fatal error: JWT_SECRET environment variable is not set. Shutting down server.');
@@ -63,7 +63,7 @@ export async function auth(req, res, next) {
   }
 }
 
-// 사용자 상태(role, verified) 캐시 헬퍼 (5분 TTL)
+// Cache helper for user status (role, verified) — 5-minute TTL
 async function getCachedUserStatus(userId) {
   if (!userId) return null;
   const cacheKey = `auth:status:${userId}`;
@@ -79,20 +79,20 @@ async function getCachedUserStatus(userId) {
       role: dbUser.role, 
       email_verified: !!dbUser.email_verified 
     };
-    await redis.setJSON(cacheKey, status, 300); // 5분 캐시
+    await redis.setJSON(cacheKey, status, 300); // 5-minute cache
     return status;
   } catch {
     return null;
   }
 }
 
-// 이메일 인증 확인 — Redis 캐싱 활용
+// Email verification check — uses Redis caching
 export async function requireVerified(req, res, next) {
   try {
     const status = await getCachedUserStatus(req.user?.id);
     if (!status) return res.status(401).json({ message: 'User not found.' });
     
-    // 어드민은 이메일 인증 불필요
+    // Admins bypass email verification
     if (status.role === 'admin') return next();
     if (!status.email_verified) {
       return res.status(403).json({
@@ -102,20 +102,20 @@ export async function requireVerified(req, res, next) {
     }
     next();
   } catch {
-    res.status(500).json({ message: '서버 오류' });
+    res.status(500).json({ message: 'Internal server error.' });
   }
 }
 
-// DB에서 직접 role 검증 — 캐시 미사용 (강등 즉시 반영 필요)
+// Verify role directly from DB — no cache (role changes must take effect immediately)
 export async function adminOnly(req, res, next) {
   try {
     const { User } = await import('../models/User.js');
     const dbUser = await User.findById(req.user?.id);
     if (!dbUser || dbUser.role !== 'admin') {
-      return res.status(403).json({ message: '관리자만 접근할 수 있습니다.' });
+      return res.status(403).json({ message: 'Admin access only.' });
     }
     next();
   } catch {
-    res.status(500).json({ message: '서버 오류' });
+    res.status(500).json({ message: 'Internal server error.' });
   }
 }

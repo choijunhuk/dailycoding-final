@@ -134,7 +134,7 @@ export const Team = {
   async requireAdmin(teamId, userId) {
     const role = await this.getMemberRole(teamId, userId);
     if (role !== 'admin') {
-      const err = new Error('소속 관리자만 처리할 수 있습니다.');
+      const err = new Error('Only team admins can perform this action.');
       err.status = 403;
       throw err;
     }
@@ -150,12 +150,12 @@ export const Team = {
     const normalizedRole = role === 'admin' ? 'admin' : 'member';
     const current = await queryOne('SELECT * FROM team_members WHERE team_id = ? AND user_id = ?', [teamId, userId]);
     if (!current) {
-      const err = new Error('소속 멤버를 찾을 수 없습니다.');
+      const err = new Error('Team member not found.');
       err.status = 404;
       throw err;
     }
     if (current.role === 'admin' && normalizedRole !== 'admin' && await this.countAdmins(teamId) <= 1) {
-      const err = new Error('마지막 관리자는 해제할 수 없습니다.');
+      const err = new Error('The last admin cannot be demoted.');
       err.status = 400;
       throw err;
     }
@@ -167,7 +167,7 @@ export const Team = {
     const current = await queryOne('SELECT * FROM team_members WHERE team_id = ? AND user_id = ?', [teamId, userId]);
     if (!current) return { affectedRows: 0 };
     if (current.role === 'admin' && await this.countAdmins(teamId) <= 1) {
-      const err = new Error('마지막 관리자는 추방할 수 없습니다.');
+      const err = new Error('The last admin cannot be removed.');
       err.status = 400;
       throw err;
     }
@@ -177,12 +177,12 @@ export const Team = {
   async leave(userId, teamId = null) {
     const membership = await this.findMembershipInTeam(userId, teamId);
     if (!membership) {
-      const err = new Error('소속이 없습니다.');
+      const err = new Error('You are not a member of any team.');
       err.status = 404;
       throw err;
     }
     if (membership.role === 'admin' && await this.countAdmins(membership.team_id) <= 1) {
-      const err = new Error('마지막 관리자는 탈퇴할 수 없습니다. 다른 관리자를 지정하거나 소속을 해산하세요.');
+      const err = new Error('The last admin cannot leave. Assign another admin or dissolve the team first.');
       err.status = 400;
       throw err;
     }
@@ -194,7 +194,7 @@ export const Team = {
     await this.requireAdmin(teamId, userId);
     const cleanName = String(name || '').trim().slice(0, 100);
     if (!cleanName) {
-      const err = new Error('소속 이름을 입력해주세요.');
+      const err = new Error('Please enter a team name.');
       err.status = 400;
       throw err;
     }
@@ -205,12 +205,12 @@ export const Team = {
   async dissolve(teamId, userId) {
     const team = await this.findById(teamId);
     if (!team) {
-      const err = new Error('소속을 찾을 수 없습니다.');
+      const err = new Error('Team not found.');
       err.status = 404;
       throw err;
     }
     if (Number(team.owner_id) !== Number(userId)) {
-      const err = new Error('소속 소유자만 해산할 수 있습니다.');
+      const err = new Error('Only the team owner can dissolve the team.');
       err.status = 403;
       throw err;
     }

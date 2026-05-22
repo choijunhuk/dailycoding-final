@@ -3,6 +3,8 @@ import { Copy, FileCode2, Play, RotateCcw, Send, Trash2 } from 'lucide-react';
 import { DEFAULT_CODE, TEMPLATES } from '../judgePageUtils.js';
 import { getJudgeLanguageOption } from '../../data/judgeLanguages.js';
 import JudgeTimer from './JudgeTimer.jsx';
+import { useLang } from '../../context/LangContext.jsx';
+import { pickLangText } from '../../utils/languageMode.js';
 
 const Editor = lazy(() => import('@monaco-editor/react'));
 
@@ -58,6 +60,9 @@ export default function CodeEditor({
   setBugFixAnswer,
   isMobileEditor,
 }) {
+  const { lang: uiLang } = useLang();
+  const txt = (ko, en) => pickLangText(uiLang, ko, en);
+
   return (
     <>
   <div className="editor-toolbar">
@@ -69,17 +74,17 @@ export default function CodeEditor({
     )}
     {isTroubleshootingProblem && (
       <span className="lang-select mono" style={{ display:'inline-flex', alignItems:'center' }}>
-        Troubleshooting Mode
+        {txt('트러블슈팅 모드', 'Troubleshooting Mode')}
       </span>
     )}
     {isSpecialProblem && (
       <span className="lang-select mono" style={{ display:'inline-flex', alignItems:'center' }}>
-        {problemType === 'fill-blank' ? 'Fill-in-the-Blank Mode' : 'Bug Fix Mode'}
+        {problemType === 'fill-blank' ? txt('빈칸 채우기 모드', 'Fill-in-the-Blank Mode') : txt('버그 수정 모드', 'Bug Fix Mode')}
       </span>
     )}
     {isBuildProblem && (
       <span className="lang-select mono" style={{ display:'inline-flex', alignItems:'center' }}>
-        Implementation Mode
+        {txt('구현 모드', 'Implementation Mode')}
       </span>
     )}
     {/* ★ 풀이 타이머 */}
@@ -89,26 +94,26 @@ export default function CodeEditor({
     <div className="editor-tool-group">
       <button className="btn btn-ghost btn-sm" onClick={() => {
         navigator.clipboard.writeText(isTroubleshootingProblem ? (activeTroubleshootingFile?.content || '') : code);
-        toast?.show('📋 Code copied to clipboard.', 'info');
-      }} title="Copy Code"><Copy size={14} /> Copy</button>
-      {!isSpecialProblem && !isTroubleshootingProblem && <button className="btn btn-ghost btn-sm" onClick={saveSnippet} title="Save current code as snippet"><FileCode2 size={14} /> Save Snippet</button>}
-      {!isSpecialProblem && !isTroubleshootingProblem && <button className="btn btn-ghost btn-sm" onClick={clearSnippet} title="Delete saved snippet"><Trash2 size={14} /> Delete</button>}
+        toast?.show(txt('📋 코드가 클립보드에 복사되었습니다.', '📋 Code copied to clipboard.'), 'info');
+      }} title={txt('코드 복사', 'Copy Code')}><Copy size={14} /> {txt('복사', 'Copy')}</button>
+      {!isSpecialProblem && !isTroubleshootingProblem && <button className="btn btn-ghost btn-sm" onClick={saveSnippet} title={txt('현재 코드를 스니펫으로 저장', 'Save current code as snippet')}><FileCode2 size={14} /> {txt('스니펫 저장', 'Save Snippet')}</button>}
+      {!isSpecialProblem && !isTroubleshootingProblem && <button className="btn btn-ghost btn-sm" onClick={clearSnippet} title={txt('저장된 스니펫 삭제', 'Delete saved snippet')}><Trash2 size={14} /> {txt('삭제', 'Delete')}</button>}
       <button className="btn btn-ghost btn-sm" onClick={() => {
-        if (window.confirm('Reset the current code?')) {
+        if (window.confirm(txt('현재 코드를 초기화할까요?', 'Reset the current code?'))) {
           if (isTroubleshootingProblem) resetTroubleshootingFiles();
           else setCode(DEFAULT_CODE[lang] || '');
-          toast?.show('↺ Code has been reset.', 'info');
+          toast?.show(txt('↺ 코드가 초기화되었습니다.', '↺ Code has been reset.'), 'info');
         }
-      }} title="Reset Code"><RotateCcw size={14} /> Reset</button>
+      }} title={txt('코드 초기화', 'Reset Code')}><RotateCcw size={14} /> {txt('초기화', 'Reset')}</button>
     </div>
     {/* ★ 코드 템플릿 */}
     {!isSpecialProblem && !isTroubleshootingProblem && (
     <div style={{position:'relative'}}>
-      <button className="btn btn-ghost btn-sm" onClick={()=>setShowTpl(p=>!p)} title="Code Templates"><FileCode2 size={14} /> Templates</button>
+      <button className="btn btn-ghost btn-sm" onClick={()=>setShowTpl(p=>!p)} title={txt('코드 템플릿', 'Code Templates')}><FileCode2 size={14} /> {txt('템플릿', 'Templates')}</button>
       {showTpl && (
         <div style={{position:'absolute',top:'100%',right:0,marginTop:4,width:200,background:'var(--bg2)',border:'1px solid var(--border)',borderRadius:8,boxShadow:'0 8px 24px rgba(0,0,0,.4)',zIndex:50,overflow:'hidden'}}>
           <div style={{padding:'8px 12px',fontSize:11,fontWeight:700,color:'var(--text3)',borderBottom:'1px solid var(--border)'}}>
-            {availableLangOptions.find(o=>o.value===lang)?.label || getJudgeLanguageOption(lang)?.label} Templates
+            {availableLangOptions.find(o=>o.value===lang)?.label || getJudgeLanguageOption(lang)?.label} {txt('템플릿', 'Templates')}
           </div>
           {(TEMPLATES[lang]||[]).map((t,i)=>(
             <button key={i} onClick={()=>{setCode(t.code);setShowTpl(false);toast?.show(`📄 "${t.name}" inserted`,'info');}} style={{
@@ -119,17 +124,17 @@ export default function CodeEditor({
               onMouseLeave={e=>e.currentTarget.style.background='transparent'}
             >{t.name}</button>
           ))}
-          {!(TEMPLATES[lang]||[]).length && <div style={{padding:'12px',fontSize:12,color:'var(--text3)'}}>No templates</div>}
+          {!(TEMPLATES[lang]||[]).length && <div style={{padding:'12px',fontSize:12,color:'var(--text3)'}}>{txt('템플릿이 없습니다', 'No templates')}</div>}
         </div>
       )}
     </div>
     )}
-    {!isSpecialProblem && <button className="btn btn-ghost btn-sm" onClick={() => runCode()} disabled={isJudging || (isTroubleshootingProblem && !troubleshootingConfig)} title={isTroubleshootingProblem ? 'Run Visible Tests' : 'Run Examples'}><Play size={14} /> {isTroubleshootingProblem ? 'Run Tests' : 'Run Examples'}</button>}
-    {!isSpecialProblem && !isTroubleshootingProblem && <button className="btn btn-ghost btn-sm" onClick={getReview} disabled={reviewLoading || !code.trim()} title="AI Code Review">
-      {reviewLoading ? <span className="spinner"/> : '🔍 Review'}
+    {!isSpecialProblem && <button className="btn btn-ghost btn-sm" onClick={() => runCode()} disabled={isJudging || (isTroubleshootingProblem && !troubleshootingConfig)} title={isTroubleshootingProblem ? txt('공개 테스트 실행', 'Run Visible Tests') : txt('예제 실행', 'Run Examples')}><Play size={14} /> {isTroubleshootingProblem ? txt('테스트 실행', 'Run Tests') : txt('예제 실행', 'Run Examples')}</button>}
+    {!isSpecialProblem && !isTroubleshootingProblem && <button className="btn btn-ghost btn-sm" onClick={getReview} disabled={reviewLoading || !code.trim()} title={txt('AI 코드 리뷰', 'AI Code Review')}>
+      {reviewLoading ? <span className="spinner"/> : txt('🔍 리뷰', '🔍 Review')}
     </button>}
-    <button className="btn btn-success btn-sm" onClick={submitCode} disabled={isJudging} title="Submit (Ctrl+Enter)">
-      {isJudging ? <><span className="spinner" /> Grading</> : <><Send size={14} /> Submit</>}
+    <button className="btn btn-success btn-sm" onClick={submitCode} disabled={isJudging} title={txt('제출 (Ctrl+Enter)', 'Submit (Ctrl+Enter)')}>
+      {isJudging ? <><span className="spinner" /> {txt('채점 중', 'Grading')}</> : <><Send size={14} /> {txt('제출', 'Submit')}</>}
     </button>
     {!isSpecialProblem && <span className="editor-key-hint">Ctrl+Enter</span>}
   </div>
@@ -142,7 +147,7 @@ export default function CodeEditor({
       color:'var(--text2)',
       fontSize:12,
     }}>
-      ⚙️ Current judge environment: <strong>native subprocess</strong> mode — Supported languages: <strong>{judgeStatus.supportedLanguages?.join(', ')}</strong>
+      ⚙️ {txt('현재 채점 환경:', 'Current judge environment:')} <strong>native subprocess</strong> {txt('모드', 'mode')} — {txt('지원 언어:', 'Supported languages:')} <strong>{judgeStatus.supportedLanguages?.join(', ')}</strong>
     </div>
   )}
   {judgeStatusError && (
@@ -167,7 +172,7 @@ export default function CodeEditor({
         <aside className="troubleshooting-files">
           <div className="troubleshooting-panel-title">FILES</div>
           {troubleshootingFiles.length === 0 ? (
-            <div className="troubleshooting-empty">No files.</div>
+            <div className="troubleshooting-empty">{txt('파일이 없습니다.', 'No files.')}</div>
           ) : troubleshootingFiles.map((file) => (
             <button
               key={file.path}
@@ -175,7 +180,7 @@ export default function CodeEditor({
               onClick={() => setActiveTroubleshootingPath(file.path)}
             >
               <span className="mono">{file.path}</span>
-              {file.editable === false && <span className="readonly-badge">read only</span>}
+              {file.editable === false && <span className="readonly-badge">{txt('읽기 전용', 'read only')}</span>}
             </button>
           ))}
         </aside>
@@ -201,7 +206,7 @@ export default function CodeEditor({
               />
             </Suspense>
           ) : (
-            <div className="troubleshooting-empty">No file selected.</div>
+            <div className="troubleshooting-empty">{txt('선택된 파일이 없습니다.', 'No file selected.')}</div>
           )}
         </div>
         <aside className="troubleshooting-side">
@@ -247,13 +252,13 @@ export default function CodeEditor({
         )}
         {problemType === 'bug-fix' && (
           <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-            <label style={{ fontSize:12, color:'var(--text2)' }}>Fixed Code / Key Lines</label>
+            <label style={{ fontSize:12, color:'var(--text2)' }}>{txt('수정된 코드 / 핵심 줄', 'Fixed Code / Key Lines')}</label>
             <textarea
               className="custom-input mono"
               style={{ minHeight: 240 }}
               value={bugFixAnswer}
               onChange={(e) => setBugFixAnswer(e.target.value)}
-              placeholder="수정된 코드 또는 핵심 수정 줄을 입력하세요."
+              placeholder={txt('수정된 코드 또는 핵심 수정 줄을 입력하세요.', 'Enter the fixed code or key changed lines.')}
             />
           </div>
         )}
@@ -263,7 +268,7 @@ export default function CodeEditor({
         <div style={{ display:'grid', gridTemplateRows:isBuildProblem ? '140px 1fr' : '1fr', height:'100%' }}>
           {isBuildProblem && (
             <div style={{ height:'100%', padding:16, overflowY:'auto', background:'var(--bg2)', borderBottom:'1px solid var(--border)' }}>
-              <div style={{ color:'var(--text3)', fontSize:12, marginBottom:4 }}>Skeleton code (read-only)</div>
+              <div style={{ color:'var(--text3)', fontSize:12, marginBottom:4 }}>{txt('스켈레톤 코드 (읽기 전용)', 'Skeleton code (read-only)')}</div>
               <pre className="io-box mono" style={{ margin:0 }}>{problem.starterCode || '// YOUR CODE HERE'}</pre>
             </div>
           )}

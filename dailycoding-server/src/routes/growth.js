@@ -10,39 +10,39 @@ router.use(requireVerified);
 const ROLE_SETS = [
   {
     id: 'backend-junior',
-    title: '백엔드 신입 코딩테스트 스타일',
-    focus: ['구현', '문자열', '해시', 'SQL 사고'],
-    description: '입출력 정확도, 자료구조 선택, 예외 케이스 대응을 보는 세트입니다.',
+    title: 'Backend Junior Coding Test Style',
+    focus: ['Implementation', 'String', 'Hash', 'SQL Thinking'],
+    description: 'A set that tests I/O accuracy, data structure selection, and edge case handling.',
   },
   {
     id: 'frontend-js',
-    title: '프론트엔드 JavaScript 스타일',
-    focus: ['배열', '문자열', '정렬', '객체 처리'],
-    description: 'JS 배열/문자열 조작과 브라우저 과제 전 사고력을 함께 훈련합니다.',
+    title: 'Frontend JavaScript Style',
+    focus: ['Array', 'String', 'Sorting', 'Object Manipulation'],
+    description: 'Trains JS array/string manipulation and logical thinking before browser tasks.',
   },
   {
     id: 'cs-core',
-    title: '자료구조 집중 스타일',
-    focus: ['스택', '큐', '그래프', '트리'],
-    description: '면접에서 설명하기 쉬운 핵심 자료구조 문제로 구성합니다.',
+    title: 'Data Structures Focus Style',
+    focus: ['Stack', 'Queue', 'Graph', 'Tree'],
+    description: 'Composed of core data structure problems that are easy to explain in interviews.',
   },
 ];
 
 const AI_INTERVIEW = {
-  title: 'AI 모의 면접',
+  title: 'AI Mock Interview',
   flow: [
-    '제한 시간 안에 한 문제를 풉니다.',
-    '풀이 접근을 3문장으로 설명합니다.',
-    'AI가 시간복잡도, 엣지 케이스, 대안 풀이를 꼬리질문합니다.',
-    '정확성, 설명력, 시간 관리 기준으로 리포트를 받습니다.',
+    'Solve one problem within the time limit.',
+    'Explain your approach in 3 sentences.',
+    'AI asks follow-up questions on time complexity, edge cases, and alternative solutions.',
+    'Receive a report graded on accuracy, explanation quality, and time management.',
   ],
-  rubric: ['정확성', '복잡도 설명', '디버깅 태도', '커뮤니케이션'],
+  rubric: ['Accuracy', 'Complexity Explanation', 'Debugging Attitude', 'Communication'],
 };
 
 const HINT_LADDER = [
-  { step: 1, title: '방향 힌트', description: '문제에서 무엇을 관찰해야 하는지만 알려줍니다.' },
-  { step: 2, title: '알고리즘 힌트', description: '적합한 자료구조나 알고리즘 이름과 이유를 알려줍니다.' },
-  { step: 3, title: '구현 전략', description: '의사코드 수준의 순서만 제공하고 정답 코드는 숨깁니다.' },
+  { step: 1, title: 'Direction Hint', description: 'Only tells you what to observe in the problem.' },
+  { step: 2, title: 'Algorithm Hint', description: 'Tells you the name and reason for the appropriate data structure or algorithm.' },
+  { step: 3, title: 'Implementation Strategy', description: 'Provides pseudocode-level steps only — the answer code is hidden.' },
 ];
 
 function rowsToProblems(rows = []) {
@@ -52,7 +52,7 @@ function rowsToProblems(rows = []) {
     tier: row.tier || 'unranked',
     difficulty: row.difficulty ?? null,
     tags: String(row.tags || '').split(',').map((tag) => tag.trim()).filter(Boolean).slice(0, 5),
-    reason: row.reason || '아직 해결하지 않은 추천 문제입니다.',
+    reason: row.reason || 'A recommended problem you have not solved yet.',
   }));
 }
 
@@ -95,16 +95,16 @@ async function getWeeklyPlan(userId) {
     tier: item.tier,
     difficulty: item.difficulty,
     tags: item.tags,
-    reason: `${item.cause} 복구: ${item.action}`,
+    reason: `${item.cause} recovery: ${item.action}`,
     recoverySubmissionId: item.submissionId,
   }));
 
   return {
-    title: '이번 주 맞춤 학습 플랜',
-    summary: '오답 복구 문제를 먼저 배치하고, 남은 칸은 아직 풀지 않은 적정 난이도 문제로 채웁니다.',
+    title: 'This Week\'s Personalized Study Plan',
+    summary: 'Recovery problems are placed first, and the remaining slots are filled with unsolved problems at the right difficulty.',
     days: [...recoveryProblems, ...fresh].slice(0, 7).map((problem, index) => ({
       day: index + 1,
-      label: index < recoveryProblems.length ? '복구' : index < 5 ? '훈련' : '도전',
+      label: index < recoveryProblems.length ? 'Recovery' : index < 5 ? 'Training' : 'Challenge',
       ...problem,
     })),
   };
@@ -135,7 +135,7 @@ async function getBattleAnalysis(userId) {
     draws,
     avgSolved,
     latest: latest ? {
-      opponentName: latest.opponent_name || '상대',
+      opponentName: latest.opponent_name || 'Opponent',
       result: latest.result,
       scoreFor: latest.score_for,
       scoreAgainst: latest.score_against,
@@ -143,10 +143,10 @@ async function getBattleAnalysis(userId) {
       solvedAgainst: latest.solved_against,
     } : null,
     insight: list.length === 0
-      ? '아직 배틀 기록이 없습니다. 첫 배틀 후 승부가 갈린 지점을 분석합니다.'
+      ? 'No battle history yet. After your first battle, we will analyze the turning points.'
       : losses > wins
-        ? '최근 배틀은 속도보다 안정성이 먼저입니다. 오답 복구 후 같은 태그로 리매치를 추천합니다.'
-        : '배틀 흐름이 좋습니다. 더 높은 난이도나 race 모드로 압박을 올려보세요.',
+        ? 'In recent battles, stability matters more than speed. Try recovering wrong answers first, then rematch with the same tags.'
+        : 'Your battle momentum is good. Try increasing the pressure with higher difficulty or race mode.',
   };
 }
 
@@ -172,7 +172,7 @@ async function getGrowthShareCard(userId) {
     streak: Number(row.streak || 0),
     solvedCount: Number(row.solved_count || 0),
     accuracy,
-    shareText: `${row.username || 'DailyCoder'}님의 DailyCoding 성장 기록: ${row.tier || 'unranked'} · ${Number(row.rating || 0)}점 · ${Number(row.streak || 0)}일 스트릭 · 정답률 ${accuracy}%`,
+    shareText: `${row.username || 'DailyCoder'}'s DailyCoding Growth Record: ${row.tier || 'unranked'} · ${Number(row.rating || 0)} pts · ${Number(row.streak || 0)}-day streak · ${accuracy}% accuracy`,
   };
 }
 
@@ -192,32 +192,32 @@ router.get('/', async (req, res) => {
       aiInterview: AI_INTERVIEW,
       shareCard,
       teamStudy: {
-        title: '팀/스터디 과제 운영',
-        steps: ['문제 세트를 고릅니다.', '마감일과 목표 정답률을 정합니다.', '팀 대시보드에서 멤버별 풀이 현황을 봅니다.'],
+        title: 'Team / Study Group Assignments',
+        steps: ['Choose a problem set.', 'Set a deadline and target accuracy.', 'Track each member\'s progress on the team dashboard.'],
         cta: '/team',
       },
       discussionGuide: {
-        title: '토론/해설 강화',
-        rules: ['정답자는 접근법을 공유합니다.', 'DP/그리디/BFS 같은 풀이 전략을 태그로 남깁니다.', '좋은 해설은 팀이나 커뮤니티에서 재사용합니다.'],
+        title: 'Discussion & Explanation Boost',
+        rules: ['Those who solved a problem share their approach.', 'Leave solution strategy tags like DP/Greedy/BFS.', 'Great explanations can be reused by teams or the community.'],
         cta: '/community',
       },
       hintLadder: HINT_LADDER,
       examImprovement: {
-        title: '실전 시험 모드 개선',
-        checks: ['시간 초과 문제', '오답 문제', '빈 문제', '약한 태그'],
+        title: 'Exam Mode Improvement',
+        checks: ['Time limit exceeded problems', 'Wrong answer problems', 'Unattempted problems', 'Weak tags'],
         recommendation: recoveryQueue.length > 0
-          ? '시험 전 오답 복구 큐를 먼저 비우고 같은 태그 시험을 다시 보세요.'
-          : '현재 오답 복구 큐가 비어 있습니다. 모의 코테로 새 약점을 찾으세요.',
+          ? 'Clear the wrong answer recovery queue before the exam, then retake the exam with the same tags.'
+          : 'Your recovery queue is empty. Take a mock test to find new weak spots.',
         cta: '/exams',
       },
       excludedRewardMission: {
-        title: '랭킹과 분리된 성장 보상',
-        explanation: '일일 미션 보상은 권위가 걸린 랭킹 점수를 올리지 않습니다. XP를 쌓아 배지, 프로필 칭호, 프로필 배경 같은 개인 꾸미기 보상만 해금합니다.',
+        title: 'Growth Rewards Separate from Rankings',
+        explanation: 'Daily mission rewards do not increase your ranking score. Earn XP to unlock personal cosmetic rewards such as badges, profile titles, and profile backgrounds.',
       },
     });
   } catch (err) {
     console.error('[growth-hub]', err);
-    res.status(500).json({ message: '성장 허브를 불러오지 못했습니다.' });
+    res.status(500).json({ message: 'Failed to load the growth hub.' });
   }
 });
 

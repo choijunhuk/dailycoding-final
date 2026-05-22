@@ -5,6 +5,7 @@ import helmet from 'helmet';
 import { randomUUID } from 'crypto';
 import xss from 'xss';
 import logger from '../config/logger.js';
+import { configureLocale } from './locale.js';
 
 export function resolveAllowedOrigins(env = process.env) {
   const raw = String(env.ALLOWED_ORIGINS || '').trim();
@@ -76,8 +77,8 @@ export function configureMiddleware(app) {
   app.use(cors({
     origin: (origin, cb) => {
       if (!origin || ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
-      logger.warn(`CORS 차단: ${origin} (허용목록: ${ALLOWED_ORIGINS.join(', ')})`);
-      cb(new Error('CORS 정책에 의해 차단된 출처입니다.'));
+      logger.warn(`CORS blocked: ${origin} (allowed: ${ALLOWED_ORIGINS.join(', ')})`);
+      cb(new Error('Origin blocked by CORS policy.'));
     },
     credentials: true,
   }));
@@ -100,6 +101,7 @@ export function configureMiddleware(app) {
   app.use(cookieParser());
   app.use('/api/subscription/webhook', express.raw({ type: 'application/json' }));
   app.use(express.json({ limit: '5mb' }));
+  app.use(configureLocale);
 
   app.use((req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');

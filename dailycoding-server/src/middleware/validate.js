@@ -4,22 +4,22 @@ export function validateBody(schema) {
     for (const [field, rules] of Object.entries(schema)) {
       const val = req.body[field];
       if (rules.required && (val === undefined || val === null || val === '')) {
-        errors.push(`${field}은(는) 필수입니다.`);
+        errors.push(`${field} is required.`);
         continue;
       }
       if (val !== undefined && val !== null && val !== '') {
         if (rules.minLength && String(val).length < rules.minLength)
-          errors.push(`${field}은(는) ${rules.minLength}자 이상이어야 합니다.`);
+          errors.push(`${field} must be at least ${rules.minLength} characters.`);
         if (rules.maxLength && String(val).length > rules.maxLength)
-          errors.push(`${field}은(는) ${rules.maxLength}자 이하여야 합니다.`);
+          errors.push(`${field} must be at most ${rules.maxLength} characters.`);
         if (rules.type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val))
-          errors.push(`올바른 이메일 형식이 아닙니다.`);
+          errors.push(`Invalid email format.`);
         if (rules.type === 'number' && isNaN(Number(val)))
-          errors.push(`${field}은(는) 숫자여야 합니다.`);
+          errors.push(`${field} must be a number.`);
         if (rules.enum && !rules.enum.includes(val))
-          errors.push(`${field}은(는) ${rules.enum.join('/')} 중 하나여야 합니다.`);
+          errors.push(`${field} must be one of: ${rules.enum.join('/')}.`);
         if (rules.regex && !rules.regex.test(val))
-          errors.push(rules.message || `${field} 형식이 올바르지 않습니다.`);
+          errors.push(rules.message || `Invalid format for ${field}.`);
       }
     }
     if (errors.length) return res.status(400).json({ message: errors[0], errors });
@@ -28,7 +28,7 @@ export function validateBody(schema) {
 }
 
 const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-const PASSWORD_MSG   = '비밀번호는 8자 이상이며, 대문자, 소문자, 숫자, 특수문자(@$!%*?&)를 각각 최소 하나 이상 포함해야 합니다.';
+const PASSWORD_MSG   = 'Password must be at least 8 characters and include uppercase, lowercase, number, and special character (@$!%*?&).';
 
 export const registerSchema = {
   email:    { required: true, type: 'email', maxLength: 255 },
@@ -54,7 +54,7 @@ export const updatePasswordSchema = {
     minLength: 8,  
     maxLength: 100,
     regex: PASSWORD_REGEX,
-    message: '새 ' + PASSWORD_MSG
+    message: 'New ' + PASSWORD_MSG
   },
 };
 
@@ -65,7 +65,7 @@ export const resetPasswordSchema = {
     minLength: 8,  
     maxLength: 100,
     regex: PASSWORD_REGEX,
-    message: '새 ' + PASSWORD_MSG
+    message: 'New ' + PASSWORD_MSG
   },
 };
 
@@ -75,7 +75,7 @@ export const adminResetPasswordSchema = {
     minLength: 8,  
     maxLength: 100,
     regex: PASSWORD_REGEX,
-    message: '새 ' + PASSWORD_MSG
+    message: 'New ' + PASSWORD_MSG
   },
 };
 

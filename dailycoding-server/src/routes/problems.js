@@ -38,7 +38,7 @@ export function normalizeProblemMutationPayload(body = {}) {
   if (problemType === 'coding') {
     const hiddenCount = countFilledHiddenTestcases(body?.testcases);
     if (hiddenCount < MIN_HIDDEN_TESTCASES) {
-      return { error: `히든 테스트케이스는 최소 ${MIN_HIDDEN_TESTCASES}개 필요합니다.` };
+      return { error: `At least ${MIN_HIDDEN_TESTCASES} hidden test cases are required.` };
     }
     return {
       payload: {
@@ -54,10 +54,10 @@ export function normalizeProblemMutationPayload(body = {}) {
     const codeTemplate = typeof rawConfig.codeTemplate === 'string' ? rawConfig.codeTemplate.trimEnd() : '';
     const blanks = normalizeDelimitedTextList(rawConfig.blanks);
     if (!codeTemplate) {
-      return { error: '빈칸 채우기 문제에는 코드 템플릿이 필요합니다.' };
+      return { error: 'A code template is required for fill-in-the-blank problems.' };
     }
     if (blanks.length === 0) {
-      return { error: '빈칸 채우기 문제에는 최소 1개 이상의 정답 빈칸이 필요합니다.' };
+      return { error: 'Fill-in-the-blank problems require at least one answer blank.' };
     }
     return {
       payload: {
@@ -76,10 +76,10 @@ export function normalizeProblemMutationPayload(body = {}) {
     const buggyCode = typeof rawConfig.buggyCode === 'string' ? rawConfig.buggyCode.trimEnd() : '';
     const keywords = normalizeDelimitedTextList(rawConfig.keywords);
     if (!buggyCode) {
-      return { error: '틀린부분 찾기 문제에는 버그 코드가 필요합니다.' };
+      return { error: 'Bug-fix problems require a buggy code snippet.' };
     }
     if (keywords.length === 0) {
-      return { error: '틀린부분 찾기 문제에는 최소 1개 이상의 정답 키워드가 필요합니다.' };
+      return { error: 'Bug-fix problems require at least one answer keyword.' };
     }
     return {
       payload: {
@@ -242,7 +242,7 @@ async function notifyProblemCommentMentions(content, authorId, problemTitle) {
       if (mentioned && mentioned.id !== authorId) {
         Notification.create(
           mentioned.id,
-          `💬 "${problemTitle.slice(0, 30)}" 문제 토론에서 @${username} 님이 멘션됐습니다.`,
+          `💬 @${username} was mentioned in the discussion for "${problemTitle.slice(0, 30)}".`,
           'problems'
         ).catch((err) => console.warn('[problem-comment mention]', err.message));
       }
@@ -280,7 +280,7 @@ router.get('/', auth, async (req, res) => {
       await redis.setJSON(cacheKey, result, 60); // 1분 캐시
     }
     return res.json(result);
-  } catch (err) { console.error('[problems/list]', err.message); res.status(500).json({ message: '서버 오류' }); }
+  } catch (err) { console.error('[problems/list]', err.message); res.status(500).json({ message: 'Internal server error.' }); }
 });
 
 // GET /api/problems/tags
@@ -333,7 +333,7 @@ router.get('/search', auth, async (req, res) => {
   const q = normalizeTextQuery(req.query.q, 100);
   if (!q) return res.json([]);
   if (typeof req.query.q === 'string' && req.query.q.trim().length > 100) {
-    return res.status(400).json({ message: '검색어는 100자 이하여야 합니다.' });
+    return res.status(400).json({ message: 'Search query must be 100 characters or fewer.' });
   }
   try {
     const rows = await query(
@@ -357,9 +357,9 @@ router.get('/random/pick', auth, async (req, res) => {
       minDiff,
       maxDiff,
     });
-    if (!picked) return res.json({ message: '조건에 맞는 문제가 없습니다.' });
+    if (!picked) return res.json({ message: 'No problems found matching the criteria.' });
     res.json(picked);
-  } catch (err) { console.error('[random]', err.message); res.status(500).json({ message: '서버 오류' }); }
+  } catch (err) { console.error('[random]', err.message); res.status(500).json({ message: 'Internal server error.' }); }
 });
 
 // ★ 일일 챌린지 (/:id 보다 먼저!)
@@ -376,18 +376,18 @@ router.get('/daily/challenge', auth, async (req, res) => {
       Problem.findAll({ userId: req.user.id, problemType: 'coding' }),
       User.findById(req.user.id),
     ]);
-    if (all.length === 0) return res.json({ problem: null, message: '문제가 없습니다.' });
-    // 전체 문제 기준으로 seed 인덱스 고정 — 풀이 상태 변화와 무관하게 하루 동안 동일한 문제 유지
+    if (all.length === 0) return res.json({ problem: null, message: 'No problems available.' });
+    // Seed index fixed on all problems — same problem served all day regardless of solve status changes
     const seed = today.split('-').reduce((s,n) => s + Number(n), 0);
     const daily = all[seed % all.length];
     const streakBonus = Math.min(20, (user?.streak || 0) * 2);
     const result = {
       problem: daily, streakBonus,
-      message: streakBonus > 0 ? `🔥 ${user.streak}일 연속! 오늘 풀면 +${45+streakBonus}점` : '오늘의 챌린지를 풀어보세요!',
+      message: streakBonus > 0 ? `🔥 ${user.streak}-day streak! Solve today for +${45+streakBonus} points` : 'Try today\'s challenge!',
     };
-    await redis.setJSON(cacheKey, result, 3600); // 1시간 캐시 (하루 기준)
+    await redis.setJSON(cacheKey, result, 3600); // 1-hour cache (daily)
     res.json(result);
-  } catch (err) { console.error('[daily]', err.message); res.status(500).json({ message: '서버 오류' }); }
+  } catch (err) { console.error('[daily]', err.message); res.status(500).json({ message: 'Internal server error.' }); }
 });
 
 // GET /api/problems/recommend — 약점 태그 + 현재 티어 기반 맞춤 추천
@@ -396,7 +396,7 @@ router.get('/recommend', auth, async (req, res) => {
     const Problem = await getProblemModel();
     const User = await getUserModel();
     const user = await User.findById(req.user.id);
-    if (!user) return res.status(404).json({ message: '유저 없음' });
+    if (!user) return res.status(404).json({ message: 'User not found.' });
 
     const requestedWeakTags = String(req.query.weakTags || '')
       .split(',')
@@ -449,24 +449,24 @@ router.get('/recommend', auth, async (req, res) => {
     for (const problem of unsolvedAllowed) {
       if (selected.length >= 4) break;
       const matchedTag = (problem.tags || []).find((tag) => weakTags.includes(tag));
-      if (matchedTag) addProblem(problem, `${matchedTag} 약점 보완`);
+      if (matchedTag) addProblem(problem, `Strengthen weak area: ${matchedTag}`);
     }
 
     const currentTierProblems = unsolvedAllowed.filter((problem) => (problem.tier || 'unranked') === currentTier);
     for (const problem of currentTierProblems) {
-      if (selected.filter((item) => item.reason === '현재 티어 추천').length >= 2 && selected.length >= 6) break;
-      addProblem(problem, '현재 티어 추천');
+      if (selected.filter((item) => item.reason === 'Recommended for your tier').length >= 2 && selected.length >= 6) break;
+      addProblem(problem, 'Recommended for your tier');
     }
 
     for (const problem of unsolvedAllowed) {
       if (selected.length >= 6) break;
-      addProblem(problem, '현재 티어 추천');
+      addProblem(problem, 'Recommended for your tier');
     }
 
     res.json(selected.slice(0, 6));
   } catch (err) {
     console.error('[recommend]', err.message);
-    res.status(500).json({ message: '서버 오류' });
+    res.status(500).json({ message: 'Internal server error.' });
   }
 });
 
@@ -480,7 +480,7 @@ router.post('/', auth, adminOnly, validateBody(problemSchema), async (req, res) 
     }
     const p = await Problem.create({ ...payload, visibility: 'global', contestId: null }, req.user.id);
     const users = await query('SELECT id FROM users WHERE banned_at IS NULL');
-    await Notification.broadcast(users.map((user) => user.id), `🆕 새 문제 "${p.title}" 등록!`, 'problems');
+    await Notification.broadcast(users.map((user) => user.id), `🆕 New problem "${p.title}" added!`, 'problems');
     // 캐시 무효화
     await redis.clearPrefix('problems:list:');
     res.status(201).json(p);
@@ -513,7 +513,7 @@ router.get('/:id/editorial', auth, async (req, res) => {
         };
       }
     }
-    if (!resolvedEditorial) return errorResponse(res, 404, 'NOT_FOUND', '해설이 없습니다.');
+    if (!resolvedEditorial) return errorResponse(res, 404, 'NOT_FOUND', 'No editorial found.');
 
     const requester = await getUserModel();
     const user = await requester.findById(req.user.id);
@@ -522,7 +522,7 @@ router.get('/:id/editorial', auth, async (req, res) => {
       [req.user.id, problemId, 'correct']
     );
     if (!solved && user?.role !== 'admin') {
-      return errorResponse(res, 403, 'FORBIDDEN', '문제를 먼저 풀어야 해설을 볼 수 있습니다.');
+      return errorResponse(res, 403, 'FORBIDDEN', 'You must solve the problem before viewing the editorial.');
     }
     res.json(resolvedEditorial);
   } catch (err) {
@@ -534,11 +534,11 @@ router.get('/:id/editorial', auth, async (req, res) => {
 router.post('/:id/editorial', auth, adminOnly, async (req, res) => {
   const problemId = Number(req.params.id);
   const content = String(req.body?.content || '').trim();
-  if (!content) return errorResponse(res, 400, 'VALIDATION_ERROR', '해설 내용을 입력해주세요.');
+  if (!content) return errorResponse(res, 400, 'VALIDATION_ERROR', 'Editorial content is required.');
 
   try {
     const existing = await queryOne('SELECT id FROM problem_editorials WHERE problem_id = ?', [problemId]);
-    if (existing) return errorResponse(res, 409, 'VALIDATION_ERROR', '이미 해설이 존재합니다.');
+    if (existing) return errorResponse(res, 409, 'VALIDATION_ERROR', 'An editorial already exists for this problem.');
     await dbInsert(
       'INSERT INTO problem_editorials (problem_id, content, author_id) VALUES (?,?,?)',
       [problemId, content, req.user.id]
@@ -554,11 +554,11 @@ router.post('/:id/editorial', auth, adminOnly, async (req, res) => {
 router.put('/:id/editorial', auth, adminOnly, async (req, res) => {
   const problemId = Number(req.params.id);
   const content = String(req.body?.content || '').trim();
-  if (!content) return errorResponse(res, 400, 'VALIDATION_ERROR', '해설 내용을 입력해주세요.');
+  if (!content) return errorResponse(res, 400, 'VALIDATION_ERROR', 'Editorial content is required.');
 
   try {
     const existing = await queryOne('SELECT id FROM problem_editorials WHERE problem_id = ?', [problemId]);
-    if (!existing) return errorResponse(res, 404, 'NOT_FOUND', '해설이 없습니다.');
+    if (!existing) return errorResponse(res, 404, 'NOT_FOUND', 'No editorial found.');
     await dbRun('UPDATE problem_editorials SET content = ?, author_id = ? WHERE problem_id = ?', [content, req.user.id, problemId]);
     const editorial = await queryOne('SELECT * FROM problem_editorials WHERE problem_id = ?', [problemId]);
     res.json(editorial);
@@ -599,14 +599,14 @@ router.get('/:id/troubleshooting', auth, async (req, res) => {
       Problem.findById(problemId, req.user.id),
       User.findById(req.user.id),
     ]);
-    if (!problem) return errorResponse(res, 404, 'NOT_FOUND', '문제를 찾을 수 없습니다.');
+    if (!problem) return errorResponse(res, 404, 'NOT_FOUND', 'Problem not found.');
     if (!TroubleshootingProblem.isTroubleshootingType(problem.problemType)) {
-      return errorResponse(res, 400, 'VALIDATION_ERROR', '트러블슈팅 문제 유형이 아닙니다.');
+      return errorResponse(res, 400, 'VALIDATION_ERROR', 'This problem is not a troubleshooting type.');
     }
 
     const isAdmin = requester?.role === 'admin';
     const config = await TroubleshootingProblem.findConfig(problemId, { includeHidden: isAdmin });
-    if (!config) return errorResponse(res, 404, 'NOT_FOUND', '트러블슈팅 설정이 없습니다.');
+    if (!config) return errorResponse(res, 404, 'NOT_FOUND', 'Troubleshooting configuration not found.');
     const submissions = await TroubleshootingProblem.listSubmissions(req.user.id, problemId, { limit: 10 });
     return res.json({ ...config, problemType: problem.problemType, submissions });
   } catch (err) {
@@ -621,12 +621,12 @@ router.post('/:id/troubleshooting/run', auth, requireVerified, async (req, res) 
     const problemId = Number(req.params.id);
     const Problem = await getProblemModel();
     const problem = await Problem.findById(problemId, req.user.id);
-    if (!problem) return errorResponse(res, 404, 'NOT_FOUND', '문제를 찾을 수 없습니다.');
+    if (!problem) return errorResponse(res, 404, 'NOT_FOUND', 'Problem not found.');
     if (!TroubleshootingProblem.isTroubleshootingType(problem.problemType)) {
-      return errorResponse(res, 400, 'VALIDATION_ERROR', '트러블슈팅 문제 유형이 아닙니다.');
+      return errorResponse(res, 400, 'VALIDATION_ERROR', 'This problem is not a troubleshooting type.');
     }
     const config = await TroubleshootingProblem.findConfig(problemId, { includeHidden: false });
-    if (!config) return errorResponse(res, 404, 'NOT_FOUND', '트러블슈팅 설정이 없습니다.');
+    if (!config) return errorResponse(res, 404, 'NOT_FOUND', 'Troubleshooting configuration not found.');
 
     const evaluation = await evaluateTroubleshootingSubmission({
       config,
@@ -636,7 +636,7 @@ router.post('/:id/troubleshooting/run', auth, requireVerified, async (req, res) 
     return res.json({ ...evaluation, mode: 'run' });
   } catch (err) {
     console.error('[troubleshooting/run]', err);
-    return internalError(res, err?.message || '실행 실패');
+    return internalError(res, err?.message || 'Execution failed.');
   }
 });
 
@@ -648,13 +648,13 @@ router.post('/:id/troubleshooting/submit', auth, requireVerified, async (req, re
     const User = await getUserModel();
     const Submission = await getSubmissionModel();
     const problem = await Problem.findById(problemId, req.user.id);
-    if (!problem) return errorResponse(res, 404, 'NOT_FOUND', '문제를 찾을 수 없습니다.');
+    if (!problem) return errorResponse(res, 404, 'NOT_FOUND', 'Problem not found.');
     if (!TroubleshootingProblem.isTroubleshootingType(problem.problemType)) {
-      return errorResponse(res, 400, 'VALIDATION_ERROR', '트러블슈팅 문제 유형이 아닙니다.');
+      return errorResponse(res, 400, 'VALIDATION_ERROR', 'This problem is not a troubleshooting type.');
     }
 
     const config = await TroubleshootingProblem.findConfig(problemId, { includeHidden: true });
-    if (!config) return errorResponse(res, 404, 'NOT_FOUND', '트러블슈팅 설정이 없습니다.');
+    if (!config) return errorResponse(res, 404, 'NOT_FOUND', 'Troubleshooting configuration not found.');
 
     const submittedFiles = req.body?.files || req.body?.submittedFiles || [];
     const alreadySolved = await TroubleshootingProblem.findCorrectSubmission(req.user.id, problemId);
@@ -688,7 +688,7 @@ router.post('/:id/troubleshooting/submit', auth, requireVerified, async (req, re
       await Promise.all([
         Problem.incrementSolved(problemId),
         User.onSolve(req.user.id, problem),
-        Notification.create(req.user.id, `🛠 "${problem.title}" 트러블슈팅 성공!`, 'submissions'),
+        Notification.create(req.user.id, `🛠 Troubleshooting "${problem.title}" solved successfully!`, 'submissions'),
         redis.clearPrefix('ranking:'),
       ]);
     }
@@ -704,11 +704,11 @@ router.post('/:id/troubleshooting/submit', auth, requireVerified, async (req, re
       mem: evaluation.memoryUsedMb == null ? '-' : `${evaluation.memoryUsedMb}MB`,
       codeLength: Buffer.byteLength(JSON.stringify(submittedFiles || []), 'utf8'),
       detail: evaluation.feedback,
-      date: new Date(submission.submitted_at).toLocaleString('ko-KR'),
+      date: new Date(submission.submitted_at).toLocaleString(req.locale === 'ko' ? 'ko-KR' : 'en-US'),
     });
   } catch (err) {
     console.error('[troubleshooting/submit]', err);
-    return internalError(res, err?.message || '제출 실패');
+    return internalError(res, err?.message || 'Submission failed.');
   }
 });
 
@@ -725,7 +725,7 @@ router.get('/:id', auth, async (req, res) => {
 
     const Problem = await getProblemModel();
     const p = await Problem.findById(problemId, req.user.id);
-    if (!p) return errorResponse(res, 404, 'NOT_FOUND', '문제를 찾을 수 없습니다.');
+    if (!p) return errorResponse(res, 404, 'NOT_FOUND', 'Problem not found.');
 
     let result = sanitizeProblemForClient(p, { isAdmin });
 
@@ -763,10 +763,10 @@ router.delete('/:id', auth, adminOnly, async (req, res) => {
     await redis.clearPrefix(`problem:detail:${req.params.id}:`);
     await redis.clearPrefix(`problem:detail:v2:`);
     await redis.clearPrefix(`problem:detail:v3:`);
-    res.json({ message: '삭제됐습니다.' });
+    res.json({ message: 'Deleted successfully.' });
   } catch (err) {
     console.error('[problems/delete]', err.message);
-    return internalError(res, '삭제 실패');
+    return internalError(res, 'Delete failed.');
   }
 });
 
@@ -832,12 +832,12 @@ router.post('/:id/comments', auth, requireVerified, async (req, res) => {
     const parentId = req.body?.parentId == null ? null : Number(req.body.parentId);
 
     if (!content || content.length > 500) {
-      return errorResponse(res, 400, 'VALIDATION_ERROR', '댓글은 1자 이상 500자 이하로 입력해주세요.');
+      return errorResponse(res, 400, 'VALIDATION_ERROR', 'Comment must be between 1 and 500 characters.');
     }
 
     const problem = await queryOne('SELECT id, title FROM problems WHERE id = ?', [problemId]);
     if (!problem) {
-      return errorResponse(res, 404, 'NOT_FOUND', '문제를 찾을 수 없습니다.');
+      return errorResponse(res, 404, 'NOT_FOUND', 'Problem not found.');
     }
 
     if (parentId) {
@@ -846,7 +846,7 @@ router.post('/:id/comments', auth, requireVerified, async (req, res) => {
         [parentId, problemId]
       );
       if (!parent) {
-        return errorResponse(res, 404, 'NOT_FOUND', '부모 댓글을 찾을 수 없습니다.');
+        return errorResponse(res, 404, 'NOT_FOUND', 'Parent comment not found.');
       }
     }
 
@@ -892,13 +892,13 @@ router.delete('/:problemId/comments/:commentId', auth, async (req, res) => {
       [commentId, problemId]
     );
     if (!comment) {
-      return errorResponse(res, 404, 'NOT_FOUND', '댓글을 찾을 수 없습니다.');
+      return errorResponse(res, 404, 'NOT_FOUND', 'Comment not found.');
     }
     if (req.user.role !== 'admin' && Number(comment.user_id) !== Number(req.user.id)) {
-      return errorResponse(res, 403, 'FORBIDDEN', '삭제 권한이 없습니다.');
+      return errorResponse(res, 403, 'FORBIDDEN', 'You do not have permission to delete this comment.');
     }
     await dbRun('DELETE FROM problem_comments WHERE id = ?', [commentId]);
-    return res.json({ message: '삭제됐습니다.' });
+    return res.json({ message: 'Deleted successfully.' });
   } catch (err) {
     console.error('[problem-comments/delete]', err);
     return internalError(res);
@@ -914,7 +914,7 @@ router.post('/:problemId/comments/:commentId/like', auth, async (req, res) => {
       'SELECT id, like_count FROM problem_comments WHERE id = ? AND problem_id = ?',
       [commentId, problemId]
     );
-    if (!comment) return errorResponse(res, 404, 'NOT_FOUND', '댓글이 없습니다.');
+    if (!comment) return errorResponse(res, 404, 'NOT_FOUND', 'Comment not found.');
 
     const inserted = await dbRun(
       'INSERT IGNORE INTO problem_comment_likes (user_id, comment_id) VALUES (?, ?)',
@@ -959,10 +959,10 @@ async function handleDifficultyVote(req, res) {
     const problemId = Number(req.params.id);
     const normalizedVote = Math.min(5, Math.max(1, Number(vote)));
     if (!Number.isInteger(normalizedVote)) {
-      return errorResponse(res, 400, 'VALIDATION_ERROR', 'vote는 1~5 사이 정수여야 합니다.');
+      return errorResponse(res, 400, 'VALIDATION_ERROR', 'Vote must be an integer between 1 and 5.');
     }
     const solved = await queryOne('SELECT 1 FROM submissions WHERE user_id=? AND problem_id=? AND result=? LIMIT 1', [req.user.id, problemId, 'correct']);
-    if (!solved) return errorResponse(res, 403, 'FORBIDDEN', '문제를 먼저 풀어야 투표할 수 있습니다.');
+    if (!solved) return errorResponse(res, 403, 'FORBIDDEN', 'You must solve the problem before voting.');
     await dbRun(
       `INSERT INTO difficulty_votes (user_id, problem_id, vote)
        VALUES (?,?,?)
@@ -1000,11 +1000,11 @@ router.get('/:id/solutions', auth, async (req, res) => {
     const problemId = Number(req.params.id);
     const mySolved = await queryOne('SELECT 1 FROM submissions WHERE user_id=? AND problem_id=? AND result=? LIMIT 1', [req.user.id, problemId, 'correct']);
     const requester = await User.findById(req.user.id);
-    if (!mySolved && requester?.role !== 'admin') return res.status(403).json({ message: '문제를 먼저 풀어야 다른 풀이를 볼 수 있습니다.' });
+    if (!mySolved && requester?.role !== 'admin') return res.status(403).json({ message: 'You must solve the problem before viewing other solutions.' });
     const rows = await query(`SELECT s.id, s.lang, s.code, s.time_ms, s.memory_mb, s.submitted_at, u.username, u.tier FROM submissions s JOIN users u ON s.user_id = u.id WHERE s.problem_id = ? AND s.result = 'correct' ORDER BY s.submitted_at DESC LIMIT 20`, [problemId]);
     const seen = new Set();
     const unique = rows.filter(r => { if (seen.has(r.username)) return false; seen.add(r.username); return true; }).slice(0, 10);
-    res.json(unique.map(r => ({ id: r.id, lang: r.lang, code: r.code, time: r.time_ms ? `${r.time_ms}ms` : '-', username: r.username, tier: r.tier, date: new Date(r.submitted_at).toLocaleDateString('ko-KR') })));
+    res.json(unique.map(r => ({ id: r.id, lang: r.lang, code: r.code, time: r.time_ms ? `${r.time_ms}ms` : '-', username: r.username, tier: r.tier, date: new Date(r.submitted_at).toLocaleDateString('en-US') })));
   } catch (err) { console.error('[solutions]', err.message); res.json([]); }
 });
 

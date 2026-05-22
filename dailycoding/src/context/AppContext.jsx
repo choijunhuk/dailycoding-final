@@ -225,7 +225,7 @@ export function AppProvider({ children }) {
       if (now - lastFriendToastAt < 10000) return;
       lastFriendToastAt = now;
       setNotifications((prev) => [
-        normalizeNotification({ id: now, msg: payload?.message || '친구가 새 이정표를 달성했습니다!', link: '/community', read: false, createdAt: new Date().toISOString() }),
+        normalizeNotification({ id: now, msg: payload?.message || 'A friend has reached a new milestone!', link: '/community', read: false, createdAt: new Date().toISOString() }),
         ...prev,
       ]);
     });

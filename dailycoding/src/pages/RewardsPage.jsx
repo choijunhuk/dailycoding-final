@@ -2,16 +2,19 @@ import { useEffect, useMemo, useState } from 'react';
 import api from '../api.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
+import { useLang } from '../context/LangContext.jsx';
+import { pickLangText } from '../utils/languageMode.js';
 
 const RARITY_META = {
-  common: { label: 'Common', color: '#94a3b8' },
-  uncommon: { label: 'Uncommon', color: '#22c55e' },
-  rare: { label: 'Rare', color: '#38bdf8' },
-  epic: { label: 'Epic', color: '#a78bfa' },
-  legendary: { label: 'Legendary', color: '#f59e0b' },
+  common: { ko: '일반', label: 'Common', color: '#94a3b8' },
+  uncommon: { ko: '고급', label: 'Uncommon', color: '#22c55e' },
+  rare: { ko: '희귀', label: 'Rare', color: '#38bdf8' },
+  epic: { ko: '에픽', label: 'Epic', color: '#a78bfa' },
+  legendary: { ko: '전설', label: 'Legendary', color: '#f59e0b' },
 };
 
-function RewardCard({ item, owned, equipped, onToggle }) {
+function RewardCard({ item, owned, equipped, onToggle, lang }) {
+  const txt = (ko, en) => pickLangText(lang, ko, en);
   const rarity = RARITY_META[item.rarity] || RARITY_META.common;
   return (
     <button
@@ -29,15 +32,15 @@ function RewardCard({ item, owned, equipped, onToggle }) {
       }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center' }}>
-        <span style={{ fontSize: item.type === 'badge' ? 32 : 18, fontWeight: 900 }}>{item.icon || '칭호'}</span>
-        {equipped && <span style={{ fontSize: 11, color: rarity.color, fontWeight: 900 }}>장착 중</span>}
+        <span style={{ fontSize: item.type === 'badge' ? 32 : 18, fontWeight: 900 }}>{item.icon || txt('칭호', 'Title')}</span>
+        {equipped && <span style={{ fontSize: 11, color: rarity.color, fontWeight: 900 }}>{txt('장착 중', 'Equipped')}</span>}
       </div>
       <div>
         <div style={{ fontWeight: 900, fontSize: 15 }}>{item.name}</div>
         <div style={{ color: 'var(--text3)', fontSize: 12, marginTop: 5, lineHeight: 1.5 }}>{item.description}</div>
       </div>
       <div style={{ marginTop: 'auto', fontSize: 10, fontWeight: 900, color: rarity.color, letterSpacing: .5 }}>
-        {rarity.label.toUpperCase()}
+        {txt(rarity.ko, rarity.label).toUpperCase()}
       </div>
     </button>
   );
@@ -46,6 +49,8 @@ function RewardCard({ item, owned, equipped, onToggle }) {
 export default function RewardsPage() {
   const { applyUser } = useAuth();
   const toast = useToast();
+  const { lang } = useLang();
+  const txt = (ko, en) => pickLangText(lang, ko, en);
   const [tab, setTab] = useState('badge');
   const [allRewards, setAllRewards] = useState([]);
   const [ownedRewards, setOwnedRewards] = useState([]);
@@ -68,7 +73,7 @@ export default function RewardsPage() {
       setEquippedTitle(mine.data?.equippedTitle || null);
       setAllRewards(all.data || []);
     } catch (err) {
-      toast?.show(err.response?.data?.message || '보상 정보를 불러오지 못했습니다.', 'error');
+      toast?.show(err.response?.data?.message || txt('보상 정보를 불러오지 못했습니다.', 'Failed to load reward info.'), 'error');
     } finally {
       setLoading(false);
     }
@@ -84,24 +89,24 @@ export default function RewardsPage() {
       if (item.type === 'badge') setEquippedBadge(code);
       else setEquippedTitle(code);
       if (data?.user) applyUser(data.user);
-      toast?.show(code ? '보상을 장착했습니다.' : '장착을 해제했습니다.', 'success');
+      toast?.show(code ? txt('보상을 장착했습니다.', 'Reward equipped.') : txt('보상을 해제했습니다.', 'Reward unequipped.'), 'success');
     } catch (err) {
-      toast?.show(err.response?.data?.message || '보상 장착 실패', 'error');
+      toast?.show(err.response?.data?.message || txt('보상 장착 실패', 'Failed to equip reward.'), 'error');
     }
   };
 
   return (
     <div style={{ maxWidth: 1120, margin: '0 auto', padding: '32px 20px 48px' }}>
       <div style={{ marginBottom: 22 }}>
-        <div style={{ fontSize: 13, color: 'var(--blue)', fontWeight: 900, marginBottom: 8 }}>COLLECTION</div>
-        <h1 style={{ margin: 0, fontSize: 34, letterSpacing: -1 }}>보상 보관함</h1>
-        <p style={{ color: 'var(--text2)', marginTop: 10 }}>획득한 보상을 프로필에 장착하고 성장 기록을 보여주세요.</p>
+        <div style={{ fontSize: 13, color: 'var(--blue)', fontWeight: 900, marginBottom: 8 }}>{txt('컬렉션', 'COLLECTION')}</div>
+        <h1 style={{ margin: 0, fontSize: 34, letterSpacing: -1 }}>{txt('보상 컬렉션', 'Reward Collection')}</h1>
+        <p style={{ color: 'var(--text2)', marginTop: 10 }}>{txt('획득한 보상을 프로필에 장착하고 성장 기록을 보여주세요.', 'Equip your earned rewards on your profile and show off your growth record.')}</p>
       </div>
 
       <section style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 22, padding: 20, marginBottom: 20 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
           <div>
-            <div style={{ color: 'var(--text3)', fontSize: 12, fontWeight: 800 }}>XP LEVEL</div>
+            <div style={{ color: 'var(--text3)', fontSize: 12, fontWeight: 800 }}>{txt('XP 레벨', 'XP LEVEL')}</div>
             <div style={{ fontSize: 28, fontWeight: 900 }}>Lv. {progression?.level || 1}</div>
           </div>
           <div style={{ flex: 1, minWidth: 220 }}>
@@ -110,11 +115,11 @@ export default function RewardsPage() {
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 7, color: 'var(--text3)', fontSize: 12 }}>
               <span>{(progression?.xp || 0).toLocaleString()} XP</span>
-              <span>다음 레벨 {progression?.nextLevelXp?.toLocaleString?.() || 120} XP</span>
+              <span>{txt('다음 레벨', 'Next level')} {progression?.nextLevelXp?.toLocaleString?.() || 120} XP</span>
             </div>
           </div>
           <div style={{ minWidth: 170, color: 'var(--text2)', fontSize: 12 }}>
-            다음 보상: <b style={{ color: 'var(--text)' }}>{nextReward ? `${nextReward.level}레벨` : '모두 획득'}</b>
+            {txt('다음 보상', 'Next reward')}: <b style={{ color: 'var(--text)' }}>{nextReward ? txt(`레벨 ${nextReward.level}`, `Level ${nextReward.level}`) : txt('모두 획득', 'All earned')}</b>
           </div>
         </div>
       </section>
@@ -125,7 +130,7 @@ export default function RewardsPage() {
             border: '1px solid var(--border)', borderRadius: 999, padding: '9px 16px', cursor: 'pointer',
             background: tab === type ? 'var(--blue)' : 'var(--bg2)', color: tab === type ? '#fff' : 'var(--text2)', fontWeight: 900,
           }}>
-            {type === 'badge' ? '뱃지' : '칭호'}
+            {type === 'badge' ? txt('배지', 'Badges') : txt('칭호', 'Titles')}
           </button>
         ))}
       </div>
@@ -139,6 +144,7 @@ export default function RewardsPage() {
               owned={ownedCodes.has(item.code)}
               equipped={(item.type === 'badge' ? equippedBadge : equippedTitle) === item.code}
               onToggle={() => toggleEquip(item)}
+              lang={lang}
             />
           ))}
         </div>

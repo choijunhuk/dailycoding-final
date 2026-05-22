@@ -39,7 +39,7 @@ router.patch('/onboarding', auth, async (req, res) => {
     const allowedLevels = new Set(['beginner', 'intermediate', 'advanced']);
 
     if (!allowedSteps.has(step)) {
-      return errorResponse(res, 400, 'VALIDATION_ERROR', '유효하지 않은 온보딩 단계입니다.');
+      return errorResponse(res, 400, 'VALIDATION_ERROR', 'Invalid onboarding step.');
     }
 
     await ensureOnboardingRow(req.user.id);

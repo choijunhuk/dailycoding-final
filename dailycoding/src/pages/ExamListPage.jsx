@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useSubscriptionStatus } from '../hooks/useSubscriptionStatus.js';
 import api from '../api.js';
 import { useLang } from '../context/LangContext.jsx';
+import { pickLangText } from '../utils/languageMode.js';
 
 const COMPANIES = ['all', 'kakao', 'naver', 'line', 'toss'];
 
@@ -11,7 +12,8 @@ export default function ExamListPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { tier: userTier } = useSubscriptionStatus(user?.id);
-  const { t } = useLang();
+  const { t, lang } = useLang();
+  const txt = (ko, en) => pickLangText(lang, ko, en);
   const [company, setCompany] = useState('all');
   const [items, setItems] = useState([]);
 
@@ -34,10 +36,10 @@ export default function ExamListPage() {
 
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))', gap:10, marginBottom:24 }}>
         {[
-          { icon:'⏱️', title:'시간 배분 전략', desc:'문제당 평균 시간을 미리 계산해 풀이 순서를 정하세요.' },
-          { icon:'📋', title:'풀이 먼저 설계', desc:'코드 작성 전 입출력 예제로 로직을 검증하세요.' },
-          { icon:'🔁', title:'엣지 케이스 확인', desc:'빈 배열, 최댓값, 음수 등 경계값을 항상 테스트하세요.' },
-          { icon:'🏆', title:'실전 연습 필수', desc:'타이머를 켜고 실전과 동일한 환경에서 반복 연습하세요.' },
+          { icon:'⏱️', title:txt('시간 관리', 'Time Management'), desc:txt('문제당 평균 시간을 미리 계산하고 풀이 순서를 계획하세요.', 'Pre-calculate average time per problem and plan your solving order.') },
+          { icon:'📋', title:txt('코딩 전 설계', 'Design Before Coding'), desc:txt('코드를 작성하기 전에 샘플 입출력으로 로직을 검증하세요.', 'Verify your logic with sample I/O before writing code.') },
+          { icon:'🔁', title:txt('엣지 케이스 확인', 'Check Edge Cases'), desc:txt('빈 배열, 최대값, 음수처럼 경계값을 항상 테스트하세요.', 'Always test boundary values: empty arrays, max values, negatives.') },
+          { icon:'🏆', title:txt('실전 조건 연습', 'Practice Under Real Conditions'), desc:txt('타이머를 켜고 실제 시험 환경을 반복해서 시뮬레이션하세요.', 'Use a timer and simulate the actual exam environment repeatedly.') },
         ].map(tip => (
           <div key={tip.title} style={{ padding:'14px 16px', background:'var(--bg2)', border:'1px solid var(--border)', borderRadius:10 }}>
             <div style={{ fontSize:22, marginBottom:6 }}>{tip.icon}</div>

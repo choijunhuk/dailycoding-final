@@ -242,8 +242,8 @@ export const Battle = {
       : (preferredLanguage
         ? BUG_FIX_PROBLEMS.filter((problem) => !problem.preferredLanguage || problem.preferredLanguage === preferredLanguage)
         : BUG_FIX_PROBLEMS);
-    const fbPool = fbCandidates.length > 0 ? fbCandidates : [{ id: 'empty_fb', title: '빈칸 채우기 문제 없음', type: 'fill-blank', preferredLanguage, desc: '관리자에게 문의하세요.', codeTemplate: '', blanks: [] }];
-    const bfPool = bfCandidates.length > 0 ? bfCandidates : [{ id: 'empty_bf', title: '버그 수정 문제 없음', type: 'bug-fix', preferredLanguage, desc: '관리자에게 문의하세요.', buggyCode: '', correctAnswerKeyword: '' }];
+    const fbPool = fbCandidates.length > 0 ? fbCandidates : [{ id: 'empty_fb', title: 'No fill-in-the-blank problems available', type: 'fill-blank', preferredLanguage, desc: 'Please contact an administrator.', codeTemplate: '', blanks: [] }];
+    const bfPool = bfCandidates.length > 0 ? bfCandidates : [{ id: 'empty_bf', title: 'No bug-fix problems available', type: 'bug-fix', preferredLanguage, desc: 'Please contact an administrator.', buggyCode: '', correctAnswerKeyword: '' }];
 
     const pickMany = (arr, count) => [...arr].sort(() => Math.random() - 0.5).slice(0, Math.max(0, count));
     const coding = pickMany(codingPool, settings.codingCount);
@@ -295,7 +295,7 @@ export const Battle = {
       const scoreAgainst = opponentPlayers.reduce((sum, item) => sum + (item.score || 0), 0);
       const solvedFor = Array.isArray(player.solved) ? player.solved.length : 0;
       const solvedAgainst = opponentPlayers.reduce((sum, item) => sum + ((item.solved || []).length || 0), 0);
-      const opponentName = opponentPlayers.map((item) => item.username).join(', ') || '상대 없음';
+      const opponentName = opponentPlayers.map((item) => item.username).join(', ') || 'No opponent';
       const opponentId = opponentPlayers[0]?.id || null;
       let result = 'draw';
       if (scoreFor > scoreAgainst) result = 'win';

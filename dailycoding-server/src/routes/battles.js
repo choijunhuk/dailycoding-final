@@ -684,12 +684,12 @@ router.post('/room/:roomId/typing', async (req, res) => {
 router.post('/room/:roomId/submit', async (req, res) => {
   try {
     const { problemId, answer } = req.body;
-    if (!problemId || answer === undefined) return errorResponse(res, 400, 'VALIDATION_ERROR', 'problemId, answer 필요');
+    if (!problemId || answer === undefined) return errorResponse(res, 400, 'VALIDATION_ERROR', 'problemId and answer are required');
 
     const room = await Battle.getRoom(req.params.roomId);
-    if (!room) return errorResponse(res, 404, 'NOT_FOUND', '방을 찾을 수 없습니다.');
-    if (!room.playerIds.includes(req.user.id)) return errorResponse(res, 403, 'FORBIDDEN', '접근 권한이 없습니다.');
-    if (room.status !== 'active') return errorResponse(res, 400, 'VALIDATION_ERROR', '진행 중인 배틀이 아닙니다.');
+    if (!room) return errorResponse(res, 404, 'NOT_FOUND', 'Room not found.');
+    if (!room.playerIds.includes(req.user.id)) return errorResponse(res, 403, 'FORBIDDEN', 'Access denied.');
+    if (room.status !== 'active') return errorResponse(res, 400, 'VALIDATION_ERROR', 'The battle is not in progress.');
 
     // 타이머전에서는 선점된 문제 제출 불가 (race 모드는 제한 없음)
     if (room.battleMode !== 'race' && room.locked[String(problemId)]) {
@@ -697,7 +697,7 @@ router.post('/room/:roomId/submit', async (req, res) => {
     }
 
     const problem = room.problems.find(p => String(p.id) === String(problemId));
-    if (!problem) return errorResponse(res, 404, 'NOT_FOUND', '문제를 찾을 수 없습니다.');
+    if (!problem) return errorResponse(res, 404, 'NOT_FOUND', 'Problem not found.');
 
     let correct = false;
     if (problem.type === 'fill-blank') {
@@ -742,13 +742,13 @@ router.post('/room/:roomId/submit', async (req, res) => {
 router.post('/room/:roomId/code-judge', async (req, res) => {
   try {
     const { problemId, lang, code } = req.body;
-    if (!problemId || !lang || !code) return errorResponse(res, 400, 'VALIDATION_ERROR', 'problemId, lang, code 필요');
-    if (code.length > 100_000) return errorResponse(res, 400, 'VALIDATION_ERROR', '코드가 너무 큽니다. (최대 100KB)');
+    if (!problemId || !lang || !code) return errorResponse(res, 400, 'VALIDATION_ERROR', 'problemId, lang, and code are required');
+    if (code.length > 100_000) return errorResponse(res, 400, 'VALIDATION_ERROR', 'Code is too large. (max 100KB)');
 
     const room = await Battle.getRoom(req.params.roomId);
-    if (!room) return errorResponse(res, 404, 'NOT_FOUND', '방을 찾을 수 없습니다.');
-    if (!room.playerIds.includes(req.user.id)) return errorResponse(res, 403, 'FORBIDDEN', '접근 권한이 없습니다.');
-    if (room.status !== 'active') return errorResponse(res, 400, 'VALIDATION_ERROR', '진행 중인 배틀이 아닙니다.');
+    if (!room) return errorResponse(res, 404, 'NOT_FOUND', 'Room not found.');
+    if (!room.playerIds.includes(req.user.id)) return errorResponse(res, 403, 'FORBIDDEN', 'Access denied.');
+    if (room.status !== 'active') return errorResponse(res, 400, 'VALIDATION_ERROR', 'The battle is not in progress.');
 
     if (room.battleMode !== 'race' && room.locked[String(problemId)]) {
       return res.json({ result: 'locked', room });
@@ -757,15 +757,15 @@ router.post('/room/:roomId/code-judge', async (req, res) => {
     // DB에서 실제 문제 정보 조회 (테스트케이스 포함)
     const Problem = await getProblemModel();
     const prob = await Problem.findById(Number(problemId));
-    if (!prob) return errorResponse(res, 404, 'NOT_FOUND', '문제를 찾을 수 없습니다.');
+    if (!prob) return errorResponse(res, 404, 'NOT_FOUND', 'Problem not found.');
     const problemType = prob.problemType || prob.problem_type || 'coding';
     if (problemType !== 'coding' && problemType !== 'build') {
-      return errorResponse(res, 400, 'VALIDATION_ERROR', '코딩 배틀 채점은 코딩 문제에서만 사용할 수 있습니다.');
+      return errorResponse(res, 400, 'VALIDATION_ERROR', 'Code battle judging is only available for coding problems.');
     }
 
     const judgeRuntime = await getCachedJudgeRuntime({ logOnRefresh: true });
     if (judgeRuntime.mode === 'unavailable') {
-      return errorResponse(res, 503, 'INTERNAL_ERROR', '현재 서버에서 채점 런타임을 사용할 수 없습니다.', {
+      return errorResponse(res, 503, 'INTERNAL_ERROR', 'The judge runtime is currently unavailable on this server.', {
         supportedLanguages: judgeRuntime.supportedLanguages || [],
       });
     }
@@ -826,8 +826,8 @@ router.post('/room/:roomId/code-judge', async (req, res) => {
 router.post('/room/:roomId/end', async (req, res) => {
   try {
     const room = await Battle.getRoom(req.params.roomId);
-    if (!room) return errorResponse(res, 404, 'NOT_FOUND', '방을 찾을 수 없습니다.');
-    if (!room.playerIds.includes(req.user.id)) return errorResponse(res, 403, 'FORBIDDEN', '접근 권한이 없습니다.');
+    if (!room) return errorResponse(res, 404, 'NOT_FOUND', 'Room not found.');
+    if (!room.playerIds.includes(req.user.id)) return errorResponse(res, 403, 'FORBIDDEN', 'Access denied.');
     const ended = await Battle.endRoom(req.params.roomId);
     if (ended?.status === 'ended') {
       await rewardBattleWinnerMissions(ended);

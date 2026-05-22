@@ -2,15 +2,17 @@ import { useEffect, useMemo, useState } from 'react';
 import api from '../api.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
+import { useLang } from '../context/LangContext.jsx';
+import { formatWithLang, pickLangText } from '../utils/languageMode.js';
 import './BadgesPage.css';
 
 const CATEGORY_LABELS = {
-  coding:  { label: '코딩 도전', emoji: '💻' },
-  streak:  { label: '꾸준함',   emoji: '🔥' },
-  ranking: { label: '티어 달성', emoji: '🏆' },
-  battle:  { label: '배틀',     emoji: '⚔️' },
-  xp:      { label: '성장',     emoji: '🌱' },
-  explore: { label: '탐험',     emoji: '🔍' },
+  coding:  { ko: '코딩 챌린지', label: 'Coding Challenges', emoji: '💻' },
+  streak:  { ko: '꾸준함',       label: 'Consistency',       emoji: '🔥' },
+  ranking: { ko: '티어 업적',    label: 'Tier Achievements', emoji: '🏆' },
+  battle:  { ko: '배틀',         label: 'Battle',            emoji: '⚔️' },
+  xp:      { ko: '성장',         label: 'Growth',            emoji: '🌱' },
+  explore: { ko: '탐험',         label: 'Exploration',       emoji: '🔍' },
 };
 
 const RARITY_META = {
@@ -24,14 +26,15 @@ const RARITY_META = {
 const RARITY_ORDER = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
 const CATEGORY_ORDER = ['coding', 'streak', 'ranking', 'battle', 'xp', 'explore'];
 
-function ItemCard({ item, isEquipped, onEquip, stats }) {
+function ItemCard({ item, isEquipped, onEquip, stats, lang }) {
+  const txt = (ko, en) => pickLangText(lang, ko, en);
   const rarity = RARITY_META[item.rarity] || RARITY_META.common;
   const earned = Boolean(item.earned);
   const isTitle = item.type === 'title';
   const pct = stats?.pct ?? null;
 
   const earnedDate = item.earned_at
-    ? new Date(item.earned_at).toLocaleDateString('ko-KR', { year: 'numeric', month: 'short', day: 'numeric' })
+    ? formatWithLang(lang, item.earned_at, { year: 'numeric', month: 'short', day: 'numeric' })
     : null;
 
   return (
@@ -66,7 +69,7 @@ function ItemCard({ item, isEquipped, onEquip, stats }) {
           fontSize: 10, fontWeight: 800, padding: '2px 7px', borderRadius: 20,
           background: 'var(--blue)', color: '#fff', letterSpacing: 0.3,
         }}>
-          장착중
+          {txt('장착 중', 'Equipped')}
         </div>
       )}
       {earned && !isEquipped && (
@@ -96,7 +99,7 @@ function ItemCard({ item, isEquipped, onEquip, stats }) {
           color: earned ? rarity.color : 'var(--text3)',
           border: `1px solid ${earned ? `${rarity.color}44` : 'var(--border)'}`,
         }}>
-          칭호
+          {txt('칭호', 'Title')}
         </div>
       )}
 
@@ -110,13 +113,13 @@ function ItemCard({ item, isEquipped, onEquip, stats }) {
             {rarity.label}
           </div>
           {pct !== null && (
-            <div style={{ fontSize: 10, color: 'var(--text3)' }} title="전체 유저 중 보유 비율">
-              {pct}% 보유
+            <div style={{ fontSize: 10, color: 'var(--text3)' }} title={txt('전체 유저 중 보유 비율', 'Percentage of all users who own this')}>
+              {pct}% {txt('보유', 'owned')}
             </div>
           )}
         </div>
         {earned && earnedDate && (
-          <div style={{ fontSize: 10, color: 'var(--text3)' }}>{earnedDate} 획득</div>
+          <div style={{ fontSize: 10, color: 'var(--text3)' }}>{txt('획득일', 'Earned')} {earnedDate}</div>
         )}
         {earned ? (
           <button
@@ -132,17 +135,17 @@ function ItemCard({ item, isEquipped, onEquip, stats }) {
               transition: 'opacity 0.15s',
             }}
           >
-            {isEquipped ? '장착 해제' : '장착하기'}
+            {isEquipped ? txt('해제', 'Unequip') : txt('장착', 'Equip')}
           </button>
         ) : (
-          <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 4 }}>🔒 미획득</div>
+          <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 4 }}>🔒 {txt('미획득', 'Not earned')}</div>
         )}
       </div>
     </div>
   );
 }
 
-function Section({ title, emoji, items, equippedBadge, equippedTitle, onEquip, stats, accentColor }) {
+function Section({ title, emoji, items, equippedBadge, equippedTitle, onEquip, stats, accentColor, lang }) {
   const earned = items.filter((b) => b.earned).length;
   const color = accentColor || 'var(--blue)';
 
@@ -171,6 +174,7 @@ function Section({ title, emoji, items, equippedBadge, equippedTitle, onEquip, s
             isEquipped={item.type === 'title' ? equippedTitle === item.code : equippedBadge === item.code}
             onEquip={onEquip}
             stats={stats?.[item.code]}
+            lang={lang}
           />
         ))}
       </div>
@@ -181,6 +185,8 @@ function Section({ title, emoji, items, equippedBadge, equippedTitle, onEquip, s
 export default function BadgesPage() {
   const toast = useToast();
   const { applyUser } = useAuth();
+  const { lang } = useLang();
+  const txt = (ko, en) => pickLangText(lang, ko, en);
   const [badges, setBadges] = useState([]);
   const [titles, setTitles] = useState([]);
   const [stats, setStats] = useState({});
@@ -211,7 +217,7 @@ export default function BadgesPage() {
         setTotalCount((badgesRes.data?.totalCount || 0) + (titlesRes.data?.totalCount || 0));
         if (rewardsRes.data) setProgression(rewardsRes.data.progression || null);
       })
-      .catch(() => toast?.show('보상 정보를 불러오지 못했습니다.', 'error'))
+      .catch(() => toast?.show(txt('보상 정보를 불러오지 못했습니다.', 'Failed to load reward info.'), 'error'))
       .finally(() => setLoading(false));
   }, []);
 
@@ -223,9 +229,9 @@ export default function BadgesPage() {
       if (type === 'badge') setEquippedBadge(newCode);
       else setEquippedTitle(newCode);
       if (data?.user) applyUser(data.user);
-      toast?.show(newCode ? '장착됐습니다.' : '장착이 해제됐습니다.', 'success');
+      toast?.show(newCode ? txt('장착했습니다.', 'Equipped.') : txt('해제했습니다.', 'Unequipped.'), 'success');
     } catch (err) {
-      toast?.show(err.response?.data?.message || '장착 실패', 'error');
+      toast?.show(err.response?.data?.message || txt('장착 실패', 'Failed to equip.'), 'error');
     }
   };
 
@@ -258,11 +264,11 @@ export default function BadgesPage() {
   const equippedTitleMeta = titles.find((t) => t.code === equippedTitle);
 
   const tabs = [
-    { key: 'all', label: '전체', emoji: '' },
+    { key: 'all', label: txt('전체', 'All'), emoji: '' },
     ...CATEGORY_ORDER
       .filter((c) => badges.some((b) => b.category === c))
-      .map((c) => ({ key: c, label: CATEGORY_LABELS[c]?.label || c, emoji: CATEGORY_LABELS[c]?.emoji || '' })),
-    { key: 'title', label: '칭호', emoji: '🏷️' },
+      .map((c) => ({ key: c, label: txt(CATEGORY_LABELS[c]?.ko || c, CATEGORY_LABELS[c]?.label || c), emoji: CATEGORY_LABELS[c]?.emoji || '' })),
+    { key: 'title', label: txt('칭호', 'Titles'), emoji: '🏷️' },
   ];
 
   if (loading) {
@@ -281,17 +287,17 @@ export default function BadgesPage() {
   return (
     <div className="badges-page" style={{ padding: '32px 28px', maxWidth: 960, margin: '0 auto', width: '100%' }}>
       <div style={{ marginBottom: 22 }}>
-        <div style={{ fontSize: 13, color: 'var(--blue)', fontWeight: 900, marginBottom: 6 }}>COLLECTION</div>
-        <h1 style={{ margin: 0, fontSize: 28, fontWeight: 900, color: 'var(--text)' }}>보상 보관함</h1>
+        <div style={{ fontSize: 13, color: 'var(--blue)', fontWeight: 900, marginBottom: 6 }}>{txt('컬렉션', 'COLLECTION')}</div>
+        <h1 style={{ margin: 0, fontSize: 28, fontWeight: 900, color: 'var(--text)' }}>{txt('보상 컬렉션', 'Reward Collection')}</h1>
         <p style={{ margin: '8px 0 0', color: 'var(--text3)', fontSize: 13 }}>
-          도전을 완료하고 뱃지와 칭호를 획득해 프로필에 장착해보세요.
+          {txt('챌린지를 완료해 배지와 칭호를 얻고 프로필에 장착하세요.', 'Complete challenges to earn badges and titles, then equip them on your profile.')}
         </p>
       </div>
 
       {progression && (
         <section style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 18, padding: '16px 20px', marginBottom: 20, display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
           <div>
-            <div style={{ color: 'var(--text3)', fontSize: 11, fontWeight: 800 }}>XP LEVEL</div>
+            <div style={{ color: 'var(--text3)', fontSize: 11, fontWeight: 800 }}>{txt('XP 레벨', 'XP LEVEL')}</div>
             <div style={{ fontSize: 26, fontWeight: 900 }}>Lv. {progression.level || 1}</div>
           </div>
           <div style={{ flex: 1, minWidth: 200 }}>
@@ -300,12 +306,12 @@ export default function BadgesPage() {
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, color: 'var(--text3)', fontSize: 11 }}>
               <span>{(progression.xp || 0).toLocaleString()} XP</span>
-              <span>다음 레벨 {(progression.nextLevelXp || 120).toLocaleString()} XP</span>
+              <span>{txt('다음 레벨', 'Next level')} {(progression.nextLevelXp || 120).toLocaleString()} XP</span>
             </div>
           </div>
           {progression.nextReward && (
             <div style={{ fontSize: 12, color: 'var(--text2)', flexShrink: 0 }}>
-              다음 보상: <b style={{ color: 'var(--text)' }}>{progression.nextReward.level}레벨</b>
+              {txt('다음 보상', 'Next reward')}: <b style={{ color: 'var(--text)' }}>{txt('레벨', 'Level')} {progression.nextReward.level}</b>
             </div>
           )}
         </section>
@@ -318,19 +324,19 @@ export default function BadgesPage() {
           padding: '12px 18px', marginBottom: 20,
           display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap',
         }}>
-          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text3)', flexShrink: 0 }}>현재 장착</span>
+          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text3)', flexShrink: 0 }}>{txt('현재 장착 중', 'Currently Equipped')}</span>
           {equippedBadgeMeta && (
             <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
               <span>{equippedBadgeMeta.icon}</span>
               <span style={{ color: 'var(--text)', fontWeight: 700 }}>{equippedBadgeMeta.name}</span>
-              <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 10, background: 'rgba(88,166,255,.15)', color: 'var(--blue)', fontWeight: 800 }}>훈장</span>
+              <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 10, background: 'rgba(88,166,255,.15)', color: 'var(--blue)', fontWeight: 800 }}>{txt('배지', 'Badge')}</span>
             </span>
           )}
           {equippedTitleMeta && (
             <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
               <span>{equippedTitleMeta.icon}</span>
               <span style={{ color: 'var(--blue)', fontWeight: 800 }}>{equippedTitleMeta.name}</span>
-              <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 10, background: 'rgba(167,139,250,.15)', color: 'var(--purple)', fontWeight: 800 }}>칭호</span>
+              <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 10, background: 'rgba(167,139,250,.15)', color: 'var(--purple)', fontWeight: 800 }}>{txt('칭호', 'Title')}</span>
             </span>
           )}
         </div>
@@ -344,7 +350,7 @@ export default function BadgesPage() {
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
             <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>
-              {earnedCount} / {totalCount} 획득
+              {earnedCount} / {totalCount} {txt('획득', 'earned')}
             </span>
             <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent)' }}>{progressPct}%</span>
           </div>
@@ -358,7 +364,7 @@ export default function BadgesPage() {
         </div>
         <div style={{ textAlign: 'right', flexShrink: 0 }}>
           <div style={{ fontSize: 28, fontWeight: 900, color: 'var(--accent)' }}>{earnedCount}</div>
-          <div style={{ fontSize: 11, color: 'var(--text3)' }}>획득한 훈장·칭호</div>
+          <div style={{ fontSize: 11, color: 'var(--text3)' }}>{txt('획득한 배지와 칭호', 'Badges & Titles Earned')}</div>
         </div>
       </div>
 
@@ -385,7 +391,7 @@ export default function BadgesPage() {
       {/* Content */}
       {activeTab === 'title' ? (
         <Section
-          title="칭호"
+          title={txt('칭호', 'Titles')}
           emoji="🏷️"
           items={titles}
           equippedBadge={equippedBadge}
@@ -393,24 +399,26 @@ export default function BadgesPage() {
           onEquip={handleEquip}
           stats={stats}
           accentColor="var(--purple)"
+          lang={lang}
         />
       ) : orderedCategories.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--text3)' }}>
-          이 카테고리에 훈장이 없습니다.
+          {txt('이 카테고리에 배지가 없습니다.', 'No badges in this category.')}
         </div>
       ) : (
         orderedCategories.map((cat) => {
-          const meta = CATEGORY_LABELS[cat] || { label: cat, emoji: '🎯' };
+          const meta = CATEGORY_LABELS[cat] || { ko: cat, label: cat, emoji: '🎯' };
           return (
             <Section
               key={cat}
-              title={meta.label}
+              title={txt(meta.ko, meta.label)}
               emoji={meta.emoji}
               items={grouped[cat] || []}
               equippedBadge={equippedBadge}
               equippedTitle={equippedTitle}
               onEquip={handleEquip}
               stats={stats}
+              lang={lang}
             />
           );
         })

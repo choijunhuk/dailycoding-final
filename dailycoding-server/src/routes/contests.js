@@ -66,12 +66,12 @@ router.get('/', auth, async (req, res) => {
 router.post('/creation-requests', auth, requireVerified, async (req, res) => {
   try {
     const { name, description, desiredDate, reason } = req.body;
-    if (!name || !String(name).trim()) return errorResponse(res, 400, 'MISSING_NAME', '대회 이름을 입력하세요.');
+    if (!name || !String(name).trim()) return errorResponse(res, 400, 'MISSING_NAME', 'Contest name is required.');
     await query(
       'INSERT INTO contest_creation_requests (user_id, name, description, desired_date, reason) VALUES (?, ?, ?, ?, ?)',
       [req.user.id, String(name).trim().slice(0, 100), String(description || '').trim().slice(0, 500), String(desiredDate || '').trim().slice(0, 50), String(reason || '').trim().slice(0, 500)],
     );
-    res.json({ message: '대회 개최 요청이 접수되었습니다. 관리자 검토 후 안내드립니다.' });
+    res.json({ message: 'Your contest creation request has been submitted. An admin will review it and follow up with you.' });
   } catch (err) { console.error('[contests/creation-requests/post]', err.message); return internalError(res); }
 });
 
@@ -87,19 +87,19 @@ router.get('/creation-requests', auth, adminOnly, async (req, res) => {
 router.patch('/creation-requests/:reqId', auth, adminOnly, async (req, res) => {
   try {
     const { status, adminNote } = req.body;
-    if (!['approved', 'rejected'].includes(status)) return errorResponse(res, 400, 'INVALID_STATUS', '잘못된 상태값');
+    if (!['approved', 'rejected'].includes(status)) return errorResponse(res, 400, 'INVALID_STATUS', 'Invalid status value.');
     await query(
       'UPDATE contest_creation_requests SET status = ?, admin_note = ? WHERE id = ?',
       [status, String(adminNote || '').trim().slice(0, 255), Number(req.params.reqId)],
     );
-    res.json({ message: status === 'approved' ? '요청을 승인했습니다.' : '요청을 거절했습니다.' });
+    res.json({ message: status === 'approved' ? 'Request approved.' : 'Request rejected.' });
   } catch (err) { console.error('[contests/creation-requests/patch]', err.message); return internalError(res); }
 });
 
 router.get('/:id', auth, async (req, res) => {
   try {
     const c = await Contest.findById(Number(req.params.id));
-    if (!c) return errorResponse(res, 404, 'NOT_FOUND', '대회 없음');
+    if (!c) return errorResponse(res, 404, 'NOT_FOUND', 'Contest not found.');
     res.json(c);
   } catch (err) {
     console.error('[contests/detail]', err.message);
@@ -110,7 +110,7 @@ router.get('/:id', auth, async (req, res) => {
 router.post('/', auth, adminOnly, validateBody(contestSchema), async (req, res) => {
   try {
     const { name, description, duration, privacy, joinType, securityCode, max, rewardRules } = req.body;
-    const privacyVal = (privacy === '비공개' || privacy === 'private') ? 'private' : 'public';
+    const privacyVal = (privacy === 'private') ? 'private' : 'public';
     const normalizedRules = normalizeRewardRulesInput(rewardRules);
     const c = await Contest.create({ 
       name: normalizeContestText(name, 100), 
@@ -124,7 +124,7 @@ router.post('/', auth, adminOnly, validateBody(contestSchema), async (req, res) 
       rewardRules: normalizedRules,
     });
     const userIds = await loadContestNotificationUserIds();
-    await Notification.broadcast(userIds, `🏆 새 대회 "${name}" 등록!`, 'contest');
+    await Notification.broadcast(userIds, `🏆 New contest "${name}" is now available!`, 'contest');
     res.status(201).json(c);
   } catch (err) { console.error('[contests/create]', err.message); return internalError(res); }
 });
@@ -132,9 +132,9 @@ router.post('/', auth, adminOnly, validateBody(contestSchema), async (req, res) 
 router.patch('/:id/start', auth, adminOnly, async (req, res) => {
   try {
     const c = await Contest.updateStatus(Number(req.params.id), 'running');
-    if (!c) return errorResponse(res, 404, 'NOT_FOUND', '대회 없음');
+    if (!c) return errorResponse(res, 404, 'NOT_FOUND', 'Contest not found.');
     const userIds = await loadContestNotificationUserIds();
-    await Notification.broadcast(userIds, `🔴 "${c.name}" 대회가 시작됐습니다!`, 'contest');
+    await Notification.broadcast(userIds, `🔴 Contest "${c.name}" has started!`, 'contest');
     res.json(c);
   } catch (err) { console.error('[contests/start]', err.message); return internalError(res); }
 });
@@ -142,14 +142,14 @@ router.patch('/:id/start', auth, adminOnly, async (req, res) => {
 router.patch('/:id/end', auth, adminOnly, async (req, res) => {
   try {
     const c = await Contest.updateStatus(Number(req.params.id), 'ended');
-    if (!c) return errorResponse(res, 404, 'NOT_FOUND', '대회 없음');
+    if (!c) return errorResponse(res, 404, 'NOT_FOUND', 'Contest not found.');
 
     const board = await Contest.getLeaderboard(Number(req.params.id));
     const grants = await Contest.grantRankRewards(Number(req.params.id), board);
     for (const grant of grants) {
       await Notification.create(
         grant.userId,
-        `🏆 대회 "${c.name}" ${grant.rankPosition}위 보상(${grant.rewardCode})이 지급됐습니다.`,
+        `🏆 Contest "${c.name}" rank #${grant.rankPosition} reward (${grant.rewardCode}) has been granted.`,
         'contest'
       );
     }
@@ -162,7 +162,7 @@ router.get('/:id/rewards', auth, async (req, res) => {
   try {
     const contestId = Number(req.params.id);
     const contest = await Contest.findById(contestId);
-    if (!contest) return errorResponse(res, 404, 'NOT_FOUND', '대회 없음');
+    if (!contest) return errorResponse(res, 404, 'NOT_FOUND', 'Contest not found.');
     const rewardRules = await Contest.getEffectiveRewardRules(contestId);
     res.json({ contestId, rewardRules, hasCustomRules: contest.rewardRules?.length > 0 });
   } catch (err) {
@@ -175,7 +175,7 @@ router.patch('/:id/rewards', auth, adminOnly, async (req, res) => {
   try {
     const contestId = Number(req.params.id);
     const contest = await Contest.findById(contestId);
-    if (!contest) return errorResponse(res, 404, 'NOT_FOUND', '대회 없음');
+    if (!contest) return errorResponse(res, 404, 'NOT_FOUND', 'Contest not found.');
     const normalizedRules = normalizeRewardRulesInput(req.body?.rewardRules);
     const saved = await Contest.setRewardRules(contestId, normalizedRules);
     res.json({ contestId, rewardRules: saved });
@@ -189,28 +189,28 @@ router.post('/:id/join', auth, requireVerified, async (req, res) => {
   try {
     const { securityCode } = req.body;
     const c = await Contest.findById(Number(req.params.id));
-    if (!c) return errorResponse(res, 404, 'NOT_FOUND', '대회 없음');
-    if (c.status === 'ended') return errorResponse(res, 400, 'VALIDATION_ERROR', '종료된 대회입니다.');
-    
-    // 비공개 대회 보안코드 체크
-    if (c.privacy === '비공개' && c.securityCode && c.securityCode !== securityCode) {
-      return errorResponse(res, 401, 'UNAUTHORIZED', '보안 코드가 일치하지 않습니다.');
+    if (!c) return errorResponse(res, 404, 'NOT_FOUND', 'Contest not found.');
+    if (c.status === 'ended') return errorResponse(res, 400, 'VALIDATION_ERROR', 'This contest has already ended.');
+
+    // Security code check for private contests
+    if (c.privacy === 'private' && c.securityCode && c.securityCode !== securityCode) {
+      return errorResponse(res, 401, 'UNAUTHORIZED', 'Incorrect security code.');
     }
 
     const joinedInfo = await Contest.isJoined(c.id, req.user.id);
-    if (joinedInfo?.status === 'joined') return errorResponse(res, 400, 'VALIDATION_ERROR', '이미 참가했습니다.');
-    if (joinedInfo?.status === 'pending') return errorResponse(res, 400, 'VALIDATION_ERROR', '승인 대기 중입니다.');
-    
+    if (joinedInfo?.status === 'joined') return errorResponse(res, 400, 'VALIDATION_ERROR', 'You have already joined this contest.');
+    if (joinedInfo?.status === 'pending') return errorResponse(res, 400, 'VALIDATION_ERROR', 'Your join request is pending approval.');
+
     const cnt = await Contest.getParticipantCount(c.id);
-    if (cnt >= (c.max||20)) return errorResponse(res, 400, 'VALIDATION_ERROR', '정원이 찼습니다.');
-    
+    if (cnt >= (c.max||20)) return errorResponse(res, 400, 'VALIDATION_ERROR', 'This contest is full.');
+
     if (c.joinType === 'approval') {
       await Contest.createJoinRequest(c.id, req.user.id);
-      return res.json({ status: 'pending', message: '참가 신청이 완료되었습니다. 관리자 승인을 기다려주세요.' });
+      return res.json({ status: 'pending', message: 'Your join request has been submitted. Please wait for admin approval.' });
     } else {
       await Contest.join(c.id, req.user.id);
-      await Notification.create(req.user.id, `✅ "${c.name}" 참가 완료!`, 'contest');
-      return res.json({ status: 'joined', message: '참가 완료' });
+      await Notification.create(req.user.id, `✅ Successfully joined "${c.name}"!`, 'contest');
+      return res.json({ status: 'joined', message: 'Joined successfully.' });
     }
   } catch (err) { console.error('[contests/join]', err.message); return internalError(res); }
 });
@@ -226,10 +226,10 @@ router.patch('/:id/requests/:reqId', auth, adminOnly, async (req, res) => {
   try {
     const { status } = req.body; // 'approved' or 'rejected'
     if (!['approved', 'rejected'].includes(status)) {
-      return errorResponse(res, 400, 'VALIDATION_ERROR', '잘못된 상태값');
+      return errorResponse(res, 400, 'VALIDATION_ERROR', 'Invalid status value.');
     }
     await Contest.updateJoinRequestStatus(Number(req.params.reqId), status);
-    res.json({ message: status === 'approved' ? '승인되었습니다.' : '거절되었습니다.' });
+    res.json({ message: status === 'approved' ? 'Request approved.' : 'Request rejected.' });
   } catch (err) { console.error('[contests/requests/update]', err.message); return internalError(res); }
 });
 
@@ -256,7 +256,7 @@ router.post('/:id/virtual/start', auth, requireVerified, async (req, res) => {
 router.get('/:id/virtual/status', auth, async (req, res) => {
   try {
     const payload = await Contest.getVirtualStatus(req.user.id, Number(req.params.id));
-    if (!payload) return errorResponse(res, 404, 'NOT_FOUND', '대회 없음');
+    if (!payload) return errorResponse(res, 404, 'NOT_FOUND', 'Contest not found.');
     res.json(payload);
   } catch (err) {
     console.error('[contests/virtual/status]', err.message);
@@ -269,21 +269,21 @@ router.post('/:id/virtual/submit', auth, requireVerified, async (req, res) => {
     const contestId = Number(req.params.id);
     const problemId = Number(req.body?.problemId);
     const code = String(req.body?.code || '');
-    if (!problemId || !code.trim()) return errorResponse(res, 400, 'VALIDATION_ERROR', 'problemId와 code가 필요합니다.');
+    if (!problemId || !code.trim()) return errorResponse(res, 400, 'VALIDATION_ERROR', 'problemId and code are required.');
 
     const status = await Contest.getVirtualStatus(req.user.id, contestId);
-    if (!status?.run || status.run.expired) return errorResponse(res, 400, 'VALIDATION_ERROR', '진행 중인 버추얼 대회가 없습니다.');
+    if (!status?.run || status.run.expired) return errorResponse(res, 400, 'VALIDATION_ERROR', 'No active virtual contest run found.');
     if (!status.problems.some((problem) => Number(problem.id) === problemId)) {
-      return errorResponse(res, 400, 'VALIDATION_ERROR', '이 대회에 포함된 문제가 아닙니다.');
+      return errorResponse(res, 400, 'VALIDATION_ERROR', 'This problem is not part of the contest.');
     }
 
     const Problem = await getProblemModel();
     const problem = await Problem.findById(problemId, req.user.id);
-    if (!problem) return errorResponse(res, 404, 'NOT_FOUND', '문제 없음');
+    if (!problem) return errorResponse(res, 404, 'NOT_FOUND', 'Problem not found.');
 
     const judgeRuntime = await getCachedJudgeRuntime({ logOnRefresh: true });
     if (judgeRuntime.mode === 'unavailable') {
-      return errorResponse(res, 503, 'JUDGE_UNAVAILABLE', '현재 서버에서 채점 런타임을 사용할 수 없습니다.');
+      return errorResponse(res, 503, 'JUDGE_UNAVAILABLE', 'The judge runtime is currently unavailable on this server.');
     }
 
     const { execution, normalizedLang, displayLang } = await executeSubmissionFlow({
@@ -319,8 +319,8 @@ router.post('/:id/virtual/submit', auth, requireVerified, async (req, res) => {
 router.delete('/:id', auth, adminOnly, async (req, res) => {
   try {
     await Contest.delete(Number(req.params.id));
-    res.json({ message: '삭제됐습니다.' });
-  } catch (err) { console.error('[contests/delete]', err.message); return internalError(res, '삭제 실패'); }
+    res.json({ message: 'Deleted successfully.' });
+  } catch (err) { console.error('[contests/delete]', err.message); return internalError(res, 'Delete failed.'); }
 });
 
 // ── 대회 문제 관리 ────────────────────────────────────────────
@@ -334,10 +334,10 @@ router.get('/:id/problems', auth, async (req, res) => {
 
 router.post('/:id/problems', auth, adminOnly, async (req, res) => {
   const { problemId } = req.body;
-  if (!problemId) return errorResponse(res, 400, 'VALIDATION_ERROR', 'problemId 필요');
+  if (!problemId) return errorResponse(res, 400, 'VALIDATION_ERROR', 'problemId is required.');
   try {
     await Contest.addProblem(Number(req.params.id), Number(problemId));
-    res.json({ message: '문제 추가됨' });
+    res.json({ message: 'Problem added.' });
   } catch (err) { console.error('[contests/problems/add]', err.message); return internalError(res); }
 });
 
@@ -345,10 +345,10 @@ router.post('/:id/problems/custom', auth, adminOnly, async (req, res) => {
   try {
     const contestId = Number(req.params.id);
     const contest = await Contest.findById(contestId);
-    if (!contest) return errorResponse(res, 404, 'NOT_FOUND', '대회 없음');
+    if (!contest) return errorResponse(res, 404, 'NOT_FOUND', 'Contest not found.');
     const hiddenCount = countFilledHiddenTestcases(req.body?.testcases);
     if (hiddenCount < MIN_HIDDEN_TESTCASES) {
-      return errorResponse(res, 400, 'VALIDATION_ERROR', `히든 테스트케이스는 최소 ${MIN_HIDDEN_TESTCASES}개 필요합니다.`);
+      return errorResponse(res, 400, 'VALIDATION_ERROR', `At least ${MIN_HIDDEN_TESTCASES} hidden test cases are required.`);
     }
 
     const Problem = await getProblemModel();
@@ -375,7 +375,7 @@ router.delete('/:id/problems/:pid', auth, adminOnly, async (req, res) => {
     if (problem?.visibility === 'contest' && Number(problem.contestId) === contestId) {
       await Problem.delete(problemId);
     }
-    res.json({ message: '문제 제거됨' });
+    res.json({ message: 'Problem removed.' });
   } catch (err) { console.error('[contests/problems/remove]', err.message); return internalError(res); }
 });
 

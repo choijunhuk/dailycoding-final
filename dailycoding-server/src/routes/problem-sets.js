@@ -11,7 +11,7 @@ const MAX_PROBLEMS_PER_SET = 200;
 router.get('/shared/:token', async (req, res) => {
   try {
     const set = await UserProblemSet.findByShareToken(req.params.token);
-    if (!set) return errorResponse(res, 404, 'NOT_FOUND', '문제 세트를 찾을 수 없습니다.');
+    if (!set) return errorResponse(res, 404, 'NOT_FOUND', 'Problem set not found.');
     res.json(set);
   } catch (err) {
     console.error('[problem-sets/shared]', err);
@@ -36,11 +36,11 @@ router.get('/', async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     const { name, description, problemIds } = req.body || {};
-    if (!name?.trim()) return errorResponse(res, 400, 'VALIDATION_ERROR', '이름을 입력해주세요.');
+    if (!name?.trim()) return errorResponse(res, 400, 'VALIDATION_ERROR', 'Name is required.');
 
     const existing = await UserProblemSet.findByUser(req.user.id);
     if (existing.length >= MAX_SETS_PER_USER) {
-      return errorResponse(res, 400, 'VALIDATION_ERROR', `문제 세트는 최대 ${MAX_SETS_PER_USER}개까지 만들 수 있습니다.`);
+      return errorResponse(res, 400, 'VALIDATION_ERROR', `You can create up to ${MAX_SETS_PER_USER} problem sets.`);
     }
 
     const safeIds = (Array.isArray(problemIds) ? problemIds : [])
@@ -64,7 +64,7 @@ router.post('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const set = await UserProblemSet.findById(Number(req.params.id), req.user.id);
-    if (!set) return errorResponse(res, 404, 'NOT_FOUND', '문제 세트를 찾을 수 없습니다.');
+    if (!set) return errorResponse(res, 404, 'NOT_FOUND', 'Problem set not found.');
     res.json(set);
   } catch (err) {
     console.error('[problem-sets/get]', err);
@@ -86,7 +86,7 @@ router.put('/:id', async (req, res) => {
         .slice(0, MAX_PROBLEMS_PER_SET);
     }
     const set = await UserProblemSet.update(Number(req.params.id), req.user.id, updates);
-    if (!set) return errorResponse(res, 404, 'NOT_FOUND', '문제 세트를 찾을 수 없습니다.');
+    if (!set) return errorResponse(res, 404, 'NOT_FOUND', 'Problem set not found.');
     res.json(set);
   } catch (err) {
     console.error('[problem-sets/update]', err);
@@ -98,7 +98,7 @@ router.put('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     const set = await UserProblemSet.findById(Number(req.params.id), req.user.id);
-    if (!set) return errorResponse(res, 404, 'NOT_FOUND', '문제 세트를 찾을 수 없습니다.');
+    if (!set) return errorResponse(res, 404, 'NOT_FOUND', 'Problem set not found.');
     await UserProblemSet.delete(Number(req.params.id), req.user.id);
     res.json({ ok: true });
   } catch (err) {
@@ -111,7 +111,7 @@ router.delete('/:id', async (req, res) => {
 router.post('/:id/share', async (req, res) => {
   try {
     const set = await UserProblemSet.findById(Number(req.params.id), req.user.id);
-    if (!set) return errorResponse(res, 404, 'NOT_FOUND', '문제 세트를 찾을 수 없습니다.');
+    if (!set) return errorResponse(res, 404, 'NOT_FOUND', 'Problem set not found.');
     const token = set.shareToken || await UserProblemSet.generateShareToken(Number(req.params.id), req.user.id);
     res.json({ token, shareUrl: `/problem-sets/shared/${token}` });
   } catch (err) {
@@ -124,7 +124,7 @@ router.post('/:id/share', async (req, res) => {
 router.delete('/:id/share', async (req, res) => {
   try {
     const set = await UserProblemSet.findById(Number(req.params.id), req.user.id);
-    if (!set) return errorResponse(res, 404, 'NOT_FOUND', '문제 세트를 찾을 수 없습니다.');
+    if (!set) return errorResponse(res, 404, 'NOT_FOUND', 'Problem set not found.');
     await UserProblemSet.revokeShareToken(Number(req.params.id), req.user.id);
     res.json({ ok: true });
   } catch (err) {

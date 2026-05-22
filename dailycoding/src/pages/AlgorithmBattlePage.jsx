@@ -5,7 +5,9 @@ import { Copy, MessageCircle, Play, Plus, Shield, Smile, Swords, Trophy, Zap, Lo
 import api from '../api.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
+import { useLang } from '../context/LangContext.jsx';
 import { JUDGE_LANGUAGE_OPTIONS } from '../data/judgeLanguages.js';
+import { pickLangText } from '../utils/languageMode.js';
 import { getSocketUrl } from '../utils/socket.js';
 import './AlgorithmBattlePage.css';
 
@@ -375,6 +377,8 @@ export default function AlgorithmBattlePage() {
   const [searchParams] = useSearchParams();
   const toast = useToast();
   const { user } = useAuth();
+  const { lang: uiLang } = useLang();
+  const txt = (ko, en) => pickLangText(uiLang, ko, en);
   const socketRef = useRef(null);
 
   // ── 로비 상태
@@ -1490,7 +1494,7 @@ export default function AlgorithmBattlePage() {
           {/* 아이템 */}
           {config?.itemsEnabled && (
             <>
-              <div className="ab-section-title">Items</div>
+              <div className="ab-section-title">{txt('아이템', 'Items')}</div>
               <div className="ab-tactics">
                 <div className="ab-item-grid">
                   {(config.availableItems || []).map((item) => (
@@ -1507,21 +1511,21 @@ export default function AlgorithmBattlePage() {
                   ))}
                 </div>
                 {itemCooldownLeft > 0 && (
-                  <div className="ab-cooldown"><Clock size={12} /> Cooldown {itemCooldownLeft}s</div>
+                  <div className="ab-cooldown"><Clock size={12} /> {txt('쿨다운', 'Cooldown')} {itemCooldownLeft}s</div>
                 )}
               </div>
             </>
           )}
 
           {/* 제출 결과 */}
-          <div className="ab-section-title">Submission Result</div>
+          <div className="ab-section-title">{txt('제출 결과', 'Submission Result')}</div>
           {submissionResult && (
             <div className={`ab-submit-card ab-submit-flash ${submissionResult.result === 'correct' ? 'correct' : 'wrong'}`}>
-              <strong>{submissionResult.result === 'correct' ? '⚔️ Attack Success' : '💨 Attack Failed'}</strong>
+              <strong>{submissionResult.result === 'correct' ? txt('⚔️ 공격 성공', '⚔️ Attack Success') : txt('💨 공격 실패', '💨 Attack Failed')}</strong>
               <span>
-                {submissionResult.userId === user?.id ? 'My submission' : `${participantById[String(submissionResult.userId)]?.username || 'Opponent'} submission`}
+                {submissionResult.userId === user?.id ? txt('내 제출', 'My submission') : txt(`${participantById[String(submissionResult.userId)]?.username || '상대'}님의 제출`, `${participantById[String(submissionResult.userId)]?.username || 'Opponent'} submission`)}
                 {' · '}
-                {submissionResult.timeMs != null ? `${submissionResult.timeMs}ms` : 'Time -'}
+                {submissionResult.timeMs != null ? `${submissionResult.timeMs}ms` : txt('시간 -', 'Time -')}
                 {' · '}
                 +{submissionResult.score || 0}
               </span>
@@ -1530,19 +1534,19 @@ export default function AlgorithmBattlePage() {
           )}
           {latestSubmission ? (
             <div className={`ab-submit-card ${latestSubmission.isCorrect ? 'correct' : 'wrong'}`}>
-              <strong>{latestSubmission.isCorrect ? '✅ Correct' : '❌ Wrong'}</strong>
+              <strong>{latestSubmission.isCorrect ? txt('✅ 정답', '✅ Correct') : txt('❌ 오답', '❌ Wrong')}</strong>
               <span>{latestSubmission.language} · {latestSubmission.executionTimeMs != null ? `${latestSubmission.executionTimeMs}ms` : '-'} · +{latestSubmission.score}</span>
               {latestSubmission.detail && <p>{latestSubmission.detail}</p>}
             </div>
           ) : (
-            <div className="ab-empty">No submissions yet.</div>
+            <div className="ab-empty">{txt('아직 제출이 없습니다.', 'No submissions yet.')}</div>
           )}
 
           {/* 전투 로그 */}
-          <div className="ab-section-title">Battle Log</div>
+          <div className="ab-section-title">{txt('전투 로그', 'Battle Log')}</div>
           <div className="ab-combat-log">
             {combatEvents.length === 0
-              ? <div className="ab-log-empty">No activity yet.</div>
+              ? <div className="ab-log-empty">{txt('아직 활동이 없습니다.', 'No activity yet.')}</div>
               : [...combatEvents].reverse().map((event) => {
                 const fmt = formatCombatEvent(event, user?.id, participantById);
                 if (!fmt) return null;

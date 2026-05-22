@@ -13,7 +13,7 @@ const postLimiter = rateLimit({
   windowMs: 60 * 1000,       // 1분
   max: 30,                   // 글 작성 최대 30개/분
   keyGenerator: (req) => String(req.user?.id || req.ip),
-  handler: (req, res) => res.status(429).json({ message: '뻘글도 너무 많이 싸면 제한됩니다. (1분 30개 한도)' }),
+  handler: (req, res) => res.status(429).json({ message: 'Too many posts. Please slow down. (30 per minute limit)' }),
   skip: (req) => !req.user,
 });
 
@@ -21,7 +21,7 @@ const replyLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 30,
   keyGenerator: (req) => String(req.user?.id || req.ip),
-  handler: (req, res) => res.status(429).json({ message: '댓글도 1분에 30개까지만요.' }),
+  handler: (req, res) => res.status(429).json({ message: 'Too many replies. (30 per minute limit)' }),
   skip: (req) => !req.user,
 });
 
@@ -32,7 +32,7 @@ function safeDumpPost(row) {
   const base = {
     id:           row.id,
     is_anonymous: !!row.is_anonymous,
-    content:      row.is_blinded ? '[신고로 블라인드된 게시글입니다]' : row.content,
+    content:      row.is_blinded ? '[This post has been hidden due to reports]' : row.content,
     is_blinded:   row.is_blinded,
     upvote:       row.upvote,
     downvote:     row.downvote,
@@ -57,7 +57,7 @@ function safeDumpReply(row) {
     id:           row.id,
     post_id:      row.post_id,
     is_anonymous: !!row.is_anonymous,
-    content:      row.is_blinded ? '[신고로 블라인드된 댓글입니다]' : row.content,
+    content:      row.is_blinded ? '[This comment has been hidden due to reports]' : row.content,
     is_blinded:   row.is_blinded,
     upvote:       row.upvote,
     created_at:   row.created_at,
@@ -96,7 +96,7 @@ router.get('/', auth, async (req, res) => {
     });
   } catch (err) {
     console.error('[dump/list]', err);
-    res.status(500).json({ message: '서버 오류' });
+    res.status(500).json({ message: 'Internal server error.' });
   }
 });
 
@@ -104,13 +104,13 @@ router.get('/', auth, async (req, res) => {
 // GET /api/dump/:id
 router.get('/:id', auth, async (req, res) => {
   const postId = Number(req.params.id);
-  if (!postId) return res.status(400).json({ message: '유효하지 않은 ID' });
+  if (!postId) return res.status(400).json({ message: 'Invalid ID.' });
   try {
     const post = await queryOne(
       `SELECT p.*, u.username FROM dump_posts p LEFT JOIN users u ON p.user_id = u.id WHERE p.id = ?`,
       [postId]
     );
-    if (!post) return res.status(404).json({ message: '게시글 없음' });
+    if (!post) return res.status(404).json({ message: 'Post not found.' });
 
     const replies = await query(
       `SELECT r.*, u.username FROM dump_replies r LEFT JOIN users u ON r.user_id = u.id WHERE r.post_id = ? ORDER BY r.created_at ASC`,
@@ -130,7 +130,7 @@ router.get('/:id', auth, async (req, res) => {
     });
   } catch (err) {
     console.error('[dump/detail]', err);
-    res.status(500).json({ message: '서버 오류' });
+    res.status(500).json({ message: 'Internal server error.' });
   }
 });
 
@@ -138,8 +138,8 @@ router.get('/:id', auth, async (req, res) => {
 // POST /api/dump  body: { content, is_anonymous?: boolean (default true) }
 router.post('/', auth, postLimiter, async (req, res) => {
   const { content, is_anonymous = true } = req.body;
-  if (!content?.trim()) return res.status(400).json({ message: '내용은 필수입니다.' });
-  if (content.length > 5000) return res.status(400).json({ message: '5000자 이하로 작성해주세요.' });
+  if (!content?.trim()) return res.status(400).json({ message: 'Content is required.' });
+  if (content.length > 5000) return res.status(400).json({ message: 'Content must be 5000 characters or fewer.' });
 
   try {
     const anonId   = generateAnonId(req.user.id);
@@ -156,7 +156,7 @@ router.post('/', auth, postLimiter, async (req, res) => {
     res.status(201).json(safeDumpPost(post));
   } catch (err) {
     console.error('[dump/create]', err);
-    res.status(500).json({ message: '서버 오류' });
+    res.status(500).json({ message: 'Internal server error.' });
   }
 });
 
@@ -166,20 +166,20 @@ router.delete('/:id', auth, async (req, res) => {
   const postId = Number(req.params.id);
   try {
     const post = await queryOne('SELECT * FROM dump_posts WHERE id = ?', [postId]);
-    if (!post) return res.status(404).json({ message: '게시글 없음' });
+    if (!post) return res.status(404).json({ message: 'Post not found.' });
 
     const myAnonId = generateAnonId(req.user.id);
     const { User } = await import('../models/User.js');
     const requester = await User.findById(req.user.id);
 
     if (post.anon_id !== myAnonId && requester?.role !== 'admin') {
-      return res.status(403).json({ message: '본인 글만 삭제할 수 있습니다.' });
+      return res.status(403).json({ message: 'You can only delete your own posts.' });
     }
     await run('DELETE FROM dump_posts WHERE id = ?', [postId]);
-    res.json({ message: '삭제됐습니다.' });
+    res.json({ message: 'Deleted successfully.' });
   } catch (err) {
     console.error('[dump/delete]', err);
-    res.status(500).json({ message: '서버 오류' });
+    res.status(500).json({ message: 'Internal server error.' });
   }
 });
 
@@ -188,11 +188,11 @@ router.delete('/:id', auth, async (req, res) => {
 router.post('/:id/replies', auth, replyLimiter, async (req, res) => {
   const postId = Number(req.params.id);
   const { content, is_anonymous = true } = req.body;
-  if (!content?.trim()) return res.status(400).json({ message: '내용은 필수입니다.' });
+  if (!content?.trim()) return res.status(400).json({ message: 'Content is required.' });
 
   try {
     const post = await queryOne('SELECT * FROM dump_posts WHERE id = ?', [postId]);
-    if (!post) return res.status(404).json({ message: '게시글 없음' });
+    if (!post) return res.status(404).json({ message: 'Post not found.' });
 
     const anonId   = generateAnonId(req.user.id);
     const anonName = generateAnonName();           // 항상 'ㅇㅇ'
@@ -208,7 +208,7 @@ router.post('/:id/replies', auth, replyLimiter, async (req, res) => {
     if (post.user_id !== req.user.id) {
       Notification.create(
         post.user_id,
-        `💬 덤프(뒷갤)에 올린 글에 새 댓글이 달렸습니다.`,
+        `💬 Someone replied to your post in the Dump board.`,
         'dump'
       ).catch(() => {});
     }
@@ -220,7 +220,7 @@ router.post('/:id/replies', auth, replyLimiter, async (req, res) => {
     res.status(201).json(safeDumpReply(reply));
   } catch (err) {
     console.error('[dump/reply/create]', err);
-    res.status(500).json({ message: '서버 오류' });
+    res.status(500).json({ message: 'Internal server error.' });
   }
 });
 
@@ -228,8 +228,8 @@ router.post('/:id/replies', auth, replyLimiter, async (req, res) => {
 // POST /api/dump/:id/vote  body: { type: 'post'|'reply', targetId, vote: 1|-1 }
 router.post('/:id/vote', auth, async (req, res) => {
   const { type, targetId, vote } = req.body;
-  if (!['post', 'reply'].includes(type)) return res.status(400).json({ message: '유효하지 않은 타입' });
-  if (![1, -1].includes(Number(vote))) return res.status(400).json({ message: '1 또는 -1만 허용됩니다.' });
+  if (!['post', 'reply'].includes(type)) return res.status(400).json({ message: 'Invalid type.' });
+  if (![1, -1].includes(Number(vote))) return res.status(400).json({ message: 'Only 1 or -1 are allowed.' });
 
   const anonId = generateAnonId(req.user.id);
   const tid = Number(targetId);
@@ -239,7 +239,7 @@ router.post('/:id/vote', auth, async (req, res) => {
       'SELECT * FROM dump_votes WHERE anon_id=? AND target_type=? AND target_id=?',
       [anonId, type, tid]
     );
-    if (existing) return res.status(409).json({ message: '이미 투표했습니다. (당일 기준)' });
+    if (existing) return res.status(409).json({ message: 'You have already voted on this.' });
 
     await run(
       'INSERT INTO dump_votes (anon_id, target_type, target_id, vote) VALUES (?,?,?,?)',
@@ -255,10 +255,10 @@ router.post('/:id/vote', auth, async (req, res) => {
       await run('UPDATE dump_replies SET downvote = downvote + 1 WHERE id = ?', [tid]);
     }
 
-    res.json({ message: '투표 완료' });
+    res.json({ message: 'Vote recorded.' });
   } catch (err) {
     console.error('[dump/vote]', err);
-    res.status(500).json({ message: '서버 오류' });
+    res.status(500).json({ message: 'Internal server error.' });
   }
 });
 
@@ -268,7 +268,7 @@ router.post('/report', auth, async (req, res) => {
   const { target_type, target_id, reason } = req.body;
   const VALID_REASONS = new Set(['spam', 'hate', 'illegal', 'other']);
   if (!['post', 'reply'].includes(target_type) || !VALID_REASONS.has(reason)) {
-    return res.status(400).json({ message: '유효하지 않은 신고 정보입니다.' });
+    return res.status(400).json({ message: 'Invalid report information.' });
   }
 
   try {
@@ -284,11 +284,11 @@ router.post('/report', auth, async (req, res) => {
       await run('UPDATE dump_replies SET report_count = report_count + 1 WHERE id = ?', [tid]);
       await run('UPDATE dump_replies SET is_blinded = 1 WHERE id = ? AND report_count >= 10', [tid]);
     }
-    res.json({ message: '신고가 접수됐습니다.' });
+    res.json({ message: 'Report submitted.' });
   } catch (err) {
-    if (err.code === 'ER_DUP_ENTRY') return res.status(409).json({ message: '이미 신고한 게시물입니다.' });
+    if (err.code === 'ER_DUP_ENTRY') return res.status(409).json({ message: 'You have already reported this post.' });
     console.error('[dump/report]', err);
-    res.status(500).json({ message: '서버 오류' });
+    res.status(500).json({ message: 'Internal server error.' });
   }
 });
 

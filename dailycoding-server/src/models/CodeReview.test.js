@@ -79,14 +79,14 @@ test('collaboration review rejects self-review and closed review suggestions', a
 
   await assert.rejects(
     () => CodeReview.createReview(fixture.submissionId, fixture.authorId),
-    /자기 자신의 제출/
+    /자기 자신의 제출|own submission/i
   );
 
   const review = await CodeReview.createReview(fixture.submissionId, fixture.reviewerId);
   await CodeReview.reject(review.id, { id: fixture.authorId, role: 'user' });
   await assert.rejects(
     () => CodeReview.addCodeSuggestion(review.id, fixture.reviewerId, { suggestedCode: 'print(1)' }),
-    /종료된 리뷰/
+    /종료된 리뷰|closed review/i
   );
 
   const stored = await queryOne('SELECT * FROM code_reviews WHERE id = ?', [review.id]);
@@ -97,13 +97,13 @@ test('collaboration review only opens for correct submissions after reviewer sol
   const wrongTarget = await seedReviewFixture('wrong-target', { targetResult: 'wrong' });
   await assert.rejects(
     () => CodeReview.createReview(wrongTarget.submissionId, wrongTarget.reviewerId),
-    /정답 제출만/
+    /정답 제출만|correct submissions/i
   );
 
   const unsolvedReviewer = await seedReviewFixture('unsolved-reviewer', { reviewerSolved: false });
   await assert.rejects(
     () => CodeReview.createReview(unsolvedReviewer.submissionId, unsolvedReviewer.reviewerId),
-    /먼저 같은 문제/
+    /먼저 같은 문제|same problem correctly/i
   );
 });
 
@@ -114,11 +114,11 @@ test('collaboration suggestions are limited to the assigned reviewer', async () 
 
   await assert.rejects(
     () => CodeReview.addCodeSuggestion(review.id, outsiderId, { suggestedCode: 'print(1)' }),
-    /리뷰 담당자만/
+    /리뷰 담당자만|assigned reviewer/i
   );
   await assert.rejects(
     () => CodeReview.addTestSuggestion(review.id, outsiderId, { inputData: '1', expectedOutput: '1' }),
-    /리뷰 담당자만/
+    /리뷰 담당자만|assigned reviewer/i
   );
 });
 
@@ -137,11 +137,11 @@ test('collaboration review can be cancelled and re-requested without duplicate s
 
   await assert.rejects(
     () => CodeReview.addComment(review.id, fixture.reviewerId, '다시 열리기 전 댓글'),
-    /종료된 리뷰/
+    /종료된 리뷰|closed review/i
   );
   await assert.rejects(
     () => CodeReview.merge(review.id, { id: fixture.authorId, role: 'user' }),
-    /취소된 리뷰/
+    /취소된 리뷰|cancelled review/i
   );
 
   const reopened = await CodeReview.reopen(review.id, { id: fixture.reviewerId, role: 'user' });

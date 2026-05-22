@@ -10,7 +10,7 @@ router.get('/:problemId', auth, async (req, res) => {
     const note = await Note.findByUserAndProblem(req.user.id, req.params.problemId);
     res.json(note || { content: '' });
   } catch (err) {
-    res.status(500).json({ message: '노트 조회 실패' });
+    res.status(500).json({ message: 'Failed to retrieve note.' });
   }
 });
 
@@ -19,9 +19,9 @@ router.post('/:problemId', auth, async (req, res) => {
   const { content } = req.body;
   try {
     await Note.upsert(req.user.id, req.params.problemId, content);
-    res.json({ message: '노트가 저장되었습니다.' });
+    res.json({ message: 'Note saved.' });
   } catch (err) {
-    res.status(500).json({ message: '노트 저장 실패' });
+    res.status(500).json({ message: 'Failed to save note.' });
   }
 });
 
@@ -29,9 +29,9 @@ router.post('/:problemId', auth, async (req, res) => {
 router.delete('/:problemId', auth, async (req, res) => {
   try {
     await Note.delete(req.user.id, req.params.problemId);
-    res.json({ message: '노트가 삭제되었습니다.' });
+    res.json({ message: 'Note deleted.' });
   } catch (err) {
-    res.status(500).json({ message: '노트 삭제 실패' });
+    res.status(500).json({ message: 'Failed to delete note.' });
   }
 });
 
@@ -41,7 +41,7 @@ router.get('/', auth, async (req, res) => {
     const notes = await Note.findAllByUser(req.user.id);
     res.json(notes);
   } catch (err) {
-    res.status(500).json({ message: '전체 노트 조회 실패' });
+    res.status(500).json({ message: 'Failed to retrieve notes.' });
   }
 });
 

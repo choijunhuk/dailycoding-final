@@ -149,17 +149,17 @@ export function registerRoutes(app) {
   });
 
   app.use((req, res) => {
-    res.status(404).json({ message: `엔드포인트를 찾을 수 없습니다: ${req.method} ${req.path}` });
+    res.status(404).json({ message: `Endpoint not found: ${req.method} ${req.path}` });
   });
 
   app.use((err, req, res, next) => {
     const status = err.status || err.statusCode || 500;
-    const message = err.message || '서버 내부 오류';
+    const message = err.message || 'Internal server error';
     logger.error(`[${req.method}] ${req.path} → ${status}: ${message}`, {
       stack: process.env.NODE_ENV !== 'production' ? err.stack : undefined,
       userId: req.user?.id,
     });
     if (res.headersSent) return next(err);
-    res.status(status).json({ message: status < 500 ? message : '서버 내부 오류가 발생했습니다.' });
+    res.status(status).json({ message: status < 500 ? message : 'An internal server error occurred.' });
   });
 }

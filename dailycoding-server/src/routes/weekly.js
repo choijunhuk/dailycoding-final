@@ -88,12 +88,12 @@ router.post('/weekly', auth, adminOnly, async (req, res) => {
     const problemId = Number(req.body?.problemId);
     const rewardCode = String(req.body?.rewardCode || 'weekly_solver').trim().slice(0, 50) || 'weekly_solver';
     if (!problemId) {
-      return errorResponse(res, 400, 'VALIDATION_ERROR', '문제 ID가 필요합니다.');
+      return errorResponse(res, 400, 'VALIDATION_ERROR', 'Problem ID is required.');
     }
 
     const problem = await queryOne('SELECT id FROM problems WHERE id = ?', [problemId]);
     if (!problem) {
-      return errorResponse(res, 404, 'NOT_FOUND', '문제를 찾을 수 없습니다.');
+      return errorResponse(res, 404, 'NOT_FOUND', 'Problem not found.');
     }
 
     const weekStart = getWeekStartDate();

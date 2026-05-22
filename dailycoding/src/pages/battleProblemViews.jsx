@@ -1,5 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { getJudgeLanguageOption } from '../data/judgeLanguages.js';
+import { useLang } from '../context/LangContext.jsx';
+import { pickLangText } from '../utils/languageMode.js';
 
 const Editor = lazy(() => import('@monaco-editor/react'));
 
@@ -70,6 +72,8 @@ export function BattleAdSlot({ slot }) {
 }
 
 export function FillBlankProblem({ problem, answer, onChange, locked, correct }) {
+  const { lang } = useLang();
+  const txt = (ko, en) => pickLangText(lang, ko, en);
   const parts = problem.codeTemplate.split(/___\d+___/);
   const blanks = problem.blanks;
   return (
@@ -90,7 +94,7 @@ export function FillBlankProblem({ problem, answer, onChange, locked, correct })
                   onChange(next);
                 }}
                 disabled={locked || correct === true}
-                placeholder={`${index + 1}번 빈칸`}
+                placeholder={txt(`${index + 1}번 빈칸`, `Blank ${index + 1}`)}
                 style={{ width: `${Math.max(80, (blanks[index]?.length || 4) * 12)}px` }}
               />
             )}
@@ -102,19 +106,21 @@ export function FillBlankProblem({ problem, answer, onChange, locked, correct })
 }
 
 export function BugFixProblem({ problem, answer, onChange, locked, correct }) {
+  const { lang } = useLang();
+  const txt = (ko, en) => pickLangText(lang, ko, en);
   return (
     <div className="bp-problem-body">
       <p className="bp-problem-desc">{problem.desc}</p>
       {problem.hint && <div className="bp-hint">💡 Hint: {problem.hint}</div>}
       <pre className="bp-buggy-code">{problem.buggyCode}</pre>
       <div className="bp-bugfix-input-wrap">
-        <label>Enter fixed line:</label>
+        <label>{txt('수정된 줄 입력:', 'Enter fixed line:')}</label>
         <input
           className={`bp-bugfix-input ${correct === true ? 'correct' : correct === false ? 'wrong' : ''}`}
           value={answer || ''}
           onChange={(event) => onChange(event.target.value)}
           disabled={locked || correct === true}
-          placeholder="수정된 줄을 입력하세요"
+          placeholder={txt('수정된 줄을 입력하세요', 'Enter the fixed line')}
         />
       </div>
     </div>
@@ -148,16 +154,28 @@ export function getBattleStarterCode(problem, lang) {
 }
 
 const RESULT_LABEL = {
-  correct: '정답',
-  locked: '점령됨',
-  wrong: '오답',
-  compile: '컴파일 오류',
-  timeout: '시간 초과',
-  error: '런타임 오류',
+  ko: {
+    correct: '정답',
+    locked: '점령됨',
+    wrong: '오답',
+    compile: '컴파일 오류',
+    timeout: '시간 초과',
+    error: '런타임 오류',
+  },
+  en: {
+    correct: 'Correct',
+    locked: 'Claimed',
+    wrong: 'Wrong',
+    compile: 'Compile Error',
+    timeout: 'Timeout',
+    error: 'Runtime Error',
+  },
 };
 
 export function CodingProblem({ problem, code, lang, lockedLanguageLabel, onCodeChange, onInsertStarter, locked, result, judgeDetail }) {
-  const resultLabel = RESULT_LABEL[result] || result;
+  const { lang: uiLang } = useLang();
+  const txt = (ko, en) => pickLangText(uiLang, ko, en);
+  const resultLabel = (RESULT_LABEL[uiLang] || RESULT_LABEL.en)[result] || result;
   const starterCode = getBattleStarterCode(problem, lang);
   const hasCode = Boolean(String(code || '').trim());
   const monacoLanguage = getJudgeLanguageOption(lang)?.monaco || 'python';
@@ -200,9 +218,9 @@ export function CodingProblem({ problem, code, lang, lockedLanguageLabel, onCode
           className="bp-btn-small"
           onClick={() => onInsertStarter?.(starterCode)}
           disabled={locked || result === 'correct' || hasCode}
-          title={hasCode ? 'Code already exists, template will not overwrite.' : 'Insert default template for language'}
+          title={hasCode ? txt('이미 코드가 있어 템플릿으로 덮어쓰지 않습니다.', 'Code already exists, template will not overwrite.') : txt('언어 기본 템플릿 삽입', 'Insert default template for language')}
         >
-          Template
+          {txt('템플릿', 'Template')}
         </button>
         {result && (
           <span className={`bp-result-badge ${result}`}>
@@ -213,7 +231,7 @@ export function CodingProblem({ problem, code, lang, lockedLanguageLabel, onCode
       </div>
       {judgeDetail?.detail && (
         <div className={`bp-judge-detail ${result === 'correct' ? 'correct' : 'wrong'}`}>
-          <strong>Judge Detail</strong>
+          <strong>{txt('채점 상세', 'Judge Detail')}</strong>
           <span>{judgeDetail.detail}</span>
           {Number.isFinite(judgeDetail.timeMs) ? <small>Runtime {judgeDetail.timeMs}ms</small> : null}
         </div>

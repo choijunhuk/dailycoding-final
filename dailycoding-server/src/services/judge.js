@@ -1,12 +1,12 @@
 /**
  * Docker Sandbox Judge
- * 실제 코드를 Docker 컨테이너 안에서 실행해서 채점합니다.
+ * Executes submitted code inside Docker containers for grading.
  *
- * 필요 조건:
- *   - Docker Engine 설치 (docker --version 으로 확인)
+ * Requirements:
+ *   - Docker Engine installed (verify with docker --version)
  *   - npm install dockerode
  *
- * 사용 이미지 (처음 실행 시 자동 pull):
+ * Images used (auto-pulled on first run):
  *   - python:3.12-alpine          (Python)
  *   - node:20-alpine               (JavaScript)
  *   - mcr.microsoft.com/devcontainers/typescript-node:1-20-bookworm (TypeScript)

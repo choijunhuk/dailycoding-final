@@ -1,6 +1,6 @@
 import redis from '../config/redis.js';
 
-// Redis 다운 시 인메모리 폴백
+// In-memory fallback when Redis is down
 const fallback = new Map();
 let fallbackMaxSize = 50000;
 let lastFallbackCleanupAt = 0;
@@ -61,9 +61,9 @@ function inMemoryCheck(key, max, windowSec) {
 }
 
 /**
- * Redis 기반 Rate Limiter (Redis 장애 시 인메모리 폴백)
- * @param {number} max - 허용 요청 수
- * @param {number} windowSec - 시간 창 (초)
+ * Redis-based rate limiter (falls back to in-memory when Redis is unavailable)
+ * @param {number} max - maximum number of allowed requests
+ * @param {number} windowSec - time window in seconds
  */
 export function rateLimit(max = 30, windowSec = 60) {
   return async (req, res, next) => {
@@ -79,7 +79,7 @@ export function rateLimit(max = 30, windowSec = 60) {
       // NOTE: redis.incr() already sets TTL on first increment — don't call redis.set()
       // here as that would reset the counter during concurrent requests (race condition)
     } catch {
-      // Redis 장애 시 인메모리 폴백 사용 (통과 대신)
+      // Use in-memory fallback on Redis failure (instead of passing through)
       const fallbackState = inMemoryCheck(key, max, windowSec);
       count = fallbackState.count;
       retryAfter = fallbackState.retryAfter;
@@ -102,16 +102,16 @@ export function rateLimit(max = 30, windowSec = 60) {
   };
 }
 
-// 로그인/회원가입용 제한 (/api/auth/me 같은 조회 엔드포인트도 포함되므로 충분히 허용)
+// Login/signup limiter (generously sized to also cover read endpoints like /api/auth/me)
 export const authLimiter = rateLimit(100, 15 * 60);
-// AI 호출 제한
+// AI call limiter
 export const aiLimiter   = rateLimit(20, 60);
-// 제출 제한 (judge-status 조회도 포함되므로 충분히 허용)
+// Submission limiter (generously sized to also cover judge-status polling)
 export const submitLimiter = rateLimit(60, 60);
-// 일반 API 제한 (문제 목록, 대회, 랭킹 등 공개 엔드포인트)
+// General API limiter (public endpoints: problem list, contests, ranking, etc.)
 export const generalLimiter = rateLimit(100, 60);
-// 비밀번호 찾기 제한
+// Forgot-password limiter
 export const forgotPasswordLimiter = rateLimit(5, 60 * 60);
-// 커뮤니티 작성 제한
+// Community post/reply limiters
 export const communityPostLimiter = rateLimit(10, 60);
 export const communityReplyLimiter = rateLimit(20, 60);

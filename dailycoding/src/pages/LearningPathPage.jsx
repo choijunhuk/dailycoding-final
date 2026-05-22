@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
+import { useLang } from '../context/LangContext.jsx';
+import { pickLangText } from '../utils/languageMode.js';
 
 const TIER_COLOR = {
   bronze: '#cd7f32',
@@ -656,9 +658,110 @@ const ALGO_TRACKS = [
 
 const ALL_TRACKS = [...LANGUAGE_TRACKS, ...ALGO_TRACKS];
 
+const TRACK_COPY = {
+  python: {
+    desc: ['Python의 깔끔한 문법으로 알고리즘 기초를 익힙니다. 입문자에게 가장 추천하는 언어입니다.', 'Learn algorithm fundamentals with Python. Its clean syntax makes it the top recommendation for beginners.'],
+  },
+  javascript: {
+    desc: ['웹의 언어 JavaScript로 알고리즘 실력과 웹 개발 감각을 함께 다집니다.', 'Sharpen your algorithm skills and web development ability at the same time with JavaScript, the language of the web.'],
+  },
+  java: {
+    desc: ['객체지향의 표준 Java로 취업 코딩 테스트에 필요한 탄탄한 기반을 만듭니다.', 'Build a solid foundation with Java, the gold standard of object-oriented programming and the #1 language for job coding tests.'],
+  },
+  c: {
+    desc: ['컴퓨터 과학의 뿌리인 C로 메모리 구조와 포인터를 깊게 이해합니다.', 'Deeply understand memory structures and pointers with C, the root of computer science.'],
+  },
+  cpp: {
+    desc: ['STL과 고성능 알고리즘에 강한 C++로 대회와 실전 개발을 준비합니다.', 'Prepare for coding competitions and real-world development with C++, the powerhouse of STL and high-performance algorithms.'],
+  },
+  'data-structure': {
+    label: ['자료구조', 'Data Structures'],
+    desc: ['스택, 큐, 트리, 그래프까지 알고리즘의 뼈대가 되는 자료구조를 단계별로 익힙니다.', 'Stack, Queue, Tree, Graph — master the data structures that form the backbone of algorithms, step by step.'],
+  },
+  dp: {
+    label: ['동적 계획법', 'Dynamic Programming'],
+    desc: ['복잡한 문제를 작은 부분 문제로 나누어 해결하는 DP 사고법을 익힙니다.', 'Master DP — solving complex problems by breaking them into smaller subproblems.'],
+  },
+  graph: {
+    label: ['그래프 이론', 'Graph Theory'],
+    desc: ['BFS/DFS부터 최단 경로, 최소 스패닝 트리까지 그래프 이론을 정복합니다.', 'Conquer graph theory from BFS and DFS all the way to shortest paths and minimum spanning trees.'],
+  },
+  sorting: {
+    label: ['정렬 · 탐색', 'Sorting · Search'],
+    desc: ['효율적인 정렬과 탐색 알고리즘으로 코딩 테스트 기본기를 다집니다.', 'Build the fundamentals of coding tests with efficient sorting and searching algorithms.'],
+  },
+  string: {
+    label: ['문자열', 'Strings'],
+    desc: ['기본 문자열 처리부터 KMP까지 문자열 알고리즘을 단계적으로 익힙니다.', 'Conquer string algorithms from basic processing all the way to KMP.'],
+  },
+};
+
+const LEVEL_TITLES = {
+  '🌱 Beginner': ['🌱 입문', '🌱 Beginner'],
+  '📘 Fundamentals': ['📘 기초', '📘 Fundamentals'],
+  '⚡ Intermediate': ['⚡ 중급', '⚡ Intermediate'],
+  '🔥 Advanced': ['🔥 고급', '🔥 Advanced'],
+  '🌱 Linear Structures': ['🌱 선형 자료구조', '🌱 Linear Structures'],
+  '📘 Hash · Sets': ['📘 해시 · 집합', '📘 Hash · Sets'],
+  '⚡ Trees': ['⚡ 트리', '⚡ Trees'],
+  '🔥 Advanced Data Structures': ['🔥 고급 자료구조', '🔥 Advanced Data Structures'],
+  '⚡ DP Optimization': ['⚡ DP 최적화', '⚡ DP Optimization'],
+  '🌱 Traversal': ['🌱 그래프 탐색', '🌱 Traversal'],
+  '📘 Shortest Path': ['📘 최단 경로', '📘 Shortest Path'],
+  '⚡ Advanced Graph': ['⚡ 고급 그래프', '⚡ Advanced Graph'],
+  '🌱 Basic Sorting': ['🌱 기본 정렬', '🌱 Basic Sorting'],
+  '📘 Binary Search': ['📘 이분 탐색', '📘 Binary Search'],
+  '🌱 Basic Strings': ['🌱 기본 문자열', '🌱 Basic Strings'],
+  '📘 문자열 알고리즘': ['📘 문자열 알고리즘', '📘 String Algorithms'],
+};
+
+const LEVEL_SUBTITLES = {
+  'Basic Syntax · I/O · Conditionals/Loops': ['기본 문법 · 입출력 · 조건문/반복문', 'Basic Syntax · I/O · Conditionals/Loops'],
+  'Lists · Dictionaries · Math': ['리스트 · 딕셔너리 · 수학', 'Lists · Dictionaries · Math'],
+  'Sorting · Search · Intro to DP': ['정렬 · 탐색 · DP 입문', 'Sorting · Search · Intro to DP'],
+  'Graph · DP · Advanced Algorithms': ['그래프 · DP · 고급 알고리즘', 'Graph · DP · Advanced Algorithms'],
+  'Variables · Functions · Basic Operations': ['변수 · 함수 · 기본 연산', 'Variables · Functions · Basic Operations'],
+  'Arrays · Objects · Functional Patterns': ['배열 · 객체 · 함수형 패턴', 'Arrays · Objects · Functional Patterns'],
+  'Stack · Queue · HashMap': ['스택 · 큐 · 해시맵', 'Stack · Queue · HashMap'],
+  'BFS/DFS · DP · Advanced': ['BFS/DFS · DP · 고급', 'BFS/DFS · DP · Advanced'],
+  'Basic Syntax · Classes · Types': ['기본 문법 · 클래스 · 타입', 'Basic Syntax · Classes · Types'],
+  'ArrayList · HashMap · Stack · Queue': ['ArrayList · HashMap · 스택 · 큐', 'ArrayList · HashMap · Stack · Queue'],
+  'Sorting · Search · Recursion': ['정렬 · 탐색 · 재귀', 'Sorting · Search · Recursion'],
+  'Graph · DP · Advanced Data Structures': ['그래프 · DP · 고급 자료구조', 'Graph · DP · Advanced Data Structures'],
+  'printf/scanf · Variables · Operators': ['printf/scanf · 변수 · 연산자', 'printf/scanf · Variables · Operators'],
+  'Arrays · Pointers · Strings': ['배열 · 포인터 · 문자열', 'Arrays · Pointers · Strings'],
+  'Structs · Dynamic Memory · Algorithms': ['구조체 · 동적 메모리 · 알고리즘', 'Structs · Dynamic Memory · Algorithms'],
+  'sort · binary_search · Graph Traversal': ['sort · binary_search · 그래프 탐색', 'sort · binary_search · Graph Traversal'],
+  'Segment Tree · KMP · Topological Sort': ['세그먼트 트리 · KMP · 위상 정렬', 'Segment Tree · KMP · Topological Sort'],
+  'Array · Stack · Queue': ['배열 · 스택 · 큐', 'Array · Stack · Queue'],
+  'HashMap · Sets · Priority Queue': ['해시맵 · 집합 · 우선순위 큐', 'HashMap · Sets · Priority Queue'],
+  'Binary Tree · Heap · Segment Tree': ['이진 트리 · 힙 · 세그먼트 트리', 'Binary Tree · Heap · Segment Tree'],
+  'Union-Find · Network Flow': ['유니온 파인드 · 네트워크 플로우', 'Union-Find · Network Flow'],
+  'Fibonacci · Stairs · Max Subarray Sum': ['피보나치 · 계단 · 최대 부분합', 'Fibonacci · Stairs · Max Subarray Sum'],
+  'LCS · Knapsack · Matrix Path': ['LCS · 배낭 · 행렬 경로', 'LCS · Knapsack · Matrix Path'],
+  'Coin Change · Memoization · Path Finding': ['동전 교환 · 메모이제이션 · 경로 찾기', 'Coin Change · Memoization · Path Finding'],
+  'BFS · DFS · Connected Components': ['BFS · DFS · 연결 요소', 'BFS · DFS · Connected Components'],
+  'Dijkstra · BFS Shortest Path': ['다익스트라 · BFS 최단 경로', 'Dijkstra · BFS Shortest Path'],
+  'MST · Topological Sort · Flow · Union-Find': ['MST · 위상 정렬 · 플로우 · 유니온 파인드', 'MST · Topological Sort · Flow · Union-Find'],
+  'Sorting Applications · Statistics': ['정렬 응용 · 통계', 'Sorting Applications · Statistics'],
+  'Binary Search · Two Pointers · Sliding Window': ['이분 탐색 · 투 포인터 · 슬라이딩 윈도우', 'Binary Search · Two Pointers · Sliding Window'],
+  'Reverse · Palindrome · Case Conversion': ['뒤집기 · 회문 · 대소문자 변환', 'Reverse · Palindrome · Case Conversion'],
+  '압축 · 패턴 매칭 · 편집 거리': ['압축 · 패턴 매칭 · 편집 거리', 'Compression · Pattern Matching · Edit Distance'],
+};
+
+function localizeTuple(lang, tuple, fallback) {
+  return tuple ? pickLangText(lang, tuple[0], tuple[1]) : fallback;
+}
+
 export default function LearningPathPage() {
   const navigate = useNavigate();
   const { solved } = useApp();
+  const { lang } = useLang();
+  const txt = (ko, en) => pickLangText(lang, ko, en);
+  const getTrackLabel = (item) => localizeTuple(lang, TRACK_COPY[item.id]?.label, item.label);
+  const getTrackDesc = (item) => localizeTuple(lang, TRACK_COPY[item.id]?.desc, item.desc);
+  const getLevelTitle = (item) => localizeTuple(lang, LEVEL_TITLES[item.title], item.title);
+  const getLevelSubtitle = (item) => localizeTuple(lang, LEVEL_SUBTITLES[item.subtitle], item.subtitle);
   const [selectedTrackId, setSelectedTrackId] = useState(LANGUAGE_TRACKS[0].id);
   const [selectedLevelIdx, setSelectedLevelIdx] = useState(0);
 
@@ -681,16 +784,16 @@ export default function LearningPathPage() {
     <div style={{ padding: '24px 20px 60px', maxWidth: 860, margin: '0 auto' }}>
       {/* 헤더 */}
       <div style={{ marginBottom: 20 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 4 }}>🎓 학습 트랙</h1>
+        <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 4 }}>🎓 {txt('학습 트랙', 'Learning Tracks')}</h1>
         <div style={{ fontSize: 13, color: 'var(--text2)' }}>
-          언어별 · 주제별 단계적 알고리즘 학습
+          {txt('언어별 · 주제별 단계적 알고리즘 학습', 'Step-by-step algorithm learning by language and topic')}
         </div>
       </div>
 
       {/* 트랙 탭 바 */}
       <div style={{ marginBottom: 16 }}>
         <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text3)', letterSpacing: 1, marginBottom: 8 }}>
-          언어별 트랙
+          {txt('언어별 트랙', 'Language Tracks')}
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
           {LANGUAGE_TRACKS.map(t => {
@@ -712,13 +815,13 @@ export default function LearningPathPage() {
                   ? <img src={t.logo} width={16} height={16} alt={t.label} style={{ objectFit: 'contain', flexShrink: 0 }} />
                   : <span>{t.icon}</span>
                 }
-                <span>{t.label}</span>
+                <span>{getTrackLabel(t)}</span>
               </button>
             );
           })}
         </div>
         <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text3)', letterSpacing: 1, marginBottom: 8 }}>
-          알고리즘 · 주제별 트랙
+          {txt('알고리즘 · 주제별 트랙', 'Algorithm · Topic Tracks')}
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
           {ALGO_TRACKS.map(t => {
@@ -737,7 +840,7 @@ export default function LearningPathPage() {
                 }}
               >
                 <span>{t.icon}</span>
-                <span>{t.label}</span>
+                <span>{getTrackLabel(t)}</span>
               </button>
             );
           })}
@@ -762,14 +865,14 @@ export default function LearningPathPage() {
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--text)', marginBottom: 4 }}>
-            {track.label}
+            {getTrackLabel(track)}
           </div>
           <div style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.5, marginBottom: 8 }}>
-            {track.desc}
+            {getTrackDesc(track)}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <span style={{ fontSize: 12, color: 'var(--text3)' }}>
-              전체 {totalProblems}문제 · 완료 {solvedInTrack}문제
+              {txt(`전체 ${totalProblems}문제 · 완료 ${solvedInTrack}문제`, `${totalProblems} problems · ${solvedInTrack} completed`)}
             </span>
             <div style={{ flex: 1, height: 4, background: 'var(--bg3)', borderRadius: 2, maxWidth: 120 }}>
               <div style={{
@@ -800,7 +903,7 @@ export default function LearningPathPage() {
                 display: 'flex', alignItems: 'center', gap: 6,
               }}
             >
-              {lv.title}
+              {getLevelTitle(lv)}
               <span style={{
                 fontSize: 11, fontWeight: 600,
                 color: isActive ? track.color.text : 'var(--text3)',
@@ -823,10 +926,10 @@ export default function LearningPathPage() {
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
           <div>
-            <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>{level.subtitle}</span>
+            <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>{getLevelSubtitle(level)}</span>
           </div>
           <span style={{ fontSize: 12, color: 'var(--text3)' }}>
-            {solvedInLevel}/{level.problems.length} 완료
+            {txt(`${solvedInLevel}/${level.problems.length} 완료`, `${solvedInLevel}/${level.problems.length} completed`)}
           </span>
         </div>
 

@@ -74,7 +74,7 @@ test('algorithm battle lifecycle creates, joins, starts, submits, and finishes',
   assert.deepEqual(item.event.payload.targetUserIds, [userB]);
   await assert.rejects(
     () => AlgorithmBattle.useItem(created.room.id, userA, { itemType: 'shield' }),
-    /쿨다운/
+    /쿨다운|cooldown/i
   );
 
   const submitted = await AlgorithmBattle.recordSubmission({
@@ -303,7 +303,7 @@ test('algorithm battle exposes mode metadata and blocks items in classic mode', 
 
   await assert.rejects(
     () => AlgorithmBattle.useItem(created.room.id, userA, { itemType: 'shield' }),
-    /아이템/
+    /아이템|items/i
   );
 });
 
@@ -328,6 +328,6 @@ test('algorithm battle prevents non-participant submissions', async () => {
       language: 'Python 3',
       judgeResult: { result: 'wrong', detail: 'nope' },
     }),
-    /방 참가자/
+    /방 참가자|room participants/i
   );
 });

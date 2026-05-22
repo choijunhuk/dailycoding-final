@@ -60,7 +60,7 @@ router.get('/search', auth, async (req, res) => {
     });
   } catch (err) {
     console.error('[search]', err);
-    res.status(500).json({ message: '검색 중 오류가 발생했습니다.' });
+    res.status(500).json({ message: 'An error occurred while searching.' });
   }
 });
 

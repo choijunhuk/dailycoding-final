@@ -29,6 +29,7 @@ test('buildDailyFocusPlan prioritizes unresolved recovery work over weekly chall
       items: [{ problemId: 2001, problemTitle: '틀린 문제', priority: 'high', result: 'wrong', submissionId: 9 }],
     },
     weeklyChallenge: { problemId: 3001, problemTitle: '주간 문제', isSolved: false },
+    lang: 'ko',
   });
 
   assert.equal(plan[1].key, 'recovery');
@@ -42,11 +43,25 @@ test('buildDailyFocusPlan uses weekly challenge when there is no recovery item',
     todayProblem,
     recoveryQueue: { count: 0, items: [] },
     weeklyChallenge: { problemId: 3001, problemTitle: '주간 문제', isSolved: false, tier: 'silver', difficulty: 2 },
+    lang: 'ko',
   });
 
   assert.equal(plan[1].key, 'weekly-challenge');
   assert.equal(plan[1].path, '/problems/3001');
   assert.equal(plan[1].stat, 'silver · 난이도 2');
+});
+
+test('buildDailyFocusPlan defaults chrome labels to English mode', () => {
+  const plan = buildDailyFocusPlan({
+    todayProblem,
+    recoveryQueue: {
+      count: 2,
+      items: [{ problemId: 2001, problemTitle: 'Wrong problem', priority: 'high', result: 'wrong', submissionId: 9 }],
+    },
+  });
+
+  assert.equal(plan[1].title, 'Wrong Answer Recovery');
+  assert.equal(plan[1].stat, 'Priority Recovery');
 });
 
 test('buildDailyFocusPlan falls back to progression and caps the card count', () => {

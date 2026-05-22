@@ -7,8 +7,10 @@ import EmailVerifyGate from '../components/EmailVerifyGate.jsx';
 import { JUDGE_LANGUAGE_OPTIONS, getEffectiveJudgeLanguage, getJudgeLanguageOptionsForSupported } from '../data/judgeLanguages.js';
 import { useSubscriptionStatus } from '../hooks/useSubscriptionStatus.js';
 import { useToast } from '../context/ToastContext.jsx';
+import { useLang } from '../context/LangContext.jsx';
 import { BATTLE_AD_SLOTS, BATTLE_DURATIONS, BATTLE_MODES, BATTLE_SEC, fmtTime, getSocketUrl, POLL_MS, TYPE_COLOR, TYPE_LABEL } from './battlePageUtils.js';
 import { BattleAdSlot, BugFixProblem, CodingProblem, FillBlankProblem, getBattleStarterCode } from './battleProblemViews.jsx';
+import { getDateLocale, pickLangText } from '../utils/languageMode.js';
 import './BattlePage.css';
 
 // ── Web Audio typing sound (no external libraries) ────────────────────────
@@ -48,6 +50,9 @@ function useTypingSound() {
 
 function BattleReplayViewer({ roomId }) {
   const navigate = useNavigate();
+  const { lang } = useLang();
+  const txt = (ko, en) => pickLangText(lang, ko, en);
+  const dateLocale = getDateLocale(lang);
   const [replay, setReplay] = useState(null);
   const [loading, setLoading] = useState(true);
   const [cursor, setCursor] = useState(0);
@@ -89,8 +94,8 @@ function BattleReplayViewer({ roomId }) {
     return (
       <div className="bp-page" style={{display:'grid',placeItems:'center'}}>
         <div className="card card-pad-lg" style={{maxWidth:420,textAlign:'center'}}>
-          <h2>리플레이를 찾을 수 없습니다</h2>
-          <button className="btn btn-primary" onClick={() => navigate('/battle')}>배틀로 이동</button>
+          <h2>{txt('리플레이를 찾을 수 없습니다', 'Replay not found')}</h2>
+          <button className="btn btn-primary" onClick={() => navigate('/battle')}>{txt('배틀로 이동', 'Go to Battle')}</button>
         </div>
       </div>
     );
@@ -101,7 +106,7 @@ function BattleReplayViewer({ roomId }) {
       <div className="bp-result">
         <div className="bp-result-banner draw">🎬 Battle Replay</div>
         <div style={{fontSize:13,color:'var(--text2)',textAlign:'center',marginBottom:16}}>
-          Room {replay.roomId} · {new Date(replay.createdAt).toLocaleString('ko-KR')}
+          Room {replay.roomId} · {new Date(replay.createdAt).toLocaleString(dateLocale)}
         </div>
 
         <div className="bp-replay-progress">
@@ -131,8 +136,8 @@ function BattleReplayViewer({ roomId }) {
           {visibleEvents.length === 0 && <div className="bp-empty-msg">No submission events recorded.</div>}
           {visibleEvents.map((event, index) => (
             <div key={`${event.ts}-${index}`} className={`bp-replay-event ${event.type}`}>
-              <span className="mono">{new Date(event.ts).toLocaleTimeString('ko-KR')}</span>
-              <strong>User {event.userId}</strong>
+              <span className="mono">{new Date(event.ts).toLocaleTimeString(dateLocale)}</span>
+              <strong>{txt('사용자', 'User')} {event.userId}</strong>
               <span>P{event.problemId}</span>
               <span>{event.language || '-'}</span>
               <span>{event.type === 'pass' ? 'Pass' : 'Fail'}</span>
@@ -151,6 +156,17 @@ export default function BattlePage() {
   const params = useParams();
   const { user } = useAuth();
   const toast = useToast();
+  const { lang } = useLang();
+  const txt = (ko, en) => pickLangText(lang, ko, en);
+  const dateLocale = getDateLocale(lang);
+  const typeLabel = (type) => {
+    const labels = {
+      coding: txt('코딩', 'Coding'),
+      'fill-blank': txt('빈칸 채우기', 'Fill in the Blank'),
+      'bug-fix': txt('버그 수정', 'Bug Fix'),
+    };
+    return labels[type] || TYPE_LABEL[type] || type;
+  };
   const { tier: subscriptionTier } = useSubscriptionStatus(user?.id);
   const playTyping = useTypingSound();
   const isFreePlan = subscriptionTier === 'free';
@@ -666,10 +682,13 @@ export default function BattlePage() {
   };
 
   const buildShareText = (battleRoom, currentPlayer, opponentPlayer, didWin, didDraw) => {
-    const outcome = didWin ? '승리' : didDraw ? '무승부' : '패배';
-    const primaryProblemTitle = battleRoom?.problems?.[0]?.title || '배틀 문제';
+    const outcome = didWin ? txt('승리', 'won') : didDraw ? txt('무승부', 'drew') : txt('패배', 'lost');
+    const primaryProblemTitle = battleRoom?.problems?.[0]?.title || txt('배틀 문제', 'battle problem');
     const elapsedSec = Math.max(0, BATTLE_SEC - timeLeft);
-    return `DailyCoding 배틀에서 ${outcome}했습니다! 🔥 문제: ${primaryProblemTitle} | 점수 ${currentPlayer?.score ?? 0}:${opponentPlayer?.score ?? 0} | ${elapsedSec}초 경과`;
+    return txt(
+      `DailyCoding 배틀에서 ${outcome}했습니다! 🔥 문제: ${primaryProblemTitle} | 점수 ${currentPlayer?.score ?? 0}:${opponentPlayer?.score ?? 0} | ${elapsedSec}초 경과`,
+      `I ${outcome} a DailyCoding battle! 🔥 Problem: ${primaryProblemTitle} | Score ${currentPlayer?.score ?? 0}:${opponentPlayer?.score ?? 0} | ${elapsedSec}s elapsed`,
+    );
   };
 
   const handleShareCopy = async () => {
@@ -870,7 +889,7 @@ export default function BattlePage() {
                       value={inviteInput}
                       onChange={e => setInviteInput(e.target.value)}
                       onKeyDown={e => e.key === 'Enter' && sendInvite()}
-                      placeholder="상대방 사용자 이름 입력"
+                      placeholder={txt('상대방 사용자 이름 입력', 'Enter opponent username')}
                     />
                     <select
                       className="bp-invite-input"
@@ -882,7 +901,7 @@ export default function BattlePage() {
                         <option key={option.value} value={option.value}>{option.label}</option>
                       ))}
                     </select>
-                    <button className="bp-btn-primary" onClick={sendInvite}>초대 보내기</button>
+                    <button className="bp-btn-primary" onClick={sendInvite}>{txt('초대 보내기', 'Send Invite')}</button>
                   </div>
                   {inviteError && <div className="bp-error">{inviteError}</div>}
                 </div>
@@ -899,7 +918,7 @@ export default function BattlePage() {
                     setLobbyPhase('idle');
                     setRoomId(null);
                     setInviteError('');
-                  }}>취소</button>
+                  }}>{txt('취소', 'Cancel')}</button>
                 </div>
               )}
 
@@ -983,7 +1002,7 @@ export default function BattlePage() {
                                 <span className={`bp-battle-tag ${row.result}`}>{row.result === 'win' ? 'WIN' : row.result === 'lose' ? 'LOSE' : 'DRAW'}</span>
                                 <span>{row.opponentName}</span>
                               </div>
-                              <span style={{ fontSize:11, color:'var(--text3)' }}>{new Date(row.createdAt).toLocaleString('ko-KR')}</span>
+                              <span style={{ fontSize:11, color:'var(--text3)' }}>{new Date(row.createdAt).toLocaleString(dateLocale)}</span>
                             </div>
                             <div style={{ fontSize:12, color:'var(--text2)' }}>
                               Score {row.scoreFor} : {row.scoreAgainst} · Solved {row.solvedFor} : {row.solvedAgainst}
@@ -1050,18 +1069,18 @@ export default function BattlePage() {
     return (
       <div className="bp-page" style={{ display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:8, background:'var(--bg)' }}>
         <div style={{ textAlign:'center' }}>
-          <div style={{ fontSize:13, color:'var(--text3)', letterSpacing:3, marginBottom:16, textTransform:'uppercase' }}>배틀 시작까지</div>
+          <div style={{ fontSize:13, color:'var(--text3)', letterSpacing:3, marginBottom:16, textTransform:'uppercase' }}>{txt('배틀 시작까지', 'Battle starts in')}</div>
           <div style={{ fontSize:128, fontWeight:900, color: countdown > 0 ? 'var(--blue)' : 'var(--green)', lineHeight:1, fontFamily:'Space Mono,monospace', minWidth:160, transition:'color 0.3s' }}>
             {countdown > 0 ? countdown : '🔥'}
           </div>
           <div style={{ fontSize:15, color:'var(--text2)', marginTop:20 }}>
-            {countdown > 0 ? '잠시 후 문제가 공개됩니다...' : '배틀 시작!'}
+            {countdown > 0 ? txt('잠시 후 문제가 공개됩니다...', 'Problems will be revealed shortly...') : txt('배틀 시작!', 'Battle Start!')}
           </div>
           {players.length > 0 && (
             <div style={{ marginTop:28, display:'flex', gap:12, justifyContent:'center', flexWrap:'wrap' }}>
               {players.map(p => (
                 <div key={p.id} style={{ padding:'6px 18px', borderRadius:20, background:'var(--bg3)', border:`2px solid ${p.teamId === 'team_1' ? 'var(--blue)' : 'var(--red)'}`, fontSize:14, fontWeight:600, color:'var(--text)' }}>
-                  {p.id === myId ? `${p.username} (나)` : p.username}
+                  {p.id === myId ? `${p.username} (${txt('나', 'Me')})` : p.username}
                 </div>
               ))}
             </div>
@@ -1097,7 +1116,7 @@ export default function BattlePage() {
     return (
       <div className="bp-page bp-battle-page">
         {isFreePlan && <BattleAdSlot slot={BATTLE_AD_SLOTS.battle} />}
-        {isSpectator && <div className="bp-spectator-banner">👁️ 관전 중입니다 (읽기 전용)</div>}
+        {isSpectator && <div className="bp-spectator-banner">👁️ {txt('관전 중입니다 (읽기 전용)', 'Spectating (read-only)')}</div>}
         
         {/* ── 상단 HUD ── */}
         <div className="bp-hud">
@@ -1154,7 +1173,7 @@ export default function BattlePage() {
                 onClick={() => setActiveProbIdx(i)}
               >
                 <span className="bp-territory-num">{i + 1}</span>
-                <span className="bp-territory-type" style={{ color: TYPE_COLOR[p.type] }}>{TYPE_LABEL[p.type]}</span>
+                <span className="bp-territory-type" style={{ color: TYPE_COLOR[p.type] }}>{typeLabel(p.type)}</span>
                 {byMe  && <span className="bp-territory-flag">🏳️ Captured</span>}
                 {byOpp && <span className="bp-territory-flag">🔒 Taken</span>}
               </button>
@@ -1168,7 +1187,7 @@ export default function BattlePage() {
             <>
               <div className="bp-problem-header">
                 <span className="bp-type-badge" style={{ background: TYPE_COLOR[activeProblem.type] + '22', color: TYPE_COLOR[activeProblem.type] }}>
-                  {TYPE_LABEL[activeProblem.type]}
+                  {typeLabel(activeProblem.type)}
                 </span>
                 <h2 className="bp-problem-title">{activeProblem.title}</h2>
                 {isLocked && <span className="bp-locked-badge">🔒 Claimed by opponent</span>}
@@ -1212,7 +1231,7 @@ export default function BattlePage() {
                   onClick={() => submitAnswer(activeProblem)}
                   disabled={submitting}
                 >
-                  {submitting ? '채점 중...' : '제출'}
+                  {submitting ? txt('채점 중...', 'Grading...') : txt('제출', 'Submit')}
                 </button>
               )}
 
@@ -1250,7 +1269,7 @@ export default function BattlePage() {
             <div className="bp-spectator-chat">
               <div className="bp-spectator-chat-log">
                 {spectatorMessages.length === 0 ? (
-                  <div className="bp-spectator-empty">아직 관전자 메시지가 없습니다.</div>
+                  <div className="bp-spectator-empty">{txt('아직 관전자 메시지가 없습니다.', 'No spectator messages yet.')}</div>
                 ) : spectatorMessages.map((item, index) => (
                   <div key={`${item.at}-${index}`} className="bp-spectator-message">
                     <strong>{item.username || 'Anonymous'}</strong>
@@ -1264,9 +1283,9 @@ export default function BattlePage() {
                   onChange={(e) => setSpectatorMessage(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') sendSpectatorMessage(); }}
                   maxLength={100}
-                  placeholder="관전자 응원 메시지"
+                  placeholder={txt('관전자 응원 메시지', 'Spectator cheer message')}
                 />
-                <button type="button" onClick={sendSpectatorMessage}>전송</button>
+                <button type="button" onClick={sendSpectatorMessage}>{txt('전송', 'Send')}</button>
               </div>
             </div>
           </div>
@@ -1315,7 +1334,7 @@ export default function BattlePage() {
                 return (
                   <div key={p.id} className={`bp-territory-cell ${byMe ? 'mine' : byOpp ? 'opp' : ''}`}>
                     <span className="bp-territory-num">{i + 1}</span>
-                    <span className="bp-territory-type">{TYPE_LABEL[p.type]}</span>
+                    <span className="bp-territory-type">{typeLabel(p.type)}</span>
                     <span className="bp-territory-flag">
                       {byMe ? `🏳️ My Team` : byOpp ? `🏴 Opponent` : '—'}
                     </span>

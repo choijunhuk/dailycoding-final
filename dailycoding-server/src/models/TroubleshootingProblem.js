@@ -158,12 +158,12 @@ export const TroubleshootingProblem = {
   async upsertConfig(problemId, input = {}) {
     const normalized = normalizeTroubleshootingConfig(input);
     if (!normalized.scenarioTitle) {
-      const err = new Error('시나리오 제목은 필수입니다.');
+      const err = new Error('Scenario title is required.');
       err.status = 400;
       throw err;
     }
     if (normalized.initialFiles.length === 0) {
-      const err = new Error('최소 1개 이상의 초기 파일이 필요합니다.');
+      const err = new Error('At least one initial file is required.');
       err.status = 400;
       throw err;
     }

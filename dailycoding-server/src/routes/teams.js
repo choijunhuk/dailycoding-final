@@ -23,7 +23,7 @@ async function getUserTeamOr404(req, res) {
   const teamId = parseTeamId(req);
   const team = await Team.findByUser(req.user.id, teamId);
   if (!team) {
-    res.status(404).json({ message: '소속을 찾을 수 없습니다.' });
+    res.status(404).json({ message: 'Organization not found.' });
     return null;
   }
   return team;
@@ -36,7 +36,7 @@ router.get('/my', auth, async (req, res) => {
     if (!team) return res.json(null);
     res.json(await Team.getTeamState(team.id));
   } catch (err) {
-    res.status(500).json({ message: '팀 정보 조회 실패' });
+    res.status(500).json({ message: 'Failed to retrieve team info.' });
   }
 });
 
@@ -45,7 +45,7 @@ router.get('/mine', auth, async (req, res) => {
   try {
     res.json({ teams: await Team.findAllByUser(req.user.id) });
   } catch (err) {
-    res.status(500).json({ message: '소속 목록 조회 실패' });
+    res.status(500).json({ message: 'Failed to retrieve organization list.' });
   }
 });
 
@@ -53,11 +53,11 @@ router.get('/mine', auth, async (req, res) => {
 router.post('/create', auth, async (req, res) => {
   const { name } = req.body;
   try {
-    const cleanName = String(name || '').trim().slice(0, 100) || `${req.user.username}의 소속`;
+    const cleanName = String(name || '').trim().slice(0, 100) || `${req.user.username}'s Organization`;
     const teamId = await Team.create(cleanName, req.user.id);
-    res.json({ id: teamId, message: '소속이 생성되었습니다.', team: await Team.getTeamState(teamId) });
+    res.json({ id: teamId, message: 'Organization created successfully.', team: await Team.getTeamState(teamId) });
   } catch (err) {
-    sendError(res, err, '팀 생성 실패');
+    sendError(res, err, 'Failed to create team.');
   }
 });
 
@@ -76,7 +76,7 @@ router.post('/invite', auth, async (req, res) => {
     await Team.createInvite(team.id, token, expiresAtSql);
     res.json({ token, expiresAt: expiresAt.toISOString() });
   } catch (err) {
-    sendError(res, err, '초대 링크 생성 실패');
+    sendError(res, err, 'Failed to create invite link.');
   }
 });
 
@@ -85,12 +85,12 @@ router.post('/join', auth, async (req, res) => {
   const { token } = req.body;
   try {
     const invite = await Team.findInvite(token);
-    if (!invite) return res.status(400).json({ message: '유효하지 않거나 만료된 초대 링크입니다.' });
+    if (!invite) return res.status(400).json({ message: 'Invalid or expired invite link.' });
 
     await Team.addMember(invite.team_id, req.user.id);
-    res.json({ message: '소속에 성공적으로 합류했습니다!', team: await Team.getTeamState(invite.team_id) });
+    res.json({ message: 'Successfully joined the organization!', team: await Team.getTeamState(invite.team_id) });
   } catch (err) {
-    sendError(res, err, '팀 합류 실패');
+    sendError(res, err, 'Failed to join team.');
   }
 });
 
@@ -101,12 +101,12 @@ router.delete('/members/:userId', auth, async (req, res) => {
     const team = await getUserTeamOr404(req, res);
     if (!team) return;
     await Team.requireAdmin(team.id, req.user.id);
-    if (targetUserId === req.user.id) return res.status(400).json({ message: '본인은 추방할 수 없습니다.' });
+    if (targetUserId === req.user.id) return res.status(400).json({ message: 'You cannot remove yourself.' });
 
     await Team.removeMember(team.id, targetUserId);
-    res.json({ message: '멤버가 추방되었습니다.', team: await Team.getTeamState(team.id) });
+    res.json({ message: 'Member has been removed.', team: await Team.getTeamState(team.id) });
   } catch (err) {
-    sendError(res, err, '멤버 추방 실패');
+    sendError(res, err, 'Failed to remove member.');
   }
 });
 
@@ -119,9 +119,9 @@ router.post('/members/:userId/role', auth, async (req, res) => {
     if (!team) return;
     await Team.requireAdmin(team.id, req.user.id);
     const nextTeam = await Team.setMemberRole(team.id, targetUserId, role);
-    res.json({ message: role === 'admin' ? '관리자로 지정했습니다.' : '일반 멤버로 변경했습니다.', team: nextTeam });
+    res.json({ message: role === 'admin' ? 'Promoted to admin.' : 'Changed to regular member.', team: nextTeam });
   } catch (err) {
-    sendError(res, err, '역할 변경 실패');
+    sendError(res, err, 'Failed to change role.');
   }
 });
 
@@ -129,9 +129,9 @@ router.post('/members/:userId/role', auth, async (req, res) => {
 router.delete('/leave', auth, async (req, res) => {
   try {
     await Team.leave(req.user.id, parseTeamId(req));
-    res.json({ message: '소속에서 탈퇴했습니다.' });
+    res.json({ message: 'You have left the organization.' });
   } catch (err) {
-    sendError(res, err, '소속 탈퇴 실패');
+    sendError(res, err, 'Failed to leave organization.');
   }
 });
 
@@ -142,9 +142,9 @@ router.patch('/name', auth, async (req, res) => {
     const team = await getUserTeamOr404(req, res);
     if (!team) return;
     const updated = await Team.rename(team.id, req.user.id, name);
-    res.json({ message: '소속 이름이 변경되었습니다.', team: updated });
+    res.json({ message: 'Organization name has been updated.', team: updated });
   } catch (err) {
-    sendError(res, err, '이름 변경 실패');
+    sendError(res, err, 'Failed to rename organization.');
   }
 });
 
@@ -154,9 +154,9 @@ router.delete('/', auth, async (req, res) => {
     const team = await getUserTeamOr404(req, res);
     if (!team) return;
     await Team.dissolve(team.id, req.user.id);
-    res.json({ message: '소속이 해산되었습니다.' });
+    res.json({ message: 'Organization has been dissolved.' });
   } catch (err) {
-    sendError(res, err, '소속 해산 실패');
+    sendError(res, err, 'Failed to dissolve organization.');
   }
 });
 

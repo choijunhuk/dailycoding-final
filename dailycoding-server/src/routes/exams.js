@@ -66,7 +66,7 @@ function buildExamReport({ problems, breakdown, score, timeUsedSec, durationMin 
     if (missed) typeEntry.misses += 1;
     typeMap.set(type, typeEntry);
 
-    const tags = Array.isArray(problem?.tags) && problem.tags.length > 0 ? problem.tags : [problem?.tier || '기타'];
+    const tags = Array.isArray(problem?.tags) && problem.tags.length > 0 ? problem.tags : [problem?.tier || 'Other'];
     for (const tag of tags.slice(0, 5)) {
       const entry = tagMap.get(tag) || { label: tag, total: 0, misses: 0 };
       entry.total += 1;
@@ -95,10 +95,10 @@ function buildExamReport({ problems, breakdown, score, timeUsedSec, durationMin 
   const emptyCount = breakdown.filter((item) => item.result === 'empty').length;
   const wrongCount = breakdown.filter((item) => item.result !== 'correct' && item.result !== 'empty').length;
   const nextPractice = weakTags.length > 0
-    ? `${weakTags[0].label} 태그의 낮은 난이도 문제를 2개 풀고, 같은 조건으로 다시 모의코테를 보세요.`
+    ? `Solve 2 easy problems tagged "${weakTags[0].label}" and retake this mock test under the same conditions.`
     : accuracy >= 80
-      ? '정답률이 안정적입니다. 제한 시간을 10~15% 줄여서 한 번 더 풀어보세요.'
-      : '오답 문제를 먼저 복기하고 같은 난이도 세트로 재도전하세요.';
+      ? 'Your accuracy is solid. Try reducing the time limit by 10–15% and solve again.'
+      : 'Review your incorrect answers first, then retry with a set of the same difficulty.';
 
   return {
     accuracy,
@@ -108,7 +108,7 @@ function buildExamReport({ problems, breakdown, score, timeUsedSec, durationMin 
     wrongCount,
     weakTags,
     weakTypes,
-    summary: `정답률 ${accuracy}%, 제한 시간의 ${paceRate}%를 사용했습니다.`,
+    summary: `Accuracy ${accuracy}%, used ${paceRate}% of the time limit.`,
     nextPractice,
   };
 }
@@ -141,7 +141,7 @@ router.get('/', async (req, res) => {
       return {
         id: row.id,
         title: row.title,
-        description: unlocked ? row.description : 'Pro 플랜 전용 모의 코테입니다.',
+        description: unlocked ? row.description : 'This mock coding test is exclusive to the Pro plan.',
         durationMin: row.duration_min,
         problemCount: ids.length,
         difficultyAvg: row.difficulty_avg,
@@ -161,10 +161,10 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const examSet = await requireExamSet(req.params.id);
-    if (!examSet) return errorResponse(res, 404, 'NOT_FOUND', '시험 세트를 찾을 수 없습니다.');
+    if (!examSet) return errorResponse(res, 404, 'NOT_FOUND', 'Exam set not found.');
     const user = await User.findById(req.user.id);
     const locked = examSet.is_pro && !['pro', 'team'].includes(user?.subscription_tier) && user?.role !== 'admin';
-    if (locked) return errorResponse(res, 403, 'PRO_REQUIRED', 'Pro 플랜 이상 필요합니다');
+    if (locked) return errorResponse(res, 403, 'PRO_REQUIRED', 'Pro plan or higher required.');
     const problems = await getExamProblems(examSet.problemIds);
     res.json({
       id: examSet.id,
@@ -182,10 +182,10 @@ router.get('/:id', async (req, res) => {
 router.post('/:id/start', async (req, res) => {
   try {
     const examSet = await requireExamSet(req.params.id);
-    if (!examSet) return errorResponse(res, 404, 'NOT_FOUND', '시험 세트를 찾을 수 없습니다.');
+    if (!examSet) return errorResponse(res, 404, 'NOT_FOUND', 'Exam set not found.');
     const user = await User.findById(req.user.id);
     const locked = examSet.is_pro && !['pro', 'team'].includes(user?.subscription_tier) && user?.role !== 'admin';
-    if (locked) return errorResponse(res, 403, 'PRO_REQUIRED', 'Pro 플랜 이상 필요합니다');
+    if (locked) return errorResponse(res, 403, 'PRO_REQUIRED', 'Pro plan or higher required.');
 
     let attempt = await queryOne(
       'SELECT * FROM exam_attempts WHERE user_id = ? AND exam_set_id = ? AND status = ? ORDER BY started_at DESC LIMIT 1',
@@ -216,12 +216,12 @@ router.post('/:id/start', async (req, res) => {
 router.post('/:id/submit', async (req, res) => {
   try {
     const examSet = await requireExamSet(req.params.id);
-    if (!examSet) return errorResponse(res, 404, 'NOT_FOUND', '시험 세트를 찾을 수 없습니다.');
+    if (!examSet) return errorResponse(res, 404, 'NOT_FOUND', 'Exam set not found.');
     const attempt = await queryOne(
       'SELECT * FROM exam_attempts WHERE id = ? AND user_id = ? AND exam_set_id = ?',
       [req.body.attemptId, req.user.id, examSet.id]
     );
-    if (!attempt) return errorResponse(res, 404, 'NOT_FOUND', '시험 시도를 찾을 수 없습니다.');
+    if (!attempt) return errorResponse(res, 404, 'NOT_FOUND', 'Exam attempt not found.');
 
     const problems = await getExamProblems(examSet.problemIds);
     const answers = req.body.answers || {};

@@ -9,6 +9,7 @@ import { useTheme } from '../context/ThemeContext';
 import api from '../api.js';
 import { useToast } from '../context/ToastContext.jsx';
 import { useLang } from '../context/LangContext.jsx';
+import { pickLangText } from '../utils/languageMode.js';
 import {
   DEFAULT_CODE,
   getDraftStorageKey,
@@ -74,17 +75,18 @@ export default function JudgePage() {
   const navigate = useNavigate();
   const { user, isAdmin, refreshUser } = useAuth();
   const { isDark } = useTheme();
-  const { t } = useLang();
+  const { t, lang: uiLang } = useLang();
+  const uiTxt = (ko, en) => pickLangText(uiLang, ko, en);
   const { tier: subscriptionTier } = useSubscriptionStatus(user?.id);
   const isFreePlan = !subscriptionTier || subscriptionTier === 'free';
   const RESULT_INFO = {
     correct: { label: t('accepted'),           color: RESULT_INFO_COLORS.correct },
-    success: { label: 'Run Complete',           color: RESULT_INFO_COLORS.success },
+    success: { label: uiTxt('실행 완료', 'Run Complete'),           color: RESULT_INFO_COLORS.success },
     wrong:   { label: t('wrongAnswer'),         color: RESULT_INFO_COLORS.wrong   },
     timeout: { label: t('timeLimitExceeded'),   color: RESULT_INFO_COLORS.timeout },
     error:   { label: t('runtimeError'),        color: RESULT_INFO_COLORS.error   },
     compile: { label: t('compileError'),        color: RESULT_INFO_COLORS.compile },
-    judging: { label: 'Judging...',             color: RESULT_INFO_COLORS.judging },
+    judging: { label: uiTxt('채점 중...', 'Judging...'),             color: RESULT_INFO_COLORS.judging },
   };
   const { solved, submissions, addSubmission, problems: appProblems, bookmarks, toggleBookmark, loadProblems, loadSubmissions } = useApp();
   const toast = useToast();
@@ -1068,11 +1070,11 @@ export default function JudgePage() {
                   {isSavingNote ? <span className="spinner"/> : 'Save'}
                 </button>
               </div>
-              <p style={{fontSize:12,color:'var(--text3)',marginBottom:12}}>This note is only visible to you. Write down your approach or key takeaways.</p>
+              <p style={{fontSize:12,color:'var(--text3)',marginBottom:12}}>{uiTxt('이 메모는 나에게만 보입니다. 풀이 접근법이나 핵심 회고를 적어두세요.', 'This note is only visible to you. Write down your approach or key takeaways.')}</p>
               <textarea
                 value={problemNote}
                 onChange={e=>setProblemNote(e.target.value)}
-                placeholder="여기에 메모를 자유롭게 적어보세요..."
+                placeholder={uiTxt('여기에 메모를 자유롭게 적어보세요...', 'Write your notes here...')}
                 style={{
                   width:'100%', minHeight:'400px', padding:'16px', borderRadius:10,
                   background:'var(--bg3)', border:'1px solid var(--border)',
@@ -1103,7 +1105,7 @@ export default function JudgePage() {
                   borderRadius:10, display:'flex', alignItems:'center', gap:12, flexWrap:'wrap',
                 }}>
                   <div style={{ flex:1, minWidth:120 }}>
-                    <div style={{ fontSize:12, fontWeight:700, color:'var(--green)', marginBottom:2 }}>🎉 Correct! Next Problem</div>
+                    <div style={{ fontSize:12, fontWeight:700, color:'var(--green)', marginBottom:2 }}>🎉 {uiTxt('정답! 다음 문제', 'Correct! Next Problem')}</div>
                     <div style={{ fontSize:12, color:'var(--text2)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                       {similarProblems[0].title}
                     </div>
@@ -1112,15 +1114,15 @@ export default function JudgePage() {
                     className="btn btn-success btn-sm"
                     onClick={() => navigate(`/problems/${similarProblems[0].id}`)}
                   >
-                    Solve Now →
+                    {uiTxt('지금 풀기', 'Solve Now')} →
                   </button>
                 </div>
               )}
 
               {/* Submission history */}
-              <h4>My Submissions</h4>
+              <h4>{uiTxt('내 제출', 'My Submissions')}</h4>
               {mySubmissions.length === 0
-                ? <p style={{ color:'var(--text3)', marginTop:12, fontSize:13 }}>No submissions yet.</p>
+                ? <p style={{ color:'var(--text3)', marginTop:12, fontSize:13 }}>{uiTxt('아직 제출이 없습니다.', 'No submissions yet.')}</p>
                 : mySubmissions.map(s => (
                   <div key={s.id} className="sub-row-item">
                     <span className="sri-result" style={{ color: RESULT_INFO[s.result]?.color }}>{RESULT_INFO[s.result]?.label}</span>

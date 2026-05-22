@@ -11,6 +11,7 @@ import { useSubscriptionStatus } from '../hooks/useSubscriptionStatus.js';
 import { useSubscriptionCheckout } from '../hooks/useSubscriptionCheckout.js';
 import { JUDGE_LANGUAGE_OPTIONS } from '../data/judgeLanguages.js';
 import { TIER_POINTS, TIER_ORDER } from '../data/constants.js';
+import { getDateLocale, pickLangText } from '../utils/languageMode.js';
 import ProfileAvatar from '../components/ProfileAvatar.jsx';
 import FollowListModal from '../components/FollowListModal.jsx';
 import { buildYearHeatmap, formatDuration, profileBackgroundToCss, PROFILE_TIER_LABELS, PROFILE_TIER_THRESHOLDS } from './profilePageUtils.js';
@@ -65,6 +66,8 @@ export default function ProfilePage() {
   const { user, updateUser, applyUser } = useAuth();
   const toast = useToast();
   const { lang } = useLang();
+  const txt = (ko, en) => pickLangText(lang, ko, en);
+  const dateLocale = getDateLocale(lang);
   const { solved, submissions, problems: appProblems } = useApp();
   const {
     subscriptionStatus: subPlan,
@@ -126,7 +129,7 @@ export default function ProfilePage() {
     setTechStack(user?.techStack || []);
   }, [user?.id]);
 
-  const showLoadErrorToast = (message = 'Failed to load profile data.') => {
+  const showLoadErrorToast = (message = txt('프로필 데이터를 불러오지 못했습니다.', 'Failed to load profile data.')) => {
     if (loadErrorToastShownRef.current) return;
     loadErrorToastShownRef.current = true;
     toast?.show(message, 'error');
@@ -140,17 +143,17 @@ export default function ProfilePage() {
       setProgression(r.data.progression || null);
       return api.get('/auth/profile/backgrounds').then(bg => setBackgrounds(bg.data || []));
     }).catch((err) => {
-      if (err?.response?.status !== 401) showLoadErrorToast(err?.response?.data?.message || 'Failed to load reward info.');
+      if (err?.response?.status !== 401) showLoadErrorToast(err?.response?.data?.message || txt('보상 정보를 불러오지 못했습니다.', 'Failed to load reward info.'));
     });
     api.get('/auth/top100').then(r => setTop100(r.data || [])).catch((err) => {
-      if (err?.response?.status !== 401) showLoadErrorToast(err?.response?.data?.message || 'Failed to load ranking stats.');
+      if (err?.response?.status !== 401) showLoadErrorToast(err?.response?.data?.message || txt('랭킹 통계를 불러오지 못했습니다.', 'Failed to load ranking stats.'));
     });
     if (user?.id) {
       api.get(`/follows/${user.id}/stats`).then(r => setFollowStats(r.data)).catch((err) => {
-        if (err?.response?.status !== 401) showLoadErrorToast(err?.response?.data?.message || 'Failed to load follow stats.');
+        if (err?.response?.status !== 401) showLoadErrorToast(err?.response?.data?.message || txt('팔로우 통계를 불러오지 못했습니다.', 'Failed to load follow stats.'));
       });
       api.get('/auth/me/stats').then(r => setSolveStats(r.data)).catch((err) => {
-        if (err?.response?.status !== 401) showLoadErrorToast(err?.response?.data?.message || 'Failed to load solve stats.');
+        if (err?.response?.status !== 401) showLoadErrorToast(err?.response?.data?.message || txt('풀이 통계를 불러오지 못했습니다.', 'Failed to load solve stats.'));
       });
       api.get('/submissions/stats').then(r => setWeaknessStats(r.data?.weaknessStats || [])).catch(() => {
         setWeaknessStats([]);
@@ -164,12 +167,12 @@ export default function ProfilePage() {
       invalidateSubscriptionStatus();
       refreshSubscriptionStatus().then(() => {
         setPaymentFeedback(buildPaymentFeedback('success', lang));
-        toast?.show('🎉 Subscription complete! Your plan has been activated.', 'success', 5000);
+        toast?.show(txt('🎉 구독이 완료되었습니다! 플랜이 활성화되었습니다.', '🎉 Subscription complete! Your plan has been activated.'), 'success', 5000);
         navigate('/profile', { replace: true });
       });
     } else if (params.get('payment') === 'cancelled') {
       setPaymentFeedback(buildPaymentFeedback('cancelled', lang));
-      toast?.show('Payment was cancelled.', 'info');
+      toast?.show(txt('결제가 취소되었습니다.', 'Payment was cancelled.'), 'info');
       navigate('/profile', { replace: true });
     }
   }, [user?.id, location.search, invalidateSubscriptionStatus, navigate, refreshSubscriptionStatus, toast]);
@@ -225,16 +228,49 @@ export default function ProfilePage() {
     }));
     const extras = solvedProblems.filter((problem) => !TIERS[problem.tier]);
     if (extras.length > 0) {
-      groups.push({ tier: 'unranked', label: '기타', color: 'var(--text3)', problems: extras });
+      groups.push({ tier: 'unranked', label: txt('기타', 'Other'), color: 'var(--text3)', problems: extras });
     }
     return groups.filter((group) => group.problems.length > 0);
-  }, [solvedProblems]);
+  }, [solvedProblems, lang]);
 
   const top100RatingSum = top100.reduce((s, p) => s + (TIER_POINTS[p.tier] || 20), 0);
 
   const tc       = TIER_COLORS[user?.tier] || '#888';
   const visibleBackgrounds = backgrounds.filter((item) => !LEGACY_PROFILE_BACKGROUND_SLUGS.has(item.slug));
   const equippedBgMeta = visibleBackgrounds.find((item) => item.slug === equippedBackground);
+  const getBackgroundDisplayName = (bg) => {
+    const names = {
+      'gradient-blue': txt('파랑', 'Blue'),
+      'gradient-purple': txt('보라', 'Purple'),
+      'gradient-green': txt('초록', 'Green'),
+      'gradient-red': txt('빨강', 'Red'),
+      'gradient-orange': txt('주황', 'Orange'),
+      'gradient-pink': txt('핑크', 'Pink'),
+      'gradient-teal': txt('청록', 'Teal'),
+      'gradient-gold': txt('골드', 'Gold'),
+      'gradient-sunset': txt('선셋', 'Sunset'),
+      'gradient-ocean': txt('오션', 'Ocean'),
+      'gradient-forest': txt('포레스트', 'Forest'),
+      'gradient-rose': txt('로즈', 'Rose'),
+      'gradient-cyber': txt('사이버', 'Cyber'),
+      'gradient-lava': txt('라바', 'Lava'),
+      'solid-charcoal': txt('차콜', 'Charcoal'),
+      'solid-black': txt('블랙', 'Black'),
+      'solid-navy': txt('네이비', 'Navy'),
+      'solid-slate': txt('기본 슬레이트', 'Default Slate'),
+      'solid-brown': txt('브라운', 'Brown'),
+      'solid-olive': txt('올리브', 'Olive'),
+      'solid-wine': txt('와인', 'Wine'),
+      'solid-cream': txt('크림', 'Cream'),
+      'photo-1': txt('배경 1', 'Background 1'),
+      'photo-2': txt('배경 2', 'Background 2'),
+      'photo-3': txt('배경 3', 'Background 3'),
+      'photo-4': txt('배경 4', 'Background 4'),
+      'focus-grid': txt('포커스 그리드', 'Focus Grid'),
+      'night-judge': txt('나이트 저지', 'Night Judge'),
+    };
+    return names[bg?.slug] || bg?.name || '';
+  };
   const profileBannerBackground = profileBackgroundToCss(equippedBgMeta?.image_url) || DEFAULT_PROFILE_BACKGROUND_CSS;
   const tierIdx  = TIER_ORDER.indexOf(user?.tier || 'unranked');
   const nextTier = TIER_ORDER[tierIdx + 1];
@@ -245,9 +281,9 @@ export default function ProfilePage() {
     : 100;
   const nextProgressReward = progression?.nextReward
     ? progression.nextReward.kind === 'background'
-      ? `Lv.${progression.nextReward.level} Profile Background`
-      : `Lv.${progression.nextReward.level} Reward`
-    : 'All growth rewards unlocked';
+      ? txt(`Lv.${progression.nextReward.level} 프로필 배경`, `Lv.${progression.nextReward.level} Profile Background`)
+      : txt(`Lv.${progression.nextReward.level} 보상`, `Lv.${progression.nextReward.level} Reward`)
+    : txt('모든 성장 보상을 해금했습니다', 'All growth rewards unlocked');
   const rewardByCode = new Map(rewards.map((reward) => [reward.code, reward]));
   const equippedBadgeMeta = equippedBadge ? rewardByCode.get(equippedBadge) : null;
   const equippedTitleMeta = equippedTitle ? rewardByCode.get(equippedTitle) : null;
@@ -269,12 +305,12 @@ export default function ProfilePage() {
     JSON.stringify(techStack || []) !== JSON.stringify(savedTechStack || [])
   );
   const profileCompletenessItems = [
-    { label:'소개', done:Boolean((bio || '').trim()) },
-    { label:'아바타', done:Boolean(hasCustomAvatarProfile || providerAvatarUrl) },
-    { label:'배경', done:Boolean(equippedBackground) },
-    { label:'기술', done:techStack.length > 0 },
-    { label:'링크', done:countFilledProfileLinks(socialLinks) > 0 },
-    { label:'보상', done:Boolean(equippedBadge || equippedTitle) },
+    { label:txt('소개', 'Bio'), done:Boolean((bio || '').trim()) },
+    { label:txt('아바타', 'Avatar'), done:Boolean(hasCustomAvatarProfile || providerAvatarUrl) },
+    { label:txt('배경', 'Background'), done:Boolean(equippedBackground) },
+    { label:txt('기술', 'Skills'), done:techStack.length > 0 },
+    { label:txt('링크', 'Links'), done:countFilledProfileLinks(socialLinks) > 0 },
+    { label:txt('보상', 'Rewards'), done:Boolean(equippedBadge || equippedTitle) },
   ];
   const profileCompleteness = Math.round(
     profileCompletenessItems.filter((item) => item.done).length / profileCompletenessItems.length * 100
@@ -311,16 +347,16 @@ export default function ProfilePage() {
   const upgradePlans = getProfileUpgradePlans(lang);
 
   const handlePwChange = async () => {
-    if (pwNext !== pwConfirm) { setPwMsg('New passwords do not match.'); return; }
-    if (pwNext.length < 8)    { setPwMsg('Password must be at least 8 characters.'); return; }
+    if (pwNext !== pwConfirm) { setPwMsg(txt('새 비밀번호가 서로 일치하지 않습니다.', 'New passwords do not match.')); return; }
+    if (pwNext.length < 8)    { setPwMsg(txt('비밀번호는 최소 8자 이상이어야 합니다.', 'Password must be at least 8 characters.')); return; }
     setPwLoading(true);
     try {
       await api.patch('/auth/password', { current: pwCurrent, next: pwNext });
-      setPwMsg('✅ Password changed successfully!');
-      toast?.show('🔒 Password changed.', 'success');
+      setPwMsg(txt('✅ 비밀번호가 변경되었습니다.', '✅ Password changed successfully!'));
+      toast?.show(txt('🔒 비밀번호가 변경되었습니다.', '🔒 Password changed.'), 'success');
       setPwCurrent(''); setPwNext(''); setPwConfirm('');
     } catch (err) {
-      setPwMsg('❌ ' + (err.response?.data?.message || 'Failed to change password'));
+      setPwMsg('❌ ' + (err.response?.data?.message || txt('비밀번호 변경에 실패했습니다', 'Failed to change password')));
     }
     setPwLoading(false);
   };
@@ -328,7 +364,7 @@ export default function ProfilePage() {
   const handleUpgrade = async (planId) => {
     const result = await startCheckout(planId);
     if (!result.ok) {
-      toast?.show(result.reason || 'Failed to create payment session', 'error');
+      toast?.show(result.reason || txt('결제 세션 생성에 실패했습니다', 'Failed to create payment session'), 'error');
     }
   };
 
@@ -338,10 +374,10 @@ export default function ProfilePage() {
     try {
       const { data } = await api.post('/subscription/cancel');
       await refreshSubscriptionStatus();
-      setCancelMsg(data?.message || 'Cancellation scheduled successfully.');
-      toast?.show(data?.message || 'Cancellation scheduled successfully.', 'success');
+      setCancelMsg(data?.message || txt('구독 취소가 예약되었습니다.', 'Cancellation scheduled successfully.'));
+      toast?.show(data?.message || txt('구독 취소가 예약되었습니다.', 'Cancellation scheduled successfully.'), 'success');
     } catch (err) {
-      const message = err.response?.data?.message || 'Failed to schedule cancellation.';
+      const message = err.response?.data?.message || txt('구독 취소 예약에 실패했습니다.', 'Failed to schedule cancellation.');
       setCancelMsg(message);
       toast?.show(message, 'error');
     }
@@ -356,23 +392,23 @@ export default function ProfilePage() {
       if (type === 'badge') setEquippedBadge(newCode);
       else setEquippedTitle(newCode);
       applyUser(data?.user);
-      toast?.show(newCode ? '✅ Equipped' : 'Unequipped', 'success');
+      toast?.show(newCode ? txt('✅ 장착했습니다', '✅ Equipped') : txt('장착 해제했습니다', 'Unequipped'), 'success');
     } catch (err) {
-      toast?.show('❌ ' + (err.response?.data?.message || 'Failed'), 'error');
+      toast?.show('❌ ' + (err.response?.data?.message || txt('실패했습니다', 'Failed')), 'error');
     }
   };
 
   const handleAvatarSourceChange = async (source) => {
     if (source === 'provider' && !providerAvatarUrl) {
-      toast?.show('No linked provider profile image found.', 'info');
+      toast?.show(txt('연결된 제공자 프로필 이미지를 찾을 수 없습니다.', 'No linked provider profile image found.'), 'info');
       return;
     }
     try {
       const updated = await updateUser({ avatar_source: source });
       setAvatarSource(updated?.avatarSource || updated?.avatar_source || source);
-      toast?.show(source === 'provider' ? 'Using original profile photo.' : 'Using DailyCoding profile.', 'success');
+      toast?.show(source === 'provider' ? txt('원본 프로필 사진을 사용합니다.', 'Using original profile photo.') : txt('DailyCoding 프로필을 사용합니다.', 'Using DailyCoding profile.'), 'success');
     } catch (err) {
-      toast?.show(err.response?.data?.message || 'Failed to save profile photo selection', 'error');
+      toast?.show(err.response?.data?.message || txt('프로필 사진 선택 저장에 실패했습니다', 'Failed to save profile photo selection'), 'error');
     }
   };
 
@@ -383,9 +419,9 @@ export default function ProfilePage() {
         default_language: defaultLanguage,
         submissions_public: submissionsPublic,
       });
-      toast?.show('✅ Submission/language settings saved.', 'success');
+      toast?.show(txt('✅ 제출/언어 설정이 저장되었습니다.', '✅ Submission/language settings saved.'), 'success');
     } catch (err) {
-      toast?.show(err.response?.data?.message || 'Failed to save settings', 'error');
+      toast?.show(err.response?.data?.message || txt('설정 저장에 실패했습니다', 'Failed to save settings'), 'error');
     }
     setPrefsSaving(false);
   };
@@ -401,19 +437,19 @@ export default function ProfilePage() {
         tech_stack: techStack,
       });
       applyUser(data);
-      toast?.show('✅ Profile info saved.', 'success');
+      toast?.show(txt('✅ 프로필 정보가 저장되었습니다.', '✅ Profile info saved.'), 'success');
     } catch (err) {
-      toast?.show(err.response?.data?.message || 'Failed to save', 'error');
+      toast?.show(err.response?.data?.message || txt('저장에 실패했습니다', 'Failed to save'), 'error');
     }
     setProfileInfoSaving(false);
   };
 
   const TABS = [
-    ['solved',   '풀이'],
+    ['solved',   txt('풀이', 'Solved')],
     ['top100',   'Top 100'],
-    ['stats',    '통계'],
-    ['streak',   '스트릭'],
-    ['settings', '설정'],
+    ['stats',    txt('통계', 'Stats')],
+    ['streak',   txt('스트릭', 'Streak')],
+    ['settings', txt('설정', 'Settings')],
   ];
 
   return (
@@ -428,13 +464,13 @@ export default function ProfilePage() {
         <div className="profile-header-content">
           <div className="profile-header-mode-row">
             <span className={`profile-mode-pill ${isSettingsTab ? 'editing' : ''}`}>
-              {isSettingsTab ? '편집 미리보기' : '공개 프로필'}
+              {isSettingsTab ? txt('편집 미리보기', 'Edit Preview') : txt('공개 프로필', 'Public Profile')}
             </span>
             <button
               className="btn btn-ghost btn-sm"
               onClick={() => setMainTab(isSettingsTab ? 'solved' : 'settings')}
             >
-              {isSettingsTab ? '프로필 보기' : '프로필 설정'}
+              {isSettingsTab ? txt('프로필 보기', 'View Profile') : txt('프로필 설정', 'Profile Settings')}
             </button>
           </div>
 
@@ -470,10 +506,10 @@ export default function ProfilePage() {
                   {equippedTitleMeta?.icon} {equippedTitleMeta?.name}
                 </span>
               )}
-              {profileDraftChanged && <span className="profile-unsaved-pill">Unsaved</span>}
+              {profileDraftChanged && <span className="profile-unsaved-pill">{txt('미저장', 'Unsaved')}</span>}
             </div>
             {headerBio && <div className="profile-bio">{headerBio}</div>}
-            <div className="profile-meta-info">@{user?.username} · Joined {user?.joinDate} · {user?.email}</div>
+            <div className="profile-meta-info">@{user?.username} · {txt('가입일', 'Joined')} {user?.joinDate} · {user?.email}</div>
             {headerTechStack.length > 0 && (
               <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginTop:8 }}>
                 {headerTechStack.slice(0, 10).map(tech => (
@@ -510,12 +546,12 @@ export default function ProfilePage() {
             {/* 스탯 */}
             <div className="profile-header-stats">
               {[
-                { v: user?.rating||0,         l:'레이팅',   c:tc,              mono:true },
-                { v: solvedProblemsMain.length, l:'풀이',    c:'var(--green)'          },
-                { v: `🔥${user?.streak||0}`,  l:'스트릭',   c:'var(--yellow)'             },
-                { v: `${accuracy}%`,           l:'정확도',   c:'var(--orange)'             },
-                { v: followStats.followers,    l:'팔로워',   c:'var(--blue)', action:'followers' },
-                { v: followStats.following,    l:'팔로잉',   c:'var(--purple)', action:'following' },
+                { v: user?.rating||0,         l:txt('레이팅', 'Rating'),   c:tc,              mono:true },
+                { v: solvedProblemsMain.length, l:txt('풀이', 'Solved'),    c:'var(--green)'          },
+                { v: `🔥${user?.streak||0}`,  l:txt('스트릭', 'Streak'),   c:'var(--yellow)'             },
+                { v: `${accuracy}%`,           l:txt('정확도', 'Accuracy'),   c:'var(--orange)'             },
+                { v: followStats.followers,    l:txt('팔로워', 'Followers'),   c:'var(--blue)', action:'followers' },
+                { v: followStats.following,    l:txt('팔로잉', 'Following'),   c:'var(--purple)', action:'following' },
               ].map(s=> s.action ? (
                 <button key={s.l} type="button" className="profile-stat-item clickable" onClick={() => setFollowModalType(s.action)}>
                   <div className="profile-stat-value" style={{ color:s.c, fontFamily:s.mono?'Space Mono,monospace':undefined }}>{s.v}</div>
@@ -534,7 +570,7 @@ export default function ProfilePage() {
               <div className="profile-tier-progress-container">
                 <div className="profile-tier-progress-labels">
                   <span style={{ color:tc, fontWeight:700 }}>{PROFILE_TIER_LABELS[user?.tier||'unranked']}</span>
-                  <span>{Math.max(0,(nextThres||0)-(user?.rating||0))} pts to {nextTier.toUpperCase()}</span>
+                  <span>{Math.max(0,(nextThres||0)-(user?.rating||0))} {txt('점 남음', 'pts to')} {nextTier.toUpperCase()}</span>
                 </div>
                 <div className="profile-tier-progress-bar-bg">
                   <div className="profile-tier-progress-bar-fill" style={{
@@ -552,14 +588,17 @@ export default function ProfilePage() {
         <div className="profile-growth-card card">
           <div className="profile-growth-main">
             <div>
-              <div className="profile-growth-kicker">Growth XP</div>
+              <div className="profile-growth-kicker">{txt('성장 XP', 'Growth XP')}</div>
               <div className="profile-growth-title">Lv.{progression.level} · {progression.xp.toLocaleString()} XP</div>
               <div className="profile-growth-copy">
-                Daily mission rewards accumulate as XP only, not ranking points. Only cosmetic rewards like badges, titles, and profile backgrounds are unlocked.
+                {txt(
+                  '데일리 미션 보상은 랭킹 점수가 아닌 XP로만 쌓입니다. 배지, 칭호, 프로필 배경 같은 꾸미기 보상만 해금됩니다.',
+                  'Daily mission rewards accumulate as XP only, not ranking points. Only cosmetic rewards like badges, titles, and profile backgrounds are unlocked.',
+                )}
               </div>
             </div>
             <div className="profile-growth-next">
-              <span>Next Unlock</span>
+              <span>{txt('다음 해금', 'Next Unlock')}</span>
               <strong>{nextProgressReward}</strong>
             </div>
           </div>
@@ -575,11 +614,11 @@ export default function ProfilePage() {
 
       <div className="profile-learning-activity card">
         {[
-          { label:'Problems Solved', value: learningActivity?.solvedProblems ?? solvedProblemsMain.length, color:'var(--green)' },
-          { label:'XP 레벨', value: `Lv.${learningActivity?.xpLevel ?? 1}`, color:'var(--orange)' },
-          { label:'배틀 승률', value: `${learningActivity?.battleWinRate ?? 0}%`, color:'var(--red)' },
-          { label:'리뷰 채택 수', value: learningActivity?.reviewAcceptedCount ?? 0, color:'var(--blue)' },
-          { label:'협업 점수', value: learningActivity?.collaborationScore ?? 0, color:'var(--purple)' },
+          { label:txt('푼 문제', 'Problems Solved'), value: learningActivity?.solvedProblems ?? solvedProblemsMain.length, color:'var(--green)' },
+          { label:txt('XP 레벨', 'XP Level'), value: `Lv.${learningActivity?.xpLevel ?? 1}`, color:'var(--orange)' },
+          { label:txt('배틀 승률', 'Battle Win Rate'), value: `${learningActivity?.battleWinRate ?? 0}%`, color:'var(--red)' },
+          { label:txt('리뷰 채택 수', 'Accepted Reviews'), value: learningActivity?.reviewAcceptedCount ?? 0, color:'var(--blue)' },
+          { label:txt('협업 점수', 'Collaboration Score'), value: learningActivity?.collaborationScore ?? 0, color:'var(--purple)' },
         ].map((item) => (
           <div key={item.label} className="profile-learning-stat">
             <div style={{ color:item.color }}>{item.value}</div>
@@ -614,11 +653,11 @@ export default function ProfilePage() {
 
           <div className="card">
             <div className="profile-panel-header">
-              난이도 분포
+              {txt('난이도 분포', 'Difficulty Distribution')}
             </div>
             {/* header */}
             <div className="profile-dist-header">
-              {['레벨','','문제','비율'].map((h,i)=>(
+              {[txt('레벨', 'Level'),'',txt('문제', 'Problems'),txt('비율', 'Ratio')].map((h,i)=>(
                 <span key={i} className={`dist-h-${i}`}>{h}</span>
               ))}
             </div>
@@ -640,13 +679,13 @@ export default function ProfilePage() {
             {/* 푼 문제 목록 */}
             {solvedProblems.length > 0 && (
               <div style={{ marginTop:20 }}>
-                <div className="profile-panel-subtitle">푼 문제</div>
+                <div className="profile-panel-subtitle">{txt('푼 문제', 'Solved Problems')}</div>
                 <div className="profile-solved-group-list">
                   {solvedByTier.map((group) => (
                     <div key={group.tier} className="profile-solved-group">
                       <div className="profile-solved-group-head">
                         <span style={{ color: group.color }}>{group.label}</span>
-                        <strong>{group.problems.length}문제</strong>
+                        <strong>{group.problems.length}{txt('문제', ' problems')}</strong>
                       </div>
                       <div className="profile-solved-list">
                         {group.problems.map(p=>(
@@ -737,10 +776,10 @@ export default function ProfilePage() {
           {/* Submission summary cards */}
           <div className="profile-stats-summary">
             {[
-              { label:'총 제출',    v:submissions.length,   color:'var(--blue)'   },
-              { label:'맞았습니다', v:resultStats.correct,  color:'var(--green)'  },
-              { label:'틀렸습니다', v:resultStats.wrong,    color:'var(--red)'    },
-              { label:'시간 초과',  v:resultStats.timeout,  color:'var(--yellow)' },
+              { label:txt('총 제출', 'Total Submissions'),    v:submissions.length,   color:'var(--blue)'   },
+              { label:txt('맞았습니다', 'Accepted'), v:resultStats.correct,  color:'var(--green)'  },
+              { label:txt('틀렸습니다', 'Wrong Answer'), v:resultStats.wrong,    color:'var(--red)'    },
+              { label:txt('시간 초과', 'Timeout'),  v:resultStats.timeout,  color:'var(--yellow)' },
             ].map(s=>(
               <div key={s.label} className="card profile-stat-mini">
                 <div className="profile-stat-mini-value" style={{ color:s.color }}>{s.v}</div>
@@ -751,9 +790,9 @@ export default function ProfilePage() {
 
           {/* Submissions by language */}
           <div className="card card-pad">
-            <div className="section-header-title" style={{ marginBottom:14 }}>언어별 제출</div>
+            <div className="section-header-title" style={{ marginBottom:14 }}>{txt('언어별 제출', 'Submissions by Language')}</div>
             {topLang.length===0
-              ? <div style={{ color:'var(--text3)', fontSize:13 }}>제출 기록이 없습니다.</div>
+              ? <div style={{ color:'var(--text3)', fontSize:13 }}>{txt('제출 기록이 없습니다.', 'No submission history yet.')}</div>
               : topLang.map(([lang,cnt],i)=>{
                 const colors=['var(--blue)','var(--green)','var(--yellow)','var(--orange)','var(--purple)'];
                 const color=colors[i%colors.length];
@@ -798,11 +837,13 @@ export default function ProfilePage() {
                 }
               });
               const maxDaily=Math.max(...dailyCounts,1);
-              const dayNames=['일','월','화','수','목','금','토'];
+              const dayNames=lang === 'ko'
+                ? ['일','월','화','수','목','금','토']
+                : ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
               return (
                 <div>
                   <div style={{ display:'flex', gap:16, marginBottom:16 }}>
-                    {[{v:weekTotal,l:'제출',c:'var(--blue)'},{v:weekCorrect,l:'정답',c:'var(--green)'},{v:`${weekRate}%`,l:'정확도',c:'var(--yellow)'}].map(s=>(
+                    {[{v:weekTotal,l:txt('제출', 'Submissions'),c:'var(--blue)'},{v:weekCorrect,l:txt('정답', 'Accepted'),c:'var(--green)'},{v:`${weekRate}%`,l:txt('정확도', 'Accuracy'),c:'var(--yellow)'}].map(s=>(
                       <div key={s.l} style={{ textAlign:'center', flex:1 }}>
                         <div style={{ fontSize:22, fontWeight:800, color:s.c, fontFamily:'Space Mono,monospace' }}>{s.v}</div>
                         <div style={{ fontSize:10, color:'var(--text3)', marginTop:2 }}>{s.l}</div>
@@ -824,14 +865,14 @@ export default function ProfilePage() {
 
           <div className="card card-pad">
             <div className="section-header" style={{ marginBottom:12 }}>
-              <div className="section-header-title">취약 태그 분석</div>
-              <span style={{ fontSize:11, color:'var(--text3)' }}>태그별 오답률 기준</span>
+              <div className="section-header-title">{txt('취약 태그 분석', 'Weak Tag Analysis')}</div>
+              <span style={{ fontSize:11, color:'var(--text3)' }}>{txt('태그별 오답률 기준', 'Based on wrong-answer rate by tag')}</span>
             </div>
             {weaknessStats.length === 0 ? (
               <div className="empty-state" style={{ padding:'24px 0' }}>
                 <div className="empty-state-icon">📊</div>
                 <div style={{ fontSize:13, color:'var(--text3)', lineHeight:1.7 }}>
-                  같은 유형 제출이 2개 이상이면 자동으로 취약 태그가 표시됩니다.
+                  {txt('같은 유형 제출이 2개 이상이면 자동으로 취약 태그가 표시됩니다.', 'Weak tags appear automatically after at least two submissions of the same type.')}
                 </div>
               </div>
             ) : (
@@ -858,12 +899,12 @@ export default function ProfilePage() {
           </div>
 
           <div className="card card-pad">
-            <div className="section-header-title" style={{ marginBottom:12 }}>풀이 시간 통계</div>
+            <div className="section-header-title" style={{ marginBottom:12 }}>{txt('풀이 시간 통계', 'Solve Time Stats')}</div>
             <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(140px, 1fr))', gap:10, marginBottom:14 }}>
               {[
-                { label:'평균 풀이 시간', value: formatDuration(solveStats.avgSolveTime) },
-                { label:'총 풀이 시간', value: formatDuration(solveStats.totalSolveTime) },
-                { label:'최단 풀이', value: solveStats.fastestSolve ? `${solveStats.fastestSolve.problemTitle} · ${formatDuration(solveStats.fastestSolve.timeSec)}` : '기록 없음' },
+                { label:txt('평균 풀이 시간', 'Average Solve Time'), value: formatDuration(solveStats.avgSolveTime) },
+                { label:txt('총 풀이 시간', 'Total Solve Time'), value: formatDuration(solveStats.totalSolveTime) },
+                { label:txt('최단 풀이', 'Fastest Solve'), value: solveStats.fastestSolve ? `${solveStats.fastestSolve.problemTitle} · ${formatDuration(solveStats.fastestSolve.timeSec)}` : txt('기록 없음', 'No records') },
               ].map((item) => (
                 <div key={item.label} className="card card-pad-sm">
                   <div style={{ fontSize:11, color:'var(--text3)', marginBottom:6 }}>{item.label}</div>
@@ -877,7 +918,7 @@ export default function ProfilePage() {
                   <div key={tierName} className="list-item-hover" style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 12px', border:'1px solid var(--border)', borderRadius:10 }}>
                     <span style={{ fontSize:12, fontWeight:700, textTransform:'capitalize' }}>{tierName}</span>
                     <span style={{ fontSize:12, color:'var(--text2)' }}>
-                      평균 {formatDuration(stat.avgSec)} · {stat.count}문제
+                      {txt('평균', 'Avg')} {formatDuration(stat.avgSec)} · {stat.count}{txt('문제', ' problems')}
                     </span>
                   </div>
                 ))}
@@ -887,17 +928,17 @@ export default function ProfilePage() {
 
           {/* Recent activity */}
           <div className="card card-pad">
-            <div className="section-header-title" style={{ marginBottom:12 }}>최근 활동</div>
+            <div className="section-header-title" style={{ marginBottom:12 }}>{txt('최근 활동', 'Recent Activity')}</div>
             {submissions.length===0
               ? <div className="empty-state" style={{ padding:'24px 0' }}>
                   <div className="empty-state-icon">📋</div>
-                  <div style={{ fontSize:13, color:'var(--text3)' }}>제출 기록이 없습니다.</div>
+                  <div style={{ fontSize:13, color:'var(--text3)' }}>{txt('제출 기록이 없습니다.', 'No submission history yet.')}</div>
                 </div>
               : submissions.slice(0,8).map(s=>(
                 <div key={s.id} className="list-item-hover" onClick={() => navigate(`/problems/${s.problem_id || s.problemId}`)} style={{ display:'flex', alignItems:'center', gap:12, padding:'9px 0', borderBottom:'1px solid var(--border)', cursor:'pointer' }}>
                   <span style={{ flex:1, fontSize:13, fontWeight:500 }}>{s.problem_title || s.problemTitle}</span>
                   <span style={{ fontSize:12, fontWeight:700, color:s.result==='correct'?'var(--green)':s.result==='wrong'?'var(--red)':'var(--yellow)' }}>
-                    {s.result==='correct'?'✓ 정답':s.result==='wrong'?'✗ 오답':'시간 초과'}
+                    {s.result==='correct' ? txt('✓ 정답', '✓ Accepted') : s.result==='wrong' ? txt('✗ 오답', '✗ Wrong') : txt('시간 초과', 'Timeout')}
                   </span>
                   <span style={{ fontSize:11, color:'var(--text3)' }}>{(s.submitted_at || s.date || '').slice(0,10)}</span>
                 </div>
@@ -915,27 +956,27 @@ export default function ProfilePage() {
           <div className="card card-pad" style={{ position:'relative' }}>
             <div className="section-header" style={{ marginBottom:16 }}>
               <div>
-                <div style={{ fontSize:22, fontWeight:800 }}>{user?.streak||0}일</div>
-                <div style={{ fontSize:13, color:'var(--text3)', marginTop:2 }}>현재 스트릭</div>
+                <div style={{ fontSize:22, fontWeight:800 }}>{user?.streak||0}{txt('일', ' days')}</div>
+                <div style={{ fontSize:13, color:'var(--text3)', marginTop:2 }}>{txt('현재 스트릭', 'Current Streak')}</div>
               </div>
               <div style={{ textAlign:'right' }}>
-                <div style={{ fontSize:13, color:'var(--text3)' }}>활성 일수 (52주)</div>
-                <div style={{ fontSize:20, fontWeight:800, fontFamily:'Space Mono,monospace' }}>{activeHeatmapDays}일</div>
+                <div style={{ fontSize:13, color:'var(--text3)' }}>{txt('활성 일수 (52주)', 'Active Days (52 weeks)')}</div>
+                <div style={{ fontSize:20, fontWeight:800, fontFamily:'Space Mono,monospace' }}>{activeHeatmapDays}{txt('일', ' days')}</div>
               </div>
             </div>
             <YearHeatmap cells={heatmapCells} onCellHover={(cell) => setHeatmapHover(cell)} />
             <div style={{ display:'flex', gap:6, alignItems:'center', marginTop:12, fontSize:11, color:'var(--text3)' }}>
-              <span>없음</span>
+              <span>{txt('없음', 'None')}</span>
               {[0,1,2,3,4].map(l=>(
                 <div key={l} className={`gcell lv${l}`} style={{ width:12, height:12, borderRadius:3, flexShrink:0 }}/>
               ))}
-              <span>많음</span>
+              <span>{txt('많음', 'More')}</span>
             </div>
           </div>
           {heatmapHover && heatmapHover.level > 0 && (
             <div className="card card-pad" style={{ borderColor:'var(--blue)', borderWidth:1, borderStyle:'solid' }}>
               <div style={{ fontSize:13, fontWeight:700, marginBottom:8, color:'var(--blue)' }}>
-                📅 {heatmapHover.date} — {['없음','약함','보통','많음','매우 많음'][heatmapHover.level]} ({heatmapHover.count}문제)
+                📅 {heatmapHover.date} — {(lang === 'ko' ? ['없음','약함','보통','많음','매우 많음'] : ['None','Light','Normal','Heavy','Very heavy'])[heatmapHover.level]} ({heatmapHover.count}{txt('문제', ' problems')})
               </div>
               {!yearSubsLoaded ? (
                 <div style={{ fontSize:12, color:'var(--text3)', display:'flex', alignItems:'center', gap:6 }}>
@@ -954,7 +995,9 @@ export default function ProfilePage() {
                   ))}
                 </div>
               ) : (
-                <div style={{ fontSize:12, color:'var(--text3)' }}>Problem details not found. ({heatmapHover.count} problems solved on this day)</div>
+                <div style={{ fontSize:12, color:'var(--text3)' }}>
+                  {txt('문제 상세 정보를 찾을 수 없습니다.', 'Problem details not found.')} ({heatmapHover.count}{txt('문제 풀이', ' problems solved on this day')})
+                </div>
               )}
             </div>
           )}
@@ -968,12 +1011,12 @@ export default function ProfilePage() {
         <div className="fade-up profile-settings-layout">
           <div className="profile-settings-hero">
             <div>
-              <div className="profile-settings-kicker">프로필 설정</div>
+              <div className="profile-settings-kicker">{txt('프로필 설정', 'Profile Settings')}</div>
               <h2>{headerDisplayName}'s Profile</h2>
             </div>
             <div className="profile-completion-card">
               <div className="profile-completion-head">
-                <span>완성도</span>
+                <span>{txt('완성도', 'Completeness')}</span>
                 <strong>{profileCompleteness}%</strong>
               </div>
               <div className="profile-completion-bar">
@@ -1004,11 +1047,11 @@ export default function ProfilePage() {
                       {PROFILE_TIER_LABELS[user?.tier || 'unranked']}
                     </span>
                   </div>
-                  <p>{headerBio || '소개를 추가하면 프로필 상단에 표시됩니다.'}</p>
+                  <p>{headerBio || txt('소개를 추가하면 프로필 상단에 표시됩니다.', 'Add a bio to show it at the top of your profile.')}</p>
                   {equippedTitleMeta && <div className="profile-live-title">{equippedTitleMeta.icon} {equippedTitleMeta.name}</div>}
                   <div className="profile-live-chips">
                     {headerTechStack.slice(0, 5).map((tech) => <span key={tech}>{tech}</span>)}
-                    {countFilledProfileLinks(headerSocialLinks) > 0 && <span>{countFilledProfileLinks(headerSocialLinks)}개 링크</span>}
+                    {countFilledProfileLinks(headerSocialLinks) > 0 && <span>{countFilledProfileLinks(headerSocialLinks)}{txt('개 링크', ' links')}</span>}
                   </div>
                 </div>
               </div>
@@ -1016,16 +1059,16 @@ export default function ProfilePage() {
 
             <div className="profile-settings-notes">
               <div>
-                <span>공개 범위</span>
-                <strong>{submissionsPublic ? '제출 공개' : '제출 비공개'}</strong>
+                <span>{txt('공개 범위', 'Visibility')}</span>
+                <strong>{submissionsPublic ? txt('제출 공개', 'Submissions Public') : txt('제출 비공개', 'Submissions Private')}</strong>
               </div>
               <div>
-                <span>기본 언어</span>
+                <span>{txt('기본 언어', 'Default Language')}</span>
                 <strong>{JUDGE_LANGUAGE_OPTIONS.find((option) => option.value === defaultLanguage)?.label || defaultLanguage}</strong>
               </div>
               <div>
-                <span>변경사항</span>
-                <strong>{profileDraftChanged ? '미저장' : '저장됨'}</strong>
+                <span>{txt('변경사항', 'Changes')}</span>
+                <strong>{profileDraftChanged ? txt('미저장', 'Unsaved') : txt('저장됨', 'Saved')}</strong>
               </div>
             </div>
           </div>
@@ -1035,21 +1078,21 @@ export default function ProfilePage() {
 
           {/* 프로필 정보 */}
           <div className="card profile-settings-card">
-            <div className="profile-section-head"><span>🧑</span><div><strong>프로필 정보</strong><p>공개 프로필에 표시되는 이름, 소개, 링크를 수정합니다.</p></div></div>
+            <div className="profile-section-head"><span>🧑</span><div><strong>{txt('프로필 정보', 'Profile Info')}</strong><p>{txt('공개 프로필에 표시되는 이름, 소개, 링크를 수정합니다.', 'Edit the name, bio, and links shown on your public profile.')}</p></div></div>
             <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
               <div className="form-group">
-                <label>표시 이름</label>
+                <label>{txt('표시 이름', 'Display Name')}</label>
                 <input className="settings-input" value={displayName} onChange={e => setDisplayName(e.target.value)}
-                  placeholder={user?.username || '표시 이름'} style={{ maxWidth:360 }} />
+                  placeholder={user?.username || txt('표시 이름', 'Display Name')} style={{ maxWidth:360 }} />
               </div>
               <div className="form-group">
-                <label>소개</label>
+                <label>{txt('소개', 'Bio')}</label>
                 <textarea className="settings-input" value={bio} onChange={e => setBio(e.target.value)}
-                  placeholder="자신을 소개해주세요" rows={3}
+                  placeholder={txt('자신을 소개해주세요', 'Introduce yourself')} rows={3}
                   style={{ resize:'vertical', fontFamily:'inherit', lineHeight:1.6, maxWidth:480 }} />
               </div>
               <div className="form-group">
-                <label>소셜 링크</label>
+                <label>{txt('소셜 링크', 'Social Links')}</label>
                 <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
                   {Object.entries(PROFILE_LINK_LABELS).map(([key, label]) => (
                     <div key={key} style={{ display:'flex', alignItems:'center', gap:8, maxWidth:480 }}>
@@ -1062,7 +1105,7 @@ export default function ProfilePage() {
                 </div>
               </div>
               <div className="form-group">
-                <label>기술 스택</label>
+                <label>{txt('기술 스택', 'Tech Stack')}</label>
                 <div style={{ display:'flex', flexWrap:'wrap', gap:6, maxWidth:560 }}>
                   {TECH_OPTIONS.map(tech => (
                     <button key={tech} onClick={() => setTechStack(prev => prev.includes(tech) ? prev.filter(x => x !== tech) : prev.length < 20 ? [...prev, tech] : prev)}
@@ -1079,16 +1122,16 @@ export default function ProfilePage() {
                 </div>
               </div>
               <button className="btn btn-primary" onClick={handleSaveProfileInfo} disabled={profileInfoSaving} style={{ alignSelf:'flex-start', padding:'10px 24px' }}>
-                {profileInfoSaving ? <span className="spinner"/> : '프로필 저장'}
+                {profileInfoSaving ? <span className="spinner"/> : txt('프로필 저장', 'Save Profile')}
               </button>
             </div>
           </div>
 
           <div className="card profile-settings-card" style={{ width:'100%' }}>
-            <div className="profile-section-head"><span>⚙️</span><div><strong>제출 및 개인정보 설정</strong><p>기본 언어를 설정하고 제출 내역 공개 범위를 제어합니다.</p></div></div>
+            <div className="profile-section-head"><span>⚙️</span><div><strong>{txt('제출 및 개인정보 설정', 'Submission and Privacy Settings')}</strong><p>{txt('기본 언어를 설정하고 제출 내역 공개 범위를 제어합니다.', 'Set your default language and control submission history visibility.')}</p></div></div>
             <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
               <div className="form-group">
-                <label>기본 언어</label>
+                <label>{txt('기본 언어', 'Default Language')}</label>
                 <select value={defaultLanguage} onChange={(e) => setDefaultLanguage(e.target.value)}>
                   {JUDGE_LANGUAGE_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>{option.label}</option>
@@ -1097,31 +1140,31 @@ export default function ProfilePage() {
               </div>
 
               <div className="card card-pad-sm">
-                <div className="section-header-title" style={{ marginBottom:6 }}>제출 내역 공개 범위</div>
+                <div className="section-header-title" style={{ marginBottom:6 }}>{txt('제출 내역 공개 범위', 'Submission History Visibility')}</div>
                 <div style={{ fontSize:12, color:'var(--text2)', lineHeight:1.6, marginBottom:10 }}>
-                  활성화하면 다른 유저가 제출 목록을 볼 수 있습니다. 코드는 항상 비공개입니다.
+                  {txt('활성화하면 다른 유저가 제출 목록을 볼 수 있습니다. 코드는 항상 비공개입니다.', 'When enabled, other users can see your submission list. Code is always private.')}
                 </div>
                 <div style={{ display:'flex', gap:8 }}>
                   <button className="btn btn-ghost btn-sm" onClick={() => setSubmissionsPublic(true)} style={{
                     background: submissionsPublic ? 'var(--blue)' : 'var(--bg2)',
                     color: submissionsPublic ? '#fff' : 'var(--text2)',
-                  }}>공개</button>
+                  }}>{txt('공개', 'Public')}</button>
                   <button className="btn btn-ghost btn-sm" onClick={() => setSubmissionsPublic(false)} style={{
                     background: !submissionsPublic ? 'var(--orange)' : 'var(--bg2)',
                     color: !submissionsPublic ? '#fff' : 'var(--text2)',
-                  }}>비공개</button>
+                  }}>{txt('비공개', 'Private')}</button>
                 </div>
               </div>
 
               <button className="btn btn-primary" onClick={handleSavePreferences} disabled={prefsSaving} style={{ alignSelf:'flex-start', padding:'10px 24px' }}>
-                {prefsSaving ? <span className="spinner"/> : '설정 저장'}
+                {prefsSaving ? <span className="spinner"/> : txt('설정 저장', 'Save Settings')}
               </button>
             </div>
           </div>
 
           {/* 아바타 꾸미기 */}
           <div className="card profile-settings-card profile-avatar-card">
-            <div className="profile-section-head"><span>🎨</span><div><strong>프로필 사진 및 배경</strong><p>DailyCoding 프로필과 OAuth 원본 사진 중 선택하고 배경과 색상을 커스터마이즈합니다.</p></div></div>
+            <div className="profile-section-head"><span>🎨</span><div><strong>{txt('프로필 사진 및 배경', 'Profile Photo and Background')}</strong><p>{txt('DailyCoding 프로필과 OAuth 원본 사진 중 선택하고 배경과 색상을 커스터마이즈합니다.', 'Choose between your DailyCoding profile and original OAuth photo, then customize background and colors.')}</p></div></div>
             <div style={{ display:'flex', gap:16, alignItems:'center', marginBottom:16, flexWrap:'wrap' }}>
               <ProfileAvatar
                 profile={{ ...user, avatarUrlCustom, avatarColor, avatarEmoji, avatarSource }}
@@ -1130,7 +1173,7 @@ export default function ProfilePage() {
               />
               <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
                 <label className="btn btn-ghost btn-sm" style={{ cursor:'pointer' }}>
-                  📷 이미지 업로드
+                  📷 {txt('이미지 업로드', 'Upload Image')}
                   <input
                     type="file"
                     accept="image/*"
@@ -1165,10 +1208,10 @@ export default function ProfilePage() {
               >
                 <span className="avatar-source-icon">DC</span>
                 <span>
-                  <strong>DailyCoding 프로필 사용</strong>
-                  <small>업로드한 이미지, 이모지, 또는 색상을 프로필로 표시합니다.</small>
+                  <strong>{txt('DailyCoding 프로필 사용', 'Use DailyCoding Profile')}</strong>
+                  <small>{txt('업로드한 이미지, 이모지, 또는 색상을 프로필로 표시합니다.', 'Show your uploaded image, emoji, or color as your profile.')}</small>
                 </span>
-                {avatarSource !== 'provider' && <em>선택됨</em>}
+                {avatarSource !== 'provider' && <em>{txt('선택됨', 'Selected')}</em>}
               </button>
               <button
                 type="button"
@@ -1178,26 +1221,26 @@ export default function ProfilePage() {
               >
                 <span className="avatar-source-icon">OAuth</span>
                 <span>
-                  <strong>원본 프로필 사진 사용</strong>
-                  <small>Google/GitHub 로그인 제공자의 원본 사진으로 되돌립니다.</small>
+                  <strong>{txt('원본 프로필 사진 사용', 'Use Original Profile Photo')}</strong>
+                  <small>{txt('Google/GitHub 로그인 제공자의 원본 사진으로 되돌립니다.', 'Revert to the original photo from your Google/GitHub login provider.')}</small>
                 </span>
-                {avatarSource === 'provider' && <em>선택됨</em>}
+                {avatarSource === 'provider' && <em>{txt('선택됨', 'Selected')}</em>}
               </button>
             </div>
             <div className="profile-avatar-status-note">
               {avatarSource === 'provider'
-                ? '원본 제공자 사진을 사용 중입니다. DailyCoding 프로필은 저장되어 있으며 언제든지 다시 활성화할 수 있습니다.'
+                ? txt('원본 제공자 사진을 사용 중입니다. DailyCoding 프로필은 저장되어 있으며 언제든지 다시 활성화할 수 있습니다.', 'You are using the original provider photo. Your DailyCoding profile is saved and can be re-enabled anytime.')
                 : hasCustomAvatarProfile
-                  ? '저장된 DailyCoding 프로필을 사용 중입니다.'
+                  ? txt('저장된 DailyCoding 프로필을 사용 중입니다.', 'You are using your saved DailyCoding profile.')
                   : providerAvatarUrl
-                    ? '사이트 프로필이 없습니다 — 원본 제공자 사진이 자동으로 표시됩니다.'
-                    : '제공자 사진을 찾을 수 없습니다 — 이모지/색상 또는 이니셜이 표시됩니다.'}
+                    ? txt('사이트 프로필이 없습니다 — 원본 제공자 사진이 자동으로 표시됩니다.', 'No site profile exists; the original provider photo is shown automatically.')
+                    : txt('제공자 사진을 찾을 수 없습니다 — 이모지/색상 또는 이니셜이 표시됩니다.', 'No provider photo found; emoji/color or initials are shown.')}
             </div>
             <div style={{ marginBottom:16, padding:14, border:'1px solid var(--border)', borderRadius:14, background:'var(--bg2)' }}>
               <div style={{display:'flex',justifyContent:'space-between',gap:12,alignItems:'center'}}>
                 <div>
-                  <div style={{fontSize:13,fontWeight:800}}>푸시 알림</div>
-                  <small style={{color:'var(--text3)'}}>배틀 초대 및 일일 초기화 알림을 브라우저에서 받습니다.</small>
+                  <div style={{fontSize:13,fontWeight:800}}>{txt('푸시 알림', 'Push Notifications')}</div>
+                  <small style={{color:'var(--text3)'}}>{txt('배틀 초대 및 일일 초기화 알림을 브라우저에서 받습니다.', 'Receive battle invite and daily reset notifications in your browser.')}</small>
                 </div>
                 <button className="btn btn-ghost btn-sm" onClick={async()=>{
                   try {
@@ -1213,13 +1256,13 @@ export default function ProfilePage() {
                   } catch (err) {
                     toast?.show(err.message || 'Failed to update push notification settings', 'error');
                   }
-                }}>{pushStatus.subscribed ? '비활성화' : '활성화'}</button>
+                }}>{pushStatus.subscribed ? txt('비활성화', 'Disable') : txt('활성화', 'Enable')}</button>
               </div>
-              {!pushStatus.configured && <div style={{fontSize:11,color:'var(--yellow)',marginTop:8}}>서버에 VAPID 키가 설정된 후 사용 가능합니다.</div>}
+              {!pushStatus.configured && <div style={{fontSize:11,color:'var(--yellow)',marginTop:8}}>{txt('서버에 VAPID 키가 설정된 후 사용 가능합니다.', 'Available after VAPID keys are configured on the server.')}</div>}
             </div>
 
             <div style={{ marginBottom:16 }}>
-              <div style={{ fontSize:13, color:'var(--text3)', fontWeight:600, marginBottom:10 }}>🖼️ 프로필 배경</div>
+              <div style={{ fontSize:13, color:'var(--text3)', fontWeight:600, marginBottom:10 }}>🖼️ {txt('프로필 배경', 'Profile Background')}</div>
               <div className="profile-background-grid">
                 {visibleBackgrounds.map((bg) => (
                   <div key={bg.slug} className="profile-background-option">
@@ -1241,15 +1284,15 @@ export default function ProfilePage() {
                         cursor:'pointer',
                         boxShadow: equippedBackground === bg.slug ? '0 0 0 3px rgba(88,166,255,0.3)' : 'none',
                       }}
-                      title={bg.name}
+                      title={getBackgroundDisplayName(bg)}
                     />
-                    <div className="profile-background-name">{bg.name}</div>
+                    <div className="profile-background-name">{getBackgroundDisplayName(bg)}</div>
                   </div>
                 ))}
               </div>
             </div>
             <div style={{ marginBottom:16 }}>
-              <div style={{ fontSize:12, color:'var(--text3)', marginBottom:8 }}>색상</div>
+              <div style={{ fontSize:12, color:'var(--text3)', marginBottom:8 }}>{txt('색상', 'Color')}</div>
               <div style={{ display:'flex', flexWrap:'wrap', gap:8 }}>
                 {['#cd7f32','#c0c0c0','#ffd700','#00e5cc','#b9f2ff','#79c0ff','#56d364','#f78166','#bc8cff','#e3b341','#ff7b72','#ffffff'].map(c=>(
                   <button key={c} onClick={async()=>{
@@ -1277,11 +1320,11 @@ export default function ProfilePage() {
                 }} style={{
                   width:28, height:28, borderRadius:'50%', border:'2px dashed var(--border)', background:'transparent',
                   cursor:'pointer', fontSize:10, color:'var(--text3)',
-                }} title="초기화">✕</button>
+                }} title={txt('초기화', 'Reset')}>✕</button>
               </div>
             </div>
             <div>
-              <div style={{ fontSize:12, color:'var(--text3)', marginBottom:8 }}>이모지</div>
+              <div style={{ fontSize:12, color:'var(--text3)', marginBottom:8 }}>{txt('이모지', 'Emoji')}</div>
               <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
                 {['🦊','🐼','🦁','🐯','🐸','🦄','🐉','🦋','🐙','🦀','🐬','⭐','🔥','💎','🎯','🚀'].map(e=>(
                   <button key={e} onClick={async()=>{
@@ -1309,7 +1352,7 @@ export default function ProfilePage() {
                 }} style={{
                   width:36, height:36, borderRadius:8, border:'1px dashed var(--border)',
                   background:'transparent', cursor:'pointer', fontSize:11, color:'var(--text3)',
-                }} title="초기화">✕</button>
+                }} title={txt('초기화', 'Reset')}>✕</button>
               </div>
             </div>
           </div>
@@ -1320,18 +1363,18 @@ export default function ProfilePage() {
           {/* 보상 */}
           {rewards.length > 0 && (
             <div className="card profile-settings-card">
-              <div className="profile-section-head"><span>🎁</span><div><strong>보상 및 장착</strong><p>획득한 배지와 칭호를 프로필에 적용합니다.</p></div></div>
+              <div className="profile-section-head"><span>🎁</span><div><strong>{txt('보상 및 장착', 'Rewards and Equip')}</strong><p>{txt('획득한 배지와 칭호를 프로필에 적용합니다.', 'Apply earned badges and titles to your profile.')}</p></div></div>
               {/* 현재 장착 */}
               <div style={{ display:'flex', gap:10, marginBottom:16, flexWrap:'wrap' }}>
-                {[{type:'badge',current:equippedBadge,label:'장착된 배지'},{type:'title',current:equippedTitle,label:'장착된 칭호'}].map(item=>(
+                {[{type:'badge',current:equippedBadge,label:txt('장착된 배지', 'Equipped Badge')},{type:'title',current:equippedTitle,label:txt('장착된 칭호', 'Equipped Title')}].map(item=>(
                   <div key={item.type} className="card card-pad-sm" style={{ display:'flex', alignItems:'center', gap:10, flex:1, minWidth:180 }}>
                     <span style={{ fontSize:20 }}>{item.current ? rewards.find(r=>r.code===item.current)?.icon : (item.type==='badge'?'⬜':'📛')}</span>
                     <div>
                       <div style={{ fontSize:11, color:'var(--text3)', marginBottom:2 }}>{item.label}</div>
-                      <div style={{ fontSize:13, fontWeight:600 }}>{item.current ? rewards.find(r=>r.code===item.current)?.name : '없음'}</div>
+                      <div style={{ fontSize:13, fontWeight:600 }}>{item.current ? rewards.find(r=>r.code===item.current)?.name : txt('없음', 'None')}</div>
                     </div>
                     {item.current && (
-                      <button className="btn btn-ghost btn-sm" style={{ marginLeft:'auto', fontSize:11 }} onClick={()=>handleEquip(item.type,item.current)}>해제</button>
+                      <button className="btn btn-ghost btn-sm" style={{ marginLeft:'auto', fontSize:11 }} onClick={()=>handleEquip(item.type,item.current)}>{txt('해제', 'Unequip')}</button>
                     )}
                   </div>
                 ))}
@@ -1340,7 +1383,7 @@ export default function ProfilePage() {
               {/* 뱃지 그리드 */}
               {rewards.filter(r=>r.type==='badge').length>0 && (
                 <>
-                  <div className="profile-rewards-subtitle">배지</div>
+                  <div className="profile-rewards-subtitle">{txt('배지', 'Badges')}</div>
                   <div className="profile-rewards-grid">
                     {rewards.filter(r=>r.type==='badge').map(r=>{
                       const isEquipped=equippedBadge===r.code;
@@ -1348,7 +1391,7 @@ export default function ProfilePage() {
                         <div key={r.code} onClick={()=>handleEquip('badge',r.code)} className={`profile-reward-item ${isEquipped ? 'equipped' : ''}`}>
                           <div className="reward-icon">{r.icon}</div>
                           <div className="reward-name">{r.name}</div>
-                          {isEquipped && <div className="reward-equipped-tag">✓ 장착 중</div>}
+                          {isEquipped && <div className="reward-equipped-tag">✓ {txt('장착 중', 'Equipped')}</div>}
                         </div>
                       );
                     })}
@@ -1359,7 +1402,7 @@ export default function ProfilePage() {
               {/* 칭호 리스트 */}
               {rewards.filter(r=>r.type==='title').length>0 && (
                 <>
-                  <div className="profile-rewards-subtitle">칭호</div>
+                  <div className="profile-rewards-subtitle">{txt('칭호', 'Titles')}</div>
                   <div className="profile-rewards-list">
                     {rewards.filter(r=>r.type==='title').map(r=>{
                       const isEquipped=equippedTitle===r.code;
@@ -1370,7 +1413,7 @@ export default function ProfilePage() {
                             <div className="title-name">{r.name}</div>
                             <div className="title-desc">{r.description}</div>
                           </div>
-                          {isEquipped && <div className="title-equipped-tag">✓ 장착 중</div>}
+                          {isEquipped && <div className="title-equipped-tag">✓ {txt('장착 중', 'Equipped')}</div>}
                         </div>
                       );
                     })}
@@ -1382,7 +1425,7 @@ export default function ProfilePage() {
 
           {/* 구독 */}
           <div className="card profile-settings-card">
-            <div className="profile-section-head"><span>💳</span><div><strong>Subscription</strong><p>View your current plan and manage upgrades or cancellations.</p></div></div>
+            <div className="profile-section-head"><span>💳</span><div><strong>{txt('구독', 'Subscription')}</strong><p>{txt('현재 플랜을 확인하고 업그레이드 또는 취소를 관리합니다.', 'View your current plan and manage upgrades or cancellations.')}</p></div></div>
             {paymentFeedback && (
               <div style={{
                 marginBottom: 16,
@@ -1396,17 +1439,17 @@ export default function ProfilePage() {
               </div>
             )}
             <div className={`profile-sub-current-panel tier-${subPlan?.tier || 'free'}`}>
-              <div className="sub-label">Current Plan</div>
+              <div className="sub-label">{txt('현재 플랜', 'Current Plan')}</div>
               <div className="sub-value">
                 {formatCurrentSubscriptionLabel(subPlan?.tier, lang)}
               </div>
               {subPlan?.expires && (
-                <div className="sub-expiry">Expires: {new Date(subPlan.expires).toLocaleDateString('en-US')}</div>
+                <div className="sub-expiry">{txt('만료일', 'Expires')}: {new Date(subPlan.expires).toLocaleDateString(dateLocale)}</div>
               )}
               <div className="sub-note">
                 {subPlan?.tier && subPlan.tier !== 'free'
-                  ? 'Your paid plan is active. You can schedule a cancellation or compare plans below.'
-                  : 'You are on the free plan. Upgrade for more AI usage and premium features.'}
+                  ? txt('유료 플랜이 활성화되어 있습니다. 아래에서 취소 예약 또는 플랜 비교를 할 수 있습니다.', 'Your paid plan is active. You can schedule a cancellation or compare plans below.')
+                  : txt('현재 무료 플랜을 사용 중입니다. 더 많은 AI 사용량과 프리미엄 기능을 원하면 업그레이드하세요.', 'You are on the free plan. Upgrade for more AI usage and premium features.')}
               </div>
             </div>
 
@@ -1428,7 +1471,7 @@ export default function ProfilePage() {
                     <button onClick={() => handleUpgrade(plan.id)} disabled={loadingPlan === plan.id} className="btn-plan-upgrade" style={{
                       background:`${plan.color}20`, color:plan.color,
                       opacity: loadingPlan && loadingPlan !== plan.id ? 0.5 : 1,
-                    }}>{loadingPlan === plan.id ? 'Processing...' : 'Upgrade →'}</button>
+                    }}>{loadingPlan === plan.id ? txt('처리 중...', 'Processing...') : txt('업그레이드 →', 'Upgrade →')}</button>
                   </div>
                 ))}
               </div>
@@ -1436,7 +1479,7 @@ export default function ProfilePage() {
             {subPlan?.tier && subPlan.tier!=='free' && (
               <div style={{ display:'flex', flexWrap:'wrap', gap:10, alignItems:'center' }}>
                 <button className="btn btn-ghost btn-sm" onClick={() => navigate('/pricing')}>
-                  💳 Compare Plans
+                  💳 {txt('플랜 비교', 'Compare Plans')}
                 </button>
                 <button
                   className="btn btn-ghost btn-sm"
@@ -1444,7 +1487,7 @@ export default function ProfilePage() {
                   disabled={cancelLoading}
                   style={{ color:'var(--red)', borderColor:'rgba(248,81,73,.25)' }}
                 >
-                  {cancelLoading ? 'Processing...' : 'Schedule Cancellation'}
+                  {cancelLoading ? txt('처리 중...', 'Processing...') : txt('취소 예약', 'Schedule Cancellation')}
                 </button>
                 <a href="mailto:choijunhuk2007@gmail.com" style={{ color:'var(--blue)', fontSize:13 }}>
                   choijunhuk2007@gmail.com
@@ -1460,14 +1503,14 @@ export default function ProfilePage() {
 
           {/* 비밀번호 변경 */}
           <div className="card profile-settings-card">
-            <div className="profile-section-head"><span>🔒</span><div><strong>Change Password</strong><p>Only applies to password accounts. Leave blank for OAuth accounts.</p></div></div>
+            <div className="profile-section-head"><span>🔒</span><div><strong>{txt('비밀번호 변경', 'Change Password')}</strong><p>{txt('비밀번호 계정에만 적용됩니다. OAuth 계정은 비워두세요.', 'Only applies to password accounts. Leave blank for OAuth accounts.')}</p></div></div>
             <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
-              <div className="form-group"><label>Current Password</label><input type="password" value={pwCurrent} onChange={e=>setPwCurrent(e.target.value)} placeholder="Current password"/></div>
-              <div className="form-group"><label>New Password</label><input type="password" value={pwNext} onChange={e=>setPwNext(e.target.value)} placeholder="New password (min 8 chars)"/></div>
-              <div className="form-group"><label>Confirm New Password</label><input type="password" value={pwConfirm} onChange={e=>setPwConfirm(e.target.value)} placeholder="Re-enter new password"/></div>
+              <div className="form-group"><label>{txt('현재 비밀번호', 'Current Password')}</label><input type="password" value={pwCurrent} onChange={e=>setPwCurrent(e.target.value)} placeholder={txt('현재 비밀번호', 'Current password')}/></div>
+              <div className="form-group"><label>{txt('새 비밀번호', 'New Password')}</label><input type="password" value={pwNext} onChange={e=>setPwNext(e.target.value)} placeholder={txt('새 비밀번호 (최소 8자)', 'New password (min 8 chars)')}/></div>
+              <div className="form-group"><label>{txt('새 비밀번호 확인', 'Confirm New Password')}</label><input type="password" value={pwConfirm} onChange={e=>setPwConfirm(e.target.value)} placeholder={txt('새 비밀번호 다시 입력', 'Re-enter new password')}/></div>
               {pwMsg && <div style={{ fontSize:13, color:pwMsg.startsWith('✅')?'var(--green)':'var(--red)', fontWeight:600 }}>{pwMsg}</div>}
               <button className="btn btn-primary" onClick={handlePwChange} disabled={pwLoading||!pwCurrent||!pwNext||!pwConfirm} style={{ alignSelf:'flex-start', padding:'10px 24px' }}>
-                {pwLoading ? <span className="spinner"/> : 'Change Password'}
+                {pwLoading ? <span className="spinner"/> : txt('비밀번호 변경', 'Change Password')}
               </button>
             </div>
           </div>
