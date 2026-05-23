@@ -927,27 +927,27 @@ export default function BattlePage() {
                   <div className="bp-invite-from">
                     <span className="bp-invite-icon">📩</span>
                     <div>
-                      <div className="bp-invite-name">{pendingInvite.inviterName} has challenged you to a Battle!</div>
-                      <div className="bp-invite-sub">If you don't accept now, the invite expires in 2 minutes.</div>
+                      <div className="bp-invite-name">{pendingInvite.inviterName}{txt('님이 배틀을 신청했습니다!', ' has challenged you to a Battle!')}</div>
+                      <div className="bp-invite-sub">{txt('지금 수락하지 않으면 초대가 2분 후 만료됩니다.', "If you don't accept now, the invite expires in 2 minutes.")}</div>
                     </div>
                   </div>
                   <div className="bp-invite-actions">
-                    <button className="bp-btn-primary" onClick={acceptInvite}>Accept</button>
-                    <button className="bp-btn-danger"  onClick={declineInvite}>Decline</button>
+                    <button className="bp-btn-primary" onClick={acceptInvite}>{txt('수락', 'Accept')}</button>
+                    <button className="bp-btn-danger"  onClick={declineInvite}>{txt('거절', 'Decline')}</button>
                   </div>
                 </div>
               )}
 
               <div className="bp-active-battles">
                 <div style={{ display:'flex', gap:8, marginBottom:12 }}>
-                  <button className="bp-btn-small" onClick={() => setLobbyTab('active')} style={{ opacity: lobbyTab === 'active' ? 1 : 0.7 }}>Active Battles</button>
-                  <button className="bp-btn-small" onClick={() => setLobbyTab('history')} style={{ opacity: lobbyTab === 'history' ? 1 : 0.7 }}>History</button>
+                  <button className="bp-btn-small" onClick={() => setLobbyTab('active')} style={{ opacity: lobbyTab === 'active' ? 1 : 0.7 }}>{txt('진행 중 배틀', 'Active Battles')}</button>
+                  <button className="bp-btn-small" onClick={() => setLobbyTab('history')} style={{ opacity: lobbyTab === 'history' ? 1 : 0.7 }}>{txt('기록', 'History')}</button>
                 </div>
                 {lobbyTab === 'active' ? (
                   <>
-                    <div className="bp-section-title">Active Battles (Spectate available)</div>
+                    <div className="bp-section-title">{txt('진행 중인 배틀 (관전 가능)', 'Active Battles (Spectate available)')}</div>
                     {activeBattles.length === 0 ? (
-                      <div className="bp-empty-msg">No battles in progress right now.</div>
+                      <div className="bp-empty-msg">{txt('현재 진행 중인 배틀이 없습니다.', 'No battles in progress right now.')}</div>
                     ) : (
                       <div className="bp-battle-list">
                         {activeBattles.map(b => {

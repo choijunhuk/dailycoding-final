@@ -187,12 +187,12 @@ export function CodingProblem({ problem, code, lang, lockedLanguageLabel, onCode
       {(problem.inputDesc || problem.outputDesc) && (
         <div className="bp-io-grid">
           <div className="bp-io-card">
-            <div className="bp-io-title">Input</div>
-            <p>{problem.inputDesc || 'Uses standard input.'}</p>
+            <div className="bp-io-title">{txt('입력', 'Input')}</div>
+            <p>{problem.inputDesc || txt('표준 입력 사용.', 'Uses standard input.')}</p>
           </div>
           <div className="bp-io-card">
-            <div className="bp-io-title">Output</div>
-            <p>{problem.outputDesc || 'Output your answer to standard output.'}</p>
+            <div className="bp-io-title">{txt('출력', 'Output')}</div>
+            <p>{problem.outputDesc || txt('표준 출력으로 답을 출력하세요.', 'Output your answer to standard output.')}</p>
           </div>
         </div>
       )}
@@ -200,10 +200,10 @@ export function CodingProblem({ problem, code, lang, lockedLanguageLabel, onCode
         <div className="bp-examples">
           {problem.examples.slice(0, 2).map((example, index) => (
             <div key={index} className="bp-example">
-              <div className="bp-example-label">Sample {index + 1}</div>
+              <div className="bp-example-label">{txt('샘플', 'Sample')} {index + 1}</div>
               <div className="bp-example-row">
-                <div><div className="bp-example-head">Input</div><pre>{example.input}</pre></div>
-                <div><div className="bp-example-head">Output</div><pre>{example.output}</pre></div>
+                <div><div className="bp-example-head">{txt('입력', 'Input')}</div><pre>{example.input}</pre></div>
+                <div><div className="bp-example-head">{txt('출력', 'Output')}</div><pre>{example.output}</pre></div>
               </div>
             </div>
           ))}

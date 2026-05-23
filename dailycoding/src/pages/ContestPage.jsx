@@ -526,31 +526,31 @@ export default function ContestPage() {
             <h2>🎯 Create Contest</h2>
             <div className="modal-form">
               <div className="form-group">
-                <label>Contest Name *</label>
+                <label>{txt('콘테스트 이름 *', 'Contest Name *')}</label>
                 <input placeholder={t('contestNamePlaceholder')} value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))} />
               </div>
               <div className="form-group">
-                <label>Description</label>
+                <label>{txt('설명', 'Description')}</label>
                 <textarea rows={2} placeholder={t('contestDescPlaceholder')} value={form.desc} onChange={e=>setForm(p=>({...p,desc:e.target.value}))} style={{resize:'vertical'}} />
               </div>
               <div className="modal-row">
                 <div className="form-group">
-                  <label>Time Limit</label>
+                  <label>{txt('제한 시간', 'Time Limit')}</label>
                   <select value={form.duration} onChange={e=>setForm(p=>({...p,duration:e.target.value}))}>
-                    {['30','60','90','120','180'].map(v=><option key={v} value={v}>{v} min</option>)}
+                    {['30','60','90','120','180'].map(v=><option key={v} value={v}>{v} {txt('분', 'min')}</option>)}
                   </select>
                 </div>
                 <div className="form-group">
-                  <label>Visibility</label>
+                  <label>{txt('공개 설정', 'Visibility')}</label>
                   <select value={form.privacy} onChange={e=>setForm(p=>({...p,privacy:e.target.value}))}>
-                    <option value="private">Private</option><option value="public">Public</option>
+                    <option value="private">{txt('비공개', 'Private')}</option><option value="public">{txt('공개', 'Public')}</option>
                   </select>
                 </div>
                 <div className="form-group">
-                  <label>Join Method</label>
+                  <label>{txt('참가 방식', 'Join Method')}</label>
                   <select value={form.joinType} onChange={e=>setForm(p=>({...p,joinType:e.target.value}))}>
-                    <option value="direct">Direct Join</option>
-                    <option value="approval">Approval Required</option>
+                    <option value="direct">{txt('바로 참가', 'Direct Join')}</option>
+                    <option value="approval">{txt('승인 필요', 'Approval Required')}</option>
                   </select>
                 </div>
               </div>
@@ -753,7 +753,7 @@ export default function ContestPage() {
             </div>
 
             <div className="modal-actions" style={{marginTop:16}}>
-              <button className="btn btn-ghost" onClick={()=>setMgmtContest(null)}>Close</button>
+              <button className="btn btn-ghost" onClick={()=>setMgmtContest(null)}>{txt('닫기', 'Close')}</button>
             </div>
           </div>
         </div>
@@ -776,10 +776,10 @@ export default function ContestPage() {
       {resultsContest && (
         <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setResultsContest(null)}>
           <div className="modal-box card fade-up" style={{maxWidth:480,width:'95vw'}}>
-            <h2>🏆 {resultsContest.name} — Final Results</h2>
+            <h2>🏆 {resultsContest.name} — {txt('최종 결과', 'Final Results')}</h2>
             <div style={{margin:'14px 0',maxHeight:320,overflowY:'auto'}}>
               {resultsBoard.length === 0
-                ? <div style={{color:'var(--text3)',fontSize:13,padding:'8px 0'}}>No participants.</div>
+                ? <div style={{color:'var(--text3)',fontSize:13,padding:'8px 0'}}>{txt('참가자 없음.', 'No participants.')}</div>
                 : resultsBoard.map((p,i) => (
                   <div key={p.username} style={{
                     display:'flex',alignItems:'center',gap:12,
@@ -793,16 +793,16 @@ export default function ContestPage() {
                     <span style={{flex:1}}>
                       <span style={{display:'block',fontWeight:600}}>{p.username}</span>
                       <span style={{display:'block',fontSize:11,color:'var(--text3)'}}>
-                        {(getRewardCodesForRank(resultsRewards, i + 1).length ? getRewardCodesForRank(resultsRewards, i + 1) : getRewardCodesForRank(DEFAULT_CONTEST_REWARD_RULES, i + 1)).join(', ') || 'No reward'}
+                        {(getRewardCodesForRank(resultsRewards, i + 1).length ? getRewardCodesForRank(resultsRewards, i + 1) : getRewardCodesForRank(DEFAULT_CONTEST_REWARD_RULES, i + 1)).join(', ') || txt('보상 없음', 'No reward')}
                       </span>
                     </span>
-                    <span className="mono" style={{color:'var(--blue)',fontWeight:700}}>{p.score} solved</span>
+                    <span className="mono" style={{color:'var(--blue)',fontWeight:700}}>{p.score} {txt('해결', 'solved')}</span>
                   </div>
                 ))
               }
             </div>
             <div className="modal-actions">
-              <button className="btn btn-ghost" onClick={()=>setResultsContest(null)}>Close</button>
+              <button className="btn btn-ghost" onClick={()=>setResultsContest(null)}>{txt('닫기', 'Close')}</button>
             </div>
           </div>
         </div>
@@ -812,11 +812,11 @@ export default function ContestPage() {
       {reqContest && (
         <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setReqContest(null)}>
           <div className="modal-box card fade-up" style={{maxWidth:440,width:'95vw'}}>
-            <h2>👥 Join Request Management</h2>
-            <div style={{fontSize:13,color:'var(--text2)',marginBottom:12}}>{reqContest.name} — Pending Requests</div>
+            <h2>👥 {txt('참가 신청 관리', 'Join Request Management')}</h2>
+            <div style={{fontSize:13,color:'var(--text2)',marginBottom:12}}>{reqContest.name} — {txt('대기 중인 신청', 'Pending Requests')}</div>
             <div style={{margin:'14px 0',maxHeight:320,overflowY:'auto'}}>
               {requests.length === 0
-                ? <div style={{color:'var(--text3)',fontSize:13,padding:'8px 0',textAlign:'center'}}>No pending requests.</div>
+                ? <div style={{color:'var(--text3)',fontSize:13,padding:'8px 0',textAlign:'center'}}>{txt('대기 중인 신청이 없습니다.', 'No pending requests.')}</div>
                 : requests.map((r) => (
                   <div key={r.id} style={{
                     display:'flex',alignItems:'center',gap:12,
@@ -832,19 +832,19 @@ export default function ContestPage() {
                       <button className="btn btn-sm btn-primary"
                         onClick={() => handleUpdateRequest(r.id, 'approved')}
                         disabled={reqBusy[r.id]}
-                      >Approve</button>
+                      >{txt('승인', 'Approve')}</button>
                       <button className="btn btn-sm btn-ghost"
                         onClick={() => handleUpdateRequest(r.id, 'rejected')}
                         disabled={reqBusy[r.id]}
                         style={{color:'var(--red)'}}
-                      >Reject</button>
+                      >{txt('거절', 'Reject')}</button>
                     </div>
                   </div>
                 ))
               }
             </div>
             <div className="modal-actions">
-              <button className="btn btn-ghost" onClick={()=>setReqContest(null)}>Close</button>
+              <button className="btn btn-ghost" onClick={()=>setReqContest(null)}>{txt('닫기', 'Close')}</button>
             </div>
           </div>
         </div>
@@ -858,12 +858,12 @@ export default function ContestPage() {
             <p style={{fontSize:13,color:'var(--text2)',marginBottom:16}}>{txt('관리자가 요청을 검토하고 대회를 개설합니다.', 'An admin will review your request and create the contest.')}</p>
             <div style={{display:'flex',flexDirection:'column',gap:10}}>
               <div className="form-group">
-                <label style={{fontSize:12,color:'var(--text3)',marginBottom:4,display:'block'}}>Contest Name *</label>
+                <label style={{fontSize:12,color:'var(--text3)',marginBottom:4,display:'block'}}>{txt('콘테스트 이름 *', 'Contest Name *')}</label>
                 <input placeholder={t('contestNameExamplePlaceholder')} value={requestForm.name} onChange={e=>setRequestForm(p=>({...p,name:e.target.value}))} />
               </div>
               <div className="form-group">
-                <label style={{fontSize:12,color:'var(--text3)',marginBottom:4,display:'block'}}>Contest Description</label>
-                <textarea rows={3} placeholder="Describe the topic, target audience, etc." value={requestForm.description} onChange={e=>setRequestForm(p=>({...p,description:e.target.value}))} style={{width:'100%',resize:'vertical',background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:8,color:'var(--text)',padding:'8px 12px',fontSize:13,fontFamily:'inherit'}} />
+                <label style={{fontSize:12,color:'var(--text3)',marginBottom:4,display:'block'}}>{txt('콘테스트 설명', 'Contest Description')}</label>
+                <textarea rows={3} placeholder={txt('주제, 대상, 목적 등을 설명하세요.', 'Describe the topic, target audience, etc.')} value={requestForm.description} onChange={e=>setRequestForm(p=>({...p,description:e.target.value}))} style={{width:'100%',resize:'vertical',background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:8,color:'var(--text)',padding:'8px 12px',fontSize:13,fontFamily:'inherit'}} />
               </div>
               <div className="form-group">
                 <label style={{fontSize:12,color:'var(--text3)',marginBottom:4,display:'block'}}>Preferred Date</label>
@@ -904,12 +904,12 @@ export default function ContestPage() {
                       </div>
                       <div style={{display:'flex',flexDirection:'column',gap:6,alignItems:'flex-end'}}>
                         <span style={{fontSize:11,fontWeight:700,color:r.status==='pending'?'var(--yellow)':r.status==='approved'?'var(--green)':'var(--red)'}}>
-                          {r.status==='pending'?'Pending':r.status==='approved'?'Approved':'Rejected'}
+                          {r.status==='pending'?txt('대기 중','Pending'):r.status==='approved'?txt('승인됨','Approved'):txt('거절됨','Rejected')}
                         </span>
                         {r.status === 'pending' && (
                           <div style={{display:'flex',gap:6}}>
-                            <button className="btn btn-sm btn-primary" onClick={()=>handleCreationRequestAction(r.id,'approved')} disabled={creationReqBusy[r.id]}>Approve</button>
-                            <button className="btn btn-sm btn-ghost" onClick={()=>handleCreationRequestAction(r.id,'rejected')} disabled={creationReqBusy[r.id]} style={{color:'var(--red)'}}>Reject</button>
+                            <button className="btn btn-sm btn-primary" onClick={()=>handleCreationRequestAction(r.id,'approved')} disabled={creationReqBusy[r.id]}>{txt('승인', 'Approve')}</button>
+                            <button className="btn btn-sm btn-ghost" onClick={()=>handleCreationRequestAction(r.id,'rejected')} disabled={creationReqBusy[r.id]} style={{color:'var(--red)'}}>{txt('거절', 'Reject')}</button>
                           </div>
                         )}
                       </div>
@@ -929,8 +929,8 @@ export default function ContestPage() {
       {pinContest && (
         <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setPinContest(null)}>
           <div className="modal-box card fade-up" style={{maxWidth:320,width:'90vw'}}>
-            <h2>🔒 Enter Security Code</h2>
-            <p style={{fontSize:13,color:'var(--text2)',marginBottom:16}}>This is a private contest. Please enter the security code to join.</p>
+            <h2>🔒 {txt('보안 코드 입력', 'Enter Security Code')}</h2>
+            <p style={{fontSize:13,color:'var(--text2)',marginBottom:16}}>{txt('비공개 콘테스트입니다. 참가하려면 보안 코드를 입력하세요.', 'This is a private contest. Please enter the security code to join.')}</p>
             <div className="form-group">
               <input 
                 type="password" 
@@ -942,9 +942,9 @@ export default function ContestPage() {
               />
             </div>
             <div className="modal-actions" style={{marginTop:20}}>
-              <button className="btn btn-ghost" onClick={()=>setPinContest(null)}>Cancel</button>
+              <button className="btn btn-ghost" onClick={()=>setPinContest(null)}>{txt('취소', 'Cancel')}</button>
               <button className="btn btn-primary" onClick={() => handleJoin(pinContest, pinValue)} disabled={!pinValue || busy[pinContest.id]}>
-                {busy[pinContest.id] ? <span className="spinner"/> : 'Confirm'}
+                {busy[pinContest.id] ? <span className="spinner"/> : txt('확인', 'Confirm')}
               </button>
             </div>
           </div>

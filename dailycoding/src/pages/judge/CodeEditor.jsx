@@ -214,9 +214,9 @@ export default function CodeEditor({
           <h3>{troubleshootingConfig?.scenarioTitle || problem.title}</h3>
           <p>{troubleshootingConfig?.scenarioDescription || problem.desc}</p>
           <div className="troubleshooting-metrics">
-            <div><span>Target</span><strong>{troubleshootingConfig?.targetResponseTimeMs ? `${troubleshootingConfig.targetResponseTimeMs}ms` : '-'}</strong></div>
-            <div><span>Limit</span><strong>{troubleshootingConfig?.performanceLimitMs ? `${troubleshootingConfig.performanceLimitMs}ms` : '-'}</strong></div>
-            <div><span>Tests</span><strong>{troubleshootingConfig ? `${troubleshootingConfig.visibleTests?.length || 0}+${troubleshootingConfig.hiddenTestCount || 0}` : '-'}</strong></div>
+            <div><span>{txt('목표', 'Target')}</span><strong>{troubleshootingConfig?.targetResponseTimeMs ? `${troubleshootingConfig.targetResponseTimeMs}ms` : '-'}</strong></div>
+            <div><span>{txt('제한', 'Limit')}</span><strong>{troubleshootingConfig?.performanceLimitMs ? `${troubleshootingConfig.performanceLimitMs}ms` : '-'}</strong></div>
+            <div><span>{txt('테스트', 'Tests')}</span><strong>{troubleshootingConfig ? `${troubleshootingConfig.visibleTests?.length || 0}+${troubleshootingConfig.hiddenTestCount || 0}` : '-'}</strong></div>
           </div>
           {troubleshootingResult && (
             <div className="troubleshooting-score-card">
