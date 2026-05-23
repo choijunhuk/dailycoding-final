@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Eye, Plus, Save, Trash2 } from 'lucide-react';
 import api from '../api.js';
 import { useToast } from '../context/ToastContext.jsx';
@@ -73,14 +73,16 @@ function actionSentence(action, t, tgtLabels, itemLabels) {
 export default function WorkshopPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const toast = useToast();
-  const { t } = useLang();
+  const { t, lang } = useLang();
+  const template = !id ? location.state?.template : null;
   const [loading, setLoading] = useState(Boolean(id));
   const [saving, setSaving] = useState(false);
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
+  const [name, setName] = useState(template ? (lang === 'en' ? template.nameEn : template.nameKo) : '');
+  const [description, setDescription] = useState(template ? (lang === 'en' ? template.descEn : template.descKo) : '');
   const [isPublic, setIsPublic] = useState(true);
-  const [config, setConfig] = useState(DEFAULT_CONFIG);
+  const [config, setConfig] = useState(template ? { ...DEFAULT_CONFIG, ...template.config } : DEFAULT_CONFIG);
 
   const rules = config.rules || [];
 

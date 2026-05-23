@@ -1,7 +1,25 @@
-/* ── Community Mobile ── */
+/* ── Community ── */
 
 .community-post-item {
   padding: 18px 20px;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.community-post-item:hover {
+  background: var(--bg3) !important;
+}
+
+.community-post-item:active {
+  transform: scale(0.995);
+  background: var(--bg2) !important;
+}
+
+.community-board-tabs button {
+  transition: transform 0.1s, box-shadow 0.15s;
+}
+
+.community-board-tabs button:active {
+  transform: scale(0.97);
 }
 
 .community-post-metrics {

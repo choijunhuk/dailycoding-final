@@ -7,6 +7,7 @@
 
 .wg-header,
 .wg-toolbar,
+.wg-templates,
 .wg-grid,
 .wg-empty {
   max-width: 1180px;
@@ -191,4 +192,71 @@
   .wg-search {
     width: 100%;
   }
+}
+
+.wg-templates {
+  max-width: 1180px;
+  margin: 0 auto 28px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 20px;
+}
+
+.wg-templates-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--purple);
+  margin-bottom: 14px;
+}
+
+.wg-templates-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.wg-template-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  cursor: pointer;
+  text-align: left;
+  color: var(--text);
+  font-family: inherit;
+  transition: border-color 0.15s, transform 0.1s, box-shadow 0.15s;
+}
+
+.wg-template-card:hover {
+  border-color: var(--purple);
+  box-shadow: 0 4px 20px rgba(210,168,255,.15);
+  transform: translateY(-2px);
+}
+
+.wg-template-card:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+.wg-template-emoji {
+  font-size: 28px;
+  margin-bottom: 4px;
+}
+
+.wg-template-card strong {
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.wg-template-card small {
+  font-size: 11px;
+  color: var(--text3);
+  line-height: 1.5;
 }

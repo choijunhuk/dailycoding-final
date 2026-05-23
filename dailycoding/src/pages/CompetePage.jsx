@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Swords, Trophy, Wrench, Zap } from 'lucide-react';
+import { Swords, Trophy, Wrench } from 'lucide-react';
 import { useLang } from '../context/LangContext.jsx';
 import { pickLangText } from '../utils/languageMode.js';
 
@@ -24,13 +24,6 @@ const COMPETE_MODES = [
     icon: Wrench,
     accent: 'var(--purple)',
     desc: { ko: '커스텀 배틀 모드를 만들고 공유하세요. 이벤트·조건·액션 블록으로 나만의 룰을 정의합니다.', en: 'Create and share custom battle modes. Define your own rules with event·condition·action blocks.' },
-  },
-  {
-    title: { ko: '코딩 테스트', en: 'Coding Test' },
-    href: '/contest',
-    icon: Zap,
-    accent: 'var(--blue)',
-    desc: { ko: '제한 시간 내 여러 문제를 풀며 실전 코딩 테스트 실력을 키우세요.', en: 'Solve multiple problems under time pressure to sharpen your real-world coding skills.' },
   },
 ];
 
@@ -61,7 +54,7 @@ export default function CompetePage() {
           </span>
           <h1 style={{ fontSize: 30, fontWeight: 900, margin: '14px 0 8px' }}>{txt('경쟁 허브', 'Competition Hub')}</h1>
           <p style={{ color: 'var(--text2)', fontSize: 15, lineHeight: 1.7, maxWidth: 720, margin: 0 }}>
-            {txt('실시간 배틀부터 토너먼트, 코딩 테스트까지 데일리코딩의 모든 경쟁 모드를 한곳에서 시작하세요.', 'From real-time battles to tournaments and coding tests — start every DailyCoding competition mode in one place.')}
+            {txt('실시간 배틀부터 토너먼트, 워크샵까지 데일리코딩의 모든 경쟁 모드를 한곳에서 시작하세요.', 'From real-time battles to tournaments and workshop — start every DailyCoding competition mode in one place.')}
           </p>
         </div>
 

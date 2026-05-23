@@ -251,15 +251,15 @@ export default function SettingsPage() {
               {t('passwordMinLength')}
             </div>
             <Field label={t('currentPassword')}>
-              <input className="settings-input" type="password" value={pwForm.current}
+              <input className="settings-input" type="password" value={pwForm.current} autoComplete="current-password"
                 onChange={e => setPwForm(p => ({ ...p, current: e.target.value }))} />
             </Field>
             <Field label={t('newPassword')}>
-              <input className="settings-input" type="password" value={pwForm.next}
+              <input className="settings-input" type="password" value={pwForm.next} autoComplete="new-password"
                 onChange={e => setPwForm(p => ({ ...p, next: e.target.value }))} />
             </Field>
             <Field label={t('confirmPassword')}>
-              <input className="settings-input" type="password" value={pwForm.confirm}
+              <input className="settings-input" type="password" value={pwForm.confirm} autoComplete="new-password"
                 onChange={e => setPwForm(p => ({ ...p, confirm: e.target.value }))} />
             </Field>
             <SaveBtn onClick={changePassword} saving={saving} label={t('changePassword')} />

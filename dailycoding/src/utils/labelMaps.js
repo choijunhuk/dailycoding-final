@@ -55,6 +55,17 @@ const TAG_KO_TO_EN = {
   '브루트포스': 'Brute Force', '백트래킹': 'Backtracking', '분리 집합': 'Disjoint Set',
   '유니온-파인드': 'Union-Find', '비트마스크': 'Bitmask', '소수': 'Prime Numbers', '정수론': 'Number Theory',
   '알고리즘': 'Algorithm',
+  '다익스트라': 'Dijkstra', '벨만-포드': 'Bellman-Ford', '플로이드-워셜': 'Floyd-Warshall',
+  '크루스칼': 'Kruskal', '프림': 'Prim', '위상 정렬': 'Topological Sort',
+  '최소 신장 트리': 'Minimum Spanning Tree', 'mst': 'MST',
+  '강한 연결 요소': 'SCC', '이분 그래프': 'Bipartite Graph',
+  '최대 유량': 'Max Flow', '네트워크 유량': 'Network Flow',
+  '문자열 검색': 'String Search', 'kmp': 'KMP', '트라이': 'Trie',
+  '슬라이딩 윈도우': 'Sliding Window', '분할 정복': 'Divide and Conquer',
+  '재귀': 'Recursion', '피보나치': 'Fibonacci', '메모이제이션': 'Memoization',
+  '정수': 'Integer', '소인수분해': 'Prime Factorization', '유클리드': 'Euclidean',
+  '조합': 'Combinations', '순열': 'Permutations', '경우의 수': 'Combinatorics',
+  '덱': 'Deque', '연결 리스트': 'Linked List', '배열': 'Array', '집합': 'Set', '맵': 'Map',
 };
 
 const TAG_EN_TO_KO = Object.fromEntries(Object.entries(TAG_KO_TO_EN).map(([ko, en]) => [en.toLowerCase(), ko]));

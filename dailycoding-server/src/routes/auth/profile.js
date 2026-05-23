@@ -283,8 +283,8 @@ router.get('/profile/:id', auth, async (req, res) => {
       : null;
     const equippedBackgroundUrl = resolveProfileBackgroundCss(bgRow?.image_url || DEFAULT_PROFILE_BACKGROUND_IMAGE_URL);
     const [badgeItem, titleItem] = await Promise.all([
-      user.equipped_badge ? queryOne('SELECT code, name, icon FROM reward_items WHERE code = ?', [user.equipped_badge]) : null,
-      user.equipped_title ? queryOne('SELECT code, name, icon FROM reward_items WHERE code = ?', [user.equipped_title]) : null,
+      user.equipped_badge ? queryOne('SELECT code, name, name_ko, icon FROM reward_items WHERE code = ?', [user.equipped_badge]) : null,
+      user.equipped_title ? queryOne('SELECT code, name, name_ko, icon FROM reward_items WHERE code = ?', [user.equipped_title]) : null,
     ]);
 
     const base = {
@@ -305,8 +305,10 @@ router.get('/profile/:id', auth, async (req, res) => {
       equippedBadge: user.equipped_badge ?? null,
       equippedBadgeIcon: badgeItem?.icon ?? null,
       equippedBadgeName: badgeItem?.name ?? null,
+      equippedBadgeNameKo: badgeItem?.name_ko ?? null,
       equippedTitle: user.equipped_title ?? null,
       equippedTitleName: titleItem?.name ?? null,
+      equippedTitleNameKo: titleItem?.name_ko ?? null,
       achievement: user.achievement ?? null,
       joinDate: user.join_date ? new Date(user.join_date).toISOString().slice(0, 10) : null,
       socialLinks: parsedSocialLinks,

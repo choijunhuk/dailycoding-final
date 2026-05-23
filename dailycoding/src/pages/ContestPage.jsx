@@ -866,12 +866,12 @@ export default function ContestPage() {
                 <textarea rows={3} placeholder={txt('주제, 대상, 목적 등을 설명하세요.', 'Describe the topic, target audience, etc.')} value={requestForm.description} onChange={e=>setRequestForm(p=>({...p,description:e.target.value}))} style={{width:'100%',resize:'vertical',background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:8,color:'var(--text)',padding:'8px 12px',fontSize:13,fontFamily:'inherit'}} />
               </div>
               <div className="form-group">
-                <label style={{fontSize:12,color:'var(--text3)',marginBottom:4,display:'block'}}>Preferred Date</label>
+                <label style={{fontSize:12,color:'var(--text3)',marginBottom:4,display:'block'}}>{txt('희망 날짜', 'Preferred Date')}</label>
                 <input type="date" value={requestForm.desiredDate} onChange={e=>setRequestForm(p=>({...p,desiredDate:e.target.value}))} />
               </div>
               <div className="form-group">
-                <label style={{fontSize:12,color:'var(--text3)',marginBottom:4,display:'block'}}>Reason for Request</label>
-                <textarea rows={2} placeholder="Why do you want to host this contest?" value={requestForm.reason} onChange={e=>setRequestForm(p=>({...p,reason:e.target.value}))} style={{width:'100%',resize:'vertical',background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:8,color:'var(--text)',padding:'8px 12px',fontSize:13,fontFamily:'inherit'}} />
+                <label style={{fontSize:12,color:'var(--text3)',marginBottom:4,display:'block'}}>{txt('요청 이유', 'Reason for Request')}</label>
+                <textarea rows={2} placeholder={txt('이 콘테스트를 개최하려는 이유를 적어주세요.', 'Why do you want to host this contest?')} value={requestForm.reason} onChange={e=>setRequestForm(p=>({...p,reason:e.target.value}))} style={{width:'100%',resize:'vertical',background:'var(--bg3)',border:'1px solid var(--border)',borderRadius:8,color:'var(--text)',padding:'8px 12px',fontSize:13,fontFamily:'inherit'}} />
               </div>
             </div>
             <div className="modal-actions" style={{marginTop:20}}>

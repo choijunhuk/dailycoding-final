@@ -423,6 +423,11 @@ nav {
   transform: translateY(-2px);
   box-shadow: 0 22px 60px rgba(0,0,0,.24), 0 0 0 1px var(--border2);
 }
+.card-hover:active {
+  transform: translateY(0) scale(0.99);
+  box-shadow: 0 4px 12px rgba(0,0,0,.15);
+  transition: transform 0.08s, box-shadow 0.08s;
+}
 
 /* ── Page section headers ── */
 .section-title {

@@ -104,7 +104,7 @@ function ItemCard({ item, isEquipped, onEquip, stats, lang }) {
       )}
 
       <div style={{ fontSize: 11.5, color: 'var(--text3)', lineHeight: 1.5, flex: 1 }}>
-        {item.description}
+        {lang === 'ko' ? (item.description_ko || item.description) : item.description}
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4, width: '100%', marginTop: 4 }}>
@@ -328,14 +328,14 @@ export default function BadgesPage() {
           {equippedBadgeMeta && (
             <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
               <span>{equippedBadgeMeta.icon}</span>
-              <span style={{ color: 'var(--text)', fontWeight: 700 }}>{equippedBadgeMeta.name}</span>
+              <span style={{ color: 'var(--text)', fontWeight: 700 }}>{lang === 'ko' ? (equippedBadgeMeta.name_ko || equippedBadgeMeta.name) : equippedBadgeMeta.name}</span>
               <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 10, background: 'rgba(88,166,255,.15)', color: 'var(--blue)', fontWeight: 800 }}>{txt('배지', 'Badge')}</span>
             </span>
           )}
           {equippedTitleMeta && (
             <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
               <span>{equippedTitleMeta.icon}</span>
-              <span style={{ color: 'var(--blue)', fontWeight: 800 }}>{equippedTitleMeta.name}</span>
+              <span style={{ color: 'var(--blue)', fontWeight: 800 }}>{lang === 'ko' ? (equippedTitleMeta.name_ko || equippedTitleMeta.name) : equippedTitleMeta.name}</span>
               <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 10, background: 'rgba(167,139,250,.15)', color: 'var(--purple)', fontWeight: 800 }}>{txt('칭호', 'Title')}</span>
             </span>
           )}

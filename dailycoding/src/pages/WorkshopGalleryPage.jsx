@@ -1,11 +1,81 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Heart, Play, Plus, Search, Wrench } from 'lucide-react';
+import { Heart, Layers, Play, Plus, Search, Wrench } from 'lucide-react';
 import api from '../api.js';
 import { useToast } from '../context/ToastContext.jsx';
 import { useLang } from '../context/LangContext.jsx';
 import { withVars } from '../utils/languageMode.js';
 import './WorkshopGalleryPage.css';
+
+const PRESET_TEMPLATES = [
+  {
+    nameKo: '클래식 HP 배틀',
+    nameEn: 'Classic HP Battle',
+    descKo: '정답 시 내 HP +15, 오답 시 상대 HP +10. 표준 배틀 규칙.',
+    descEn: 'Correct = my HP +15, wrong = opponent HP +10. Standard battle rules.',
+    emoji: '⚔️',
+    config: {
+      baseHp: 100,
+      timeLimit: 1800,
+      allowItems: false,
+      rules: [
+        { id: 'tpl_1', event: 'ON_CORRECT_ANSWER', condition: { type: 'always' }, action: { type: 'MODIFY_HP', target: 'self', value: 15 } },
+        { id: 'tpl_2', event: 'ON_WRONG_ANSWER', condition: { type: 'always' }, action: { type: 'MODIFY_HP', target: 'opponent', value: -10 } },
+      ],
+    },
+  },
+  {
+    nameKo: '생존 모드',
+    nameEn: 'Survival Mode',
+    descKo: '오답 시 내 HP -20. 틀리면 위험. 정답 시 HP +5 회복.',
+    descEn: 'Wrong answer costs you HP -20. Correct answer heals HP +5.',
+    emoji: '🛡️',
+    config: {
+      baseHp: 150,
+      timeLimit: 1800,
+      allowItems: true,
+      rules: [
+        { id: 'tpl_1', event: 'ON_CORRECT_ANSWER', condition: { type: 'always' }, action: { type: 'MODIFY_HP', target: 'self', value: 5 } },
+        { id: 'tpl_2', event: 'ON_WRONG_ANSWER', condition: { type: 'always' }, action: { type: 'MODIFY_HP', target: 'self', value: -20 } },
+        { id: 'tpl_3', event: 'ON_COMPILE_ERROR', condition: { type: 'always' }, action: { type: 'MODIFY_HP', target: 'self', value: -10 } },
+      ],
+    },
+  },
+  {
+    nameKo: '역전 드라마',
+    nameEn: 'Comeback Mode',
+    descKo: 'HP 25% 미만일 때 정답 맞히면 시간 +60초. 불리할수록 기회.',
+    descEn: 'Correct answer below 25% HP grants +60s. The worse you do, the more opportunities.',
+    emoji: '🔥',
+    config: {
+      baseHp: 100,
+      timeLimit: 1800,
+      allowItems: false,
+      rules: [
+        { id: 'tpl_1', event: 'ON_CORRECT_ANSWER', condition: { type: 'always' }, action: { type: 'MODIFY_HP', target: 'self', value: 10 } },
+        { id: 'tpl_2', event: 'ON_CORRECT_ANSWER', condition: { type: 'hp_below', value: 25 }, action: { type: 'ADD_TIME', value: 60 } },
+        { id: 'tpl_3', event: 'ON_WRONG_ANSWER', condition: { type: 'always' }, action: { type: 'MODIFY_HP', target: 'opponent', value: -15 } },
+      ],
+    },
+  },
+  {
+    nameKo: '블리츠 배틀',
+    nameEn: 'Blitz Battle',
+    descKo: '5분 제한, HP 200. 오답 시 상대에게 더블 데미지 5초.',
+    descEn: '5-minute limit, HP 200. Wrong answer triggers double damage for 5s.',
+    emoji: '⚡',
+    config: {
+      baseHp: 200,
+      timeLimit: 300,
+      allowItems: true,
+      rules: [
+        { id: 'tpl_1', event: 'ON_CORRECT_ANSWER', condition: { type: 'always' }, action: { type: 'MODIFY_HP', target: 'self', value: 20 } },
+        { id: 'tpl_2', event: 'ON_WRONG_ANSWER', condition: { type: 'always' }, action: { type: 'DOUBLE_DAMAGE', duration: 5 } },
+        { id: 'tpl_3', event: 'ON_TIMER_LOW', condition: { type: 'always' }, action: { type: 'SHOW_MESSAGE', text: '⚡ 시간이 얼마 남지 않았습니다!' } },
+      ],
+    },
+  },
+];
 
 const SORT_KEYS = [
   { key: 'like_count', tKey: 'wgSortLike' },
@@ -16,7 +86,7 @@ const SORT_KEYS = [
 export default function WorkshopGalleryPage() {
   const navigate = useNavigate();
   const toast = useToast();
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const [modes, setModes] = useState([]);
   const [sort, setSort] = useState('like_count');
   const [query, setQuery] = useState('');
@@ -69,6 +139,27 @@ export default function WorkshopGalleryPage() {
           <Plus size={16} /> {t('wgCreateBtn')}
         </button>
       </header>
+
+      <section className="wg-templates">
+        <div className="wg-templates-head">
+          <Layers size={16} />
+          <span>{lang === 'en' ? 'Start from a Template' : '템플릿으로 빠르게 시작'}</span>
+        </div>
+        <div className="wg-templates-grid">
+          {PRESET_TEMPLATES.map((tpl) => (
+            <button
+              key={tpl.nameKo}
+              type="button"
+              className="wg-template-card"
+              onClick={() => navigate('/workshop', { state: { template: tpl } })}
+            >
+              <span className="wg-template-emoji">{tpl.emoji}</span>
+              <strong>{lang === 'en' ? tpl.nameEn : tpl.nameKo}</strong>
+              <small>{lang === 'en' ? tpl.descEn : tpl.descKo}</small>
+            </button>
+          ))}
+        </div>
+      </section>
 
       <section className="wg-toolbar">
         <div className="wg-tabs">

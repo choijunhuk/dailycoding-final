@@ -298,8 +298,8 @@ export default function PublicProfilePage() {
               <div style={{ fontSize: 13, color: 'var(--text2)', marginTop: 8 }}>@{profile.username}</div>
               {(profile.equippedBadgeIcon || profile.equippedTitleName) && (
                 <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginTop:10 }}>
-                  {profile.equippedBadgeIcon && <span style={{ fontSize:12, border:'1px solid var(--border)', borderRadius:999, padding:'4px 8px', background:'var(--bg)', color:'var(--text)' }}>{profile.equippedBadgeIcon} {profile.equippedBadgeName || t('publicProfileBadgeFallback')}</span>}
-                  {profile.equippedTitleName && <span style={{ fontSize:12, border:'1px solid var(--blue)', borderRadius:999, padding:'4px 8px', background:'rgba(88,166,255,.12)', color:'var(--blue)', fontWeight:800 }}>{profile.equippedTitleName}</span>}
+                  {profile.equippedBadgeIcon && <span style={{ fontSize:12, border:'1px solid var(--border)', borderRadius:999, padding:'4px 8px', background:'var(--bg)', color:'var(--text)' }}>{profile.equippedBadgeIcon} {(lang === 'ko' ? profile.equippedBadgeNameKo || profile.equippedBadgeName : profile.equippedBadgeName) || t('publicProfileBadgeFallback')}</span>}
+                  {profile.equippedTitleName && <span style={{ fontSize:12, border:'1px solid var(--blue)', borderRadius:999, padding:'4px 8px', background:'rgba(88,166,255,.12)', color:'var(--blue)', fontWeight:800 }}>{lang === 'ko' ? profile.equippedTitleNameKo || profile.equippedTitleName : profile.equippedTitleName}</span>}
                 </div>
               )}
               <div style={{ fontSize: 13, color: 'var(--text3)', marginTop: 10, lineHeight: 1.7, maxWidth: 680 }}>{profile.bio || t('publicProfileNoBio')}</div>
@@ -461,7 +461,7 @@ export default function PublicProfilePage() {
             {profile.rewards.slice(0, 9).map((reward) => (
               <div key={reward.code} style={{ border: '1px solid var(--border)', borderRadius: 16, background: 'var(--bg3)', padding: '14px 10px', textAlign: 'center' }}>
                 <div style={{ fontSize: 28, marginBottom: 8 }}>{reward.icon}</div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>{reward.name}</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>{lang === 'ko' ? (reward.name_ko || reward.name) : reward.name}</div>
               </div>
             ))}
             {profile.rewards.length > 9 ? (

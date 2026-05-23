@@ -12,6 +12,25 @@ import { TIER_ORDER } from '../shared/constants.js';
 
 const router = Router();
 const ALLOWED_TIERS = new Set(['bronze', 'silver', 'gold', 'platinum', 'diamond']);
+
+const TAG_KO_TO_EN = {
+  '입출력': 'I/O', '구현': 'Implementation', '수학': 'Math', '문자열': 'String', '정렬': 'Sorting',
+  '자료 구조': 'Data Structure', '자료구조': 'Data Structure', '해시': 'Hash', '스택': 'Stack', '큐': 'Queue',
+  '스택/큐': 'Stack/Queue', '트리': 'Tree', '힙': 'Heap', '우선순위 큐': 'Priority Queue',
+  '세그먼트 트리': 'Segment Tree', '그리디': 'Greedy', '탐욕': 'Greedy', '이분 탐색': 'Binary Search',
+  '투 포인터': 'Two Pointers', '누적 합': 'Prefix Sum', '누적합': 'Prefix Sum',
+  '다이나믹 프로그래밍': 'Dynamic Programming', '동적 계획법': 'Dynamic Programming', '동적계획법': 'Dynamic Programming',
+  '그래프 이론': 'Graph Theory', '그래프': 'Graph', '그래프 탐색': 'Graph Traversal', '탐색': 'Search',
+  '최단 경로': 'Shortest Path', '기하': 'Geometry', '시뮬레이션': 'Simulation', '완전 탐색': 'Brute Force',
+  '완전탐색': 'Brute Force', '브루트포스': 'Brute Force', '백트래킹': 'Backtracking',
+  '유니온-파인드': 'Union-Find', '비트마스크': 'Bitmask', '소수': 'Prime Numbers', '정수론': 'Number Theory',
+  '알고리즘': 'Algorithm', '다익스트라': 'Dijkstra', '벨만-포드': 'Bellman-Ford',
+  '플로이드-워셜': 'Floyd-Warshall', '크루스칼': 'Kruskal', '프림': 'Prim',
+  '위상 정렬': 'Topological Sort', '최소 신장 트리': 'MST', '트라이': 'Trie',
+  '슬라이딩 윈도우': 'Sliding Window', '분할 정복': 'Divide and Conquer',
+  '재귀': 'Recursion', '메모이제이션': 'Memoization', '조합': 'Combinations',
+  '순열': 'Permutations', '덱': 'Deque', '연결 리스트': 'Linked List', '배열': 'Array',
+};
 const ALLOWED_PROBLEM_TYPES = new Set(['coding', 'fill-blank', 'bug-fix', 'troubleshooting', 'performance-fix', 'refactor-fix']);
 const ALLOWED_SORTS = new Set(['id', 'newest', 'difficulty', '-difficulty', 'solved']);
 const ALLOWED_STATUS = new Set(['all', 'solved', 'unsolved', 'bookmarked']);
@@ -451,7 +470,7 @@ router.get('/recommend', auth, async (req, res) => {
     for (const problem of unsolvedAllowed) {
       if (selected.length >= 4) break;
       const matchedTag = (problem.tags || []).find((tag) => weakTags.includes(tag));
-      if (matchedTag) addProblem(problem, isKo ? `취약 태그 강화: ${matchedTag}` : `Strengthen weak area: ${matchedTag}`);
+      if (matchedTag) addProblem(problem, isKo ? `취약 태그 강화: ${matchedTag}` : `Strengthen weak area: ${TAG_KO_TO_EN[matchedTag] || matchedTag}`);
     }
 
     const currentTierProblems = unsolvedAllowed.filter((problem) => (problem.tier || 'unranked') === currentTier);

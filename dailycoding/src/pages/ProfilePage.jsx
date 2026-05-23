@@ -477,7 +477,7 @@ export default function ProfilePage() {
           <div className="profile-header-info">
             <div className="profile-header-name-row">
               {equippedBadge && (
-                <span className="profile-equipped-badge" title={equippedBadgeMeta?.name}>
+                <span className="profile-equipped-badge" title={lang === 'ko' ? (equippedBadgeMeta?.name_ko || equippedBadgeMeta?.name) : equippedBadgeMeta?.name}>
                   {equippedBadgeMeta?.icon}
                 </span>
               )}
@@ -560,7 +560,7 @@ export default function ProfilePage() {
             {nextTier && (
               <div className="profile-tier-progress-container">
                 <div className="profile-tier-progress-labels">
-                  <span style={{ color:tc, fontWeight:700 }}>{PROFILE_TIER_LABELS[user?.tier||'unranked']}</span>
+                  <span style={{ color:tc, fontWeight:700 }}>{getTierLabel(user?.tier||'unranked', lang)}</span>
                   <span>{Math.max(0,(nextThres||0)-(user?.rating||0))} {txt('점 남음', 'pts to')} {getTierLabel(nextTier, lang)}</span>
                 </div>
                 <div className="profile-tier-progress-bar-bg">
@@ -1003,7 +1003,7 @@ export default function ProfilePage() {
           <div className="profile-settings-hero">
             <div>
               <div className="profile-settings-kicker">{txt('프로필 설정', 'Profile Settings')}</div>
-              <h2>{headerDisplayName}'s Profile</h2>
+              <h2>{lang === 'ko' ? `${headerDisplayName} 프로필` : `${headerDisplayName}'s Profile`}</h2>
             </div>
             <div className="profile-completion-card">
               <div className="profile-completion-head">

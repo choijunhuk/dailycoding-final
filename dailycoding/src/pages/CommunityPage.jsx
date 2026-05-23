@@ -251,6 +251,13 @@ export default function CommunityPage() {
   }, [refreshPopular])
 
   useEffect(() => {
+    if (location.state?.openComposer) {
+      navigate(location.pathname, { replace: true, state: {} })
+      openComposer('create')
+    }
+  }, [location.state])
+
+  useEffect(() => {
     if (selectedPostId) {
       refreshDetail(selectedPostId)
     } else {
@@ -437,7 +444,7 @@ export default function CommunityPage() {
           style={{ border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', borderRadius: 12, padding: '12px 14px', fontFamily: 'inherit', fontSize: 13, outline: 'none' }}
         />
         {editorMode === 'create' ? (
-          <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: 'var(--text2)' }}>
+          <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text2)', cursor: 'pointer', width: 'fit-content' }}>
             <input type="checkbox" checked={draft.isAnonymous} onChange={(event) => setDraft((current) => ({ ...current, isAnonymous: event.target.checked }))} />
             {txt('익명으로 게시', 'Post anonymously')}
           </label>
@@ -461,7 +468,11 @@ export default function CommunityPage() {
           <button onClick={closePost} className="btn btn-ghost">
             ← {txt('목록으로', 'Back to List')}
           </button>
-          <button onClick={() => openComposer('create')} className="btn" style={{ background: BOARD_META[activeBoard].tone, color: 'var(--bg)' }}>
+          <button
+            onClick={() => navigate(`/community/${activeBoard}`, { state: { openComposer: true } })}
+            className="btn"
+            style={{ background: BOARD_META[activeBoard].tone, color: 'var(--bg)', padding: '10px 20px', whiteSpace: 'nowrap' }}
+          >
             {txt('글쓰기', 'Write Post')}
           </button>
         </div>
