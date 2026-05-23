@@ -5,16 +5,12 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import { useLang } from '../context/LangContext.jsx';
 import { withVars } from '../utils/languageMode.js';
+import { getTagLabel, getTierLabel } from '../utils/labelMaps.js';
 import './TournamentPage.css';
 
 const SIZE_OPTIONS = [8, 16, 32];
 
 const TIER_OPTIONS = ['iron', 'bronze', 'silver', 'gold', 'platinum', 'emerald', 'diamond', 'master', 'grandmaster', 'challenger'];
-const TIER_LABEL = {
-  iron: 'Iron', bronze: 'Bronze', silver: 'Silver', gold: 'Gold',
-  platinum: 'Platinum', emerald: 'Emerald', diamond: 'Diamond',
-  master: 'Master', grandmaster: 'Grandmaster', challenger: 'Challenger',
-};
 const STATUS_COLOR = { open: 'var(--green)', in_progress: 'var(--blue)', complete: 'var(--text3)', expired: 'var(--text3)' };
 
 export default function TournamentPage() {
@@ -222,8 +218,8 @@ export default function TournamentPage() {
 
   const tierConditionLabel = (entry) => {
     const parts = [];
-    if (entry.minTier) parts.push(withVars(t('tournamentAbove'), { tier: TIER_LABEL[entry.minTier] || entry.minTier }));
-    if (entry.maxTier) parts.push(withVars(t('tournamentBelow'), { tier: TIER_LABEL[entry.maxTier] || entry.maxTier }));
+    if (entry.minTier) parts.push(withVars(t('tournamentAbove'), { tier: getTierLabel(entry.minTier, lang) || entry.minTier }));
+    if (entry.maxTier) parts.push(withVars(t('tournamentBelow'), { tier: getTierLabel(entry.maxTier, lang) || entry.maxTier }));
     return parts.length ? parts.join(', ') : null;
   };
 
@@ -252,7 +248,7 @@ export default function TournamentPage() {
                 <select value={form.size} onChange={(e) => setForm((p) => ({ ...p, size: e.target.value }))}>
                   {SIZE_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
-                <button className="btn btn-ghost btn-sm" onClick={() => setForm((p) => ({ ...p, showAdvanced: !p.showAdvanced }))} title="Advanced settings">
+                <button className="btn btn-ghost btn-sm" onClick={() => setForm((p) => ({ ...p, showAdvanced: !p.showAdvanced }))} title={t('tournamentAdvancedSettings')}>
                   ⚙️ {form.showAdvanced ? '▲' : '▼'}
                 </button>
                 <button className="btn btn-primary btn-sm" onClick={create} disabled={busy || !form.name.trim()}>{t('tournamentCreate')}</button>
@@ -277,12 +273,12 @@ export default function TournamentPage() {
                     <span>{t('tournamentTierLimit')}</span>
                     <select value={form.minTier} onChange={(e) => setForm((p) => ({ ...p, minTier: e.target.value }))} style={{ fontSize: 12 }}>
                       <option value="">{t('tournamentMinNone')}</option>
-                      {TIER_OPTIONS.map((tier) => <option key={tier} value={tier}>{withVars(t('tournamentAbove'), { tier: TIER_LABEL[tier] })}</option>)}
+                      {TIER_OPTIONS.map((tier) => <option key={tier} value={tier}>{withVars(t('tournamentAbove'), { tier: getTierLabel(tier, lang) })}</option>)}
                     </select>
                     <span>~</span>
                     <select value={form.maxTier} onChange={(e) => setForm((p) => ({ ...p, maxTier: e.target.value }))} style={{ fontSize: 12 }}>
                       <option value="">{t('tournamentMaxNone')}</option>
-                      {TIER_OPTIONS.map((tier) => <option key={tier} value={tier}>{withVars(t('tournamentBelow'), { tier: TIER_LABEL[tier] })}</option>)}
+                      {TIER_OPTIONS.map((tier) => <option key={tier} value={tier}>{withVars(t('tournamentBelow'), { tier: getTierLabel(tier, lang) })}</option>)}
                     </select>
                   </div>
 
@@ -298,7 +294,7 @@ export default function TournamentPage() {
                               checked={form.bannedTags.includes(tag)}
                               onChange={() => toggleBannedTag(tag)}
                             />
-                            {tag}
+                            {getTagLabel(tag, lang)}
                           </label>
                         ))}
                       </div>

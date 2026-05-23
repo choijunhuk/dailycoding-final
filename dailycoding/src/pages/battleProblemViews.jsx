@@ -67,7 +67,7 @@ export function BattleAdSlot({ slot }) {
       )}
 
       <a className="bp-ad-cta" href={slot.ctaUrl || '#'} onClick={(event) => slot.ctaUrl === '#' && event.preventDefault()}>
-        {slot.ctaText || 'Learn more'}
+        {slot.ctaText || adTxt('자세히 보기', 'Learn more')}
       </a>
     </aside>
   );
@@ -81,7 +81,7 @@ export function FillBlankProblem({ problem, answer, onChange, locked, correct })
   return (
     <div className="bp-problem-body">
       <p className="bp-problem-desc">{problem.desc}</p>
-      {problem.hint && <div className="bp-hint">💡 Hint: {problem.hint}</div>}
+      {problem.hint && <div className="bp-hint">💡 {txt('힌트', 'Hint')}: {problem.hint}</div>}
       <div className="bp-code-fill">
         {parts.map((part, index) => (
           <span key={index}>
@@ -113,7 +113,7 @@ export function BugFixProblem({ problem, answer, onChange, locked, correct }) {
   return (
     <div className="bp-problem-body">
       <p className="bp-problem-desc">{problem.desc}</p>
-      {problem.hint && <div className="bp-hint">💡 Hint: {problem.hint}</div>}
+      {problem.hint && <div className="bp-hint">💡 {txt('힌트', 'Hint')}: {problem.hint}</div>}
       <pre className="bp-buggy-code">{problem.buggyCode}</pre>
       <div className="bp-bugfix-input-wrap">
         <label>{txt('수정된 줄 입력:', 'Enter fixed line:')}</label>
@@ -235,11 +235,11 @@ export function CodingProblem({ problem, code, lang, lockedLanguageLabel, onCode
         <div className={`bp-judge-detail ${result === 'correct' ? 'correct' : 'wrong'}`}>
           <strong>{txt('채점 상세', 'Judge Detail')}</strong>
           <span>{judgeDetail.detail}</span>
-          {Number.isFinite(judgeDetail.timeMs) ? <small>Runtime {judgeDetail.timeMs}ms</small> : null}
+          {Number.isFinite(judgeDetail.timeMs) ? <small>{txt('실행 시간', 'Runtime')} {judgeDetail.timeMs}ms</small> : null}
         </div>
       )}
       <div className="bp-code-editor-shell">
-        <Suspense fallback={<div className="bp-code-editor-loading">Loading editor...</div>}>
+        <Suspense fallback={<div className="bp-code-editor-loading">{txt('에디터 로딩 중...', 'Loading editor...')}</div>}>
           <Editor
             height="100%"
             language={monacoLanguage}

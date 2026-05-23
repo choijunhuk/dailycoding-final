@@ -257,7 +257,7 @@ export default function LandingPage({ onLogin, onSignup, onPricing }) {
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               {tierRows.map((tier) => (
                 <span key={tier.name} style={{ padding: '6px 10px', borderRadius: 999, background: `${tier.color}14`, border: `1px solid ${tier.color}30`, color: tier.color, fontSize: 12, fontWeight: 700 }}>
-                  {tier.label}
+                  {getTierLabel(tier.name, lang)}
                 </span>
               ))}
             </div>

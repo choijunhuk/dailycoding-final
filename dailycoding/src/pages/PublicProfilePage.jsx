@@ -53,7 +53,7 @@ function Avatar({ profile, size = 92 }) {
   return <ProfileAvatar profile={profile} size={size} fontSize={profile?.avatar_emoji ? Math.round(size * 0.42) : Math.round(size * 0.3)} />
 }
 
-function DonutChart({ counts, centerLabel }) {
+function DonutChart({ counts, centerLabel, lang = 'en' }) {
   const entries = Object.entries(counts || {}).filter(([, value]) => Number(value) > 0)
   const total = entries.reduce((sum, [, value]) => sum + Number(value), 0)
   let cursor = -90
@@ -91,7 +91,7 @@ function DonutChart({ counts, centerLabel }) {
         {(entries.length ? entries : [['unranked', 0]]).map(([tier, value]) => (
           <div key={tier} style={{ fontSize: 11, color: 'var(--text2)', display: 'flex', alignItems: 'center', gap: 6 }}>
             <span style={{ width: 10, height: 10, borderRadius: '50%', background: TIER_COLORS[tier] || 'var(--text3)', display: 'inline-block' }} />
-            <span>{tier}</span>
+            <span>{getTierLabel(tier, lang)}</span>
             <span style={{ color: 'var(--text3)' }}>{value}</span>
           </div>
         ))}

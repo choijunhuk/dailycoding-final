@@ -170,7 +170,7 @@ export default function CodeEditor({
     {isTroubleshootingProblem ? (
       <div className="troubleshooting-workspace">
         <aside className="troubleshooting-files">
-          <div className="troubleshooting-panel-title">FILES</div>
+          <div className="troubleshooting-panel-title">{txt('파일', 'FILES')}</div>
           {troubleshootingFiles.length === 0 ? (
             <div className="troubleshooting-empty">{txt('파일이 없습니다.', 'No files.')}</div>
           ) : troubleshootingFiles.map((file) => (
@@ -186,7 +186,7 @@ export default function CodeEditor({
         </aside>
         <div className="troubleshooting-editor">
           {activeTroubleshootingFile ? (
-            <Suspense fallback={<div className="troubleshooting-empty">Loading editor...</div>}>
+            <Suspense fallback={<div className="troubleshooting-empty">{txt('에디터 로딩 중...', 'Loading editor...')}</div>}>
               <Editor
                 height="100%"
                 language={inferMonacoLanguage(activeTroubleshootingFile.path)}
@@ -210,7 +210,7 @@ export default function CodeEditor({
           )}
         </div>
         <aside className="troubleshooting-side">
-          <div className="troubleshooting-panel-title">SCENARIO</div>
+          <div className="troubleshooting-panel-title">{txt('시나리오', 'SCENARIO')}</div>
           <h3>{troubleshootingConfig?.scenarioTitle || problem.title}</h3>
           <p>{troubleshootingConfig?.scenarioDescription || problem.desc}</p>
           <div className="troubleshooting-metrics">
@@ -222,9 +222,9 @@ export default function CodeEditor({
             <div className="troubleshooting-score-card">
               <div className="score-total">{troubleshootingResult.totalScore ?? 0}</div>
               <div className="score-lines">
-                <span>Correctness {troubleshootingResult.correctnessScore ?? 0}/50</span>
-                <span>Performance {troubleshootingResult.performanceScore ?? 0}/30</span>
-                <span>Readability {troubleshootingResult.readabilityScore ?? 0}/20</span>
+                <span>{txt('정확성', 'Correctness')} {troubleshootingResult.correctnessScore ?? 0}/50</span>
+                <span>{txt('성능', 'Performance')} {troubleshootingResult.performanceScore ?? 0}/30</span>
+                <span>{txt('가독성', 'Readability')} {troubleshootingResult.readabilityScore ?? 0}/20</span>
               </div>
             </div>
           )}
@@ -236,7 +236,7 @@ export default function CodeEditor({
           <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
             {(Array.isArray(specialConfig?.blanks) ? specialConfig.blanks : []).map((_, index) => (
               <label key={index} style={{ display:'flex', flexDirection:'column', gap:6, fontSize:12, color:'var(--text2)' }}>
-                Blank {index + 1}
+                {txt(`${index + 1}번 빈칸`, `Blank ${index + 1}`)}
                 <input
                   value={fillBlankAnswers[index] || ''}
                   onChange={(e) => setFillBlankAnswers((prev) => {
@@ -244,7 +244,7 @@ export default function CodeEditor({
                     next[index] = e.target.value
                     return next
                   })}
-                  placeholder={`Blank ${index + 1} answer`}
+                  placeholder={txt(`${index + 1}번 빈칸 답`, `Blank ${index + 1} answer`)}
                 />
               </label>
             ))}
@@ -264,7 +264,7 @@ export default function CodeEditor({
         )}
       </div>
     ) : (
-      <Suspense fallback={<div style={{height:'100%',display:'flex',alignItems:'center',justifyContent:'center',background:isDark?'#1e1e1e':'#fff',color:'#888',fontSize:13}}>Loading editor...</div>}>
+      <Suspense fallback={<div style={{height:'100%',display:'flex',alignItems:'center',justifyContent:'center',background:isDark?'#1e1e1e':'#fff',color:'#888',fontSize:13}}>{txt('에디터 로딩 중...', 'Loading editor...')}</div>}>
         <div style={{ display:'grid', gridTemplateRows:isBuildProblem ? '140px 1fr' : '1fr', height:'100%' }}>
           {isBuildProblem && (
             <div style={{ height:'100%', padding:16, overflowY:'auto', background:'var(--bg2)', borderBottom:'1px solid var(--border)' }}>
@@ -278,7 +278,7 @@ export default function CodeEditor({
               value={code}
               onChange={(e) => setCode(e.target.value)}
               spellCheck={false}
-              aria-label="Mobile code editor"
+              aria-label={txt('모바일 코드 에디터', 'Mobile code editor')}
             />
           ) : (
             <Editor

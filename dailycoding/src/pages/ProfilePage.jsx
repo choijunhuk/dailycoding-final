@@ -49,7 +49,7 @@ function normalizeProfileBackgroundSlug(slug) {
   return LEGACY_PROFILE_BACKGROUND_SLUGS.has(slug) ? DEFAULT_PROFILE_BACKGROUND_SLUG : slug;
 }
 
-const countFilledProfileLinks = (links = {}) => Object.values(links || {}).filter(Boolean).length;
+const countFilledProfileLinks = (links = {}) => Object.values(normalizeSocialLinksForDisplay(links || {})).filter(Boolean).length;
 
 export default function ProfilePage() {
   const navigate = useNavigate();
@@ -96,7 +96,7 @@ export default function ProfilePage() {
   const [submissionsPublic, setSubmissionsPublic] = useState(user?.submissionsPublic ?? true);
   const [prefsSaving, setPrefsSaving] = useState(false);
   const [displayName, setDisplayName] = useState(user?.displayName || '');
-  const [socialLinks, setSocialLinks] = useState(user?.socialLinks || {});
+  const [socialLinks, setSocialLinks] = useState(normalizeSocialLinksForDisplay(user?.socialLinks || {}));
   const [techStack, setTechStack] = useState(user?.techStack || []);
   const [profileInfoSaving, setProfileInfoSaving] = useState(false);
   const [fullGrass, setFullGrass] = useState([]);
@@ -116,7 +116,7 @@ export default function ProfilePage() {
     setDefaultLanguage(user?.defaultLanguage || 'python');
     setSubmissionsPublic(user?.submissionsPublic ?? true);
     setDisplayName(user?.displayName || '');
-    setSocialLinks(user?.socialLinks || {});
+    setSocialLinks(normalizeSocialLinksForDisplay(user?.socialLinks || {}));
     setTechStack(user?.techStack || []);
   }, [user?.id]);
 

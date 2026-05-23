@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useToast } from '../context/ToastContext.jsx';
 import { useLang } from '../context/LangContext.jsx';
 import { formatWithLang, pickLangText } from '../utils/languageMode.js';
+import { getDifficultyLabel, getTierLabel } from '../utils/labelMaps.js';
 import api from '../api.js';
 
 const TIER_OPTIONS = ['unranked', 'bronze', 'silver', 'gold', 'platinum', 'diamond'];
@@ -200,7 +201,7 @@ export default function SubmitProblemPage() {
           <div>
             <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: 'var(--text2)', marginBottom: 6 }}>{txt('티어', 'Tier')}</label>
             <select className="input" style={{ width: '100%' }} value={form.tier} onChange={e => set('tier', e.target.value)}>
-              {TIER_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
+              {TIER_OPTIONS.map(tier => <option key={tier} value={tier}>{getTierLabel(tier, lang)}</option>)}
             </select>
           </div>
           <div>
@@ -213,7 +214,7 @@ export default function SubmitProblemPage() {
 
         <div style={{ marginBottom: 20 }}>
           <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: 'var(--text2)', marginBottom: 8 }}>
-            {txt('난이도', 'Difficulty')}: <span style={{ color: 'var(--blue)' }}>{form.difficulty}</span> / 10
+            {txt('난이도', 'Difficulty')}: <span style={{ color: 'var(--blue)' }}>{getDifficultyLabel(form.difficulty, lang)} · {form.difficulty}</span> / 10
           </label>
           <input type="range" min={1} max={10} value={form.difficulty} onChange={e => set('difficulty', Number(e.target.value))}
             style={{ width: '100%', accentColor: 'var(--blue)' }} />

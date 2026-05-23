@@ -162,7 +162,7 @@ export default function JudgePage() {
       setProblemNote(res.data.content || '');
     } catch (err) {
       if (err.response?.status !== 404) {
-        toast?.show('Failed to load solution note.', 'error');
+        toast?.show(uiTxt('풀이 노트를 불러오지 못했습니다.', 'Failed to load solution note.'), 'error');
       }
     }
   };
@@ -172,9 +172,9 @@ export default function JudgePage() {
     setIsSavingNote(true);
     try {
       await api.post('/notes/' + problem.id, { content: problemNote });
-      toast?.show('🗒️ Note saved.', 'success');
+      toast?.show(uiTxt('🗒️ 노트를 저장했습니다.', '🗒️ Note saved.'), 'success');
     } catch (err) {
-      toast?.show('Failed to save note.', 'error');
+      toast?.show(uiTxt('노트 저장에 실패했습니다.', 'Failed to save note.'), 'error');
     } finally {
       setIsSavingNote(false);
     }
@@ -220,7 +220,7 @@ export default function JudgePage() {
   useEffect(() => {
     if (problem?.id) {
       api.get('/problems/'+problem.id+'/comments').then(r => setComments(r.data)).catch(() => {
-        toast?.show('Failed to load comments.', 'error');
+        toast?.show(uiTxt('댓글을 불러오지 못했습니다.', 'Failed to load comments.'), 'error');
       });
     }
   }, [problem?.id]);
@@ -332,7 +332,7 @@ export default function JudgePage() {
     if (availableLangOptions.length > 0 && !availableLangOptions.some(o => o.value === lang)) {
       const fallback = availableLangOptions[0]?.value || 'python';
       setLang(fallback);
-      toast?.show(`Selected language not supported. Switched to ${fallback}.`, 'warning');
+      toast?.show(uiTxt(`선택한 언어를 지원하지 않아 ${fallback}(으)로 변경했습니다.`, `Selected language not supported. Switched to ${fallback}.`), 'warning');
     }
   }, [availableLangOptions, lang]);
 
@@ -343,20 +343,20 @@ export default function JudgePage() {
   const saveWrongNote = () => {
     if (wrongNote.trim()) {
       localStorage.setItem(`dc_note_${problem.id}`, wrongNote);
-      toast?.show('📝 Wrong answer note saved.', 'success');
+      toast?.show(uiTxt('📝 오답 노트를 저장했습니다.', '📝 Wrong answer note saved.'), 'success');
     }
   };
 
   const saveSnippet = () => {
     if (!problem?.id || !lang) return
     localStorage.setItem(getSnippetStorageKey(problem.id, lang), code || '')
-    toast?.show('📌 Snippet saved.', 'success')
+    toast?.show(uiTxt('📌 스니펫을 저장했습니다.', '📌 Snippet saved.'), 'success')
   }
 
   const clearSnippet = () => {
     if (!problem?.id || !lang) return
     localStorage.removeItem(getSnippetStorageKey(problem.id, lang))
-    toast?.show('🗑 Saved snippet deleted.', 'info')
+    toast?.show(uiTxt('🗑 저장된 스니펫을 삭제했습니다.', '🗑 Saved snippet deleted.'), 'info')
   }
 
   const getReview = async () => {
@@ -370,10 +370,10 @@ export default function JudgePage() {
       setBottomTab('review');
     } catch (err) {
       if (err.response?.data?.code === 'QUOTA_EXCEEDED') {
-        setAiQuotaNotice("You've used all AI calls for today.");
+        setAiQuotaNotice(uiTxt('오늘 사용할 수 있는 AI 호출을 모두 사용했습니다.', "You've used all AI calls for today."));
         setBottomTab('review');
       } else {
-        toast?.show('Failed to load AI review.', 'error');
+        toast?.show(uiTxt('AI 리뷰를 불러오지 못했습니다.', 'Failed to load AI review.'), 'error');
       }
     }
     setReviewLoading(false);
@@ -387,9 +387,9 @@ export default function JudgePage() {
       setWalkthrough(data.walkthrough || '');
     } catch (err) {
       if (err.response?.data?.requiresPro) {
-        toast?.show('Solve the problem first or upgrade to Pro.', 'warning');
+        toast?.show(uiTxt('먼저 문제를 풀거나 Pro로 업그레이드하세요.', 'Solve the problem first or upgrade to Pro.'), 'warning');
       } else {
-        toast?.show(err.response?.data?.message || 'Failed to load solution walkthrough.', 'error');
+        toast?.show(uiLang === 'ko' ? '풀이 가이드를 불러오지 못했습니다.' : (err.response?.data?.message || 'Failed to load solution walkthrough.'), 'error');
       }
     } finally {
       setWalkthroughLoading(false);
@@ -408,7 +408,7 @@ export default function JudgePage() {
       setCommentText('');
       setReplyTo(null);
     } catch (err) {
-      toast?.show(err.response?.data?.message || 'Failed to post comment.', 'error');
+      toast?.show(uiLang === 'ko' ? '댓글 작성에 실패했습니다.' : (err.response?.data?.message || 'Failed to post comment.'), 'error');
     }
     setCommentLoading(false);
   };
@@ -418,7 +418,7 @@ export default function JudgePage() {
       await api.delete('/problems/' + problem.id + '/comments/' + cid);
       setComments(p => p.filter(c => c.id !== cid && c.parentId !== cid));
     } catch (err) {
-      toast?.show(err.response?.data?.message || 'Failed to delete comment.', 'error');
+      toast?.show(uiLang === 'ko' ? t('commentDeleteFailed') : (err.response?.data?.message || t('commentDeleteFailed')), 'error');
     }
   };
 
@@ -431,7 +431,7 @@ export default function JudgePage() {
         likeCount: data.likeCount,
       } : comment));
     } catch (err) {
-      toast?.show(err.response?.data?.message || 'Failed to process like.', 'error');
+      toast?.show(uiLang === 'ko' ? t('commentLikeFailed') : (err.response?.data?.message || t('commentLikeFailed')), 'error');
     }
   };
 
@@ -449,9 +449,9 @@ export default function JudgePage() {
       setDiffVote(res.data);
       setMyVote(res.data?.myVote || vote);
       setVoteSubmitted(true);
-      toast?.show('Difficulty vote saved.', 'success');
+      toast?.show(t('difficultyVoteSaved'), 'success');
     } catch (err) {
-      toast?.show(err.response?.data?.message || 'Failed to submit difficulty vote.', 'error');
+      toast?.show(uiLang === 'ko' ? t('difficultyVoteFailed') : (err.response?.data?.message || t('difficultyVoteFailed')), 'error');
     }
   };
 
@@ -495,7 +495,7 @@ export default function JudgePage() {
   const handleShareSubmission = async () => {
     const latestSubmission = [...mySubmissions].find((item) => item.result === 'correct') || mySubmissions[0]
     if (!latestSubmission?.id) {
-      toast?.show('No submission to share. Please submit first.', 'info')
+      toast?.show(uiTxt('공유할 제출이 없습니다. 먼저 제출해주세요.', 'No submission to share. Please submit first.'), 'info')
       return
     }
 
@@ -507,10 +507,10 @@ export default function JudgePage() {
       } else {
         await copyText(shareUrl)
       }
-      toast?.show('Share link copied.', 'success')
+      toast?.show(uiTxt('공유 링크를 복사했습니다.', 'Share link copied.'), 'success')
     } catch (err) {
       if (err?.name === 'AbortError') return
-      toast?.show(err?.response?.data?.message || 'Failed to create share link.', 'error')
+      toast?.show(uiLang === 'ko' ? '공유 링크 생성에 실패했습니다.' : (err?.response?.data?.message || 'Failed to create share link.'), 'error')
     }
   }
 
@@ -521,7 +521,7 @@ export default function JudgePage() {
       localStorage.setItem(getLegacyDraftStorageKey(problem.id, submitLang), code)
     }
     setLang(submitLang)
-    toast?.show(`Detected code pattern. Switching to ${getJudgeLanguageOption(submitLang)?.label || submitLang} for ${actionLabel}.`, 'info')
+    toast?.show(uiTxt(`코드 패턴을 감지해 ${getJudgeLanguageOption(submitLang)?.label || submitLang}(으)로 전환합니다.`, `Detected code pattern. Switching to ${getJudgeLanguageOption(submitLang)?.label || submitLang} for ${actionLabel}.`), 'info')
   }
 
   const updateTroubleshootingFile = (path, content) => {
@@ -533,7 +533,7 @@ export default function JudgePage() {
     setTroubleshootingFiles(files)
     setActiveTroubleshootingPath(files[0]?.path || '')
     setTroubleshootingResult(null)
-    toast?.show('Troubleshooting files reset to initial state.', 'info')
+    toast?.show(uiTxt('트러블슈팅 파일을 초기 상태로 되돌렸습니다.', 'Troubleshooting files reset to initial state.'), 'info')
   }
 
   const runTroubleshooting = async ({ submit = false } = {}) => {
@@ -566,12 +566,12 @@ export default function JudgePage() {
       }
       if (data.result === 'correct') {
         if (submit) confetti({ particleCount: 120, spread: 80, origin: { y: 0.7 } })
-        toast?.show(submit ? 'Troubleshooting submitted successfully.' : 'Visible test passed.', 'success')
+        toast?.show(submit ? uiTxt('트러블슈팅 제출 완료.', 'Troubleshooting submitted successfully.') : uiTxt('공개 테스트 통과.', 'Visible test passed.'), 'success')
       } else {
-        toast?.show(submit ? 'Troubleshooting conditions not yet satisfied.' : 'Visible test failed.', 'warning')
+        toast?.show(submit ? uiTxt('아직 트러블슈팅 조건을 만족하지 못했습니다.', 'Troubleshooting conditions not yet satisfied.') : uiTxt('공개 테스트 실패.', 'Visible test failed.'), 'warning')
       }
     } catch (err) {
-      const msg = err.response?.data?.message || (submit ? 'Troubleshooting submission failed.' : 'Troubleshooting run failed.')
+      const msg = uiLang === 'ko' ? (submit ? '트러블슈팅 제출에 실패했습니다.' : '트러블슈팅 실행에 실패했습니다.') : (err.response?.data?.message || (submit ? 'Troubleshooting submission failed.' : 'Troubleshooting run failed.'))
       setResult({ status: 'error', detail: msg })
       toast?.show(msg, 'error')
     } finally {
@@ -585,16 +585,16 @@ export default function JudgePage() {
       return
     }
     if (isSpecialProblem) {
-      toast?.show('Run is not supported for this problem type. Please submit directly.', 'info')
+      toast?.show(uiTxt('이 문제 유형은 실행을 지원하지 않습니다. 바로 제출해주세요.', 'Run is not supported for this problem type. Please submit directly.'), 'info')
       return
     }
     if (!problem?.id) return;
     if (availableLangOptions.length === 0) {
-      toast?.show('No executable language available.', 'error');
+      toast?.show(uiTxt('실행 가능한 언어가 없습니다.', 'No executable language available.'), 'error');
       return;
     }
     if (!code.trim()) {
-      toast?.show('Please enter your code.', 'warning');
+      toast?.show(uiTxt('코드를 입력해주세요.', 'Please enter your code.'), 'warning');
       return;
     }
 
@@ -637,16 +637,16 @@ export default function JudgePage() {
       setResult(runResult);
 
       if (runResult.status === 'correct' || runResult.status === 'success') {
-        toast?.show(runMode === 'custom' ? '▶ Custom run complete.' : '▶ Example run complete.', 'success');
+        toast?.show(runMode === 'custom' ? uiTxt('▶ 사용자 입력 실행 완료.', '▶ Custom run complete.') : uiTxt('▶ 예제 실행 완료.', '▶ Example run complete.'), 'success');
       } else if (runResult.status === 'wrong') {
-        toast?.show('❌ Output does not match expected answer.', 'error');
+        toast?.show(uiTxt('❌ 출력이 정답과 일치하지 않습니다.', '❌ Output does not match expected answer.'), 'error');
       } else if (runResult.status === 'timeout') {
-        toast?.show('⏱ Time limit exceeded.', 'warning');
+        toast?.show(uiTxt('⏱ 시간 초과.', '⏱ Time limit exceeded.'), 'warning');
       } else {
-        toast?.show('⚡ An error occurred during execution.', 'warning');
+        toast?.show(uiTxt('⚡ 실행 중 오류가 발생했습니다.', '⚡ An error occurred during execution.'), 'warning');
       }
     } catch (err) {
-      const msg = err.response?.data?.message || 'Run request failed.';
+      const msg = uiLang === 'ko' ? '실행 요청에 실패했습니다.' : (err.response?.data?.message || 'Run request failed.');
       setResult({
         status: 'error',
         mode: runMode,
@@ -662,14 +662,14 @@ export default function JudgePage() {
 
   const showCorrectToast = (solveTimeSec) => {
     if (ghostChallenge?.ghost?.targetTimeSec && solveTimeSec && solveTimeSec <= ghostChallenge.ghost.targetTimeSec) {
-      toast?.show('👻 You beat the ghost record!', 'success');
+      toast?.show(uiTxt('👻 고스트 기록을 이겼습니다!', '👻 You beat the ghost record!'), 'success');
       return;
     }
     if (dungeonRoom?.damage) {
-      toast?.show(`🐉 Dealt ${dungeonRoom.damage} damage to the boss!`, 'success');
+      toast?.show(uiTxt(`🐉 보스에게 ${dungeonRoom.damage} 데미지를 입혔습니다!`, `🐉 Dealt ${dungeonRoom.damage} damage to the boss!`), 'success');
       return;
     }
-    toast?.show('🎉 Correct!', 'success');
+    toast?.show(uiTxt('🎉 정답입니다!', '🎉 Correct!'), 'success');
   };
 
   const submitCode = async () => {
@@ -697,9 +697,9 @@ export default function JudgePage() {
           confetti({ particleCount: 120, spread: 80, origin: { y: 0.7 } });
           showCorrectToast(solveTimeSec);
         }
-        else toast?.show('❌ Wrong answer.', 'error');
+        else toast?.show(uiTxt('❌ 오답입니다.', '❌ Wrong answer.'), 'error');
       } catch (err) {
-        const msg = err.response?.data?.message || 'Submission request failed.';
+        const msg = uiLang === 'ko' ? '제출 요청에 실패했습니다.' : (err.response?.data?.message || 'Submission request failed.');
         setResult({ status: 'error', detail: msg });
         setLeftTab('submissions');
         toast?.show(msg, 'error');
@@ -709,7 +709,7 @@ export default function JudgePage() {
     }
 
     if (availableLangOptions.length === 0) {
-      toast?.show('No submittable language available.', 'error');
+      toast?.show(uiTxt('제출 가능한 언어가 없습니다.', 'No submittable language available.'), 'error');
       return;
     }
     const solveTimeSec = timerComponentRef.current?.getSec?.() || null
@@ -727,11 +727,11 @@ export default function JudgePage() {
         confetti({ particleCount: 120, spread: 80, origin: { y: 0.7 } });
         showCorrectToast(solveTimeSec);
       }
-      else if (sub.result === 'wrong') toast?.show('❌ Wrong Answer.', 'error');
-      else if (sub.result === 'timeout') toast?.show('⏱ Time Limit Exceeded.', 'warning');
-      else toast?.show('⚡ Error occurred.', 'warning');
+      else if (sub.result === 'wrong') toast?.show(uiTxt('❌ 오답입니다.', '❌ Wrong Answer.'), 'error');
+      else if (sub.result === 'timeout') toast?.show(uiTxt('⏱ 시간 초과.', '⏱ Time Limit Exceeded.'), 'warning');
+      else toast?.show(uiTxt('⚡ 오류가 발생했습니다.', '⚡ Error occurred.'), 'warning');
     } catch (err) {
-      const msg = err.response?.data?.message || 'Judge request failed.';
+      const msg = uiLang === 'ko' ? '채점 요청에 실패했습니다.' : (err.response?.data?.message || 'Judge request failed.');
       setResult({ status: 'error', detail: msg });
       setLeftTab('submissions');
       toast?.show(msg, 'error');
@@ -945,7 +945,7 @@ export default function JudgePage() {
           {/* ── Solutions tab ── */}
           {leftTab === 'solutions' && (
             <div className="prob-content fade-in">
-              <h4>💡 Other Solutions</h4>
+              <h4>💡 {t('otherSolutions')}</h4>
               <p style={{fontSize:12,color:'var(--text3)',marginBottom:12}}>{t('judgeSolveToPeek')}</p>
               {!solutions || solutions === 'locked' ? (
                 solutions === 'locked' ? (
@@ -1357,7 +1357,7 @@ export default function JudgePage() {
                         </div>
                         <button className="btn btn-primary btn-sm apply-btn" onClick={() => {
                           setCode(aiReview.betterCode);
-                          toast?.show('💡 Optimized code applied.', 'success');
+                          toast?.show(uiTxt('💡 최적화 코드를 적용했습니다.', '💡 Optimized code applied.'), 'success');
                         }}>
                           Apply Changes
                         </button>

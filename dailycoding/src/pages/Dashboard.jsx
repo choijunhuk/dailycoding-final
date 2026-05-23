@@ -366,7 +366,7 @@ export default function Dashboard() {
               padding:'3px 10px',borderRadius:20,fontSize:12,fontWeight:700,
               background:tierMeta.bg, color:tierMeta.color,
               border:`1px solid ${tierMeta.color}40`,
-            }}>● {tierMeta.label}</span>
+            }}>● {tierLbl(user?.tier)}</span>
             <span style={{fontSize:13,color:'var(--text2)'}}>
               {t('rating')} <strong style={{color:'var(--blue)',fontFamily:'Space Mono,monospace'}}>{user?.rating}</strong>
             </span>
@@ -377,8 +377,8 @@ export default function Dashboard() {
           {/* 레이팅 바 */}
           <div style={{marginTop:12,maxWidth:300}}>
             <div style={{display:'flex',justifyContent:'space-between',fontSize:11,color:'var(--text3)',marginBottom:4}}>
-              <span>{tierMeta.label}</span>
-              <span>{tierMeta.next} +{ratingMax - (user?.rating||800)} pts</span>
+              <span>{tierLbl(user?.tier)}</span>
+              <span>{tierLbl(tierMeta.next)} +{ratingMax - (user?.rating||800)} pts</span>
             </div>
             <div style={{height:5,background:'var(--bg3)',borderRadius:3,overflow:'hidden'}}>
               <div style={{

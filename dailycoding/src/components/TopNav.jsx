@@ -422,7 +422,7 @@ export default function TopNav() {
                               onMouseLeave={e=>e.currentTarget.style.background='transparent'}
                             >
                               <div style={{fontSize:13,fontWeight:600}}>{p.title}</div>
-                              <div style={{fontSize:11,color:'var(--text3)',marginTop:2}}>{p.tier} · {p.difficulty}</div>
+                              <div style={{fontSize:11,color:'var(--text3)',marginTop:2}}>{getTierLabel(p.tier, lang)} · {t('difficultyShort')} {p.difficulty}</div>
                             </div>
                           ))}
                         </>

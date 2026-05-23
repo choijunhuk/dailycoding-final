@@ -144,7 +144,7 @@ export default function ProblemStatement({
 
     {isTroubleshootingProblem && (
       <section>
-        <h4>Troubleshooting Scenario</h4>
+        <h4>{txt('트러블슈팅 시나리오', 'Troubleshooting Scenario')}</h4>
         {troubleshootingError ? (
           <div className="hint-box" style={{ borderColor:'rgba(248,81,73,.25)', color:'var(--red)' }}>{troubleshootingError}</div>
         ) : (
@@ -157,17 +157,17 @@ export default function ProblemStatement({
             </div>
             <div className="stat-rows" style={{ marginTop:12 }}>
               {[
-                ['Target Response Time', troubleshootingConfig?.targetResponseTimeMs ? `${troubleshootingConfig.targetResponseTimeMs}ms` : '-'],
-                ['Performance Limit', troubleshootingConfig?.performanceLimitMs ? `${troubleshootingConfig.performanceLimitMs}ms` : '-'],
-                ['Memory Limit', troubleshootingConfig?.memoryLimitMb ? `${troubleshootingConfig.memoryLimitMb}MB` : '-'],
-                ['Visible / Hidden Tests', `${troubleshootingConfig?.visibleTests?.length || 0} / ${troubleshootingConfig?.hiddenTestCount || 0}`],
+                [txt('목표 응답 시간', 'Target Response Time'), troubleshootingConfig?.targetResponseTimeMs ? `${troubleshootingConfig.targetResponseTimeMs}ms` : '-'],
+                [txt('성능 제한', 'Performance Limit'), troubleshootingConfig?.performanceLimitMs ? `${troubleshootingConfig.performanceLimitMs}ms` : '-'],
+                [txt('메모리 제한', 'Memory Limit'), troubleshootingConfig?.memoryLimitMb ? `${troubleshootingConfig.memoryLimitMb}MB` : '-'],
+                [txt('공개 / 숨김 테스트', 'Visible / Hidden Tests'), `${troubleshootingConfig?.visibleTests?.length || 0} / ${troubleshootingConfig?.hiddenTestCount || 0}`],
               ].map(([k, v]) => (
                 <div key={k} className="stat-row"><span>{k}</span><span className="mono" style={{ color:'var(--blue)' }}>{v}</span></div>
               ))}
             </div>
             {Array.isArray(troubleshootingConfig?.forbiddenPatterns) && troubleshootingConfig.forbiddenPatterns.length > 0 && (
               <div style={{ marginTop:12, fontSize:12, color:'var(--text3)' }}>
-                Forbidden patterns: {troubleshootingConfig.forbiddenPatterns.join(', ')}
+                {txt('금지 패턴', 'Forbidden patterns')}: {troubleshootingConfig.forbiddenPatterns.join(', ')}
               </div>
             )}
           </>
@@ -224,10 +224,10 @@ export default function ProblemStatement({
     {/* 난이도 투표 (풀었을 때만) */}
     {solved[problem.id] && (
       <div style={{marginTop:16,padding:'16px 18px',background:'var(--bg3)',borderRadius:10,border:'1px solid var(--border)'}}>
-        <h4 style={{marginBottom:10}}>📊 Difficulty Rating</h4>
+        <h4 style={{marginBottom:10}}>📊 {txt('난이도 평가', 'Difficulty Rating')}</h4>
         <div>
           <p style={{fontSize:12,color:'var(--text2)',marginBottom:10}}>
-            How hard was this problem? {user?.emailVerified ? 'Click to rate.' : 'Verify your email to rate.'}
+            {txt('이 문제는 얼마나 어려웠나요?', 'How hard was this problem?')} {user?.emailVerified ? txt('클릭해서 평가하세요.', 'Click to rate.') : txt('평가하려면 이메일 인증이 필요합니다.', 'Verify your email to rate.')}
           </p>
           <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
             {[1,2,3,4,5].map(v => {
@@ -245,8 +245,8 @@ export default function ProblemStatement({
             })}
           </div>
           <div style={{fontSize:13,color: voteSubmitted ? 'var(--green)' : 'var(--text2)', marginTop:10}}>
-            {voteSubmitted ? '✅ Voted! ' : ''}
-            Avg: <strong>{diffVote?.avgVote ?? diffVote?.avgDifficulty ?? '-'}</strong> / 5 ({diffVote?.voteCount ?? diffVote?.totalVotes ?? 0} users)
+            {voteSubmitted ? txt('✅ 투표 완료! ', '✅ Voted! ') : ''}
+            {txt('평균', 'Avg')}: <strong>{diffVote?.avgVote ?? diffVote?.avgDifficulty ?? '-'}</strong> / 5 ({diffVote?.voteCount ?? diffVote?.totalVotes ?? 0}{txt('명', ' users')})
           </div>
         </div>
       </div>
@@ -255,11 +255,11 @@ export default function ProblemStatement({
     {/* 패널 열기 버튼 */}
     <div className="judge-panel-actions">
       {[
-        ...(showEditorial ? [{ id:'editorial', icon:'📘', label:'Editorial' }] : []),
-        { id:'solutions',   icon:'💡', label:'Solutions' },
-        { id:'discuss',     icon:'💬', label:'Discussion' },
-        { id:'notes',       icon:'🗒️', label:'Notes' },
-        { id:'submissions', icon:'📝', label:`Submissions${mySubmissions.length ? ` (${mySubmissions.length})` : ''}` },
+        ...(showEditorial ? [{ id:'editorial', icon:'📘', label:txt('해설', 'Editorial') }] : []),
+        { id:'solutions',   icon:'💡', label:txt('다른 풀이', 'Solutions') },
+        { id:'discuss',     icon:'💬', label:txt('토론', 'Discussion') },
+        { id:'notes',       icon:'🗒️', label:txt('노트', 'Notes') },
+        { id:'submissions', icon:'📝', label:`${txt('제출 기록', 'Submissions')}${mySubmissions.length ? ` (${mySubmissions.length})` : ''}` },
       ].map(p => (
         <button key={p.id} className="judge-panel-action" onClick={() => setLeftTab(p.id)}
           onMouseEnter={e=>{e.currentTarget.style.background='var(--bg4)';e.currentTarget.style.color='var(--text)';}}
