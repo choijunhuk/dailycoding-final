@@ -10,7 +10,7 @@ import { pickLangText } from '../utils/languageMode.js';
 import { TIER_THRESHOLDS, TIER_ORDER } from '../data/constants.js';
 import ProfileAvatar from '../components/ProfileAvatar';
 import './RankingPage.css';
-import { PROFILE_TIER_LABELS_KO } from './profilePageUtils.js';
+import { getTierLabel } from '../utils/labelMaps.js';
 
 const TIER_META = {
   unranked:    { color:'#888888', bg:'rgba(136,136,136,.12)', label:'Unranked'    },
@@ -60,7 +60,7 @@ function TierBadge({ tier }) {
   const tm = TIER_META[tier] || TIER_META.unranked;
   const glow = getTierGlowStyle(tier);
   const { lang: _badgeLang } = useLang();
-  const label = _badgeLang === 'ko' ? (PROFILE_TIER_LABELS_KO[tier] || tm.label) : tm.label;
+  const label = getTierLabel(tier, _badgeLang) || tm.label;
   return (
     <span style={{
       padding: '3px 9px', borderRadius: 20, fontSize: 10, fontWeight: 700,
@@ -371,13 +371,13 @@ export default function RankingPage() {
           <div style={{ marginTop: 18 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, fontSize: 11, color: 'var(--text3)' }}>
               <span style={{ color: TIER_META[myData.tier]?.color, fontWeight: 700 }}>
-                {lang === 'ko' ? (PROFILE_TIER_LABELS_KO[myData.tier] || TIER_META[myData.tier]?.label) : TIER_META[myData.tier]?.label}
+                {getTierLabel(myData.tier, lang) || TIER_META[myData.tier]?.label}
               </span>
               {myProgress.nextTier ? (
                 <span>
                   {myData.rating} / {myProgress.nextRating} →&nbsp;
                   <span style={{ color: TIER_META[myProgress.nextTier]?.color, fontWeight: 700 }}>
-                    {lang === 'ko' ? (PROFILE_TIER_LABELS_KO[myProgress.nextTier] || TIER_META[myProgress.nextTier]?.label) : TIER_META[myProgress.nextTier]?.label}
+                    {getTierLabel(myProgress.nextTier, lang) || TIER_META[myProgress.nextTier]?.label}
                   </span>
                 </span>
               ) : (
@@ -467,7 +467,7 @@ export default function RankingPage() {
           >
             <option value="all">{t('rankingAllTiers')}</option>
             {Object.entries(TIER_META).map(([key, value]) => (
-              <option key={key} value={key}>{lang === 'ko' ? (PROFILE_TIER_LABELS_KO[key] || value.label) : value.label}</option>
+              <option key={key} value={key}>{getTierLabel(key, lang) || value.label}</option>
             ))}
           </select>
         )}

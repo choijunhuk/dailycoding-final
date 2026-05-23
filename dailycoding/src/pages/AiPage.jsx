@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
 import { useLang } from '../context/LangContext';
 import { PROBLEMS, TIERS } from '../data/problems';
-import { PROFILE_TIER_LABELS_KO } from './profilePageUtils.js';
+import { getTierLabel } from '../utils/labelMaps.js';
 import api from '../api.js';
 import EmailVerifyGate from '../components/EmailVerifyGate.jsx';
 import './AiPage.css';
@@ -22,7 +22,7 @@ export default function AiPage() {
   const { problems: appProblems, solved } = useApp();
   const { t, lang } = useLang();
   const txt = (ko, en) => lang === 'ko' ? ko : en;
-  const tierLbl = (tier) => lang === 'ko' ? (PROFILE_TIER_LABELS_KO[tier] || TIERS[tier]?.label || tier) : (TIERS[tier]?.label || tier);
+  const tierLbl = (tier) => getTierLabel(tier, lang) || TIERS[tier]?.label || tier;
   const [analyzing,  setAnalyzing]  = useState(false);
   const [analysis,   setAnalysis]   = useState(null);
   const [chat,       setChat]       = useState([]);

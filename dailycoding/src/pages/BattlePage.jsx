@@ -11,6 +11,7 @@ import { useLang } from '../context/LangContext.jsx';
 import { BATTLE_AD_SLOTS, BATTLE_DURATIONS, BATTLE_MODES, BATTLE_SEC, fmtTime, getSocketUrl, POLL_MS, TYPE_COLOR, TYPE_LABEL } from './battlePageUtils.js';
 import { BattleAdSlot, BugFixProblem, CodingProblem, FillBlankProblem, getBattleStarterCode } from './battleProblemViews.jsx';
 import { getDateLocale, pickLangText } from '../utils/languageMode.js';
+import { SocialIcon } from '../components/icons/BrandIcon.jsx';
 import './BattlePage.css';
 
 // ── Web Audio typing sound (no external libraries) ────────────────────────
@@ -1345,22 +1346,22 @@ export default function BattlePage() {
           </div>
 
           <div className="bp-result-notice">
-            ℹ️ Battle results do not affect your rating or tier.
+            {txt('ℹ️ 배틀 결과는 레이팅/티어에 반영되지 않습니다.', 'ℹ️ Battle results do not affect your rating or tier.')}
           </div>
 
           <div style={{ display:'flex', gap:10, justifyContent:'center', flexWrap:'wrap' }}>
             <button className="bp-btn-small" onClick={() => requestRematch(room.id, opp?.username)} disabled={rematchPending}>
-              {rematchPending ? 'Requesting...' : '🔄 Rematch'}
+              {rematchPending ? txt('요청 중...', 'Requesting...') : txt('리매치', 'Rematch')}
             </button>
             <button className="bp-btn-small" onClick={() => navigate('/battles/history')}>
-              🕘 History
+              {txt('기록', 'History')}
             </button>
-            <button className="bp-btn-small" onClick={handleShareCopy}>📋 Copy</button>
-            <button className="bp-btn-small" onClick={handleShareTwitter}>🐦 Twitter</button>
+            <button className="bp-btn-small" onClick={handleShareCopy}>{txt('복사', 'Copy')}</button>
+            <button className="bp-btn-small" onClick={handleShareTwitter}><SocialIcon name="x" size={14} />{txt('X로 공유', 'Share to X')}</button>
           </div>
 
           <button className="bp-btn-primary" onClick={resetBattleStateToLobby}>
-            Play Again
+            {txt('다시 하기', 'Play Again')}
           </button>
         </div>
       </div>

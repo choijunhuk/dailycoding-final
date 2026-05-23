@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { useLang } from '../context/LangContext.jsx';
 import { pickLangText } from '../utils/languageMode.js';
+import { TechIcon } from '../components/icons/BrandIcon.jsx';
 
 const TIER_COLOR = {
   bronze: '#cd7f32',
@@ -21,7 +22,6 @@ const LANGUAGE_TRACKS = [
   {
     id: 'python',
     icon: '🐍',
-    logo: '/tech/python.png',
     label: 'Python',
     color: { bg: 'rgba(255,212,59,.08)', border: 'rgba(255,212,59,.3)', text: '#d4a900', pill: 'rgba(255,212,59,.15)' },
     desc: 'Learn algorithm fundamentals with Python. Its clean syntax makes it the top recommendation for beginners.',
@@ -107,7 +107,6 @@ const LANGUAGE_TRACKS = [
   {
     id: 'javascript',
     icon: '🟨',
-    logo: '/tech/javascript.webp',
     label: 'JavaScript',
     color: { bg: 'rgba(247,223,30,.08)', border: 'rgba(247,223,30,.3)', text: '#c9a800', pill: 'rgba(247,223,30,.15)' },
     desc: 'Sharpen your algorithm skills and web development ability at the same time with JavaScript, the language of the web.',
@@ -189,7 +188,6 @@ const LANGUAGE_TRACKS = [
   {
     id: 'java',
     icon: '☕',
-    logo: '/tech/java.webp',
     label: 'Java',
     color: { bg: 'rgba(234,91,32,.08)', border: 'rgba(234,91,32,.3)', text: '#ea5b20', pill: 'rgba(234,91,32,.15)' },
     desc: 'Build a solid foundation with Java, the gold standard of object-oriented programming and the #1 language for job coding tests.',
@@ -268,7 +266,6 @@ const LANGUAGE_TRACKS = [
   {
     id: 'c',
     icon: '🔵',
-    logo: '/tech/c.png',
     label: 'C',
     color: { bg: 'rgba(88,166,255,.08)', border: 'rgba(88,166,255,.3)', text: '#58a6ff', pill: 'rgba(88,166,255,.15)' },
     desc: 'Deeply understand memory structures and pointers with C, the root of computer science.',
@@ -348,7 +345,6 @@ const LANGUAGE_TRACKS = [
   {
     id: 'cpp',
     icon: '⚙️',
-    logo: '/tech/cpp.png',
     label: 'C++',
     color: { bg: 'rgba(86,211,100,.08)', border: 'rgba(86,211,100,.3)', text: '#56d364', pill: 'rgba(86,211,100,.15)' },
     desc: 'Prepare for coding competitions and real-world development with C++, the powerhouse of STL and high-performance algorithms.',
@@ -811,10 +807,7 @@ export default function LearningPathPage() {
                   cursor: 'pointer', transition: 'all .15s', fontFamily: 'inherit',
                 }}
               >
-                {t.logo
-                  ? <img src={t.logo} width={16} height={16} alt={t.label} style={{ objectFit: 'contain', flexShrink: 0 }} />
-                  : <span>{t.icon}</span>
-                }
+                <TechIcon name={t.label} size={16} decorative={false} />
                 <span>{getTrackLabel(t)}</span>
               </button>
             );
@@ -858,8 +851,8 @@ export default function LearningPathPage() {
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: 24, flexShrink: 0,
         }}>
-          {track.logo
-            ? <img src={track.logo} width={28} height={28} alt={track.label} style={{ objectFit: 'contain' }} />
+          {LANGUAGE_TRACKS.some((item) => item.id === track.id)
+            ? <TechIcon name={track.label} size={28} decorative={false} />
             : <span>{track.icon}</span>
           }
         </div>

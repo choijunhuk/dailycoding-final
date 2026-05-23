@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../api.js';
 import { useLang } from '../context/LangContext.jsx';
+import { getProblemTypeLabel, getTierLabel } from '../utils/labelMaps.js';
 
 const Editor = lazy(() => import('@monaco-editor/react'));
 
@@ -13,10 +14,6 @@ const LANG_OPTIONS = [
   { value: 'java', label: 'Java', monaco: 'java' },
 ];
 
-const TYPE_LABEL = {
-  ko: { coding: '코딩', 'fill-blank': '빈칸 채우기', 'bug-fix': '틀린부분 찾기' },
-  en: { coding: 'Coding', 'fill-blank': 'Fill-Blank', 'bug-fix': 'Bug-Fix' },
-};
 const TYPE_COLOR = { coding: 'var(--blue)', 'fill-blank': 'var(--green)', 'bug-fix': 'var(--orange)' };
 
 function parseConfig(raw) {
@@ -170,12 +167,12 @@ export default function ExamPage() {
                       ))}
                   </div>
                   <div style={{ padding:'12px 14px', border:'1px solid var(--border)', borderRadius:10, background:'var(--bg3)' }}>
-                    <div style={{ fontSize:12, fontWeight:800, marginBottom:8 }}>Mistakes by Type</div>
+                    <div style={{ fontSize:12, fontWeight:800, marginBottom:8 }}>{lang === 'ko' ? '유형별 실수' : 'Mistakes by Type'}</div>
                     {(result.report.weakTypes || []).length === 0
-                      ? <div style={{ fontSize:12, color:'var(--text3)' }}>No mistakes by type.</div>
+                      ? <div style={{ fontSize:12, color:'var(--text3)' }}>{lang === 'ko' ? '유형별 실수가 없습니다.' : 'No mistakes by type.'}</div>
                       : result.report.weakTypes.map((type) => (
                         <div key={type.label} style={{ display:'flex', justifyContent:'space-between', gap:10, fontSize:12, color:'var(--text2)', marginBottom:6 }}>
-                          <span>{TYPE_LABEL[type.label] || type.label}</span>
+                          <span>{getProblemTypeLabel(type.label, lang) || type.label}</span>
                           <span>{type.missRate}%</span>
                         </div>
                       ))}
@@ -223,7 +220,7 @@ export default function ExamPage() {
                     {t('examProblemTitle').replace('{n}', String(index + 1))}. {problem.title}
                   </div>
                   <div style={{ fontSize: 11, color: TYPE_COLOR[pType], marginTop: 3 }}>
-                    {TYPE_LABEL[pType] || pType}
+                    {getProblemTypeLabel(pType, lang)}
                     {problem.preferredLanguage ? ` · ${problem.preferredLanguage}` : ''}
                   </div>
                 </button>
@@ -237,7 +234,7 @@ export default function ExamPage() {
             <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, overflowY: 'auto' }}>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
                 <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 999, background: 'var(--bg3)', color: TYPE_COLOR[problemType], fontWeight: 700 }}>
-                      {TYPE_LABEL[lang]?.[problemType] || TYPE_LABEL.en[problemType] || problemType}
+                      {getProblemTypeLabel(problemType, lang)}
                 </span>
                 {activeProblem?.preferredLanguage && (
                   <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 999, background: 'rgba(88,166,255,.1)', color: 'var(--blue)', fontWeight: 700 }}>
@@ -247,7 +244,7 @@ export default function ExamPage() {
               </div>
               <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 6 }}>{activeProblem?.title}</h2>
               <div style={{ color: 'var(--text3)', fontSize: 12, marginBottom: 14 }}>
-                {t('examTierLabel').replace('{tier}', String(activeProblem?.tier || '-'))}
+                {t('examTierLabel').replace('{tier}', getTierLabel(activeProblem?.tier, lang) || '-')}
               </div>
               {activeProblem?.description && (
                 <p style={{ color: 'var(--text2)', fontSize: 14, lineHeight: 1.7, marginBottom: 16 }}>{activeProblem.description}</p>

@@ -8,8 +8,8 @@ import { useToast } from '../context/ToastContext.jsx'
 import { useLang } from '../context/LangContext.jsx'
 import api from '../api.js'
 import { pickLangText } from '../utils/languageMode.js'
-import { PROFILE_TIER_LABELS_KO } from './profilePageUtils.js'
-import { Bookmark, CheckCircle2, Filter, Grid, List, Search, Share2, Star, Target, X } from 'lucide-react'
+import { getProblemTypeLabel, getTierLabel } from '../utils/labelMaps.js'
+import { Bookmark, Bug, CheckCircle2, ClipboardList, Code2, FilePenLine, Filter, Gauge, Grid, List, Recycle, Search, Share2, Star, Target, Wrench, X } from 'lucide-react'
 import {
   FALLBACK_TAGS,
   getAcceptanceRate,
@@ -46,33 +46,15 @@ export default function ProblemsPage() {
   const toast = useToast()
   const { t, lang } = useLang()
   const txt = useCallback((ko, en) => pickLangText(lang, ko, en), [lang])
-  const tierLbl = (tier) => lang === 'ko' ? (PROFILE_TIER_LABELS_KO[tier] || TIERS[tier]?.label || tier) : (TIERS[tier]?.label || tier)
+  const tierLbl = (tier) => getTierLabel(tier, lang) || TIERS[tier]?.label || tier
   const PROBLEMS = appProblems.length > 0 ? appProblems : DEFAULT_PROBLEMS
 
   const normalizeProblemTypeFilter = (type) => type === 'algorithm' ? 'coding' : type
   const getTypeLabel = (type) => {
-    const map = {
-      algorithm: txt('알고리즘', 'Algorithm'),
-      coding: txt('알고리즘', 'Algorithm'),
-      'fill-blank': txt('빈칸 채우기', 'Fill in the Blank'),
-      'bug-fix': txt('버그 찾기', 'Bug Fix'),
-      troubleshooting: txt('트러블슈팅', 'Troubleshooting'),
-      'performance-fix': txt('성능 최적화', 'Performance Optimization'),
-      'refactor-fix': txt('리팩터링', 'Refactoring'),
-    }
-    return map[type] || type
+    return getProblemTypeLabel(type, lang)
   }
   const getTypeShort = (type) => {
-    const map = {
-      algorithm: txt('알고리즘', 'Algorithm'),
-      coding: txt('알고리즘', 'Algorithm'),
-      'fill-blank': txt('빈칸', 'Blank'),
-      'bug-fix': txt('버그', 'Bug'),
-      troubleshooting: txt('트러블슈팅', 'Trouble'),
-      'performance-fix': txt('성능', 'Perf'),
-      'refactor-fix': txt('리팩터링', 'Refactor'),
-    }
-    return map[type] || type
+    return getProblemTypeLabel(type, lang, { short: true })
   }
 
   const search = (searchParams.get('search') || '').trim()
@@ -546,14 +528,14 @@ export default function ProblemsPage() {
         {/* Problem type tabs - full width above filters */}
         <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
           {[
-            { key: 'all', label: t('allTypes'), icon: '📋' },
-            { key: 'algorithm', label: getTypeLabel('algorithm'), icon: '💻', type: 'coding' },
-            { key: 'fill-blank', label: getTypeLabel('fill-blank'), icon: '✏️' },
-            { key: 'bug-fix', label: getTypeLabel('bug-fix'), icon: '🐛' },
-            { key: 'troubleshooting', label: getTypeLabel('troubleshooting'), icon: '🛠️' },
-            { key: 'performance-fix', label: getTypeLabel('performance-fix'), icon: '⚡' },
-            { key: 'refactor-fix', label: getTypeLabel('refactor-fix'), icon: '♻️' },
-          ].map(({ key, label, icon, type }) => {
+            { key: 'all', label: t('allTypes'), Icon: ClipboardList },
+            { key: 'algorithm', label: getTypeLabel('algorithm'), Icon: Code2, type: 'coding' },
+            { key: 'fill-blank', label: getTypeLabel('fill-blank'), Icon: FilePenLine },
+            { key: 'bug-fix', label: getTypeLabel('bug-fix'), Icon: Bug },
+            { key: 'troubleshooting', label: getTypeLabel('troubleshooting'), Icon: Wrench },
+            { key: 'performance-fix', label: getTypeLabel('performance-fix'), Icon: Gauge },
+            { key: 'refactor-fix', label: getTypeLabel('refactor-fix'), Icon: Recycle },
+          ].map(({ key, label, Icon, type }) => {
             const countType = type || key;
             const count = key === 'all' ? PROBLEMS.length : PROBLEMS.filter(p => (p.problemType || 'coding') === countType).length;
             const isActive = problemType === key;
@@ -565,7 +547,7 @@ export default function ProblemsPage() {
                 color: isActive ? '#0d1117' : 'var(--text2)',
                 fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'all .15s',
               }}>
-                <span style={{ fontSize: 14 }}>{icon}</span>
+                <Icon size={14} aria-hidden="true" />
                 {label}
                 <span style={{
                   fontSize: 11, fontWeight: 700, padding: '1px 6px', borderRadius: 99,

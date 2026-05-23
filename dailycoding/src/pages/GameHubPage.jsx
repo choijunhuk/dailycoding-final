@@ -4,6 +4,7 @@ import { Activity, ArrowRight, Bot, Crown, Flame, RefreshCcw, Shield, Swords, Ta
 import api from '../api.js'
 import { useLang } from '../context/LangContext.jsx'
 import { pickLangText } from '../utils/languageMode.js'
+import { getTierLabel } from '../utils/labelMaps.js'
 import './GameHubPage.css'
 
 const emptySummary = {
@@ -24,12 +25,8 @@ function formatSeconds(sec, lang) {
   return `${minutes}분 ${String(seconds).padStart(2, '0')}초`
 }
 
-const TIER_LABELS_KO = { iron: '아이언', bronze: '브론즈', silver: '실버', gold: '골드', platinum: '플래티넘', emerald: '에메랄드', diamond: '다이아', master: '마스터', grandmaster: '그랜드마스터', challenger: '챌린저' }
-const TIER_LABELS_EN = { iron: 'Iron', bronze: 'Bronze', silver: 'Silver', gold: 'Gold', platinum: 'Platinum', emerald: 'Emerald', diamond: 'Diamond', master: 'Master', grandmaster: 'Grandmaster', challenger: 'Challenger' }
-
 function tierLabel(tier, lang) {
-  const map = lang === 'ko' ? TIER_LABELS_KO : TIER_LABELS_EN
-  return map[tier] || tier || (lang === 'ko' ? '훈련' : 'Training')
+  return getTierLabel(tier, lang) || tier || (lang === 'ko' ? '훈련' : 'Training')
 }
 
 export default function GameHubPage() {

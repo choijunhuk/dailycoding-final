@@ -1,8 +1,8 @@
 import { Bookmark, Share2 } from 'lucide-react';
 import { formatTimer } from './JudgeTimer.jsx';
 import { useLang } from '../../context/LangContext.jsx';
-import { PROFILE_TIER_LABELS_KO } from '../profilePageUtils.js';
 import { getTagLabelLang } from '../problemsPageUtils.js';
+import { getTierLabel } from '../../utils/labelMaps.js';
 
 export default function ProblemStatement({
   problem,
@@ -57,7 +57,7 @@ export default function ProblemStatement({
       </div>
     </div>
     <div className="prob-meta-row">
-      <span className="tag" style={{ background: tierInfo.bg, color: tierInfo.color }}>{lang === 'ko' ? (PROFILE_TIER_LABELS_KO[problem.tier] || tierInfo.label) : tierInfo.label}</span>
+      <span className="tag" style={{ background: tierInfo.bg, color: tierInfo.color }}>{getTierLabel(problem.tier, lang) || tierInfo.label}</span>
       <span className="pmeta">⏱ {problem.timeLimit}s</span>
       <span className="pmeta">💾 {problem.memLimit}MB</span>
       <span className="pmeta mono">#{problem.id}</span>

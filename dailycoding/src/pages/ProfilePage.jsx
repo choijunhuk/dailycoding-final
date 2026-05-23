@@ -12,31 +12,32 @@ import { useSubscriptionCheckout } from '../hooks/useSubscriptionCheckout.js';
 import { JUDGE_LANGUAGE_OPTIONS } from '../data/judgeLanguages.js';
 import { TIER_POINTS, TIER_ORDER } from '../data/constants.js';
 import { getDateLocale, pickLangText } from '../utils/languageMode.js';
+import { getTierLabel } from '../utils/labelMaps.js';
 import ProfileAvatar from '../components/ProfileAvatar.jsx';
 import FollowListModal from '../components/FollowListModal.jsx';
-import { buildYearHeatmap, formatDuration, profileBackgroundToCss, PROFILE_TIER_LABELS, PROFILE_TIER_LABELS_KO, PROFILE_TIER_THRESHOLDS } from './profilePageUtils.js';
+import { buildYearHeatmap, formatDuration, profileBackgroundToCss, PROFILE_TIER_LABELS, PROFILE_TIER_THRESHOLDS } from './profilePageUtils.js';
 import { buildPaymentFeedback, formatCurrentSubscriptionLabel, getProfileUpgradePlans } from './profileSubscriptionUtils.js';
 import { DonutChart, TierBadge, YearHeatmap } from './profilePageWidgets.jsx';
+import { SocialIcon, TechIcon, TECH_STACK_OPTIONS, getSocialIconMeta } from '../components/icons/BrandIcon.jsx';
 import './ProfilePage.css';
 
-const TECH_OPTIONS = [
-  'JavaScript','TypeScript','Python','Java','C++','C','Go','Rust','Kotlin','Swift',
-  'React','Vue','Angular','Next.js','Node.js','Express','Spring','Django','FastAPI','Flutter',
-  'MySQL','PostgreSQL','MongoDB','Redis','Docker','Kubernetes','AWS','GCP','Azure','Git',
-];
 const PROFILE_LINK_LABELS = { github:'GitHub', instagram:'Instagram', x:'X', linkedin:'LinkedIn', velog:'Velog', tistory:'Tistory' };
 
-const TECH_LOGO_MAP = {
-  JavaScript:'/tech/javascript.webp', Python:'/tech/python.png', Java:'/tech/java.webp',
-  'C++':'/tech/cpp.png', C:'/tech/c.png', Go:'/tech/go.png', Rust:'/tech/rust.png',
-  Kotlin:'/tech/kotlin.png', Swift:'/tech/swift.png', React:'/tech/react.png',
-  Vue:'/tech/vue.png', Angular:'/tech/angular.png', 'Next.js':'/tech/nextjs.png',
-  'Node.js':'/tech/nodejs.png', Express:'/tech/express.png', Spring:'/tech/spring.png',
-  Django:'/tech/django.png', FastAPI:'/tech/fastapi.svg', Flutter:'/tech/flutter.png',
-  MySQL:'/tech/mysql.png', PostgreSQL:'/tech/postgresql.png', MongoDB:'/tech/mongodb.png',
-  Redis:'/tech/redis.webp', Docker:'/tech/docker.png', Kubernetes:'/tech/kubernetes.png',
-  AWS:'/tech/aws.webp', GCP:'/tech/gcp.png', Azure:'/tech/azure.svg', Git:'/tech/git.png',
-};
+function isValidSocialUrl(value = '') {
+  const trimmed = String(value || '').trim();
+  if (!trimmed) return false;
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) return false;
+  try {
+    const url = new URL(trimmed.startsWith('http') ? trimmed : `https://${trimmed}`);
+    return ['http:', 'https:'].includes(url.protocol) && url.hostname.includes('.');
+  } catch {
+    return false;
+  }
+}
+
+function normalizeSocialLinksForDisplay(links = {}) {
+  return Object.fromEntries(Object.entries(links || {}).filter(([, value]) => isValidSocialUrl(value)));
+}
 
 
 const DEFAULT_PROFILE_BACKGROUND_SLUG = 'solid-slate';
@@ -47,16 +48,6 @@ function normalizeProfileBackgroundSlug(slug) {
   if (!slug) return DEFAULT_PROFILE_BACKGROUND_SLUG;
   return LEGACY_PROFILE_BACKGROUND_SLUGS.has(slug) ? DEFAULT_PROFILE_BACKGROUND_SLUG : slug;
 }
-
-const SOCIAL_ICON_META = {
-  github:    { label:'GitHub',    color:'var(--text2)', icon:<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg> },
-  instagram: { label:'Instagram', color:'#e1306c',      icon:<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg> },
-  x:         { label:'X',         color:'var(--text2)', icon:<img src="/social/x.webp"       width="14" height="14" alt="X"        style={{ objectFit:'contain' }} /> },
-  twitter:   { label:'X',         color:'var(--text2)', icon:<img src="/social/x.webp"       width="14" height="14" alt="X"        style={{ objectFit:'contain' }} /> },
-  linkedin:  { label:'LinkedIn',  color:'#0077b5',      icon:<img src="/social/linkedin.png" width="14" height="14" alt="LinkedIn" style={{ objectFit:'contain' }} /> },
-  velog:     { label:'Velog',     color:'#20c997',      icon:<svg viewBox="0 0 24 24" width="14" height="14"><circle cx="12" cy="12" r="12" fill="#20c997"/><text x="12" y="16" textAnchor="middle" fill="white" fontSize="12" fontWeight="900" fontFamily="sans-serif">V</text></svg> },
-  tistory:   { label:'Tistory',   color:'#ff5a00',      icon:<img src="/social/tistory.png"  width="14" height="14" alt="Tistory" style={{ objectFit:'contain' }} /> },
-};
 
 const countFilledProfileLinks = (links = {}) => Object.values(links || {}).filter(Boolean).length;
 
@@ -222,7 +213,7 @@ export default function ProfilePage() {
   const solvedByTier = useMemo(() => {
     const groups = Object.entries(TIERS).map(([tier, meta]) => ({
       tier,
-      label: lang === 'ko' ? (PROFILE_TIER_LABELS_KO[tier] || meta.label) : meta.label,
+      label: getTierLabel(tier, lang) || meta.label,
       color: meta.color,
       problems: solvedProblems.filter((problem) => problem.tier === tier),
     }));
@@ -288,7 +279,7 @@ export default function ProfilePage() {
   const equippedBadgeMeta = equippedBadge ? rewardByCode.get(equippedBadge) : null;
   const equippedTitleMeta = equippedTitle ? rewardByCode.get(equippedTitle) : null;
   const isSettingsTab = mainTab === 'settings';
-  const savedSocialLinks = user?.socialLinks || {};
+  const savedSocialLinks = normalizeSocialLinksForDisplay(user?.socialLinks || {});
   const providerAvatarUrl = user?.avatarUrl || user?.avatar_url || null;
   const hasCustomAvatarProfile = Boolean(avatarUrlCustom || avatarEmoji || avatarColor);
   const savedTechStack = user?.techStack || [];
@@ -297,7 +288,7 @@ export default function ProfilePage() {
     : (user?.displayName || user?.username);
   const headerBio = isSettingsTab ? bio : user?.bio;
   const headerTechStack = isSettingsTab ? techStack : savedTechStack;
-  const headerSocialLinks = isSettingsTab ? socialLinks : savedSocialLinks;
+  const headerSocialLinks = isSettingsTab ? normalizeSocialLinksForDisplay(socialLinks) : savedSocialLinks;
   const profileDraftChanged = isSettingsTab && (
     (displayName || '') !== (user?.displayName || '') ||
     (bio || '') !== (user?.bio || '') ||
@@ -429,7 +420,7 @@ export default function ProfilePage() {
   const handleSaveProfileInfo = async () => {
     setProfileInfoSaving(true);
     try {
-      const filteredLinks = Object.fromEntries(Object.entries(socialLinks).filter(([, v]) => v));
+      const filteredLinks = normalizeSocialLinksForDisplay(socialLinks);
       const { data } = await api.patch('/auth/profile/extended', {
         display_name: displayName,
         bio,
@@ -493,7 +484,7 @@ export default function ProfilePage() {
               <span className="profile-username">{headerDisplayName}</span>
               <span className="profile-tier-badge" style={{
                 background:`${tc}20`, color:tc, border:`1px solid ${tc}50`,
-              }}>{lang === 'ko' ? (PROFILE_TIER_LABELS_KO[user?.tier || 'unranked'] || PROFILE_TIER_LABELS[user?.tier || 'unranked']) : PROFILE_TIER_LABELS[user?.tier || 'unranked']}</span>
+              }}>{getTierLabel(user?.tier || 'unranked', lang) || PROFILE_TIER_LABELS[user?.tier || 'unranked']}</span>
               {subPlan?.tier && subPlan.tier !== 'free' && (
                 <span className="profile-sub-badge" style={{
                   background: subPlan.tier==='team'?'rgba(255,215,0,.15)':'rgba(121,192,255,.15)',
@@ -514,7 +505,7 @@ export default function ProfilePage() {
               <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginTop:8 }}>
                 {headerTechStack.slice(0, 10).map(tech => (
                   <span key={tech} className="badge" style={{ display:'flex', alignItems:'center', gap:4, fontSize:11 }}>
-                    {TECH_LOGO_MAP[tech] && <img src={TECH_LOGO_MAP[tech]} width={12} height={12} alt="" style={{ objectFit:'contain', flexShrink:0 }}/>}
+                    <TechIcon name={tech} size={12} />
                     {tech}
                   </span>
                 ))}
@@ -523,7 +514,7 @@ export default function ProfilePage() {
             {Object.entries(headerSocialLinks).some(([, v]) => v) && (
               <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginTop:6 }}>
                 {Object.entries(headerSocialLinks).filter(([, url]) => url).map(([key, url]) => {
-                  const meta = SOCIAL_ICON_META[key];
+                  const meta = getSocialIconMeta(key);
                   if (!meta) return null;
                   const href = url.startsWith('http') ? url : `https://${url}`;
                   return (
@@ -537,7 +528,7 @@ export default function ProfilePage() {
                       }}
                       onMouseEnter={e => e.currentTarget.style.opacity='0.75'}
                       onMouseLeave={e => e.currentTarget.style.opacity='1'}
-                    >{meta.icon}{meta.label}</a>
+                    ><SocialIcon name={key} size={14} />{meta.label}</a>
                   );
                 })}
               </div>
@@ -570,7 +561,7 @@ export default function ProfilePage() {
               <div className="profile-tier-progress-container">
                 <div className="profile-tier-progress-labels">
                   <span style={{ color:tc, fontWeight:700 }}>{PROFILE_TIER_LABELS[user?.tier||'unranked']}</span>
-                  <span>{Math.max(0,(nextThres||0)-(user?.rating||0))} {txt('점 남음', 'pts to')} {lang === 'ko' ? (PROFILE_TIER_LABELS_KO[nextTier] || nextTier.toUpperCase()) : nextTier.toUpperCase()}</span>
+                  <span>{Math.max(0,(nextThres||0)-(user?.rating||0))} {txt('점 남음', 'pts to')} {getTierLabel(nextTier, lang)}</span>
                 </div>
                 <div className="profile-tier-progress-bar-bg">
                   <div className="profile-tier-progress-bar-fill" style={{
@@ -646,8 +637,8 @@ export default function ProfilePage() {
               total={solvedProblemsMain.length}
             />
             <div style={{ marginTop: 12, display:'grid', gap:6, width:'100%' }}>
-              <div style={{ fontSize: 12, color:'var(--text2)' }}>{txt('빈칸 채우기', 'Fill-in-the-blank')}: <strong>{practiceTracks.fillBlank?.solvedCount ?? solvedFillBlank.length}</strong> {txt('개 해결', 'solved')} · {txt('티어', 'Tier')} {lang === 'ko' ? (PROFILE_TIER_LABELS_KO[practiceTracks.fillBlank?.tier || 'unranked'] || 'UNRANKED') : String(practiceTracks.fillBlank?.tier || 'unranked').toUpperCase()}</div>
-              <div style={{ fontSize: 12, color:'var(--text2)' }}>{txt('버그 수정', 'Bug fix')}: <strong>{practiceTracks.bugFix?.solvedCount ?? solvedBugFix.length}</strong> {txt('개 해결', 'solved')} · {txt('티어', 'Tier')} {lang === 'ko' ? (PROFILE_TIER_LABELS_KO[practiceTracks.bugFix?.tier || 'unranked'] || 'UNRANKED') : String(practiceTracks.bugFix?.tier || 'unranked').toUpperCase()}</div>
+              <div style={{ fontSize: 12, color:'var(--text2)' }}>{txt('빈칸 채우기', 'Fill-in-the-blank')}: <strong>{practiceTracks.fillBlank?.solvedCount ?? solvedFillBlank.length}</strong> {txt('개 해결', 'solved')} · {txt('티어', 'Tier')} {getTierLabel(practiceTracks.fillBlank?.tier || 'unranked', lang)}</div>
+              <div style={{ fontSize: 12, color:'var(--text2)' }}>{txt('버그 수정', 'Bug fix')}: <strong>{practiceTracks.bugFix?.solvedCount ?? solvedBugFix.length}</strong> {txt('개 해결', 'solved')} · {txt('티어', 'Tier')} {getTierLabel(practiceTracks.bugFix?.tier || 'unranked', lang)}</div>
             </div>
           </div>
 
@@ -666,7 +657,7 @@ export default function ProfilePage() {
               const pct = solvedProblems.length ? (cnt/solvedProblems.length*100).toFixed(1) : '0.0';
               return (
                 <div key={k} className="profile-dist-row">
-                  <span className="dist-level" style={{ color:v.color }}>● {lang === 'ko' ? (PROFILE_TIER_LABELS_KO[k] || v.label) : v.label}</span>
+                    <span className="dist-level" style={{ color:v.color }}>● {getTierLabel(k, lang) || v.label}</span>
                   <div className="dist-bar-bg">
                     <div className="dist-bar-fill" style={{ width:`${solvedProblems.length?cnt/solvedProblems.length*100:0}%`, background:v.color }}/>
                   </div>
@@ -1044,7 +1035,7 @@ export default function ProfilePage() {
                     {equippedBadgeMeta && <span>{equippedBadgeMeta.icon}</span>}
                     <strong>{headerDisplayName}</strong>
                     <span className="profile-live-tier" style={{ color:tc, borderColor:`${tc}55`, background:`${tc}16` }}>
-                      {lang === 'ko' ? (PROFILE_TIER_LABELS_KO[user?.tier || 'unranked'] || PROFILE_TIER_LABELS[user?.tier || 'unranked']) : PROFILE_TIER_LABELS[user?.tier || 'unranked']}
+                      {getTierLabel(user?.tier || 'unranked', lang) || PROFILE_TIER_LABELS[user?.tier || 'unranked']}
                     </span>
                   </div>
                   <p>{headerBio || txt('소개를 추가하면 프로필 상단에 표시됩니다.', 'Add a bio to show it at the top of your profile.')}</p>
@@ -1099,6 +1090,7 @@ export default function ProfilePage() {
                       <span style={{ width:90, fontSize:13, color:'var(--text2)', flexShrink:0 }}>{label}</span>
                       <input className="settings-input" style={{ flex:1 }}
                         value={socialLinks[key] || ''} onChange={e => setSocialLinks(p => ({ ...p, [key]: e.target.value }))}
+                        name={`profile_${key}_url`} type="url" inputMode="url" autoComplete="off" spellCheck="false"
                         placeholder={`${label} URL`} />
                     </div>
                   ))}
@@ -1107,7 +1099,7 @@ export default function ProfilePage() {
               <div className="form-group">
                 <label>{txt('기술 스택', 'Tech Stack')}</label>
                 <div style={{ display:'flex', flexWrap:'wrap', gap:6, maxWidth:560 }}>
-                  {TECH_OPTIONS.map(tech => (
+                  {TECH_STACK_OPTIONS.map(tech => (
                     <button key={tech} onClick={() => setTechStack(prev => prev.includes(tech) ? prev.filter(x => x !== tech) : prev.length < 20 ? [...prev, tech] : prev)}
                       style={{
                         display:'flex', alignItems:'center', gap:4,
@@ -1115,7 +1107,7 @@ export default function ProfilePage() {
                         background: techStack.includes(tech) ? 'var(--accent)' : 'var(--bg3)',
                         color: techStack.includes(tech) ? '#fff' : 'var(--text2)',
                       }}>
-                      {TECH_LOGO_MAP[tech] && <img src={TECH_LOGO_MAP[tech]} width={13} height={13} alt="" style={{ objectFit:'contain', flexShrink:0 }} />}
+                      <TechIcon name={tech} size={13} />
                       {tech}
                     </button>
                   ))}

@@ -8,6 +8,7 @@ import { useToast } from '../context/ToastContext.jsx';
 import { useLang } from '../context/LangContext.jsx';
 import { JUDGE_LANGUAGE_OPTIONS } from '../data/judgeLanguages.js';
 import { pickLangText, withVars } from '../utils/languageMode.js';
+import { getTierLabel } from '../utils/labelMaps.js';
 import { getTagLabelLang } from './problemsPageUtils.js';
 import { getSocketUrl } from '../utils/socket.js';
 import './AlgorithmBattlePage.css';
@@ -52,19 +53,38 @@ const BATTLE_MODE_KO = {
   'draft-ban': { title: '🚫 드래프트 밴', description: '전략적 1v1 — 두 플레이어가 티어와 태그를 밴/픽한 후 문제가 확정됩니다.', rules: ['방 생성 시 문제 조건 없음', '두 플레이어 준비 후 드래프트 시작', '드래프트 후 문제 확정', '정답 → 상대 HP 손실 + 이펙트'] },
 };
 
+
+function getBattleModeTitle(modeKey, config, lang) {
+  if (lang === 'ko') return BATTLE_MODE_KO[modeKey]?.title || config?.titleKo || config?.title || modeKey;
+  return config?.title || modeKey;
+}
+
+function getBattleModeRules(modeKey, config, lang) {
+  if (lang === 'ko') return BATTLE_MODE_KO[modeKey]?.rules || config?.rules || [];
+  return config?.rules || [];
+}
+
+function normalizeItemKey(value = '') {
+  const raw = String(value || '').toLowerCase();
+  if (raw.includes('shield') || raw.includes('방어')) return 'shield';
+  if (raw.includes('bomb') || raw.includes('폭탄')) return 'bomb';
+  if (raw.includes('heal') || raw.includes('회복')) return 'heal';
+  if (raw.includes('freeze') || raw.includes('정지')) return 'freeze';
+  return raw.replace(/[^a-z0-9_-]/g, '');
+}
+
+function getBattleItemLabel(item, itemLabels = {}) {
+  const key = normalizeItemKey(item?.key || item?.item || item?.itemType || item?.label);
+  return itemLabels[key] || item?.label || item?.itemLabel || item?.item || key;
+}
+
 const FALLBACK_BANNABLE_TAGS = [
   '구현', '수학', '문자열', '정렬', '자료 구조', '해시',
   '그리디', '이분 탐색', '투 포인터', '누적 합', '다이나믹 프로그래밍',
   '그래프 이론', 'BFS', 'DFS', '최단 경로', '트리', '백트래킹',
 ];
 const FALLBACK_PROBLEM_TIERS = ['bronze', 'silver', 'gold', 'platinum', 'diamond'];
-const PROBLEM_TIER_LABELS = {
-  bronze: 'Bronze', silver: 'Silver', gold: 'Gold', platinum: 'Platinum', diamond: 'Diamond',
-};
-const PROBLEM_TIER_LABELS_KO = {
-  bronze: '브론즈', silver: '실버', gold: '골드', platinum: '플래티넘', diamond: '다이아',
-};
-const tierLblBattle = (tier, lang) => lang === 'ko' ? (PROBLEM_TIER_LABELS_KO[tier] || PROBLEM_TIER_LABELS[tier] || tier) : (PROBLEM_TIER_LABELS[tier] || tier);
+const tierLblBattle = (tier, lang) => getTierLabel(tier, lang) || tier;
 const DEFAULT_PROBLEM_FILTERS = {
   tierMode: 'auto',
   minTier: 'silver',
@@ -135,7 +155,7 @@ function getBattleObjectiveText(config, isTerritoryMode, txt) {
   return txt('⚔️ 정답 → 공격', '⚔️ Correct answer → attack');
 }
 
-function formatCombatEvent(event, myId, participantById = {}, txt = (ko, en) => en) {
+function formatCombatEvent(event, myId, participantById = {}, txt = (ko, en) => en, itemLabels = {}) {
   if (!event || !COMBAT_EVENT_TYPES.has(event.type)) return null;
   const payload = event.payload || {};
   const isMe = event.userId === myId;
@@ -157,7 +177,7 @@ function formatCombatEvent(event, myId, participantById = {}, txt = (ko, en) => 
       const statStr = payload.stat
         ? Object.entries(payload.stat).map(([k, v]) => `${k} ${v > 0 ? '+' : ''}${v}`).join(' ')
         : '';
-      return { emoji: '🎒', label: payload.itemLabel || txt('아이템', 'Item'), detail: statStr || txt('사용됨', 'Used'), color: 'var(--yellow)' };
+      return { emoji: '🎒', label: getBattleItemLabel(payload, itemLabels) || txt('아이템', 'Item'), detail: statStr || txt('사용됨', 'Used'), color: 'var(--yellow)' };
     }
     case 'territory.claimed':
       return { emoji: '🏴', label: txt(`${actor} 점령`, `${actor} claimed`), detail: payload.problemId ? `Problem #${payload.problemId}` : '', color: isMe ? 'var(--blue)' : 'var(--red)' };
@@ -417,7 +437,7 @@ export default function AlgorithmBattlePage() {
   const toast = useToast();
   const { user } = useAuth();
   const { lang: uiLang, t } = useLang();
-  const txt = (ko, en) => pickLangText(uiLang, ko, en);
+  const txt = useCallback((ko, en) => pickLangText(uiLang, ko, en), [uiLang]);
   const workshopEventLabels = useMemo(() => ({
     ON_CORRECT_ANSWER: t('abEvt_ON_CORRECT_ANSWER'),
     ON_WRONG_ANSWER: t('abEvt_ON_WRONG_ANSWER'),
@@ -771,20 +791,20 @@ export default function AlgorithmBattlePage() {
       if (next?.room?.id !== roomId) return;
       const hasAnyOpponent = (next?.participants || []).some((p) => p.userId !== user?.id);
       if (!hasAnyOpponent) {
-        toast?.show('Wait time expired. No opponent found, room closed.', 'warning');
+        toast?.show(txt('대기 시간이 만료되어 상대를 찾지 못했고 방이 닫혔습니다.', 'Wait time expired. No opponent found, room closed.'), 'warning');
         setTimeout(() => navigate('/battle', { replace: true }), 2500);
         return;
       }
       setState(next);
-      toast?.show('Battle ended.', 'info');
+      toast?.show(txt('배틀이 종료되었습니다.', 'Battle ended.'), 'info');
     });
-    socket.on('battle:effect', (event) => { toast?.show(event?.payload?.effectLabel || 'Problem effect triggered', 'info'); });
-    socket.on('battle:item:used', (event) => { toast?.show(event?.payload?.itemLabel || 'Item used', 'info'); });
+    socket.on('battle:effect', (event) => { toast?.show(event?.payload?.effectLabel || txt('문제 효과가 발동했습니다.', 'Problem effect triggered'), 'info'); });
+    socket.on('battle:item:used', (event) => { toast?.show(getBattleItemLabel(event?.payload, workshopItemLabels) || txt('아이템 사용됨', 'Item used'), 'info'); });
     socket.on('battle:spectator_chat', (msg) => {
       setSpectatorMessages((prev) => [...prev.slice(-39), { ...msg, isSpectator: true }]);
     });
     return () => { socket.disconnect(); if (socketRef.current === socket) socketRef.current = null; };
-  }, [navigate, roomId, searchParams, toast, user?.id]);
+  }, [navigate, roomId, searchParams, toast, user?.id, txt, workshopItemLabels]);
 
   // ── 틱 (타이머/쿨다운용)
   useEffect(() => {
@@ -892,7 +912,7 @@ export default function AlgorithmBattlePage() {
     const ll = lobbyTimeLeft(currentRoom);
     if (ll !== null && ll <= 0) {
       lobbyExpiredRef.current = true;
-      toast?.show('Waiting time expired.', 'warning');
+      toast?.show(txt('대기 시간이 만료되었습니다.', 'Waiting time expired.'), 'warning');
       const t = setTimeout(() => navigate('/battle', { replace: true }), 2500);
       return () => clearTimeout(t);
     }
@@ -1081,7 +1101,7 @@ export default function AlgorithmBattlePage() {
     try {
       const { data } = await api.post(`/battles/rooms/${currentRoom.id}/emote`, { emote });
       if (data.state) setState(data.state);
-    } catch (err) { toast?.show(err.response?.data?.message || 'Failed to send emote', 'error'); }
+    } catch (err) { toast?.show(err.response?.data?.message || txt('이모트 전송 실패', 'Failed to send emote'), 'error'); }
   };
 
   const useItem = async (itemType) => {
@@ -1089,7 +1109,7 @@ export default function AlgorithmBattlePage() {
     try {
       const { data } = await api.post(`/battles/rooms/${currentRoom.id}/item`, { itemType });
       if (data.state) setState(data.state);
-    } catch (err) { toast?.show(err.response?.data?.message || 'Failed to use item', 'error'); }
+    } catch (err) { toast?.show(err.response?.data?.message || txt('아이템 사용 실패', 'Failed to use item'), 'error'); }
   };
 
   const deleteRoom = async () => {
@@ -1554,7 +1574,7 @@ export default function AlgorithmBattlePage() {
           <div className="ab-room-title">
             <strong>{isDrafting ? txt('드래프트 진행 중', 'Draft in progress') : activeProblem?.title || txt('배틀', 'Battle')}</strong>
             <span>
-              {config?.title || currentRoom?.mode} ·{' '}
+              {getBattleModeTitle(currentRoom?.mode, config, uiLang)} ·{' '}
               {currentRoom?.status === 'waiting'
                 ? isDrafting ? `${txt('드래프트', 'Draft')} (${draftState?.submittedCount || 0}/${draftState?.requiredCount || 2})` : lobbyLeft != null ? `${txt('대기', 'Waiting')} (${fmtSec(lobbyLeft)} ${txt('남음', 'left')})` : txt('대기 중', 'Waiting')
                 : currentRoom?.status === 'playing'
@@ -1604,9 +1624,9 @@ export default function AlgorithmBattlePage() {
       {/* 모드 규칙 패널 */}
       {showRules && config?.rules && (
         <div style={{ margin:'0 16px', padding:'12px 16px', background:'var(--bg2)', border:'1px solid var(--border)', borderRadius:10, fontSize:13 }}>
-          <div style={{ fontWeight:700, marginBottom:8 }}>📋 {uiLang === 'ko' ? (BATTLE_MODE_KO[currentRoom?.mode]?.title || config.title) : config.title} {txt('규칙', 'Rules')}</div>
+          <div style={{ fontWeight:700, marginBottom:8 }}>📋 {getBattleModeTitle(currentRoom?.mode, config, uiLang)} {txt('규칙', 'Rules')}</div>
           <ul style={{ margin:0, paddingLeft:18, display:'flex', flexDirection:'column', gap:4 }}>
-            {(uiLang === 'ko' ? (BATTLE_MODE_KO[currentRoom?.mode]?.rules || config.rules) : config.rules).map((rule, i) => <li key={i} style={{ color:'var(--text2)' }}>{rule}</li>)}
+            {getBattleModeRules(currentRoom?.mode, config, uiLang).map((rule, i) => <li key={i} style={{ color:'var(--text2)' }}>{rule}</li>)}
             {workshopRules.map((rule, i) => (
               <li key={`workshop-${rule.id || i}`} style={{ color:'var(--purple)' }}>
                 {workshopEventLabels[rule.event] || rule.event} → {rule.action?.type || t('abActionLabel')}
@@ -1727,7 +1747,7 @@ export default function AlgorithmBattlePage() {
                       {activeProblem.title}
                       {activeProblem.tier && (
                         <span className="ab-problem-tier" style={{ marginLeft: 8, fontSize: 12, opacity: 0.6 }}>
-                          [{activeProblem.tier}]
+                          [{tierLblBattle(activeProblem.tier, uiLang)}]
                         </span>
                       )}
                     </h2>
@@ -1796,10 +1816,10 @@ export default function AlgorithmBattlePage() {
                       key={item.key}
                       onClick={() => useItem(item.key)}
                       disabled={currentRoom?.status !== 'playing' || isSpectating || itemCooldownLeft > 0}
-                      title={item.description}
+                      title={uiLang === 'ko' ? getBattleItemLabel(item, workshopItemLabels) : item.description}
                     >
                       <Shield size={13} />
-                      <span>{item.label}</span>
+                      <span>{getBattleItemLabel(item, workshopItemLabels)}</span>
                     </button>
                   ))}
                 </div>
@@ -1869,7 +1889,7 @@ export default function AlgorithmBattlePage() {
                     </div>
                   ))}
                   {[...combatEvents].reverse().map((event) => {
-                const fmt = formatCombatEvent(event, user?.id, participantById, txt);
+                const fmt = formatCombatEvent(event, user?.id, participantById, txt, workshopItemLabels);
                 if (!fmt) return null;
                 return (
                   <div key={event.id} className="ab-log-entry" style={{ borderLeft: `2px solid ${fmt.color}` }}>
@@ -1886,11 +1906,11 @@ export default function AlgorithmBattlePage() {
           </div>
 
           {/* 채팅 + 이모트 */}
-          <div className="ab-section-title">Chat / Join Alerts</div>
+          <div className="ab-section-title">{txt('채팅 / 입장 알림', 'Chat / Join Alerts')}</div>
           <div className="ab-social">
             <div className="ab-chat-feed" ref={chatFeedRef}>
               {socialEvents.length === 0 && spectatorMessages.length === 0
-                ? <div className="ab-log-empty">No messages yet.</div>
+                ? <div className="ab-log-empty">{txt('아직 메시지가 없습니다.', 'No messages yet.')}</div>
                 : [...socialEvents].slice(-40).map((event) => {
                   const fmt = formatSocialEvent(event, user?.id, participantById, txt);
                   if (!fmt) return null;
@@ -1903,7 +1923,7 @@ export default function AlgorithmBattlePage() {
                 })}
               {spectatorMessages.map((msg) => (
                 <div key={msg.id} className="ab-chat-line chat" style={{ opacity: 0.75 }}>
-                  <b>{msg.username} <span style={{ fontSize: 10, color: 'var(--text3)' }}>(spectating)</span></b>
+                  <b>{msg.username} <span style={{ fontSize: 10, color: 'var(--text3)' }}>{txt('관전 중', 'spectating')}</span></b>
                   <span>{msg.text}</span>
                 </div>
               ))}
@@ -1926,7 +1946,7 @@ export default function AlgorithmBattlePage() {
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
                 maxLength={220}
-                placeholder={isSpectating ? 'Spectator chat (gg, nice, wp...)' : 'Chat (gg, nice, wp...)'}
+                placeholder={isSpectating ? txt('관전 채팅 (gg, nice, wp...)', 'Spectator chat (gg, nice, wp...)') : txt('채팅 (gg, nice, wp...)', 'Chat (gg, nice, wp...)')}
               />
               <button type="submit" className="btn btn-ghost btn-sm">
                 <MessageCircle size={14} />
@@ -1959,7 +1979,7 @@ export default function AlgorithmBattlePage() {
       {currentRoom?.status === 'finished' && (
         <div className={`ab-result-overlay ${resultTone}`}>
           <div className="ab-result-modal">
-            <div className="ab-result-kicker">{config?.title || txt('알고리즘 배틀', 'Algorithm Battle')} {txt('결과', 'Result')}</div>
+            <div className="ab-result-kicker">{getBattleModeTitle(currentRoom?.mode, config, uiLang) || txt('알고리즘 배틀', 'Algorithm Battle')} {txt('결과', 'Result')}</div>
             <div className="ab-result-icon">{resultTone === 'win' ? '🏆' : resultTone === 'draw' ? '🤝' : resultTone === 'lose' ? '💥' : '⏱️'}</div>
             <h2>{isTerritoryMode && didWin ? txt('영토 점령 승리!', 'Territory Conquest Win!') : resultTitle}</h2>
             <p>

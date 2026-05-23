@@ -23,7 +23,7 @@ export const PROFILE_TIER_LABELS_KO = {
   gold:        '골드',
   platinum:    '플래티넘',
   emerald:     '에메랄드',
-  diamond:     '다이아',
+  diamond:     '다이아몬드',
   master:      '마스터',
   grandmaster: '그랜드마스터',
   challenger:  '챌린저',

@@ -63,4 +63,5 @@
 .ai-gen-title {
   font-size: 14px; font-weight: 700;
   color: var(--blue); margin-bottom: 16px;
+  display: flex; align-items: center; gap: 8px;
 }

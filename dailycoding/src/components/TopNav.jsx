@@ -7,7 +7,7 @@ import { useSubscriptionStatus } from '../hooks/useSubscriptionStatus.js';
 import { useTheme } from '../context/ThemeContext';
 import { useLang } from '../context/LangContext.jsx';
 import { PLAN_META } from '../data/pricingPlans.js';
-import { PROFILE_TIER_LABELS_KO } from '../pages/profilePageUtils.js';
+import { getTierLabel } from '../utils/labelMaps.js';
 import ProfileAvatar from './ProfileAvatar.jsx';
 import ServerStatus from './ServerStatus.jsx';
 import {
@@ -566,7 +566,7 @@ export default function TopNav() {
                   <div style={{
                     marginTop:6,fontSize:11,fontFamily:'Space Mono,monospace',
                     color:tc,fontWeight:700,
-                  }}>● {lang === 'ko' ? (PROFILE_TIER_LABELS_KO[user?.tier || 'unranked'] || 'UNRANKED') : (user?.tier === 'unranked' ? 'UNRANKED' : user?.tier?.toUpperCase())} · {t('ratingPoints').replace('{n}', String(user?.rating || 0))}</div>
+                  }}>● {getTierLabel(user?.tier || 'unranked', lang)} · {t('ratingPoints').replace('{n}', String(user?.rating || 0))}</div>
                 </div>
                 {[
                   {labelKey:'myProfile', Icon: UserIcon, path:'/profile'},

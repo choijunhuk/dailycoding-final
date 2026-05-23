@@ -8,6 +8,8 @@ import { useLang } from '../context/LangContext.jsx';
 import { MIN_HIDDEN_TESTCASES } from '../data/problems';
 import { JUDGE_LANGUAGE_OPTIONS } from '../data/judgeLanguages.js';
 import { getDateLocale, pickLangText } from '../utils/languageMode.js';
+import { getProblemTypeLabel, getStatusLabel, getTagLabel, getTierLabel } from '../utils/labelMaps.js';
+import { TechIcon } from '../components/icons/BrandIcon.jsx';
 import './AdminPage.css';
 
 const TIER_OPTIONS = ['bronze','silver','gold','platinum','diamond'];
@@ -598,18 +600,27 @@ export default function AdminPage() {
     </div>
   );
 
-  const STATUS_LABELS = { live:'🔴 Live', upcoming:'📅 Upcoming', waiting:'📅 Waiting', ended:'🏁 Ended' };
+  const STATUS_LABELS = { live:getStatusLabel('live', lang), upcoming:getStatusLabel('upcoming', lang), waiting:getStatusLabel('waiting', lang), ended:getStatusLabel('ended', lang), running:getStatusLabel('running', lang) };
   const STATUS_COLORS = { live:'var(--red)', upcoming:'var(--yellow)', waiting:'var(--yellow)', ended:'var(--text3)' };
 
   // ── 목록 뷰
   if (view==='list') return (
     <div className="admin-page">
       <div className="admin-header fade-up">
-        <div><h1>👑 Admin Panel</h1><p>Manage problems, contests, and users.</p></div>
+        <div><h1>{txt('관리자 패널', 'Admin Panel')}</h1><p>{txt('문제, 대회, 사용자를 관리합니다.', 'Manage problems, contests, and users.')}</p></div>
         {activeTab==='problems' && <button className="btn btn-primary" onClick={()=>{setForm(createEmptyForm());setEditTarget(null);setAiPreview(null);setView('create');}}>+ {txt('문제 추가', 'Add Problem')}</button>}
       </div>
       <div className="admin-tabs fade-up">
-        {[['problems','📝 Problems'],['contests','🏆 Contests'],['users','👥 Users'],['battle','⚔️ Battle'],['stats','📊 Stats'],['flagged','🛡️ Flagged'],['system','⚙️ System'],['community','💡 Submissions']].map(([k,l])=>(
+        {[
+          ['problems', txt('문제', 'Problems')],
+          ['contests', txt('대회', 'Contests')],
+          ['users', txt('사용자', 'Users')],
+          ['battle', txt('배틀', 'Battle')],
+          ['stats', txt('통계', 'Stats')],
+          ['flagged', txt('신고됨', 'Flagged')],
+          ['system', txt('시스템', 'System')],
+          ['community', txt('제출', 'Submissions')],
+        ].map(([k,l])=>(
           <button key={k} className={`at-btn ${activeTab===k?'active':''}`} onClick={()=>setActiveTab(k)}>{l}</button>
         ))}
       </div>
@@ -631,10 +642,10 @@ export default function AdminPage() {
                   <tr key={p.id} className="at-row">
                     <td className="mono" style={{fontSize:11,color:'var(--text3)'}}>#{p.id}</td>
                     <td style={{fontWeight:600}}>{p.title}</td>
-                    <td><span className="tag" style={{fontSize:10,background:'var(--bg3)',color:'var(--text2)'}}>{p.problemType || 'coding'}</span></td>
-                    <td><span style={{fontSize:11,fontWeight:700,fontFamily:'Space Mono,monospace',color:TIER_COLORS[p.tier]}}>● {p.tier}</span></td>
+                    <td><span className="tag" style={{fontSize:10,background:'var(--bg3)',color:'var(--text2)'}}>{getProblemTypeLabel(p.problemType || 'coding', lang)}</span></td>
+                    <td><span style={{fontSize:11,fontWeight:700,fontFamily:'Space Mono,monospace',color:TIER_COLORS[p.tier]}}>● {getTierLabel(p.tier, lang)}</span></td>
                     <td className="mono" style={{fontSize:12}}>{p.difficulty}/10</td>
-                    <td><span className="tag" style={{background:p.visibility==='contest'?'var(--purple)':'var(--bg3)',color:p.visibility==='contest'?'#fff':'var(--text2)',fontSize:10}}>{p.visibility==='contest'?'🏆 Contest':'🌍 All'}</span></td>
+                    <td><span className="tag" style={{background:p.visibility==='contest'?'var(--purple)':'var(--bg3)',color:p.visibility==='contest'?'#fff':'var(--text2)',fontSize:10}}>{p.visibility==='contest'?txt('대회', 'Contest'):txt('전체', 'All')}</span></td>
                     <td className="mono" style={{fontSize:12,color:(p.hiddenCount||0) >= MIN_HIDDEN_TESTCASES ? 'var(--green)' : 'var(--orange)'}}>{p.hiddenCount || 0}</td>
                     <td className="mono" style={{fontSize:12,color:'var(--text2)'}}>{p.submissions||0}</td>
                     <td><div style={{display:'flex',gap:5}}>
@@ -669,9 +680,9 @@ export default function AdminPage() {
                     <td className="mono" style={{fontSize:12}}>{c.participants||0}/{c.max||20}</td>
                     <td className="mono" style={{fontSize:12,color:'var(--text2)'}}>{c.duration||60}min</td>
                     <td><div style={{display:'flex',gap:5,flexWrap:'wrap'}}>
-                      {(c.status==='upcoming'||c.status==='waiting')&&<button className="btn btn-sm" style={{background:'rgba(86,211,100,.1)',color:'var(--green)',border:'1px solid rgba(86,211,100,.3)',fontSize:11}} onClick={()=>handleContestStart(c.id)}>▶ Start</button>}
-                      {(c.status==='live'||c.status==='running')&&<button className="btn btn-sm" style={{background:'rgba(227,179,65,.1)',color:'var(--yellow)',border:'1px solid rgba(227,179,65,.3)',fontSize:11}} onClick={()=>handleContestEnd(c.id)}>⏹ End</button>}
-                      <button className="btn btn-sm" style={{background:'rgba(248,81,73,.1)',color:'var(--red)',border:'1px solid rgba(248,81,73,.3)',fontSize:11}} onClick={()=>handleDeleteContest(c.id,c.name)}>🗑 Delete</button>
+                      {(c.status==='upcoming'||c.status==='waiting')&&<button className="btn btn-sm" style={{background:'rgba(86,211,100,.1)',color:'var(--green)',border:'1px solid rgba(86,211,100,.3)',fontSize:11}} onClick={()=>handleContestStart(c.id)}>{txt('시작', 'Start')}</button>}
+                      {(c.status==='live'||c.status==='running')&&<button className="btn btn-sm" style={{background:'rgba(227,179,65,.1)',color:'var(--yellow)',border:'1px solid rgba(227,179,65,.3)',fontSize:11}} onClick={()=>handleContestEnd(c.id)}>{txt('종료', 'End')}</button>}
+                      <button className="btn btn-sm" style={{background:'rgba(248,81,73,.1)',color:'var(--red)',border:'1px solid rgba(248,81,73,.3)',fontSize:11}} onClick={()=>handleDeleteContest(c.id,c.name)}>{txt('삭제', 'Delete')}</button>
                     </div></td>
                   </tr>
                 ))}
@@ -1020,18 +1031,18 @@ export default function AdminPage() {
       {activeTab==='system' && (
         <div className="fade-up" style={{maxWidth:640}}>
           <div className="card" style={{padding:24}}>
-            <h3 style={{marginBottom:12}}>⚙️ System Maintenance</h3>
+            <h3 style={{marginBottom:12}}>{txt('시스템 유지관리', 'System Maintenance')}</h3>
             <p style={{fontSize:13,color:'var(--text2)',marginBottom:24,lineHeight:1.6}}>
-              Real-time data (rankings, activity heatmaps, etc.) uses Redis cache for performance.<br/>
-              Use the buttons below if you need to clear stale or inconsistent cached data.
+              {txt('랭킹, 활동 히트맵 등 실시간 데이터는 성능을 위해 Redis 캐시를 사용합니다.', 'Real-time data (rankings, activity heatmaps, etc.) uses Redis cache for performance.')}<br/>
+              {txt('오래되었거나 일관성이 깨진 캐시를 지워야 할 때 아래 버튼을 사용하세요.', 'Use the buttons below if you need to clear stale or inconsistent cached data.')}
             </p>
 
             <div style={{display:'flex',flexDirection:'column',gap:12}}>
               {[
-                {id:'leaderboards', label:'🏆 랭킹 & 리더보드 캐시', desc:'대회 랭킹 및 전체 리더보드 데이터를 초기화합니다.'},
-                {id:'heatmaps',     label:'🌱 사용자 활동 히트맵 캐시', desc:'프로필에 사용되는 일별 풀이 기록 캐시를 초기화합니다.'},
-                {id:'problems',     label:'📝 문제 정보 캐시',           desc:'문제 상세 및 목록 캐시를 초기화합니다.'},
-                {id:'all',          label:'🔥 전체 캐시 초기화',              desc:'시스템 전체의 캐시 데이터를 삭제합니다.', danger:true},
+                {id:'leaderboards', label:txt('랭킹 & 리더보드 캐시', 'Ranking & leaderboard cache'), desc:txt('대회 랭킹 및 전체 리더보드 데이터를 초기화합니다.', 'Clear contest rankings and global leaderboard data.')},
+                {id:'heatmaps',     label:txt('사용자 활동 히트맵 캐시', 'User activity heatmap cache'), desc:txt('프로필에 사용되는 일별 풀이 기록 캐시를 초기화합니다.', 'Clear daily solve-history cache used on profiles.')},
+                {id:'problems',     label:txt('문제 정보 캐시', 'Problem info cache'), desc:txt('문제 상세 및 목록 캐시를 초기화합니다.', 'Clear problem detail and list cache.')},
+                {id:'all',          label:txt('전체 캐시 초기화', 'Clear all cache'), desc:txt('시스템 전체의 캐시 데이터를 삭제합니다.', 'Clear all cached system data.'), danger:true},
               ].map(item => (
                 <div key={item.id} style={{
                   display:'flex',alignItems:'center',gap:16,padding:16,
@@ -1211,16 +1222,16 @@ export default function AdminPage() {
 
       {aiPanel && (
         <div className="card ai-gen-panel fade-up">
-          <div className="ai-gen-title">🤖 Auto-generate with Gemini AI</div>
+          <div className="ai-gen-title"><TechIcon name="Gemini AI" size={18} decorative={false} /> {txt('Gemini AI로 자동 생성', 'Auto-generate with Gemini AI')}</div>
           <div className="cf-row">
             <div className="form-group" style={{flex:1}}><label>{txt('문제 유형', 'Problem Type')}</label><select value={aiForm.problemType} onChange={e=>setAiForm(p=>({...p,problemType:e.target.value}))}>{PROBLEM_TYPE_OPTIONS.map(o=><option key={o.value} value={o.value}>{txt(o.ko, o.label)}</option>)}</select></div>
-            <div className="form-group" style={{flex:1}}><label>{txt('티어','Tier')}</label><select value={aiForm.tier} onChange={e=>setAiForm(p=>({...p,tier:e.target.value}))}>{TIER_OPTIONS.map(t=><option key={t} value={t}>{t}</option>)}</select></div>
+            <div className="form-group" style={{flex:1}}><label>{txt('티어','Tier')}</label><select value={aiForm.tier} onChange={e=>setAiForm(p=>({...p,tier:e.target.value}))}>{TIER_OPTIONS.map(t=><option key={t} value={t}>{getTierLabel(t, lang)}</option>)}</select></div>
             <div className="form-group" style={{flex:1}}><label>{txt('난이도','Difficulty')}</label><input type="number" min="1" max="10" value={aiForm.difficulty} onChange={e=>setAiForm(p=>({...p,difficulty:e.target.value}))} /></div>
             <div className="form-group" style={{flex:2}}><label>{txt('주제/키워드','Topic/Keywords')}</label><input placeholder={txt('예: fibonacci, NameError, 중복 제거...','e.g. fibonacci, NameError, deduplication...')} value={aiForm.topic} onChange={e=>setAiForm(p=>({...p,topic:e.target.value}))} /></div>
           </div>
           <div className="form-group">
             <label>{txt('알고리즘 태그','Algorithm Tags')}</label>
-            <div className="tag-picker">{TAG_OPTIONS.map(t=><button key={t} type="button" className={`tag-pick-btn ${aiForm.tags.includes(t)?'selected':''}`} onClick={()=>toggleAiTag(t)}>{t}</button>)}</div>
+            <div className="tag-picker">{TAG_OPTIONS.map(t=><button key={t} type="button" className={`tag-pick-btn ${aiForm.tags.includes(t)?'selected':''}`} onClick={()=>toggleAiTag(t)}>{getTagLabel(t, lang)}</button>)}</div>
           </div>
           <div style={{display:'flex',alignItems:'center',gap:12}}>
             <button className="btn btn-primary" onClick={handleAiGenerate} disabled={aiGenerating} style={{padding:'10px 24px'}}>

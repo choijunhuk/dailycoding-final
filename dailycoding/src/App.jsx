@@ -20,6 +20,7 @@ import ErrorBoundary from './components/ErrorBoundary.jsx';
 import api from './api.js';
 import { applyAppTypographyPreference } from './utils/fontPreferences.js';
 import { resolvePostLoginRedirect } from './utils/redirects.js';
+import { MAIN_TECH_STACK, TechIcon } from './components/icons/BrandIcon.jsx';
 import './index.css';
 
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -225,7 +226,14 @@ function AppInner() {
               <a href="/terms"   style={{color:'var(--text2)',textDecoration:'none'}} onClick={e=>{e.preventDefault();navigate('/terms');}}>{t('authTermsLabel')}</a>
               <a href="/privacy" style={{color:'var(--text2)',textDecoration:'none'}} onClick={e=>{e.preventDefault();navigate('/privacy');}}>{t('authPrivacyLabel')}</a>
               <span style={{color:'var(--text3)'}}>·</span>
-              <span style={{fontSize:10,color:'var(--text3)'}}>React · Node.js · MySQL · Redis · Docker · Gemini AI</span>
+              <span style={{display:'inline-flex',alignItems:'center',gap:8,flexWrap:'wrap',justifyContent:'center',fontSize:10,color:'var(--text3)'}}>
+                {MAIN_TECH_STACK.map((tech) => (
+                  <span key={tech} style={{display:'inline-flex',alignItems:'center',gap:3}}>
+                    <TechIcon name={tech} size={12} />
+                    {tech}
+                  </span>
+                ))}
+              </span>
             </div>
           </footer>
         )}
