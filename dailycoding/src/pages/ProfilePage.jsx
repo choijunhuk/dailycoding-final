@@ -493,7 +493,7 @@ export default function ProfilePage() {
               <span className="profile-username">{headerDisplayName}</span>
               <span className="profile-tier-badge" style={{
                 background:`${tc}20`, color:tc, border:`1px solid ${tc}50`,
-              }}>{PROFILE_TIER_LABELS[user?.tier || 'unranked']}</span>
+              }}>{lang === 'ko' ? (PROFILE_TIER_LABELS_KO[user?.tier || 'unranked'] || PROFILE_TIER_LABELS[user?.tier || 'unranked']) : PROFILE_TIER_LABELS[user?.tier || 'unranked']}</span>
               {subPlan?.tier && subPlan.tier !== 'free' && (
                 <span className="profile-sub-badge" style={{
                   background: subPlan.tier==='team'?'rgba(255,215,0,.15)':'rgba(121,192,255,.15)',
@@ -503,7 +503,7 @@ export default function ProfilePage() {
               )}
               {equippedTitle && (
                 <span className="profile-title-badge">
-                  {equippedTitleMeta?.icon} {equippedTitleMeta?.name}
+                  {equippedTitleMeta?.icon} {lang === 'ko' ? (equippedTitleMeta?.name_ko || equippedTitleMeta?.name) : equippedTitleMeta?.name}
                 </span>
               )}
               {profileDraftChanged && <span className="profile-unsaved-pill">{txt('미저장', 'Unsaved')}</span>}
@@ -1044,11 +1044,11 @@ export default function ProfilePage() {
                     {equippedBadgeMeta && <span>{equippedBadgeMeta.icon}</span>}
                     <strong>{headerDisplayName}</strong>
                     <span className="profile-live-tier" style={{ color:tc, borderColor:`${tc}55`, background:`${tc}16` }}>
-                      {PROFILE_TIER_LABELS[user?.tier || 'unranked']}
+                      {lang === 'ko' ? (PROFILE_TIER_LABELS_KO[user?.tier || 'unranked'] || PROFILE_TIER_LABELS[user?.tier || 'unranked']) : PROFILE_TIER_LABELS[user?.tier || 'unranked']}
                     </span>
                   </div>
                   <p>{headerBio || txt('소개를 추가하면 프로필 상단에 표시됩니다.', 'Add a bio to show it at the top of your profile.')}</p>
-                  {equippedTitleMeta && <div className="profile-live-title">{equippedTitleMeta.icon} {equippedTitleMeta.name}</div>}
+                  {equippedTitleMeta && <div className="profile-live-title">{equippedTitleMeta.icon} {lang === 'ko' ? (equippedTitleMeta.name_ko || equippedTitleMeta.name) : equippedTitleMeta.name}</div>}
                   <div className="profile-live-chips">
                     {headerTechStack.slice(0, 5).map((tech) => <span key={tech}>{tech}</span>)}
                     {countFilledProfileLinks(headerSocialLinks) > 0 && <span>{countFilledProfileLinks(headerSocialLinks)}{txt('개 링크', ' links')}</span>}

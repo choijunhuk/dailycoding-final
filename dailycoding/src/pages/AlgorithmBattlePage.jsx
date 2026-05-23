@@ -59,12 +59,12 @@ const FALLBACK_BANNABLE_TAGS = [
 ];
 const FALLBACK_PROBLEM_TIERS = ['bronze', 'silver', 'gold', 'platinum', 'diamond'];
 const PROBLEM_TIER_LABELS = {
-  bronze: 'Bronze',
-  silver: 'Silver',
-  gold: 'Gold',
-  platinum: 'Platinum',
-  diamond: 'Diamond',
+  bronze: 'Bronze', silver: 'Silver', gold: 'Gold', platinum: 'Platinum', diamond: 'Diamond',
 };
+const PROBLEM_TIER_LABELS_KO = {
+  bronze: '브론즈', silver: '실버', gold: '골드', platinum: '플래티넘', diamond: '다이아',
+};
+const tierLblBattle = (tier, lang) => lang === 'ko' ? (PROBLEM_TIER_LABELS_KO[tier] || PROBLEM_TIER_LABELS[tier] || tier) : (PROBLEM_TIER_LABELS[tier] || tier);
 const DEFAULT_PROBLEM_FILTERS = {
   tierMode: 'auto',
   minTier: 'silver',
@@ -101,17 +101,18 @@ function sanitizeProblemFilters(filters, tiers) {
   };
 }
 
-function getProblemFilterSummary(filters, t) {
+function getProblemFilterSummary(filters, t, lang = 'en') {
+  const tl = (tier) => tierLblBattle(tier, lang);
   const parts = [];
-  if (filters.tierMode === 'min') parts.push(`${PROBLEM_TIER_LABELS[filters.minTier] || filters.minTier}+`);
-  if (filters.tierMode === 'max') parts.push(`≤${PROBLEM_TIER_LABELS[filters.maxTier] || filters.maxTier}`);
-  if (filters.tierMode === 'range') parts.push(`${PROBLEM_TIER_LABELS[filters.minTier] || filters.minTier}~${PROBLEM_TIER_LABELS[filters.maxTier] || filters.maxTier}`);
+  if (filters.tierMode === 'min') parts.push(`${tl(filters.minTier)}+`);
+  if (filters.tierMode === 'max') parts.push(`≤${tl(filters.maxTier)}`);
+  if (filters.tierMode === 'range') parts.push(`${tl(filters.minTier)}~${tl(filters.maxTier)}`);
   if (filters.tierMode === 'only' && filters.allowedTiers.length) {
-    parts.push(filters.allowedTiers.map((tier) => PROBLEM_TIER_LABELS[tier] || tier).join(', '));
+    parts.push(filters.allowedTiers.map((tier) => tl(tier)).join(', '));
   }
-  if (filters.bannedTiers.length) parts.push(withVars(t('abBannedTiers'), { tiers: filters.bannedTiers.map((tier) => PROBLEM_TIER_LABELS[tier] || tier).join(', ') }));
-  if (filters.requiredTags.length) parts.push(withVars(t('abRequiredTags'), { tags: filters.requiredTags.join(', ') }));
-  if (filters.bannedTags.length) parts.push(withVars(t('abBannedTags'), { tags: filters.bannedTags.join(', ') }));
+  if (filters.bannedTiers.length) parts.push(withVars(t('abBannedTiers'), { tiers: filters.bannedTiers.map((tier) => tl(tier)).join(', ') }));
+  if (filters.requiredTags.length) parts.push(withVars(t('abRequiredTags'), { tags: filters.requiredTags.map((tag) => getTagLabelLang(tag, lang)).join(', ') }));
+  if (filters.bannedTags.length) parts.push(withVars(t('abBannedTags'), { tags: filters.bannedTags.map((tag) => getTagLabelLang(tag, lang)).join(', ') }));
   return parts.length ? parts.join(' · ') : t('abAutoRecommend');
 }
 
@@ -351,7 +352,7 @@ function DraftBanPanel({
                 onClick={() => canSubmit && setBannedTier((prev) => (prev === tier ? '' : tier))}
                 disabled={!canSubmit}
               >
-                {PROBLEM_TIER_LABELS[tier] || tier}
+                {tierLblBattle(tier, draftLang)}
               </button>
             ))}
           </div>
@@ -372,7 +373,7 @@ function DraftBanPanel({
                       onClick={() => canSubmit && togglePickTag(tag)}
                       disabled={!canSubmit}
                     >
-                      {tag}
+                      {getTagLabelLang(tag, draftLang)}
                     </button>
                   ))}
                 </div>
@@ -382,7 +383,7 @@ function DraftBanPanel({
         </div>
 
         <div className="ab-draft-block wide">
-          <label>Ban Tags (max 2)</label>
+          <label>{dtxt('밴 태그 (최대 2개)', 'Ban Tags (max 2)')}</label>
           <div className="ab-tag-groups compact">
             {tagGroups.map((group) => (
               <div key={`draft-ban-${group.label}`} className="ab-tag-group">
@@ -396,7 +397,7 @@ function DraftBanPanel({
                       onClick={() => canSubmit && toggleBanTag(tag)}
                       disabled={!canSubmit}
                     >
-                      {tag}
+                      {getTagLabelLang(tag, draftLang)}
                     </button>
                   ))}
                 </div>
@@ -1149,7 +1150,7 @@ export default function AlgorithmBattlePage() {
   // ════════════════════════════════════════════════
   if (!roomId) {
     const isTerritorySelected = selectedMode === 'territory';
-    const filterSummary = getProblemFilterSummary(normalizedProblemFilters, t);
+    const filterSummary = getProblemFilterSummary(normalizedProblemFilters, t, uiLang);
     return (
       <div className="ab-page">
         <div className="ab-header">
@@ -1334,13 +1335,13 @@ export default function AlgorithmBattlePage() {
                       <div className="ab-tier-select-row">
                         {['min', 'range'].includes(normalizedProblemFilters.tierMode) && (
                           <select value={normalizedProblemFilters.minTier} onChange={(e) => updateProblemFilters({ minTier: e.target.value })}>
-                            {problemTiers.map((tier) => <option key={tier} value={tier}>{PROBLEM_TIER_LABELS[tier] || tier}+</option>)}
+                            {problemTiers.map((tier) => <option key={tier} value={tier}>{tierLblBattle(tier, uiLang)}+</option>)}
                           </select>
                         )}
                         {normalizedProblemFilters.tierMode === 'range' && <span>~</span>}
                         {['max', 'range'].includes(normalizedProblemFilters.tierMode) && (
                           <select value={normalizedProblemFilters.maxTier} onChange={(e) => updateProblemFilters({ maxTier: e.target.value })}>
-                            {problemTiers.map((tier) => <option key={tier} value={tier}>≤{PROBLEM_TIER_LABELS[tier] || tier}</option>)}
+                            {problemTiers.map((tier) => <option key={tier} value={tier}>≤{tierLblBattle(tier, uiLang)}</option>)}
                           </select>
                         )}
                       </div>
@@ -1354,7 +1355,7 @@ export default function AlgorithmBattlePage() {
                             className={normalizedProblemFilters.allowedTiers.includes(tier) ? 'active include' : ''}
                             onClick={() => toggleFilterTier('allowedTiers', tier)}
                           >
-                            {PROBLEM_TIER_LABELS[tier] || tier}
+                            {tierLblBattle(tier, uiLang)}
                           </button>
                         ))}
                       </div>
@@ -1371,7 +1372,7 @@ export default function AlgorithmBattlePage() {
                           className={normalizedProblemFilters.bannedTiers.includes(tier) ? 'active danger' : ''}
                           onClick={() => toggleFilterTier('bannedTiers', tier)}
                         >
-                          {PROBLEM_TIER_LABELS[tier] || tier}
+                          {tierLblBattle(tier, uiLang)}
                         </button>
                       ))}
                     </div>
