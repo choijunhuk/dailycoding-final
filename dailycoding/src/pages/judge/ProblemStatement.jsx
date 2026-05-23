@@ -72,7 +72,7 @@ export default function ProblemStatement({
     {gameMode && (
       <div className="judge-game-banner">
         <div>
-          <strong>{gameMode === 'ghost' ? '👻 Ghost Battle' : gameMode === 'dungeon' ? '🐉 Today\'s Dungeon' : '🎮 Game Mode'}</strong>
+          <strong>{gameMode === 'ghost' ? `👻 ${txt('고스트 배틀', 'Ghost Battle')}` : gameMode === 'dungeon' ? `🐉 ${txt('오늘의 던전', "Today's Dungeon")}` : `🎮 ${txt('게임 모드', 'Game Mode')}`}</strong>
           <small>
             {gameMode === 'ghost'
               ? `${ghostChallenge?.ghost?.username || 'Ghost'} target: ${ghostChallenge?.ghost?.targetTimeSec ? formatTimer(ghostChallenge.ghost.targetTimeSec) : '-'}`
@@ -81,7 +81,7 @@ export default function ProblemStatement({
                 : txt('정답 제출 시 Game Hub 진행도 업데이트', 'Submit correct answer to update Game Hub progress.')}
           </small>
         </div>
-        <button className="btn btn-ghost btn-sm" onClick={() => navigate('/game')}>Game Hub</button>
+        <button className="btn btn-ghost btn-sm" onClick={() => navigate('/game')}>{txt('게임 허브', 'Game Hub')}</button>
       </div>
     )}
 

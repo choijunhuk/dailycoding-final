@@ -224,37 +224,38 @@ export const Submission = {
     return (rows||[]).map(r => ({ lang: r.lang, cnt: Number(r.cnt) }));
   },
 
-  getRecoveryAdvice(result, detail = '') {
+  getRecoveryAdvice(result, detail = '', lang = 'en') {
     const text = String(detail || '').toLowerCase();
+    const isKo = lang === 'ko';
     if (result === 'timeout') {
       return {
-        cause: 'Time Limit Exceeded',
-        action: 'Try reducing iteration count and time complexity first.',
+        cause: isKo ? '시간 초과' : 'Time Limit Exceeded',
+        action: isKo ? '반복 횟수를 줄이고 시간 복잡도를 먼저 최적화해 보세요.' : 'Try reducing iteration count and time complexity first.',
         priority: 'high',
       };
     }
     if (result === 'compile') {
       return {
-        cause: 'Compile Error',
-        action: 'Check language selection, imports, function names, and I/O format.',
+        cause: isKo ? '컴파일 오류' : 'Compile Error',
+        action: isKo ? '언어 선택, import, 함수명, 입출력 형식을 확인하세요.' : 'Check language selection, imports, function names, and I/O format.',
         priority: 'medium',
       };
     }
     if (result === 'error' || text.includes('runtime')) {
       return {
-        cause: 'Runtime Error',
-        action: 'Reproduce edge cases like empty input, index out of bounds, or division by zero.',
+        cause: isKo ? '런타임 오류' : 'Runtime Error',
+        action: isKo ? '빈 입력, 인덱스 초과, 0 나누기 등 엣지케이스를 재현해 보세요.' : 'Reproduce edge cases like empty input, index out of bounds, or division by zero.',
         priority: 'medium',
       };
     }
     return {
-      cause: 'Wrong Answer',
-      action: 'Trace through examples by hand and add min/max boundary cases.',
+      cause: isKo ? '오답' : 'Wrong Answer',
+      action: isKo ? '예제를 손으로 직접 추적하고 최솟값/최댓값 경계 케이스를 추가해 보세요.' : 'Trace through examples by hand and add min/max boundary cases.',
       priority: 'high',
     };
   },
 
-  async getRecoveryQueue(userId, { limit = 5 } = {}) {
+  async getRecoveryQueue(userId, { limit = 5, lang = 'en' } = {}) {
     const cap = Math.min(Math.max(1, Number(limit) || 5), 12);
     const rows = await query(
       `SELECT s.id, s.problem_id, s.lang, s.result, s.detail, s.submitted_at,
@@ -294,7 +295,7 @@ export const Submission = {
     );
 
     return (rows || []).map((row) => {
-      const advice = this.getRecoveryAdvice(row.result, row.detail);
+      const advice = this.getRecoveryAdvice(row.result, row.detail, lang);
       return {
         submissionId: row.id,
         problemId: row.problem_id,

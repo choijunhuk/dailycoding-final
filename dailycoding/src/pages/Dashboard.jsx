@@ -448,11 +448,11 @@ export default function Dashboard() {
       <div className="dashboard-game-banner card card-hover" onClick={() => navigate('/game')} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter') navigate('/game'); }}>
         <div className="dashboard-game-banner-icon"><Sparkles size={22} /></div>
         <div className="dashboard-game-banner-body">
-          <span>NEW GAME HUB</span>
-          <strong>{txt('Ghost Battle · Daily Dungeon · 시즌 정복 — 한 곳에서', 'Ghost Battle · Daily Dungeon · Season Conquest — all in one place')}</strong>
-          <small>Ghost {gameSummary.ghost} · Dungeon {gameSummary.dungeon}% · {txt('영역', 'Territories')} {gameSummary.territory}</small>
+          <span>{txt('새 게임 허브', 'NEW GAME HUB')}</span>
+          <strong>{txt('고스트 배틀 · 데일리 던전 · 시즌 정복 — 한 곳에서', 'Ghost Battle · Daily Dungeon · Season Conquest — all in one place')}</strong>
+          <small>{txt('고스트', 'Ghost')} {gameSummary.ghost} · {txt('던전', 'Dungeon')} {gameSummary.dungeon}% · {txt('영역', 'Territories')} {gameSummary.territory}</small>
         </div>
-        <button className="btn btn-primary btn-sm" onClick={(e) => { e.stopPropagation(); navigate('/game'); }}>Game Hub</button>
+        <button className="btn btn-primary btn-sm" onClick={(e) => { e.stopPropagation(); navigate('/game'); }}>{txt('게임 허브', 'Game Hub')}</button>
       </div>
 
       {dailyFocusPlan.length > 0 && (

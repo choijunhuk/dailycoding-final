@@ -28,6 +28,8 @@ import './JudgePage.css';
 
 const TROUBLESHOOTING_TYPES = new Set(['troubleshooting', 'performance-fix', 'refactor-fix']);
 
+const TIER_SHORT_KO = { unranked: '비랭', iron: '아이언', bronze: '브론즈', silver: '실버', gold: '골드', platinum: '플래티넘', emerald: '에메랄드', diamond: '다이아몬드', master: '마스터', grandmaster: '그마', challenger: '챌린저' };
+
 function isTroubleshootingType(problemType) {
   return TROUBLESHOOTING_TYPES.has(problemType || '');
 }
@@ -911,7 +913,7 @@ export default function JudgePage() {
                       onMouseLeave={e=>e.currentTarget.style.borderColor='var(--border)'}
                     >
                       <span style={{ fontSize:10, fontWeight:700, color:t.color||'var(--text3)', minWidth:28 }}>
-                        {(p.tier||'?').slice(0,3).toUpperCase()}
+                        {uiLang === 'ko' ? (TIER_SHORT_KO[p.tier] || p.tier || '?') : (p.tier||'?').slice(0,3).toUpperCase()}
                       </span>
                       <span style={{ fontSize:13, color:solved[p.id]?'var(--green)':'var(--text)', flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                         {solved[p.id]&&'✓ '}{p.title}

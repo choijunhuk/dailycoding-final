@@ -416,15 +416,18 @@ router.get('/stats', auth, async (req, res) => {
 // GET /api/submissions/recovery
 router.get('/recovery', auth, async (req, res) => {
   try {
+    const lang = req.headers['x-language'] === 'ko' ? 'ko' : 'en';
     const recoveryQueue = await Submission.getRecoveryQueue(req.user.id, {
       limit: req.query.limit,
+      lang,
     });
+    const isKo = lang === 'ko';
     res.json({
       count: recoveryQueue.length,
       items: recoveryQueue,
       summary: recoveryQueue.length > 0
-        ? 'Recovering recently failed problems first is more efficient for skill improvement per unit time.'
-        : 'No unresolved wrong answers. Try new problems or battles to increase the difficulty.',
+        ? (isKo ? '최근 실패한 문제부터 복습하면 단위 시간당 실력 향상 효율이 높습니다.' : 'Recovering recently failed problems first is more efficient for skill improvement per unit time.')
+        : (isKo ? '미해결 오답이 없습니다. 새 문제나 배틀에 도전해 난이도를 높여보세요.' : 'No unresolved wrong answers. Try new problems or battles to increase the difficulty.'),
     });
   } catch (err) {
     console.error('[submissions/recovery]', err);

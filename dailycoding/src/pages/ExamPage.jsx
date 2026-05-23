@@ -316,10 +316,10 @@ export default function ExamPage() {
 
               {problemType === 'fill-blank' && (
                 <div style={{ flex: 1, overflowY: 'auto' }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12, color: 'var(--text2)' }}>Fill in the Blanks</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12, color: 'var(--text2)' }}>{lang === 'ko' ? '빈칸 채우기' : 'Fill in the Blanks'}</div>
                   {(Array.isArray(specialConfig?.blanks) ? specialConfig.blanks : []).map((_, index) => (
                     <div key={index} style={{ marginBottom: 10 }}>
-                      <label style={{ fontSize: 12, color: 'var(--text3)', display: 'block', marginBottom: 4 }}>Blank {index + 1}</label>
+                      <label style={{ fontSize: 12, color: 'var(--text3)', display: 'block', marginBottom: 4 }}>{lang === 'ko' ? `${index + 1}번 빈칸` : `Blank ${index + 1}`}</label>
                       <input
                         value={currentAnswer.blankAnswers?.[index] || ''}
                         onChange={e => setBlankAnswer(index, e.target.value)}
