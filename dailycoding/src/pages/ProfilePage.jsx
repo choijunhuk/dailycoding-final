@@ -570,7 +570,7 @@ export default function ProfilePage() {
               <div className="profile-tier-progress-container">
                 <div className="profile-tier-progress-labels">
                   <span style={{ color:tc, fontWeight:700 }}>{PROFILE_TIER_LABELS[user?.tier||'unranked']}</span>
-                  <span>{Math.max(0,(nextThres||0)-(user?.rating||0))} {txt('점 남음', 'pts to')} {nextTier.toUpperCase()}</span>
+                  <span>{Math.max(0,(nextThres||0)-(user?.rating||0))} {txt('점 남음', 'pts to')} {lang === 'ko' ? (PROFILE_TIER_LABELS_KO[nextTier] || nextTier.toUpperCase()) : nextTier.toUpperCase()}</span>
                 </div>
                 <div className="profile-tier-progress-bar-bg">
                   <div className="profile-tier-progress-bar-fill" style={{

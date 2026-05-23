@@ -4,6 +4,7 @@ import api from '../api.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useLang } from '../context/LangContext.jsx';
 import ProfileAvatar from './ProfileAvatar.jsx';
+import { PROFILE_TIER_LABELS_KO } from '../pages/profilePageUtils.js';
 
 const TAB_TYPES = ['followers', 'following'];
 
@@ -183,7 +184,7 @@ export default function FollowListModal({ userId, initialType = 'followers', ope
               </div>
               <div style={{ display: 'grid', justifyItems: 'end', gap: 5 }}>
                 <span style={{ fontSize: 11, color: 'var(--text2)', border: '1px solid var(--border)', borderRadius: 999, padding: '4px 8px', background: 'var(--bg)' }}>
-                  {String(item.tier || 'unranked').toUpperCase()}
+                  {lang === 'ko' ? (PROFILE_TIER_LABELS_KO[item.tier || 'unranked'] || String(item.tier || 'unranked').toUpperCase()) : String(item.tier || 'unranked').toUpperCase()}
                 </span>
                 {item.isFollowing && Number(item.id) !== Number(user?.id) ? (
                   <span style={{ fontSize: 10, color: 'var(--blue)', fontWeight: 800 }}>

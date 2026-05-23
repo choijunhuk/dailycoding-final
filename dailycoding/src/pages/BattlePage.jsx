@@ -957,7 +957,7 @@ export default function BattlePage() {
                           return (
                             <div key={b.id} className="bp-battle-item">
                               <div className="bp-battle-info">
-                                <span className="bp-battle-tag">{b.isTeamBattle ? 'Team' : '1v1'}</span>
+                                <span className="bp-battle-tag">{b.isTeamBattle ? txt('팀', 'Team') : '1v1'}</span>
                                 <span>{Object.values(b.players).map(p => p.username).join(' vs ')}</span>
                                 {showTimer && (
                                   <span className="mono" style={{ fontSize: 11, color: remaining < 60 ? 'var(--red)' : remaining < 300 ? 'var(--yellow)' : 'var(--text3)', marginLeft: 4 }}>
@@ -965,7 +965,7 @@ export default function BattlePage() {
                                   </span>
                                 )}
                               </div>
-                              <button className="bp-btn-small" onClick={() => spectateBattle(b.id)}>Spectate</button>
+                              <button className="bp-btn-small" onClick={() => spectateBattle(b.id)}>{txt('관전', 'Spectate')}</button>
                             </div>
                           );
                         })}
@@ -974,7 +974,7 @@ export default function BattlePage() {
                   </>
                 ) : (
                   <>
-                    <div className="bp-section-title">My Battle History</div>
+                    <div className="bp-section-title">{txt('내 배틀 기록', 'My Battle History')}</div>
                     {historyRows.length > 0 && (
                       <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:8, marginBottom:14 }}>
                         {[
@@ -990,22 +990,22 @@ export default function BattlePage() {
                       </div>
                     )}
                     {historyLoading ? (
-                      <div className="bp-empty-msg">Loading history...</div>
+                      <div className="bp-empty-msg">{txt('기록 불러오는 중...', 'Loading history...')}</div>
                     ) : historyRows.length === 0 ? (
-                      <div className="bp-empty-msg">No completed battles yet.</div>
+                      <div className="bp-empty-msg">{txt('완료된 배틀이 없습니다.', 'No completed battles yet.')}</div>
                     ) : (
                       <div className="bp-battle-list">
                         {historyRows.map((row) => (
                           <div key={row.id} className="bp-battle-item" style={{ alignItems:'flex-start', flexDirection:'column', gap:8 }}>
                             <div style={{ display:'flex', width:'100%', justifyContent:'space-between', gap:12, flexWrap:'wrap' }}>
                               <div className="bp-battle-info">
-                                <span className={`bp-battle-tag ${row.result}`}>{row.result === 'win' ? 'WIN' : row.result === 'lose' ? 'LOSE' : 'DRAW'}</span>
+                                <span className={`bp-battle-tag ${row.result}`}>{row.result === 'win' ? txt('승리', 'WIN') : row.result === 'lose' ? txt('패배', 'LOSE') : txt('무승부', 'DRAW')}</span>
                                 <span>{row.opponentName}</span>
                               </div>
                               <span style={{ fontSize:11, color:'var(--text3)' }}>{new Date(row.createdAt).toLocaleString(dateLocale)}</span>
                             </div>
                             <div style={{ fontSize:12, color:'var(--text2)' }}>
-                              Score {row.scoreFor} : {row.scoreAgainst} · Solved {row.solvedFor} : {row.solvedAgainst}
+                              {txt('점수', 'Score')} {row.scoreFor} : {row.scoreAgainst} · {txt('해결', 'Solved')} {row.solvedFor} : {row.solvedAgainst}
                             </div>
                             <div style={{ fontSize:11, color:'var(--text3)' }}>
                               {(row.problems || []).map((problem) => problem.title).join(' · ')}
@@ -1029,27 +1029,27 @@ export default function BattlePage() {
             </div>
 
             <div className="bp-rules">
-              <div className="bp-rules-title">Battle Rules</div>
+              <div className="bp-rules-title">{txt('배틀 규칙', 'Battle Rules')}</div>
               {selectedBattleMode === 'race' ? (
                 <ul>
-                  <li>🏁 First-to-finish: <strong>Solve all problems first to win instantly.</strong></li>
-                  <li>⏰ No time limit: Speed decides the winner. Be fast and accurate!</li>
-                  <li>🗺️ Territory capture: The team that answers first claims the territory; the opposing team cannot attempt that problem.</li>
-                  <li>🎯 Strategy: Claim easy problems quickly, then focus on harder ones.</li>
-                  <li>👥 Team battle: Communicate in real-time and divide roles to capture all territories fast.</li>
-                  <li>👁️ Spectate mode: You can watch other players' battles in real-time.</li>
+                  <li>🏁 {txt('선착순 완료: 모든 문제를 먼저 풀면 즉시 승리합니다.', 'First-to-finish: Solve all problems first to win instantly.')}</li>
+                  <li>⏰ {txt('제한 없음: 속도가 승부를 결정합니다. 빠르고 정확하게!', 'No time limit: Speed decides the winner. Be fast and accurate!')}</li>
+                  <li>🗺️ {txt('영토 점령: 먼저 답을 맞힌 팀이 영토를 차지하며 상대는 해당 문제에 도전할 수 없습니다.', 'Territory capture: The team that answers first claims the territory; the opposing team cannot attempt that problem.')}</li>
+                  <li>🎯 {txt('전략: 쉬운 문제를 빠르게 점령하고 어려운 문제에 집중하세요.', 'Strategy: Claim easy problems quickly, then focus on harder ones.')}</li>
+                  <li>👥 {txt('팀 배틀: 실시간으로 소통하고 역할을 분담해 모든 영토를 빠르게 점령하세요.', 'Team battle: Communicate in real-time and divide roles to capture all territories fast.')}</li>
+                  <li>👁️ {txt('관전 모드: 다른 플레이어의 배틀을 실시간으로 관전할 수 있습니다.', 'Spectate mode: You can watch other players\' battles in real-time.')}</li>
                 </ul>
               ) : (
                 (() => {
                   const dur = BATTLE_DURATIONS.find(d => d.sec === selectedDuration) || BATTLE_DURATIONS[1];
                   return (
                     <ul>
-                      <li>⏱️ Time limit: <strong>{dur.desc}</strong> ({dur.label.replace(/[^\w가-힣]/g, '').trim()} mode)</li>
-                      {dur.sec === 300 && <li>⚡ Blitz: Quick thinking is key. Claim easy problems first.</li>}
-                      {dur.sec === 3600 && <li>🏔️ Marathon: Use the extra time to tackle hard problems. Teamwork and role division matter.</li>}
-                      <li>🗺️ Territory capture: The team that answers first claims the territory; the opposing team cannot attempt that problem.</li>
-                      <li>👥 Team battle: Combine scores with teammates and split problems in real-time.</li>
-                      <li>👁️ Spectate mode: You can watch other players' battles in real-time.</li>
+                      <li>⏱️ {txt('제한 시간:', 'Time limit:')} <strong>{dur.desc}</strong> ({dur.label.replace(/[^\w가-힣]/g, '').trim()} {txt('모드', 'mode')})</li>
+                      {dur.sec === 300 && <li>⚡ {txt('블리츠: 순간적인 판단이 핵심입니다. 쉬운 문제를 먼저 점령하세요.', 'Blitz: Quick thinking is key. Claim easy problems first.')}</li>}
+                      {dur.sec === 3600 && <li>🏔️ {txt('마라톤: 여유 시간을 활용해 어려운 문제에 도전하세요. 팀워크와 역할 분담이 중요합니다.', 'Marathon: Use the extra time to tackle hard problems. Teamwork and role division matter.')}</li>}
+                      <li>🗺️ {txt('영토 점령: 먼저 답을 맞힌 팀이 영토를 차지하며 상대는 해당 문제에 도전할 수 없습니다.', 'Territory capture: The team that answers first claims the territory; the opposing team cannot attempt that problem.')}</li>
+                      <li>👥 {txt('팀 배틀: 팀원과 점수를 합산하고 실시간으로 문제를 분담하세요.', 'Team battle: Combine scores with teammates and split problems in real-time.')}</li>
+                      <li>👁️ {txt('관전 모드: 다른 플레이어의 배틀을 실시간으로 관전할 수 있습니다.', 'Spectate mode: You can watch other players\' battles in real-time.')}</li>
                     </ul>
                   );
                 })()

@@ -4,6 +4,7 @@ import api from '../api.js'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext.jsx'
 import { useLang } from '../context/LangContext.jsx'
+import { PROFILE_TIER_LABELS_KO } from './profilePageUtils.js'
 import ProfileAvatar from '../components/ProfileAvatar.jsx'
 import FollowListModal from '../components/FollowListModal.jsx'
 
@@ -300,7 +301,7 @@ export default function PublicProfilePage() {
               <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
                 <div style={{ fontSize: 28, fontWeight: 900, color: 'var(--text)' }}>{profile.displayName || profile.nickname || profile.username}</div>
                 <span style={{ fontSize: 12, fontWeight: 800, color: TIER_COLORS[profile.tier] || 'var(--text3)', border: '1px solid var(--border)', borderRadius: 999, padding: '6px 10px', background: 'var(--bg)' }}>
-                  {profile.tier?.toUpperCase() || 'UNRANKED'}
+                  {lang === 'ko' ? (PROFILE_TIER_LABELS_KO[profile.tier || 'unranked'] || 'UNRANKED') : (profile.tier?.toUpperCase() || 'UNRANKED')}
                 </span>
               </div>
               <div style={{ fontSize: 13, color: 'var(--text2)', marginTop: 8 }}>@{profile.username}</div>

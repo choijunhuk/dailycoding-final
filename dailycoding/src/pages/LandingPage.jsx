@@ -7,6 +7,7 @@ import { TIER_THRESHOLDS } from '../data/constants.js'
 import { PLAN_META } from '../data/pricingPlans.js'
 import api from '../api.js'
 import { getDateLocale, pickLangText } from '../utils/languageMode.js'
+import { PROFILE_TIER_LABELS_KO } from './profilePageUtils.js'
 
 const TIERS = [
   { name: 'Iron',        label: 'Iron',        color: '#a8a8a8', range: `${TIER_THRESHOLDS.iron.toLocaleString()} - ${(TIER_THRESHOLDS.bronze - 1).toLocaleString()} pts` },
@@ -363,7 +364,7 @@ export default function LandingPage({ onLogin, onSignup, onPricing }) {
             <div key={item.name} className={`card card-hover animate-fade-in-up animate-delay-${Math.min(index + 1, 3)}`} style={{ padding: '22px 20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
                 <div style={{ fontWeight: 800 }}>{item.name}</div>
-                <span style={{ padding: '4px 8px', borderRadius: 999, background: 'var(--bg3)', color: 'var(--blue)', fontSize: 11, fontWeight: 700 }}>{item.tier.toUpperCase()}</span>
+                <span style={{ padding: '4px 8px', borderRadius: 999, background: 'var(--bg3)', color: 'var(--blue)', fontSize: 11, fontWeight: 700 }}>{lang === 'ko' ? (PROFILE_TIER_LABELS_KO[item.tier] || item.tier.toUpperCase()) : item.tier.toUpperCase()}</span>
               </div>
               <div style={{ color: 'var(--text2)', lineHeight: 1.7, fontSize: 14, minHeight: 72 }}>"{item.text}"</div>
               <div style={{ marginTop: 18, fontSize: 12, color: 'var(--text3)' }}>{item.company}</div>
