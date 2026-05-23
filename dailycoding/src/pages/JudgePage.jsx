@@ -45,11 +45,11 @@ function getProblemAcceptanceRate(problem) {
   return null;
 }
 
-function formatAcceptanceStat(problem) {
+function formatAcceptanceStat(problem, t) {
   const submitCount = getProblemCount(problem, 'submissions', 'submit_count');
   const rate = getProblemAcceptanceRate(problem);
-  const rateText = rate == null ? '데이터 없음' : `${rate.toFixed(1)}%`;
-  return `정답률 ${rateText} (${submitCount.toLocaleString()} 제출)`;
+  const rateText = rate == null ? t('judgeNoData') : `${rate.toFixed(1)}%`;
+  return t('judgeAccuracyFmt').replace('{rate}', rateText).replace('{count}', submitCount.toLocaleString());
 }
 
 
@@ -484,9 +484,9 @@ export default function JudgePage() {
     if (!problem?.id) return
     try {
       const data = await toggleBookmark(problem.id)
-      toast?.show(data?.bookmarked ? '🔖 북마크에 추가했습니다.' : '북마크를 해제했습니다.', 'info')
+      toast?.show(data?.bookmarked ? t('bookmarkAdded') : t('bookmarkRemoved'), 'info')
     } catch (err) {
-      toast?.show(err?.response?.data?.message || '북마크 처리에 실패했습니다.', 'error')
+      toast?.show(err?.response?.data?.message || t('bookmarkFailed'), 'error')
     }
   }
 
@@ -765,7 +765,7 @@ export default function JudgePage() {
   const tierInfo = TIERS[problem?.tier] || {};
   const problemSubmitCount = getProblemCount(problem, 'submissions', 'submit_count');
   const problemSolvedCount = getProblemCount(problem, 'solved', 'solved_count');
-  const problemAcceptanceText = formatAcceptanceStat(problem);
+  const problemAcceptanceText = formatAcceptanceStat(problem, t);
 
   if (isProblemLoading) {
     return (
@@ -802,7 +802,7 @@ export default function JudgePage() {
               maxWidth:520,
             }}>
               <div style={{ fontSize: 30, marginBottom: 10 }}>⚠️</div>
-              <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 8 }}>문제를 열 수 없습니다</div>
+              <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 8 }}>{t('judgeProblemLoadFail')}</div>
               <div style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.7, marginBottom: 16 }}>
                 {problemError}
               </div>
@@ -944,12 +944,12 @@ export default function JudgePage() {
           {leftTab === 'solutions' && (
             <div className="prob-content fade-in">
               <h4>💡 Other Solutions</h4>
-              <p style={{fontSize:12,color:'var(--text3)',marginBottom:12}}>다른 풀이를 보려면 이 문제를 먼저 풀어야 합니다.</p>
+              <p style={{fontSize:12,color:'var(--text3)',marginBottom:12}}>{t('judgeSolveToPeek')}</p>
               {!solutions || solutions === 'locked' ? (
                 solutions === 'locked' ? (
                   <div style={{padding:'24px',textAlign:'center',background:'var(--bg3)',borderRadius:10,border:'1px solid var(--border)'}}>
                     <div style={{fontSize:32,marginBottom:8}}>🔒</div>
-                    <p style={{fontSize:13,color:'var(--text2)'}}>다른 풀이를 보려면<br/>이 문제를 먼저 풀어야 합니다!</p>
+                    <p style={{fontSize:13,color:'var(--text2)'}}>{t('judgeSolveToPeek')}</p>
                   </div>
                 ) : (
                   <button className="btn btn-primary btn-sm" onClick={loadSolutions} disabled={solLoading}>
@@ -992,12 +992,12 @@ export default function JudgePage() {
                 )}
                 {replyTo && (
                   <div style={{marginBottom:8,fontSize:12,color:'var(--text2)'}}>
-                    <strong>{replyTo.username}</strong>님에게 답글 중
-                    <button onClick={() => setReplyTo(null)} style={{marginLeft:8,background:'none',border:'none',color:'var(--blue)',cursor:'pointer',fontSize:12}}>취소</button>
+                    <strong>{replyTo.username}</strong> {t('judgeReplyingTo')}
+                    <button onClick={() => setReplyTo(null)} style={{marginLeft:8,background:'none',border:'none',color:'var(--blue)',cursor:'pointer',fontSize:12}}>{t('cancel')}</button>
                   </div>
                 )}
                 <textarea rows={3} value={commentText} onChange={e=>setCommentText(e.target.value)}
-                  placeholder="질문이나 풀이 접근 방식을 공유하세요..." style={{resize:'vertical',marginBottom:8}} disabled={!user?.emailVerified} />
+                  placeholder={t('judgeCommentPlaceholder')} style={{resize:'vertical',marginBottom:8}} disabled={!user?.emailVerified} />
                 <button className="btn btn-primary btn-sm" onClick={postComment} disabled={commentLoading||!commentText.trim()||!user?.emailVerified}>
                   {commentLoading?<span className="spinner"/>:'Post Comment'}
                 </button>
@@ -1231,7 +1231,7 @@ export default function JudgePage() {
 
           {bottomTab === 'custom' && (
             <div className="custom-body">
-              <textarea className="custom-input mono" placeholder="커스텀 입력값을 입력하세요..." value={customInput} onChange={e => setCustomInput(e.target.value)} />
+              <textarea className="custom-input mono" placeholder={t('judgeCustomInputPlaceholder')} value={customInput} onChange={e => setCustomInput(e.target.value)} />
               <button className="btn btn-ghost btn-sm" style={{ marginTop: 8, alignSelf: 'flex-start' }}
                 onClick={() => runCode({ input: customInput })}>▶ Run</button>
             </div>
@@ -1315,9 +1315,9 @@ export default function JudgePage() {
                   {/* Analysis Cards */}
                   <div className="analysis-grid">
                     {[
-                      { label: '정확도', val: aiReview.correctness, color: 'var(--blue)', bg: 'rgba(56,139,253,0.1)', border: 'rgba(56,139,253,0.15)', icon: '✓' },
-                      { label: '시간 복잡도', val: aiReview.timeComplexity, color: 'var(--purple)', bg: 'rgba(163,113,247,0.1)', border: 'rgba(163,113,247,0.15)', icon: '⏱' },
-                      { label: '공간 복잡도', val: aiReview.spaceComplexity, color: 'var(--orange)', bg: 'rgba(255,166,87,0.1)', border: 'rgba(255,166,87,0.15)', icon: '💾' },
+                      { label: t('judgeAccuracyLabel'), val: aiReview.correctness, color: 'var(--blue)', bg: 'rgba(56,139,253,0.1)', border: 'rgba(56,139,253,0.15)', icon: '✓' },
+                      { label: t('judgeTimeComplexity'), val: aiReview.timeComplexity, color: 'var(--purple)', bg: 'rgba(163,113,247,0.1)', border: 'rgba(163,113,247,0.15)', icon: '⏱' },
+                      { label: t('judgeSpaceComplexity'), val: aiReview.spaceComplexity, color: 'var(--orange)', bg: 'rgba(255,166,87,0.1)', border: 'rgba(255,166,87,0.15)', icon: '💾' },
                     ].map(c => (
                       <div key={c.label} className="ai-review-card" style={{
                         background: c.bg, border: `1px solid ${c.border}`

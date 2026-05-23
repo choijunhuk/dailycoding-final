@@ -26,7 +26,7 @@ export function getProfileUpgradePlans(lang = 'ko') {
     {
       id: 'pro',
       name: PLAN_META.pro.name,
-      price: PLAN_META.pro.detailPrice,
+      price: PLAN_META.pro.detailPrice?.[lang] ?? PLAN_META.pro.detailPrice?.ko,
       color: PLAN_META.pro.accent,
       features: [
         pickLangText(lang, '무제한 AI 힌트', 'Unlimited AI Hints'),
@@ -38,7 +38,7 @@ export function getProfileUpgradePlans(lang = 'ko') {
     {
       id: 'team',
       name: PLAN_META.team.name,
-      price: PLAN_META.team.detailPrice,
+      price: PLAN_META.team.detailPrice?.[lang] ?? PLAN_META.team.detailPrice?.ko,
       color: PLAN_META.team.accent,
       features: [
         pickLangText(lang, 'Pro 모든 기능', 'Everything in Pro'),

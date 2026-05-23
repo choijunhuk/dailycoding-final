@@ -3,53 +3,9 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Eye, Plus, Save, Trash2 } from 'lucide-react';
 import api from '../api.js';
 import { useToast } from '../context/ToastContext.jsx';
+import { useLang } from '../context/LangContext.jsx';
+import { withVars } from '../utils/languageMode.js';
 import './WorkshopPage.css';
-
-const EVENT_LABELS = {
-  ON_CORRECT_ANSWER: '정답 제출 시',
-  ON_WRONG_ANSWER: '오답 제출 시',
-  ON_COMPILE_ERROR: '컴파일 오류 시',
-  ON_OPPONENT_CORRECT: '상대방 정답 시',
-  ON_OPPONENT_WRONG: '상대방 오답 시',
-  ON_TIMER_HALF: '시간 절반 경과 시',
-  ON_TIMER_LOW: '시간 60초 미만 시',
-  ON_BATTLE_START: '배틀 시작 시',
-  ON_HP_BELOW_50: '내 HP 50 미만 시',
-  ON_HP_BELOW_25: '내 HP 25 미만 시',
-};
-
-const CONDITION_LABELS = {
-  always: '항상',
-  hp_below: '내 HP 미만',
-  hp_above: '내 HP 초과',
-  opponent_hp_below: '상대 HP 미만',
-  time_remaining_below: '남은 시간 미만',
-  solved_count_above: '해결 수 초과',
-  wrong_streak_above: '연속 오답 초과',
-};
-
-const ACTION_LABELS = {
-  MODIFY_HP: 'HP 변경',
-  SET_HP: 'HP 설정',
-  ADD_TIME: '시간 추가/감소',
-  GRANT_ITEM: '아이템 지급',
-  DOUBLE_DAMAGE: '데미지 2배',
-  FREEZE_OPPONENT: '상대방 타이머 정지',
-  SHOW_MESSAGE: '메시지 표시',
-};
-
-const TARGET_LABELS = {
-  self: '자신',
-  opponent: '상대방',
-  both: '양쪽',
-};
-
-const ITEM_LABELS = {
-  shield: '방어막',
-  bomb: '폭탄',
-  heal: '회복',
-  freeze: '정지',
-};
 
 const DEFAULT_CONFIG = {
   baseHp: 100,
@@ -79,37 +35,46 @@ function defaultAction(type) {
   if (type === 'GRANT_ITEM') return { type, item: 'shield' };
   if (type === 'DOUBLE_DAMAGE') return { type, duration: 10 };
   if (type === 'FREEZE_OPPONENT') return { type, duration: 5 };
-  return { type, text: '워크샵 효과 발동!' };
+  return { type, text: '' };
 }
 
-function conditionSentence(condition) {
-  if (!condition || condition.type === 'always') return '항상';
-  const label = CONDITION_LABELS[condition.type] || condition.type;
-  const suffix = condition.type === 'time_remaining_below' ? '초' : '';
+function conditionSentence(condition, t, condLabels) {
+  if (!condition || condition.type === 'always') return t('workshopAlwaysSentence');
+  const label = condLabels[condition.type] || condition.type;
+  const suffix = condition.type === 'time_remaining_below' ? t('workshopCondSecSuffix') : '';
   return `${label} ${condition.value}${suffix}`;
 }
 
-function actionSentence(action) {
+function actionSentence(action, t, tgtLabels, itemLabels) {
   if (!action) return '';
   if (action.type === 'MODIFY_HP') {
     const sign = Number(action.value) >= 0 ? '+' : '';
-    return `${TARGET_LABELS[action.target] || action.target} HP ${sign}${action.value}`;
+    return `${tgtLabels[action.target] || action.target} HP ${sign}${action.value}`;
   }
-  if (action.type === 'SET_HP') return `${TARGET_LABELS[action.target] || action.target} HP를 ${action.value}로 설정`;
+  if (action.type === 'SET_HP') {
+    return withVars(t('workshopSetHpTo'), { target: tgtLabels[action.target] || action.target, value: action.value });
+  }
   if (action.type === 'ADD_TIME') {
     const sign = Number(action.value) >= 0 ? '+' : '';
-    return `남은 시간 ${sign}${action.value}초`;
+    return withVars(t('workshopAddTimeFmt'), { sign, value: action.value });
   }
-  if (action.type === 'GRANT_ITEM') return `${ITEM_LABELS[action.item] || action.item} 아이템 지급`;
-  if (action.type === 'DOUBLE_DAMAGE') return `${action.duration}초 동안 데미지 2배`;
-  if (action.type === 'FREEZE_OPPONENT') return `${action.duration}초 동안 상대 타이머 정지`;
-  return `"${action.text || ''}" 메시지 표시`;
+  if (action.type === 'GRANT_ITEM') {
+    return withVars(t('workshopGrantItemFmt'), { item: itemLabels[action.item] || action.item });
+  }
+  if (action.type === 'DOUBLE_DAMAGE') {
+    return withVars(t('workshopDoubleDamageFmt'), { duration: action.duration });
+  }
+  if (action.type === 'FREEZE_OPPONENT') {
+    return withVars(t('workshopFreezeFmt'), { duration: action.duration });
+  }
+  return withVars(t('workshopShowMsgFmt'), { text: action.text || '' });
 }
 
 export default function WorkshopPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
+  const { t } = useLang();
   const [loading, setLoading] = useState(Boolean(id));
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState('');
@@ -118,6 +83,52 @@ export default function WorkshopPage() {
   const [config, setConfig] = useState(DEFAULT_CONFIG);
 
   const rules = config.rules || [];
+
+  const eventLabels = {
+    ON_CORRECT_ANSWER: t('workshopEvt_ON_CORRECT_ANSWER'),
+    ON_WRONG_ANSWER: t('workshopEvt_ON_WRONG_ANSWER'),
+    ON_COMPILE_ERROR: t('workshopEvt_ON_COMPILE_ERROR'),
+    ON_OPPONENT_CORRECT: t('workshopEvt_ON_OPPONENT_CORRECT'),
+    ON_OPPONENT_WRONG: t('workshopEvt_ON_OPPONENT_WRONG'),
+    ON_TIMER_HALF: t('workshopEvt_ON_TIMER_HALF'),
+    ON_TIMER_LOW: t('workshopEvt_ON_TIMER_LOW'),
+    ON_BATTLE_START: t('workshopEvt_ON_BATTLE_START'),
+    ON_HP_BELOW_50: t('workshopEvt_ON_HP_BELOW_50'),
+    ON_HP_BELOW_25: t('workshopEvt_ON_HP_BELOW_25'),
+  };
+
+  const condLabels = {
+    always: t('workshopCond_always'),
+    hp_below: t('workshopCond_hp_below'),
+    hp_above: t('workshopCond_hp_above'),
+    opponent_hp_below: t('workshopCond_opponent_hp_below'),
+    time_remaining_below: t('workshopCond_time_remaining_below'),
+    solved_count_above: t('workshopCond_solved_count_above'),
+    wrong_streak_above: t('workshopCond_wrong_streak_above'),
+  };
+
+  const actionLabels = {
+    MODIFY_HP: t('workshopAct_MODIFY_HP'),
+    SET_HP: t('workshopAct_SET_HP'),
+    ADD_TIME: t('workshopAct_ADD_TIME'),
+    GRANT_ITEM: t('workshopAct_GRANT_ITEM'),
+    DOUBLE_DAMAGE: t('workshopAct_DOUBLE_DAMAGE'),
+    FREEZE_OPPONENT: t('workshopAct_FREEZE_OPPONENT'),
+    SHOW_MESSAGE: t('workshopAct_SHOW_MESSAGE'),
+  };
+
+  const targetLabels = {
+    self: t('workshopTgt_self'),
+    opponent: t('workshopTgt_opponent'),
+    both: t('workshopTgt_both'),
+  };
+
+  const itemLabels = {
+    shield: t('workshopItem_shield'),
+    bomb: t('workshopItem_bomb'),
+    heal: t('workshopItem_heal'),
+    freeze: t('workshopItem_freeze'),
+  };
 
   useEffect(() => {
     if (!id) return;
@@ -133,16 +144,16 @@ export default function WorkshopPage() {
         setConfig({ ...DEFAULT_CONFIG, ...(mode.config || {}) });
       })
       .catch((err) => {
-        toast?.show(err.response?.data?.message || '워크샵 모드를 불러오지 못했습니다.', 'error');
+        toast?.show(err.response?.data?.message || t('workshopLoadError'), 'error');
         navigate('/workshop-gallery', { replace: true });
       })
       .finally(() => { if (!ignore) setLoading(false); });
     return () => { ignore = true; };
-  }, [id, navigate, toast]);
+  }, [id, navigate, toast, t]);
 
   const previewLines = useMemo(() => rules.map((rule) => (
-    `${EVENT_LABELS[rule.event] || rule.event} → ${conditionSentence(rule.condition)} → ${actionSentence(rule.action)}`
-  )), [rules]);
+    `${eventLabels[rule.event] || rule.event} → ${conditionSentence(rule.condition, t, condLabels)} → ${actionSentence(rule.action, t, targetLabels, itemLabels)}`
+  )), [rules, t, eventLabels, condLabels, targetLabels, itemLabels]);
 
   const updateConfig = (patch) => setConfig((prev) => ({ ...prev, ...patch }));
 
@@ -170,7 +181,7 @@ export default function WorkshopPage() {
 
   const addRule = () => {
     if (rules.length >= 20) {
-      toast?.show('룰은 최대 20개까지 만들 수 있습니다.', 'warning');
+      toast?.show(t('workshopMaxRules'), 'warning');
       return;
     }
     updateConfig({ rules: [...rules, createRule(rules.length + 1)] });
@@ -182,7 +193,7 @@ export default function WorkshopPage() {
 
   const save = async () => {
     if (!name.trim()) {
-      toast?.show('모드 이름을 입력해 주세요.', 'warning');
+      toast?.show(t('workshopNameRequired'), 'warning');
       return;
     }
     setSaving(true);
@@ -191,88 +202,88 @@ export default function WorkshopPage() {
       const { data } = id
         ? await api.put(`/battle-modes/${id}`, payload)
         : await api.post('/battle-modes', payload);
-      toast?.show('워크샵 모드를 저장했습니다.', 'success');
+      toast?.show(t('workshopSaveSuccess'), 'success');
       navigate(`/workshop/${data.mode.id}`, { replace: true });
     } catch (err) {
-      toast?.show(err.response?.data?.message || '워크샵 모드를 저장하지 못했습니다.', 'error');
+      toast?.show(err.response?.data?.message || t('workshopSaveFailed'), 'error');
     } finally {
       setSaving(false);
     }
   };
 
   if (loading) {
-    return <main className="workshop-page"><div className="workshop-loading">불러오는 중...</div></main>;
+    return <main className="workshop-page"><div className="workshop-loading">{t('loading')}</div></main>;
   }
 
   return (
     <main className="workshop-page">
       <header className="workshop-header">
         <div>
-          <p>배틀 워크샵</p>
-          <h1>{id ? '워크샵 모드 수정' : '워크샵 모드 만들기'}</h1>
+          <p>{t('workshopHeaderLabel')}</p>
+          <h1>{id ? t('workshopEditTitle') : t('workshopCreateTitle')}</h1>
         </div>
         <div className="workshop-header-actions">
           <button type="button" className="btn btn-ghost" onClick={() => navigate('/workshop-gallery')}>
-            갤러리
+            {t('workshopGalleryBtn')}
           </button>
           <button type="button" className="btn btn-primary" onClick={save} disabled={saving}>
-            {saving ? <span className="spinner" /> : <Save size={16} />} 저장
+            {saving ? <span className="spinner" /> : <Save size={16} />} {t('save')}
           </button>
         </div>
       </header>
 
       <div className="workshop-layout">
         <section className="workshop-panel workshop-meta">
-          <div className="workshop-section-title">모드 정보</div>
+          <div className="workshop-section-title">{t('workshopMetaInfo')}</div>
           <label>
-            이름
-            <input value={name} maxLength={100} onChange={(e) => setName(e.target.value)} placeholder="체력 회복 모드" />
+            {t('workshopNameLabel')}
+            <input value={name} maxLength={100} onChange={(e) => setName(e.target.value)} placeholder={t('workshopNamePlaceholder')} />
           </label>
           <label>
-            설명
-            <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="정답 시 체력 회복, 오답 시 체력 감소" />
+            {t('workshopDescLabel')}
+            <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder={t('workshopDescPlaceholder')} />
           </label>
           <div className="workshop-grid-2">
             <label>
-              기본 HP
+              {t('workshopBaseHp')}
               <input type="number" min="1" max="999" value={config.baseHp} onChange={(e) => updateConfig({ baseHp: Number(e.target.value) })} />
             </label>
             <label>
-              제한 시간(초)
+              {t('workshopTimeLimit')}
               <input type="number" min="60" max="7200" value={config.timeLimit} onChange={(e) => updateConfig({ timeLimit: Number(e.target.value) })} />
             </label>
           </div>
           <label className="workshop-check">
             <input type="checkbox" checked={config.allowItems} onChange={(e) => updateConfig({ allowItems: e.target.checked })} />
-            아이템 사용 허용
+            {t('workshopAllowItems')}
           </label>
           <label className="workshop-check">
             <input type="checkbox" checked={isPublic} onChange={(e) => setIsPublic(e.target.checked)} />
-            공개 갤러리에 게시
+            {t('workshopPublish')}
           </label>
 
-          <div className="workshop-section-title preview-title"><Eye size={16} /> 미리보기</div>
+          <div className="workshop-section-title preview-title"><Eye size={16} /> {t('workshopPreviewLabel')}</div>
           <div className="workshop-preview">
             {previewLines.length
               ? previewLines.map((line, index) => <p key={`${line}-${index}`}>{line}</p>)
-              : <span>아직 룰이 없습니다.</span>}
+              : <span>{t('workshopNoRules')}</span>}
           </div>
         </section>
 
         <section className="workshop-panel workshop-rules">
           <div className="workshop-rules-head">
             <div>
-              <div className="workshop-section-title">룰 빌더</div>
-              <p>{rules.length}/20개 룰</p>
+              <div className="workshop-section-title">{t('workshopRulesBuilder')}</div>
+              <p>{withVars(t('workshopRulesCount'), { n: rules.length })}</p>
             </div>
             <button type="button" className="btn btn-ghost" onClick={addRule}>
-              <Plus size={16} /> 룰 추가
+              <Plus size={16} /> {t('workshopAddRule')}
             </button>
           </div>
 
           {rules.length === 0 && (
             <div className="workshop-empty">
-              이벤트, 조건, 액션을 조합해 첫 룰을 만들어 보세요.
+              {t('workshopEmptyRules')}
             </div>
           )}
 
@@ -280,28 +291,28 @@ export default function WorkshopPage() {
             {rules.map((rule, index) => (
               <article className="workshop-rule-card" key={rule.id}>
                 <div className="workshop-rule-title">
-                  <strong>룰 {index + 1}</strong>
-                  <button type="button" onClick={() => removeRule(rule.id)} aria-label="룰 삭제">
+                  <strong>{withVars(t('workshopRuleNum'), { n: index + 1 })}</strong>
+                  <button type="button" onClick={() => removeRule(rule.id)} aria-label={t('workshopDeleteRule')}>
                     <Trash2 size={16} />
                   </button>
                 </div>
 
                 <div className="workshop-form-row">
                   <label>
-                    이벤트
+                    {t('workshopEventLabel')}
                     <select value={rule.event} onChange={(e) => updateRule(rule.id, { event: e.target.value })}>
-                      {Object.entries(EVENT_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                      {Object.entries(eventLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                     </select>
                   </label>
                   <label>
-                    조건
+                    {t('workshopConditionLabel')}
                     <select value={rule.condition?.type || 'always'} onChange={(e) => updateRule(rule.id, { condition: defaultCondition(e.target.value) })}>
-                      {Object.entries(CONDITION_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                      {Object.entries(condLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                     </select>
                   </label>
                   {rule.condition?.type !== 'always' && (
                     <label>
-                      조건 값
+                      {t('workshopCondValueLabel')}
                       <input type="number" value={rule.condition?.value ?? 0} onChange={(e) => updateRuleCondition(rule.id, { value: Number(e.target.value) })} />
                     </label>
                   )}
@@ -309,24 +320,24 @@ export default function WorkshopPage() {
 
                 <div className="workshop-form-row">
                   <label>
-                    액션
+                    {t('workshopActionLabel')}
                     <select value={rule.action?.type || 'MODIFY_HP'} onChange={(e) => updateRule(rule.id, { action: defaultAction(e.target.value) })}>
-                      {Object.entries(ACTION_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                      {Object.entries(actionLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                     </select>
                   </label>
 
                   {['MODIFY_HP', 'SET_HP'].includes(rule.action?.type) && (
                     <>
                       <label>
-                        대상
+                        {t('workshopTargetLabel')}
                         <select value={rule.action.target || 'self'} onChange={(e) => updateRuleAction(rule.id, { target: e.target.value })}>
-                          {Object.entries(TARGET_LABELS)
+                          {Object.entries(targetLabels)
                             .filter(([value]) => rule.action.type === 'MODIFY_HP' || value !== 'both')
                             .map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                         </select>
                       </label>
                       <label>
-                        HP 값
+                        {t('workshopHpValueLabel')}
                         <input type="number" value={rule.action.value ?? 0} onChange={(e) => updateRuleAction(rule.id, { value: Number(e.target.value) })} />
                       </label>
                     </>
@@ -334,30 +345,30 @@ export default function WorkshopPage() {
 
                   {rule.action?.type === 'ADD_TIME' && (
                     <label>
-                      시간(초)
+                      {t('workshopTimeSecLabel')}
                       <input type="number" value={rule.action.value ?? 0} onChange={(e) => updateRuleAction(rule.id, { value: Number(e.target.value) })} />
                     </label>
                   )}
 
                   {rule.action?.type === 'GRANT_ITEM' && (
                     <label>
-                      아이템
+                      {t('workshopItemLabel')}
                       <select value={rule.action.item || 'shield'} onChange={(e) => updateRuleAction(rule.id, { item: e.target.value })}>
-                        {Object.entries(ITEM_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                        {Object.entries(itemLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                       </select>
                     </label>
                   )}
 
                   {['DOUBLE_DAMAGE', 'FREEZE_OPPONENT'].includes(rule.action?.type) && (
                     <label>
-                      지속 시간(초)
+                      {t('workshopDurationLabel')}
                       <input type="number" min="1" max="600" value={rule.action.duration ?? 1} onChange={(e) => updateRuleAction(rule.id, { duration: Number(e.target.value) })} />
                     </label>
                   )}
 
                   {rule.action?.type === 'SHOW_MESSAGE' && (
                     <label className="wide">
-                      메시지
+                      {t('workshopMessageLabel')}
                       <input value={rule.action.text || ''} maxLength={120} onChange={(e) => updateRuleAction(rule.id, { text: e.target.value })} />
                     </label>
                   )}

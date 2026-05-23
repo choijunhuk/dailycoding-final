@@ -11,6 +11,7 @@ import { BarChart3, BookOpen, Bot, CheckCircle2, FileText, Flame, Sparkles, Swor
 import ProfileAvatar from '../components/ProfileAvatar';
 import OnboardingModal from '../components/OnboardingModal.jsx';
 import { useLang } from '../context/LangContext.jsx';
+import { withVars } from '../utils/languageMode.js';
 import { buildDailyFocusPlan } from './dashboardPlanUtils.js';
 
 const TIER_META = {
@@ -432,7 +433,7 @@ export default function Dashboard() {
                 </span>
               ))}
               {(!battleSummary.recent || battleSummary.recent.length === 0) && (
-                <span style={{fontSize:11,color:'var(--text3)'}}>최근 결과 없음</span>
+                <span style={{fontSize:11,color:'var(--text3)'}}>{t('dashNoRecentResult')}</span>
               )}
             </div>
           </div>
@@ -617,7 +618,7 @@ export default function Dashboard() {
                 color:recoveryQueue.count > 0 ? 'var(--red)' : 'var(--green)',
                 fontSize:11,fontWeight:800,whiteSpace:'nowrap',
               }}>
-                {recoveryQueue.count > 0 ? `${recoveryQueue.count}건 대기 중` : '모두 완료'}
+                {recoveryQueue.count > 0 ? withVars(t('dashQueuePending'), { n: recoveryQueue.count }) : t('dashAllDone')}
               </span>
             </div>
             {recoveryQueue.items?.length > 0 ? (
@@ -647,7 +648,7 @@ export default function Dashboard() {
                         color:item.priority === 'high' ? 'var(--red)' : 'var(--orange)',
                         fontSize:11,fontWeight:800,whiteSpace:'nowrap',
                       }}>
-                        {item.priority === 'high' ? '우선' : '검토'}
+                        {item.priority === 'high' ? t('dashPriorityHigh') : t('dashPriorityReview')}
                       </span>
                     </div>
                     <div style={{fontSize:12,color:'var(--text2)',lineHeight:1.6,marginTop:8}}>
@@ -724,9 +725,9 @@ export default function Dashboard() {
               <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:12,marginBottom:12}}>
                 <div>
                   <div style={{fontSize:11,color:'var(--orange)',fontWeight:800,letterSpacing:.5}}>REVIEW QUEUE</div>
-                  <h3 style={{fontSize:17,fontWeight:800,margin:'4px 0 0'}}>검토 대기열</h3>
+                  <h3 style={{fontSize:17,fontWeight:800,margin:'4px 0 0'}}>{t('dashReviewQueue')}</h3>
                 </div>
-                <span style={{fontSize:12,color:'var(--text3)'}}>{reviewQueue.length}건 대기 중</span>
+                <span style={{fontSize:12,color:'var(--text3)'}}>{withVars(t('dashQueuePending'), { n: reviewQueue.length })}</span>
               </div>
               <div style={{display:'grid',gap:8}}>
                 {reviewQueue.slice(0,5).map((item) => (
@@ -766,9 +767,9 @@ export default function Dashboard() {
                   <div style={{fontSize:11,color:'var(--text3)',fontWeight:700,marginBottom:4,textTransform:'uppercase',letterSpacing:.5}}>
                     {t('recommendedProblems')}
                   </div>
-                  <h3 style={{fontSize:17,fontWeight:800,margin:0}}>추천 문제</h3>
+                  <h3 style={{fontSize:17,fontWeight:800,margin:0}}>{t('dashRecommendedSection')}</h3>
                 </div>
-                <button className="btn btn-ghost btn-sm" onClick={()=>navigate('/problems')}>전체 보기</button>
+                <button className="btn btn-ghost btn-sm" onClick={()=>navigate('/problems')}>{t('dashViewAll')}</button>
               </div>
               <div className="dashboard-problem-rail">
                 {recommendedProblems.map((problem) => (

@@ -323,7 +323,7 @@ export default function ExamPage() {
                       <input
                         value={currentAnswer.blankAnswers?.[index] || ''}
                         onChange={e => setBlankAnswer(index, e.target.value)}
-                        placeholder={`${index + 1}번 빈칸에 값을 입력하세요`}
+                        placeholder={t('examBlankPlaceholder').replace('{n}', index + 1)}
                         style={{
                           width: '100%', padding: '8px 12px', borderRadius: 8,
                           border: '1px solid var(--border)', background: 'var(--bg3)',
@@ -345,7 +345,7 @@ export default function ExamPage() {
                   <textarea
                     value={currentAnswer.answer || ''}
                     onChange={e => setBugAnswer(e.target.value)}
-                    placeholder="수정된 코드를 입력하세요..."
+                    placeholder={t('examBugFixPlaceholder')}
                     style={{
                       flex: 1, minHeight: 280, padding: 12, borderRadius: 8,
                       border: '1px solid var(--border)', background: 'var(--bg3)',

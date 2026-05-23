@@ -7,19 +7,19 @@ router.use(auth);
 router.use(requireVerified);
 
 const DUNGEON_BOSSES = [
-  { name: 'I/O Goblin', emoji: '🟢', theme: 'warmup' },
-  { name: 'Greedy Wyvern', emoji: '🐉', theme: 'greedy' },
-  { name: 'DP Golem', emoji: '🪨', theme: 'dp' },
-  { name: 'Graph Lich', emoji: '🧙', theme: 'graph' },
-  { name: 'String Kraken', emoji: '🦑', theme: 'string' },
+  { name: 'I/O Goblin',      nameKo: '입출력 고블린',    emoji: '🟢', theme: 'warmup' },
+  { name: 'Greedy Wyvern',   nameKo: '탐욕의 와이번',    emoji: '🐉', theme: 'greedy' },
+  { name: 'DP Golem',        nameKo: 'DP 골렘',          emoji: '🪨', theme: 'dp' },
+  { name: 'Graph Lich',      nameKo: '그래프 리치',      emoji: '🧙', theme: 'graph' },
+  { name: 'String Kraken',   nameKo: '문자열 크라켄',    emoji: '🦑', theme: 'string' },
 ];
 
 const TERRITORIES = [
-  { id: 'implementation', label: 'Implementation Kingdom', aliases: ['implementation', '구현', 'simulation', '시뮬레이션'] },
-  { id: 'math', label: 'Math Citadel', aliases: ['math', '수학', 'number-theory', '정수론'] },
-  { id: 'string', label: 'String Forest', aliases: ['string', '문자열'] },
-  { id: 'graph', label: 'Graph Frontline', aliases: ['graph', '그래프', 'bfs', 'dfs'] },
-  { id: 'dp', label: 'DP Fortress', aliases: ['dp', 'dynamic-programming', '동적계획법'] },
+  { id: 'implementation', label: 'Implementation Kingdom', labelKo: '구현 왕국',   aliases: ['implementation', '구현', 'simulation', '시뮬레이션'] },
+  { id: 'math',           label: 'Math Citadel',           labelKo: '수학 성채',   aliases: ['math', '수학', 'number-theory', '정수론'] },
+  { id: 'string',         label: 'String Forest',          labelKo: '문자열 숲',   aliases: ['string', '문자열'] },
+  { id: 'graph',          label: 'Graph Frontline',        labelKo: '그래프 전선', aliases: ['graph', '그래프', 'bfs', 'dfs'] },
+  { id: 'dp',             label: 'DP Fortress',            labelKo: 'DP 요새',     aliases: ['dp', 'dynamic-programming', '동적계획법'] },
 ];
 
 function toInt(value, fallback = 0) {
@@ -244,6 +244,7 @@ async function buildSeasonConquest(userId) {
   const territories = TERRITORIES.map((territory) => ({
     id: territory.id,
     label: territory.label,
+    labelKo: territory.labelKo,
     totalSolves: 0,
     mySolves: 0,
     controlled: false,

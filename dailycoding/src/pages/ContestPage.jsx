@@ -339,8 +339,8 @@ export default function ContestPage() {
             <button type="button" onClick={() => setCustomForm((prev) => ({ ...prev, [keyName]: prev[keyName].filter((_, idx) => idx !== index) }))} style={{background:'none',border:'none',color:'var(--red)',cursor:'pointer'}}>✕</button>
           </div>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
-            <textarea rows={3} value={item.input} placeholder="입력" onChange={(e) => setCustomForm((prev) => ({ ...prev, [keyName]: prev[keyName].map((entry, idx) => idx === index ? { ...entry, input:e.target.value } : entry) }))} style={{width:'100%',resize:'vertical'}} />
-            <textarea rows={3} value={item.output} placeholder="출력" onChange={(e) => setCustomForm((prev) => ({ ...prev, [keyName]: prev[keyName].map((entry, idx) => idx === index ? { ...entry, output:e.target.value } : entry) }))} style={{width:'100%',resize:'vertical'}} />
+            <textarea rows={3} value={item.input} placeholder={t('contestInputPlaceholder')} onChange={(e) => setCustomForm((prev) => ({ ...prev, [keyName]: prev[keyName].map((entry, idx) => idx === index ? { ...entry, input:e.target.value } : entry) }))} style={{width:'100%',resize:'vertical'}} />
+            <textarea rows={3} value={item.output} placeholder={t('contestOutputPlaceholder')} onChange={(e) => setCustomForm((prev) => ({ ...prev, [keyName]: prev[keyName].map((entry, idx) => idx === index ? { ...entry, output:e.target.value } : entry) }))} style={{width:'100%',resize:'vertical'}} />
           </div>
         </div>
       ))}
@@ -526,11 +526,11 @@ export default function ContestPage() {
             <div className="modal-form">
               <div className="form-group">
                 <label>Contest Name *</label>
-                <input placeholder="콘테스트 이름" value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))} />
+                <input placeholder={t('contestNamePlaceholder')} value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))} />
               </div>
               <div className="form-group">
                 <label>Description</label>
-                <textarea rows={2} placeholder="콘테스트 설명..." value={form.desc} onChange={e=>setForm(p=>({...p,desc:e.target.value}))} style={{resize:'vertical'}} />
+                <textarea rows={2} placeholder={t('contestDescPlaceholder')} value={form.desc} onChange={e=>setForm(p=>({...p,desc:e.target.value}))} style={{resize:'vertical'}} />
               </div>
               <div className="modal-row">
                 <div className="form-group">
@@ -561,7 +561,7 @@ export default function ContestPage() {
                 {form.privacy === 'private' && (
                   <div className="form-group" style={{flex:2}}>
                     <label>Security Code (Password)</label>
-                    <input placeholder="숫자 또는 문자" value={form.securityCode} onChange={e=>setForm(p=>({...p,securityCode:e.target.value}))} />
+                    <input placeholder={t('contestSecCodePlaceholder')} value={form.securityCode} onChange={e=>setForm(p=>({...p,securityCode:e.target.value}))} />
                   </div>
                 )}
               </div>
@@ -578,7 +578,7 @@ export default function ContestPage() {
                           ...prev,
                           rewardRules: prev.rewardRules.map((entry, ridx) => ridx === idx ? { ...entry, rankFrom: e.target.value } : entry),
                         }))}
-                        placeholder="시작"
+                        placeholder={t('contestStartPlaceholder')}
                       />
                       <input
                         type="number"
@@ -588,7 +588,7 @@ export default function ContestPage() {
                           ...prev,
                           rewardRules: prev.rewardRules.map((entry, ridx) => ridx === idx ? { ...entry, rankTo: e.target.value } : entry),
                         }))}
-                        placeholder="종료"
+                        placeholder={t('contestEndPlaceholder')}
                       />
                       <select
                         value={rule.rewardCode}
@@ -628,7 +628,7 @@ export default function ContestPage() {
               </div>
             </div>
             <div className="modal-actions">
-              <button className="btn btn-ghost" onClick={()=>setShowCreate(false)}>취소</button>
+              <button className="btn btn-ghost" onClick={()=>setShowCreate(false)}>{t('cancel')}</button>
               <button className="btn btn-primary" onClick={handleCreate} disabled={creating||!form.name.trim()}>
                 {creating?<span className="spinner"/>:'Create Contest →'}
               </button>
@@ -702,20 +702,20 @@ export default function ContestPage() {
               {showCustomForm && (
                 <div style={{display:'flex',flexDirection:'column',gap:10}}>
                   <div style={{display:'grid',gridTemplateColumns:'2fr 1fr 1fr',gap:10}}>
-                    <input placeholder="문제 제목" value={customForm.title} onChange={(e) => setCustomField('title', e.target.value)} />
+                    <input placeholder={t('contestProbTitlePlaceholder')} value={customForm.title} onChange={(e) => setCustomField('title', e.target.value)} />
                     <select value={customForm.tier} onChange={(e) => setCustomField('tier', e.target.value)}>
                       {CONTEST_TIER_OPTIONS.map((tier) => <option key={tier} value={tier}>{tier}</option>)}
                     </select>
                     <input type="number" min="1" max="10" value={customForm.difficulty} onChange={(e) => setCustomField('difficulty', e.target.value)} />
                   </div>
                   <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
-                    <input type="number" min="1" placeholder="시간 제한 (초)" value={customForm.timeLimit} onChange={(e) => setCustomField('timeLimit', e.target.value)} />
-                    <input type="number" min="32" placeholder="메모리 제한 (MB)" value={customForm.memLimit} onChange={(e) => setCustomField('memLimit', e.target.value)} />
+                    <input type="number" min="1" placeholder={t('contestTimeLimitPlaceholder')} value={customForm.timeLimit} onChange={(e) => setCustomField('timeLimit', e.target.value)} />
+                    <input type="number" min="32" placeholder={t('contestMemLimitPlaceholder')} value={customForm.memLimit} onChange={(e) => setCustomField('memLimit', e.target.value)} />
                   </div>
-                  <textarea rows={3} placeholder="문제 설명" value={customForm.desc} onChange={(e) => setCustomField('desc', e.target.value)} style={{resize:'vertical'}} />
+                  <textarea rows={3} placeholder={t('contestProbDescPlaceholder')} value={customForm.desc} onChange={(e) => setCustomField('desc', e.target.value)} style={{resize:'vertical'}} />
                   <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
-                    <textarea rows={2} placeholder="입력 설명" value={customForm.inputDesc} onChange={(e) => setCustomField('inputDesc', e.target.value)} style={{resize:'vertical'}} />
-                    <textarea rows={2} placeholder="출력 설명" value={customForm.outputDesc} onChange={(e) => setCustomField('outputDesc', e.target.value)} style={{resize:'vertical'}} />
+                    <textarea rows={2} placeholder={t('contestInputDescPlaceholder')} value={customForm.inputDesc} onChange={(e) => setCustomField('inputDesc', e.target.value)} style={{resize:'vertical'}} />
+                    <textarea rows={2} placeholder={t('contestOutputDescPlaceholder')} value={customForm.outputDesc} onChange={(e) => setCustomField('outputDesc', e.target.value)} style={{resize:'vertical'}} />
                   </div>
                   <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
                     {CONTEST_TAG_OPTIONS.map((tag) => (
@@ -741,7 +741,7 @@ export default function ContestPage() {
                   <div style={{fontSize:12,color:'var(--orange)',fontWeight:700}}>No limit on hidden test cases. Input/output will be visible on the problem detail page.</div>
                   {renderContestCaseEditor('Hidden Test Case', customForm.testcases, 'testcases', 'var(--orange)')}
                   <textarea rows={2} placeholder="Hint" value={customForm.hint} onChange={(e) => setCustomField('hint', e.target.value)} style={{resize:'vertical'}} />
-                  <textarea rows={4} placeholder="모범 답안" value={customForm.solution} onChange={(e) => setCustomField('solution', e.target.value)} style={{resize:'vertical'}} />
+                  <textarea rows={4} placeholder={t('contestSolutionPlaceholder')} value={customForm.solution} onChange={(e) => setCustomField('solution', e.target.value)} style={{resize:'vertical'}} />
                   <div style={{display:'flex',justifyContent:'flex-end'}}>
                     <button className="btn btn-primary btn-sm" onClick={handleCreateCustomProblem} disabled={customSaving || !customForm.title.trim() || !customForm.desc.trim()}>
                       {customSaving ? <span className="spinner"/> : 'Add Contest Problem'}
@@ -762,11 +762,11 @@ export default function ContestPage() {
         <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.7)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center'}}
           onClick={e=>e.target===e.currentTarget&&setDeleteConfirmId(null)}>
           <div className="card card-pad-lg" style={{minWidth:320}}>
-            <h3 style={{marginBottom:8}}>⚠️ 콘테스트 삭제</h3>
-            <p style={{fontSize:13,color:'var(--text2)',marginBottom:20}}>이 콘테스트를 삭제하시겠습니까? 되돌릴 수 없습니다.</p>
+            <h3 style={{marginBottom:8}}>{t('contestDeleteTitle')}</h3>
+            <p style={{fontSize:13,color:'var(--text2)',marginBottom:20}}>{t('contestDeleteConfirm')}</p>
             <div style={{display:'flex',gap:10,justifyContent:'flex-end'}}>
-              <button className="btn btn-ghost" onClick={()=>setDeleteConfirmId(null)}>취소</button>
-              <button className="btn btn-primary" style={{background:'var(--red)',borderColor:'var(--red)'}} onClick={confirmDelete}>삭제</button>
+              <button className="btn btn-ghost" onClick={()=>setDeleteConfirmId(null)}>{t('cancel')}</button>
+              <button className="btn btn-primary" style={{background:'var(--red)',borderColor:'var(--red)'}} onClick={confirmDelete}>{t('delete')}</button>
             </div>
           </div>
         </div>
@@ -858,7 +858,7 @@ export default function ContestPage() {
             <div style={{display:'flex',flexDirection:'column',gap:10}}>
               <div className="form-group">
                 <label style={{fontSize:12,color:'var(--text3)',marginBottom:4,display:'block'}}>Contest Name *</label>
-                <input placeholder="예) 알고리즘 마스터 챌린지" value={requestForm.name} onChange={e=>setRequestForm(p=>({...p,name:e.target.value}))} />
+                <input placeholder={t('contestNameExamplePlaceholder')} value={requestForm.name} onChange={e=>setRequestForm(p=>({...p,name:e.target.value}))} />
               </div>
               <div className="form-group">
                 <label style={{fontSize:12,color:'var(--text3)',marginBottom:4,display:'block'}}>Contest Description</label>
@@ -874,9 +874,9 @@ export default function ContestPage() {
               </div>
             </div>
             <div className="modal-actions" style={{marginTop:20}}>
-              <button className="btn btn-ghost" onClick={()=>setShowRequestForm(false)}>취소</button>
+              <button className="btn btn-ghost" onClick={()=>setShowRequestForm(false)}>{t('cancel')}</button>
               <button className="btn btn-primary" onClick={handleSubmitCreationRequest} disabled={!requestForm.name.trim()||submittingRequest}>
-                {submittingRequest ? <span className="spinner"/> : '신청 제출'}
+                {submittingRequest ? <span className="spinner"/> : t('contestSubmitRequest')}
               </button>
             </div>
           </div>
@@ -918,7 +918,7 @@ export default function ContestPage() {
               }
             </div>
             <div className="modal-actions">
-              <button className="btn btn-ghost" onClick={()=>setShowCreationRequests(false)}>닫기</button>
+              <button className="btn btn-ghost" onClick={()=>setShowCreationRequests(false)}>{t('close')}</button>
             </div>
           </div>
         </div>
@@ -933,7 +933,7 @@ export default function ContestPage() {
             <div className="form-group">
               <input 
                 type="password" 
-                placeholder="보안 코드"
+                placeholder={t('contestSecCodePlaceholder2')}
                 autoFocus
                 value={pinValue} 
                 onChange={e=>setPinValue(e.target.value)} 
@@ -1042,6 +1042,7 @@ function LiveContestView({ contest, onExit, isAdmin }) {
 function VirtualContestView({ payload, onExit }) {
   const contest = payload?.contest || {};
   const toast = useToast();
+  const { t } = useLang();
   const [run, setRun] = useState(payload?.run || null);
   const [probs, setProbs] = useState(payload?.problems || []);
   const [remainingMs, setRemainingMs] = useState(payload?.run?.remainingMs || 0);
@@ -1123,9 +1124,9 @@ function VirtualContestView({ payload, onExit }) {
           ))}
         </div>
         <div className="lv-ranking card">
-          <div className="lv-panel-title">🏆 내 가상 진행도</div>
+          <div className="lv-panel-title">🏆 {t('contestMyProgress')}</div>
           <div className="lr-row me">
-            <span style={{flex:1,fontWeight:700}}>풀린 문제</span>
+            <span style={{flex:1,fontWeight:700}}>{t('contestSolvedProblems')}</span>
             <span className="mono" style={{color:'var(--blue)',fontWeight:700}}>{solvedIds.size}/{probs.length}</span>
           </div>
           <div style={{padding:'12px 16px',display:'grid',gap:10}}>
@@ -1138,7 +1139,7 @@ function VirtualContestView({ payload, onExit }) {
             <textarea
               value={code}
               onChange={(e) => setCode(e.target.value)}
-              placeholder="코드를 붙여넣고 제출하세요. 결과는 글로벌 랭킹이나 공식 리더보드에 반영되지 않습니다."
+              placeholder={t('contestSubmitNote')}
               rows={10}
               disabled={remainingSec === 0}
               style={{width:'100%',minHeight:180,fontFamily:'var(--font-mono)',fontSize:13,borderRadius:12,border:'1px solid var(--border)',background:'var(--bg)',color:'var(--text)',padding:12}}

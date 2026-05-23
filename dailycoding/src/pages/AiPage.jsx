@@ -19,7 +19,8 @@ export default function AiPage() {
   const navigate = useNavigate();
   const { user }     = useAuth();
   const { problems: appProblems, solved } = useApp();
-  const { t } = useLang();
+  const { t, lang } = useLang();
+  const txt = (ko, en) => lang === 'ko' ? ko : en;
   const [analyzing,  setAnalyzing]  = useState(false);
   const [analysis,   setAnalysis]   = useState(null);
   const [chat,       setChat]       = useState([]);
@@ -383,15 +384,15 @@ export default function AiPage() {
           </div>
         )}
         <div className="ai-card fade-up" style={{marginTop:16,background:'linear-gradient(135deg,rgba(188,140,255,.08),rgba(13,17,23,.9))',borderColor:'rgba(188,140,255,.25)'}}>
-          <div className="ai-card-title" style={{color:'var(--purple)'}}>🎙️ AI Interview Prep Guide</div>
+          <div className="ai-card-title" style={{color:'var(--purple)'}}>🎙️ {txt('AI 모의 면접 가이드', 'AI Interview Prep Guide')}</div>
           <p style={{fontSize:13,color:'var(--text2)',lineHeight:1.7,marginBottom:12}}>
-            Type any of the prompts below into the AI chat to run a mock interview.
+            {txt('아래 프롬프트를 AI 채팅에 입력하면 모의 면접을 진행할 수 있습니다.', 'Type any of the prompts below into the AI chat to run a mock interview.')}
           </p>
           <div style={{display:'flex',flexDirection:'column',gap:6}}>
             {[
-              'Generate 3 expected interview questions based on my solving style',
-              'Give me an example interview answer explaining O(n log n) time complexity',
-              'Explain interview answer strategies for algorithm problems using hash maps',
+              txt('내 풀이 스타일을 기반으로 예상 면접 질문 3가지를 생성해줘', 'Generate 3 expected interview questions based on my solving style'),
+              txt('O(n log n) 시간 복잡도를 설명하는 면접 답변 예시를 알려줘', 'Give me an example interview answer explaining O(n log n) time complexity'),
+              txt('해시맵을 활용하는 알고리즘 문제의 면접 답변 전략을 설명해줘', 'Explain interview answer strategies for algorithm problems using hash maps'),
             ].map((q) => (
               <button key={q} onClick={() => setInput(q)} style={{
                 padding:'8px 12px',borderRadius:8,border:'1px solid rgba(188,140,255,.25)',

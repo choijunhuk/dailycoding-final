@@ -12,18 +12,24 @@ const emptySummary = {
   season: { territories: [], mySolvedThisWeek: 0, totalSolvedThisWeek: 0 },
 }
 
-function formatSeconds(sec) {
+function formatSeconds(sec, lang) {
   const value = Number(sec) || 0
   const minutes = Math.floor(value / 60)
   const seconds = value % 60
+  if (lang === 'en') {
+    if (!minutes) return `${seconds}s`
+    return `${minutes}m ${String(seconds).padStart(2, '0')}s`
+  }
   if (!minutes) return `${seconds}초`
   return `${minutes}분 ${String(seconds).padStart(2, '0')}초`
 }
 
-function tierLabel(tier) {
-  return ({
-    iron: 'Iron', bronze: 'Bronze', silver: 'Silver', gold: 'Gold', platinum: 'Platinum', emerald: 'Emerald', diamond: 'Diamond', master: 'Master', grandmaster: 'Grandmaster', challenger: 'Challenger',
-  })[tier] || tier || 'Training'
+const TIER_LABELS_KO = { iron: '아이언', bronze: '브론즈', silver: '실버', gold: '골드', platinum: '플래티넘', emerald: '에메랄드', diamond: '다이아', master: '마스터', grandmaster: '그랜드마스터', challenger: '챌린저' }
+const TIER_LABELS_EN = { iron: 'Iron', bronze: 'Bronze', silver: 'Silver', gold: 'Gold', platinum: 'Platinum', emerald: 'Emerald', diamond: 'Diamond', master: 'Master', grandmaster: 'Grandmaster', challenger: 'Challenger' }
+
+function tierLabel(tier, lang) {
+  const map = lang === 'ko' ? TIER_LABELS_KO : TIER_LABELS_EN
+  return map[tier] || tier || (lang === 'ko' ? '훈련' : 'Training')
 }
 
 export default function GameHubPage() {
@@ -83,7 +89,7 @@ export default function GameHubPage() {
           <div className="game-boss-orb">{boss?.emoji || '🎮'}</div>
           <div>
             <div className="game-panel-label">{txt('오늘의 보스', "Today's Boss")}</div>
-            <strong>{boss?.name || txt('보스 준비 중', 'Boss coming soon')}</strong>
+            <strong>{(lang === 'ko' ? boss?.nameKo || boss?.name : boss?.name) || txt('보스 준비 중', 'Boss coming soon')}</strong>
             <small>{dungeonProgress.cleared}/{dungeonProgress.total} {txt('방 클리어', 'rooms cleared')} · {dungeonProgress.percent}% {txt('진행', 'progress')}</small>
           </div>
         </div>
@@ -138,9 +144,9 @@ export default function GameHubPage() {
                 <span className="game-row-icon"><Zap size={16} /></span>
                 <span className="game-row-main">
                   <strong>{challenge.title}</strong>
-                  <small>{challenge.ghost?.username || txt('고스트', 'Ghost')} · {txt('목표', 'Target')} {formatSeconds(challenge.ghost?.targetTimeSec)}</small>
+                  <small>{challenge.ghost?.username || txt('고스트', 'Ghost')} · {txt('목표', 'Target')} {formatSeconds(challenge.ghost?.targetTimeSec, lang)}</small>
                 </span>
-                <span className="game-pill">{tierLabel(challenge.tier)}</span>
+                <span className="game-pill">{tierLabel(challenge.tier, lang)}</span>
               </button>
             ))}
           </div>
@@ -170,7 +176,7 @@ export default function GameHubPage() {
                   <strong>{txt('방', 'Room')} {room.order} · {room.title}</strong>
                   <small>{room.cleared ? txt('클리어됨', 'Cleared') : txt(`클리어 시 ${room.damage} 피해`, `Deal ${room.damage} damage on clear`)}</small>
                 </span>
-                <span className="game-pill">{tierLabel(room.tier)}</span>
+                <span className="game-pill">{tierLabel(room.tier, lang)}</span>
               </button>
             ))}
           </div>
@@ -189,7 +195,7 @@ export default function GameHubPage() {
             {territories.map((territory) => (
               <div key={territory.id} className="territory-row">
                 <div className="territory-title">
-                  <strong>{territory.label}</strong>
+                  <strong>{lang === 'ko' ? territory.labelKo || territory.label : territory.label}</strong>
                   <small>{territory.mySolves}/{territory.totalSolves} {txt('풀이', 'solves')}</small>
                 </div>
                 <div className="territory-bar"><span style={{ width: `${territory.progress || 0}%` }} /></div>

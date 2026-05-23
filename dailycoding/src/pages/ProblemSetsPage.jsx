@@ -130,7 +130,7 @@ function EditModal({ set, onSave, onClose, lang }) {
           </label>
           <textarea className="input mono" style={{ width: '100%', minHeight: 80, resize: 'vertical', fontSize: 13 }}
             value={problemIdsText} onChange={(e) => setProblemIdsText(e.target.value)}
-            placeholder="예) 1001, 1002, 1003" />
+            placeholder={txt('예) 1001, 1002, 1003', 'e.g. 1001, 1002, 1003')} />
         </div>
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
           <button className="btn btn-ghost" onClick={onClose}>{txt('취소', 'Cancel')}</button>

@@ -4,27 +4,30 @@ import { useAuth } from '../context/AuthContext';
 import { useSubscriptionStatus } from '../hooks/useSubscriptionStatus.js';
 import { useSubscriptionCheckout } from '../hooks/useSubscriptionCheckout.js';
 import { useToast } from '../context/ToastContext.jsx';
-import { formatPlanPrice, getPlanList, PRICING_FAQ } from '../data/pricingPlans.js';
+import { useLang } from '../context/LangContext.jsx';
+import { formatPlanPrice, getPlanList, getPricingFaq } from '../data/pricingPlans.js';
 
 export default function PricingPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const toast = useToast();
+  const { t, lang, toggleLang } = useLang();
   const { tier: currentTier } = useSubscriptionStatus(user?.id);
   const { loadingPlan, startCheckout } = useSubscriptionCheckout();
   const [billingPeriod, setBillingPeriod] = useState('monthly');
   const [openFaq, setOpenFaq] = useState(null);
-  const plans = useMemo(() => getPlanList(), []);
+  const plans = useMemo(() => getPlanList(lang), [lang]);
+  const pricingFaq = useMemo(() => getPricingFaq(lang), [lang]);
 
   const pricingSummary = useMemo(() => (
     plans.map((plan) => ({
       id: plan.id,
       name: plan.name,
       value: billingPeriod === 'monthly' ? plan.monthlyPrice : plan.annualPrice,
-      suffix: billingPeriod === 'monthly' ? '/월' : '/년',
+      suffix: billingPeriod === 'monthly' ? t('pricingSufMonth') : t('pricingSufYear'),
       accent: plan.accent,
     }))
-  ), [billingPeriod, plans]);
+  ), [billingPeriod, plans, t]);
 
   const handleUpgrade = async (planId) => {
     if (planId === 'free' || planId === currentTier) return;
@@ -35,30 +38,34 @@ export default function PricingPage() {
     }
     const result = await startCheckout(planId, billingPeriod);
     if (!result.ok) {
-      toast?.show(result.reason || '결제 페이지를 열지 못했습니다.', 'error');
+      toast?.show(result.reason || t('pricingCheckoutError'), 'error');
     }
   };
 
   return (
     <div style={{ minHeight: '100%', overflowY: 'auto', background: 'radial-gradient(circle at top, rgba(121,192,255,.12), transparent 28%), var(--bg)' }}>
       <div style={{ maxWidth: 1260, margin: '0 auto', padding: '28px 24px 64px' }}>
-        <button
-          onClick={() => navigate(-1)}
-          style={{
-            background: 'none',
-            border: 'none',
-            color: 'var(--text3)',
-            cursor: 'pointer',
-            fontSize: 13,
-            fontFamily: 'inherit',
-            marginBottom: 18,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-          }}
-        >
-          ← 뒤로
-        </button>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+          <button
+            onClick={() => navigate(-1)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'var(--text3)',
+              cursor: 'pointer',
+              fontSize: 13,
+              fontFamily: 'inherit',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+            }}
+          >
+            {t('pricingBack')}
+          </button>
+          <button className="btn btn-ghost" onClick={toggleLang} style={{ fontWeight: 700, fontSize: 12 }}>
+            {lang === 'ko' ? 'EN' : 'KO'}
+          </button>
+        </div>
 
         <section
           style={{
@@ -79,23 +86,22 @@ export default function PricingPage() {
             }}
           >
             <div style={{ display: 'inline-flex', padding: '7px 12px', borderRadius: 999, background: 'rgba(121,192,255,.12)', border: '1px solid rgba(121,192,255,.22)', color: 'var(--blue)', fontWeight: 800, fontSize: 11, letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 14 }}>
-              요금제 개요
+              {t('pricingOverviewLabel')}
             </div>
             <h1 style={{ fontSize: 'clamp(32px, 5vw, 54px)', lineHeight: 1.05, letterSpacing: '-0.04em', fontWeight: 900, marginBottom: 12 }}>
-              요금제
+              {t('pricingTitle')}
               <br />
-              <span className="gradient-text">한눈에 보기</span>
+              <span className="gradient-text">{t('pricingSubtitleHighlight')}</span>
             </h1>
             <p style={{ color: 'var(--text2)', fontSize: 16, lineHeight: 1.75, maxWidth: 620, marginBottom: 18 }}>
-              무료로 시작하고 필요할 때 업그레이드하세요.
-              Pro · Team 플랜은 Stripe 보안 결제 후 즉시 시작되며 언제든지 해지 가능합니다.
+              {t('pricingDesc')}
             </p>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
               <button className="btn btn-primary" onClick={() => handleUpgrade('pro')} disabled={loadingPlan === 'pro' || currentTier === 'pro'}>
-                Pro 시작하기
+                {t('pricingStartPro')}
               </button>
               <button className="btn btn-ghost" onClick={() => handleUpgrade('team')} disabled={loadingPlan === 'team' || currentTier === 'team'}>
-                팀 플랜 보기
+                {t('pricingViewTeam')}
               </button>
             </div>
           </div>
@@ -113,8 +119,8 @@ export default function PricingPage() {
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
               <div>
-                <div style={{ fontSize: 12, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '.08em' }}>결제</div>
-                <div style={{ fontSize: 18, fontWeight: 900, marginTop: 4 }}>결제 주기</div>
+                <div style={{ fontSize: 12, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '.08em' }}>{t('pricingBillingLabel')}</div>
+                <div style={{ fontSize: 18, fontWeight: 900, marginTop: 4 }}>{t('pricingBillingCycle')}</div>
               </div>
               <div style={{ display: 'flex', padding: 4, borderRadius: 999, background: 'var(--bg2)', border: '1px solid var(--border)' }}>
                 <button
@@ -130,7 +136,7 @@ export default function PricingPage() {
                     fontSize: 13,
                   }}
                 >
-                  월간
+                  {t('pricingMonthly')}
                 </button>
                 <button
                   onClick={() => setBillingPeriod('annual')}
@@ -145,7 +151,7 @@ export default function PricingPage() {
                     fontSize: 13,
                   }}
                 >
-                  연간
+                  {t('pricingAnnual')}
                 </button>
               </div>
             </div>
@@ -170,7 +176,7 @@ export default function PricingPage() {
                     <div style={{ width: item.value === 0 ? '18%' : item.id === 'team' ? '100%' : '62%', height: '100%', borderRadius: 999, background: item.accent }} />
                   </div>
                   <div style={{ fontWeight: 900, fontSize: 18 }}>
-                    {formatPlanPrice(item.value)}
+                    {formatPlanPrice(item.value, lang)}
                     {item.value > 0 && <span style={{ fontSize: 12, color: 'var(--text3)', marginLeft: 4 }}>{item.suffix}</span>}
                   </div>
                 </div>
@@ -178,8 +184,7 @@ export default function PricingPage() {
             </div>
 
             <div style={{ padding: '12px 14px', borderRadius: 18, background: 'linear-gradient(135deg, rgba(63,185,80,.14), rgba(121,192,255,.12))', border: '1px solid rgba(63,185,80,.22)', color: 'var(--text2)', fontSize: 13, lineHeight: 1.7 }}>
-              연간 결제 시 월간 대비 약 17% 절약됩니다.
-              Pro는 2개월 무료 수준이며, Team은 인당 비용을 더 낮춥니다.
+              {t('pricingSavings')}
             </div>
           </div>
         </section>
@@ -195,7 +200,7 @@ export default function PricingPage() {
         >
           {plans.map((plan) => {
             const price = billingPeriod === 'monthly' ? plan.monthlyPrice : plan.annualPrice;
-            const suffix = billingPeriod === 'monthly' ? '/월' : '/년';
+            const suffix = billingPeriod === 'monthly' ? t('pricingSufMonth') : t('pricingSufYear');
             return (
               <div
                 key={plan.id}
@@ -213,7 +218,7 @@ export default function PricingPage() {
               >
                 {plan.highlight && (
                   <div style={{ position: 'absolute', top: 14, right: 14, padding: '5px 10px', borderRadius: 999, background: plan.accent, color: '#0d1117', fontSize: 11, fontWeight: 900 }}>
-                    추천
+                    {t('pricingRecommended')}
                   </div>
                 )}
                 <div style={{ fontSize: 11, color: plan.accent, letterSpacing: '.12em', textTransform: 'uppercase', fontWeight: 900, marginBottom: 8 }}>
@@ -222,7 +227,7 @@ export default function PricingPage() {
                 <div style={{ fontSize: 26, fontWeight: 900, marginBottom: 6 }}>{plan.name}</div>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 10 }}>
                   <span style={{ fontSize: 42, fontWeight: 900, lineHeight: 1 }}>
-                    {formatPlanPrice(price)}
+                    {formatPlanPrice(price, lang)}
                   </span>
                   {price > 0 && <span style={{ color: 'var(--text3)', fontSize: 14 }}>{suffix}</span>}
                 </div>
@@ -268,14 +273,14 @@ export default function PricingPage() {
                   }}
                 >
                   {loadingPlan === plan.id
-                    ? '이동 중...'
+                    ? t('pricingLoadingPlan')
                     : plan.id === currentTier
-                      ? '현재 플랜'
+                      ? t('pricingCurrentPlan')
                       : plan.id === 'free'
-                        ? '무료로 시작'
+                        ? t('pricingStartFree')
                         : user
-                          ? (billingPeriod === 'annual' ? '연간 플랜 시작' : '이 플랜 선택')
-                          : '회원가입 후 시작'}
+                          ? (billingPeriod === 'annual' ? t('pricingSelectAnnual') : t('pricingSelectPlan'))
+                          : t('pricingSignupFirst')}
                 </button>
               </div>
             );
@@ -291,10 +296,10 @@ export default function PricingPage() {
           }}
         >
           <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 26, padding: '24px 22px' }}>
-            <div style={{ fontSize: 28, fontWeight: 900, marginBottom: 8 }}>자주 묻는 질문</div>
-            <div style={{ color: 'var(--text2)', fontSize: 14, marginBottom: 20 }}>구독 전 가장 자주 묻는 질문에 대한 빠른 답변입니다.</div>
+            <div style={{ fontSize: 28, fontWeight: 900, marginBottom: 8 }}>{t('pricingFaqTitle')}</div>
+            <div style={{ color: 'var(--text2)', fontSize: 14, marginBottom: 20 }}>{t('pricingFaqDesc')}</div>
             <div style={{ display: 'grid', gap: 10 }}>
-              {PRICING_FAQ.map((item, index) => {
+              {pricingFaq.map((item, index) => {
                 const open = openFaq === index;
                 return (
                   <div key={item.q} style={{ border: '1px solid var(--border)', borderRadius: 18, background: 'var(--bg3)', overflow: 'hidden' }}>
@@ -332,25 +337,25 @@ export default function PricingPage() {
 
           <div style={{ display: 'grid', gap: 14 }}>
             <div style={{ padding: '22px 20px', borderRadius: 26, background: 'linear-gradient(145deg, rgba(121,192,255,.12), rgba(13,17,23,.96))', border: '1px solid rgba(121,192,255,.18)' }}>
-              <div style={{ fontSize: 12, color: 'var(--blue)', fontWeight: 900, letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 10 }}>보안</div>
-              <div style={{ fontSize: 22, fontWeight: 900, marginBottom: 10 }}>안심하고 결제하세요</div>
+              <div style={{ fontSize: 12, color: 'var(--blue)', fontWeight: 900, letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 10 }}>{t('pricingSecurityLabel')}</div>
+              <div style={{ fontSize: 22, fontWeight: 900, marginBottom: 10 }}>{t('pricingSecurityTitle')}</div>
               <div style={{ display: 'grid', gap: 10, color: 'var(--text2)', fontSize: 13, lineHeight: 1.7 }}>
-                <div>카드 정보는 DailyCoding 서버에 저장되지 않으며, 모든 결제는 Stripe가 직접 처리합니다.</div>
-                <div>결제 후 7일 이내 취소 수수료 없이 전액 환불이 보장됩니다.</div>
-                <div>계정 페이지에서 언제든지 즉시 구독을 취소할 수 있습니다.</div>
+                <div>{t('pricingSecurityInfo1')}</div>
+                <div>{t('pricingSecurityInfo2')}</div>
+                <div>{t('pricingSecurityInfo3')}</div>
               </div>
             </div>
 
             <div style={{ padding: '20px', borderRadius: 26, background: 'var(--bg2)', border: '1px solid var(--border)', color: 'var(--text3)', fontSize: 13, lineHeight: 1.8 }}>
-              모든 유료 플랜은 <strong style={{ color: 'var(--text)' }}>결제 후 7일 이내 전액 환불</strong> 대상입니다.
+              {t('pricingRefundNote')} <strong style={{ color: 'var(--text)' }}>{t('pricingRefundBold')}</strong> {t('pricingRefundEnd')}
               <br />
-              문의: <a href="mailto:choijunhuk2007@gmail.com" style={{ color: 'var(--blue)' }}>choijunhuk2007@gmail.com</a>
+              {lang === 'ko' ? '문의' : 'Contact'}: <a href="mailto:choijunhuk2007@gmail.com" style={{ color: 'var(--blue)' }}>choijunhuk2007@gmail.com</a>
               {' · '}
               <button
                 onClick={() => navigate('/terms')}
                 style={{ background: 'none', border: 'none', color: 'var(--blue)', cursor: 'pointer', fontSize: 13, fontFamily: 'inherit', padding: 0 }}
               >
-                이용약관
+                {t('pricingTerms')}
               </button>
             </div>
           </div>

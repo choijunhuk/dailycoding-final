@@ -55,12 +55,49 @@ export function getProblemTypeMeta(problemType = 'coding', lang = 'en') {
 }
 
 
+const TAG_TRANSLATIONS_EN = {
+  '입출력': 'I/O',
+  '구현': 'Implementation',
+  '수학': 'Math',
+  '문자열': 'String',
+  '정렬': 'Sorting',
+  '자료 구조': 'Data Structures',
+  '해시': 'Hash',
+  '스택': 'Stack',
+  '큐': 'Queue',
+  '우선순위 큐': 'Priority Queue',
+  '세그먼트 트리': 'Segment Tree',
+  '그리디': 'Greedy',
+  '이분 탐색': 'Binary Search',
+  '투 포인터': 'Two Pointers',
+  '누적 합': 'Prefix Sum',
+  '다이나믹 프로그래밍': 'Dynamic Programming',
+  '그래프 이론': 'Graph Theory',
+  '그래프': 'Graph',
+  '최단 경로': 'Shortest Path',
+  '트리': 'Tree',
+  '유니온-파인드': 'Union-Find',
+  '비트마스크': 'Bitmask',
+  '백트래킹': 'Backtracking',
+  '분리 집합': 'Disjoint Set',
+  '소수': 'Prime Numbers',
+  '시뮬레이션': 'Simulation',
+  '동적계획법': 'Dynamic Programming',
+  '정수론': 'Number Theory',
+};
+
 export function isCompanyTag(tag) {
   return typeof tag === 'string' && tag.startsWith(COMPANY_TAG_PREFIX);
 }
 
 export function getTagLabel(tag) {
   return isCompanyTag(tag) ? tag.slice(COMPANY_TAG_PREFIX.length) : tag;
+}
+
+export function getTagLabelLang(tag, lang) {
+  if (isCompanyTag(tag)) return tag.slice(COMPANY_TAG_PREFIX.length);
+  if (lang === 'en') return TAG_TRANSLATIONS_EN[tag] || tag;
+  return tag;
 }
 
 export function splitDiscoveryTags(tags = []) {

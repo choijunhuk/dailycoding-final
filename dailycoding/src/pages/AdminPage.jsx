@@ -535,9 +535,9 @@ export default function AdminPage() {
   const handleClearCache = async (target) => {
     setClearing(target);
     try {
-      const labelMap = { all: '전체', leaderboards: '랭킹', heatmaps: '활동', problems: '문제' };
+      const labelMap = { all: txt('전체','All'), leaderboards: txt('랭킹','Rankings'), heatmaps: txt('활동','Activity'), problems: txt('문제','Problems') };
       await api.post('/admin/cache/clear', { target });
-      toast?.show(`✅ ${labelMap[target] || target} 캐시가 초기화되었습니다.`, 'success');
+      toast?.show(`✅ ${labelMap[target] || target} ${txt('캐시가 초기화되었습니다.','cache cleared.')}`, 'success');
     } catch (err) {
       toast?.show('❌ 캐시 초기화 실패', 'error');
     } finally {
@@ -558,9 +558,9 @@ export default function AdminPage() {
       });
       const { data } = await api.get('/weekly');
       setWeeklyChallenge(data);
-      toast?.show('🏆 이번 주 챌린지가 설정되었습니다.', 'success');
+      toast?.show(txt('🏆 이번 주 챌린지가 설정되었습니다.','🏆 Weekly challenge set.'), 'success');
     } catch (err) {
-      toast?.show(err.response?.data?.message || '주간 챌린지 설정 실패', 'error');
+      toast?.show(err.response?.data?.message || txt('주간 챌린지 설정 실패','Failed to set weekly challenge'), 'error');
     } finally {
       setWeeklySaving(false);
     }
@@ -582,13 +582,13 @@ export default function AdminPage() {
           <div className="cf-row" style={{margin:0,gap:8}}>
             <div style={{flex:1}}>
               <div style={{fontSize:11,fontWeight:700,color:'var(--text2)',marginBottom:4,textTransform:'uppercase',letterSpacing:.5}}>Input</div>
-              <textarea rows={3} className="mono" placeholder="입력값" value={ex.input}
+              <textarea rows={3} className="mono" placeholder={txt('입력값','Input value')} value={ex.input}
                 onChange={e=>{ const arr=[...items]; arr[i]={...arr[i],input:e.target.value}; f(fieldKey,arr); }}
                 style={{resize:'vertical',color:'var(--green)',width:'100%'}}/>
             </div>
             <div style={{flex:1}}>
               <div style={{fontSize:11,fontWeight:700,color:'var(--text2)',marginBottom:4,textTransform:'uppercase',letterSpacing:.5}}>Output</div>
-              <textarea rows={3} className="mono" placeholder="출력값" value={ex.output}
+              <textarea rows={3} className="mono" placeholder={txt('출력값','Output value')} value={ex.output}
                 onChange={e=>{ const arr=[...items]; arr[i]={...arr[i],output:e.target.value}; f(fieldKey,arr); }}
                 style={{resize:'vertical',color:'var(--green)',width:'100%'}}/>
             </div>
@@ -606,7 +606,7 @@ export default function AdminPage() {
     <div className="admin-page">
       <div className="admin-header fade-up">
         <div><h1>👑 Admin Panel</h1><p>Manage problems, contests, and users.</p></div>
-        {activeTab==='problems' && <button className="btn btn-primary" onClick={()=>{setForm(createEmptyForm());setEditTarget(null);setAiPreview(null);setView('create');}}>+ 문제 추가</button>}
+        {activeTab==='problems' && <button className="btn btn-primary" onClick={()=>{setForm(createEmptyForm());setEditTarget(null);setAiPreview(null);setView('create');}}>+ {txt('문제 추가', 'Add Problem')}</button>}
       </div>
       <div className="admin-tabs fade-up">
         {[['problems','📝 Problems'],['contests','🏆 Contests'],['users','👥 Users'],['battle','⚔️ Battle'],['stats','📊 Stats'],['flagged','🛡️ Flagged'],['system','⚙️ System'],['community','💡 Submissions']].map(([k,l])=>(
@@ -620,12 +620,12 @@ export default function AdminPage() {
           {problems.length===0 ? (
             <div className="admin-empty">
               <div style={{fontSize:40}}>📝</div>
-              <p>문제가 없습니다. 직접 만들거나 AI로 생성하세요!</p>
-              <button className="btn btn-primary btn-sm" onClick={()=>setView('create')}>문제 만들기</button>
+              <p>{txt('문제가 없습니다. 직접 만들거나 AI로 생성하세요!', 'No problems yet. Create manually or use AI generation!')}</p>
+              <button className="btn btn-primary btn-sm" onClick={()=>setView('create')}>{txt('문제 만들기', 'Create Problem')}</button>
             </div>
           ) : (
             <table className="admin-table">
-              <thead><tr><th style={{width:60}}>#</th><th>제목</th><th style={{width:90}}>유형</th><th style={{width:90}}>티어</th><th style={{width:70}}>난이도</th><th style={{width:80}}>공개</th><th style={{width:90}}>숨김</th><th style={{width:90}}>제출</th><th style={{width:120}}>관리</th></tr></thead>
+              <thead><tr><th style={{width:60}}>#</th><th>{txt('제목','Title')}</th><th style={{width:90}}>{txt('유형','Type')}</th><th style={{width:90}}>{txt('티어','Tier')}</th><th style={{width:70}}>{txt('난이도','Diff')}</th><th style={{width:80}}>{txt('공개','Vis')}</th><th style={{width:90}}>{txt('숨김','Hidden')}</th><th style={{width:90}}>{txt('제출','Submit')}</th><th style={{width:120}}>{txt('관리','Manage')}</th></tr></thead>
               <tbody>
                 {problems.map(p=>(
                   <tr key={p.id} className="at-row">
@@ -655,11 +655,11 @@ export default function AdminPage() {
           {contests.length===0 ? (
             <div className="admin-empty">
               <div style={{fontSize:40}}>🏆</div>
-              <p>등록된 대회 없음</p>
+              <p>{txt('등록된 대회 없음', 'No contests registered')}</p>
             </div>
           ) : (
             <table className="admin-table">
-              <thead><tr><th style={{width:40}}>ID</th><th>이름</th><th style={{width:90}}>상태</th><th style={{width:70}}>참가자</th><th style={{width:80}}>시간</th><th style={{width:180}}>관리</th></tr></thead>
+              <thead><tr><th style={{width:40}}>ID</th><th>{txt('이름','Name')}</th><th style={{width:90}}>{txt('상태','Status')}</th><th style={{width:70}}>{txt('참가자','Players')}</th><th style={{width:80}}>{txt('시간','Time')}</th><th style={{width:180}}>{txt('관리','Manage')}</th></tr></thead>
               <tbody>
                 {contests.map(c=>(
                   <tr key={c.id} className="at-row">
@@ -686,15 +686,15 @@ export default function AdminPage() {
         <div className="card fade-up" style={{overflow:'hidden'}}>
           <div style={{padding:'12px 16px',borderBottom:'1px solid var(--border)'}}>
             <input
-              placeholder="🔍 유저명 또는 이메일 검색..."
+              placeholder={txt('🔍 유저명 또는 이메일 검색...', '🔍 Search username or email...')}
               value={userSearch}
               onChange={e=>setUserSearch(e.target.value)}
               style={{width:'100%',padding:'8px 12px',fontSize:13,borderRadius:8,border:'1px solid var(--border)',background:'var(--bg3)',color:'var(--text)'}}
             />
           </div>
-          {users.length===0 ? <div className="admin-empty"><p>사용자 없음</p></div> : (
+          {users.length===0 ? <div className="admin-empty"><p>{txt('사용자 없음', 'No users')}</p></div> : (
             <table className="admin-table">
-              <thead><tr><th style={{width:40}}>ID</th><th>닉네임</th><th>이메일</th><th style={{width:80}}>티어</th><th style={{width:80}}>레이팅</th><th style={{width:80}}>역할</th><th style={{width:110}}>관리</th></tr></thead>
+              <thead><tr><th style={{width:40}}>ID</th><th>{txt('닉네임','Username')}</th><th>{txt('이메일','Email')}</th><th style={{width:80}}>{txt('티어','Tier')}</th><th style={{width:80}}>{txt('레이팅','Rating')}</th><th style={{width:80}}>{txt('역할','Role')}</th><th style={{width:110}}>{txt('관리','Manage')}</th></tr></thead>
               <tbody>
                 {users.filter(u=>!userSearch||u.username?.toLowerCase().includes(userSearch.toLowerCase())||u.email?.toLowerCase().includes(userSearch.toLowerCase())).map(u=>(
                   <tr key={u.id} className="at-row">
@@ -706,7 +706,7 @@ export default function AdminPage() {
                     <td><select value={u.role} onChange={e=>handleRoleChange(u.id,e.target.value)} style={{padding:'3px 6px',fontSize:12,width:'auto'}}><option value="user">User</option><option value="admin">Admin</option></select></td>
                     <td style={{display:'flex',gap:4}}>
                       <button className="btn btn-sm" style={{background:'rgba(227,179,65,.1)',color:'var(--yellow)',border:'1px solid rgba(227,179,65,.3)',fontSize:11}} onClick={()=>handleResetPw(u.id,u.username)}>PW</button>
-                      <button className="btn btn-sm" style={{background:'rgba(248,81,73,.1)',color:'var(--red)',border:'1px solid rgba(248,81,73,.3)'}} onClick={()=>handleDeleteUser(u.id,u.username)}>삭제</button>
+                      <button className="btn btn-sm" style={{background:'rgba(248,81,73,.1)',color:'var(--red)',border:'1px solid rgba(248,81,73,.3)'}} onClick={()=>handleDeleteUser(u.id,u.username)}>{txt('삭제','Delete')}</button>
                     </td>
                   </tr>
                 ))}
@@ -726,33 +726,33 @@ export default function AdminPage() {
             </p>
             <div className="cf-row">
               <div className="form-group" style={{flex:1}}>
-                <label>코딩 문제</label>
+                <label>{txt('코딩 문제', 'Coding Problems')}</label>
                 <input type="number" min="1" max="8" value={battleSettings.codingCount}
                   onChange={e=>setBattleSettings(p=>({...p,codingCount:e.target.value}))} />
               </div>
               <div className="form-group" style={{flex:1}}>
-                <label>빈칸 채우기 문제</label>
+                <label>{txt('빈칸 채우기 문제', 'Fill-Blank Problems')}</label>
                 <input type="number" min="0" max="6" value={battleSettings.fillBlankCount}
                   onChange={e=>setBattleSettings(p=>({...p,fillBlankCount:e.target.value}))} />
               </div>
               <div className="form-group" style={{flex:1}}>
-                <label>버그 수정 문제</label>
+                <label>{txt('버그 수정 문제', 'Bug-Fix Problems')}</label>
                 <input type="number" min="0" max="6" value={battleSettings.bugFixCount}
                   onChange={e=>setBattleSettings(p=>({...p,bugFixCount:e.target.value}))} />
               </div>
             </div>
             <div className="cf-row" style={{alignItems:'end'}}>
               <div className="form-group" style={{flex:1}}>
-                <label>최대 문제 수</label>
+                <label>{txt('최대 문제 수', 'Max Problems')}</label>
                 <input type="number" min="3" max="20" value={battleSettings.maxTotalProblems}
                   onChange={e=>setBattleSettings(p=>({...p,maxTotalProblems:e.target.value}))} />
               </div>
               <div style={{fontSize:12,color:'var(--text2)',marginBottom:10,flex:2}}>
-                현재 합계: {Number(battleSettings.codingCount||0) + Number(battleSettings.fillBlankCount||0) + Number(battleSettings.bugFixCount||0)}문제
+                {txt('현재 합계', 'Total')}: {Number(battleSettings.codingCount||0) + Number(battleSettings.fillBlankCount||0) + Number(battleSettings.bugFixCount||0)} {txt('문제', 'problems')}
               </div>
             </div>
             <button className="btn btn-primary" onClick={handleSaveBattleSettings} disabled={battleSettingsSaving}>
-              {battleSettingsSaving ? <><span className="spinner"/> 저장 중...</> : '설정 저장'}
+              {battleSettingsSaving ? <><span className="spinner"/> {txt('저장 중...', 'Saving...')}</> : txt('설정 저장', 'Save Settings')}
             </button>
           </div>
         </div>
@@ -762,10 +762,10 @@ export default function AdminPage() {
       {activeTab==='stats' && (
         <div className="admin-stats-grid fade-up">
           {[
-            {label:'전체 사용자', value:adminStats?.userStats?.total ?? '—', color:'var(--blue)', sub: adminStats ? `+${adminStats.userStats.newThisWeek} 이번 주` : ''},
-            {label:'오늘 제출', value:adminStats?.submissionStats?.totalToday ?? '—', color:'var(--green)', sub: adminStats ? `${adminStats.submissionStats.correctRate}% 정답` : ''},
-            {label:'오늘 활성', value:adminStats?.userStats?.activeToday ?? '—', color:'var(--yellow)'},
-            {label:'문제 수', value:problems.length, color:'var(--purple)'},
+            {label:txt('전체 사용자','Total Users'), value:adminStats?.userStats?.total ?? '—', color:'var(--blue)', sub: adminStats ? `+${adminStats.userStats.newThisWeek} ${txt('이번 주','this week')}` : ''},
+            {label:txt('오늘 제출','Today Submissions'), value:adminStats?.submissionStats?.totalToday ?? '—', color:'var(--green)', sub: adminStats ? `${adminStats.submissionStats.correctRate}% ${txt('정답','correct')}` : ''},
+            {label:txt('오늘 활성','Active Today'), value:adminStats?.userStats?.activeToday ?? '—', color:'var(--yellow)'},
+            {label:txt('문제 수','Problems'), value:problems.length, color:'var(--purple)'},
           ].map(s=>(
             <div key={s.label} className="card admin-stat-card">
               <div className="asc-value mono" style={{color:s.color}}>{s.value}</div>
@@ -813,11 +813,11 @@ export default function AdminPage() {
             </div>
           </div>
           <div className="card admin-stat-card" style={{textAlign:'left'}}>
-            <div className="asc-label" style={{marginBottom:12}}>배틀 현황</div>
+            <div className="asc-label" style={{marginBottom:12}}>{txt('배틀 현황','Battle Status')}</div>
             {[
-              ['waiting', '대기 중'],
-              ['playing', '진행 중'],
-              ['finished', '완료'],
+              ['waiting', txt('대기 중','Waiting')],
+              ['playing', txt('진행 중','Playing')],
+              ['finished', txt('완료','Finished')],
             ].map(([key, label]) => (
               <div key={key} style={{display:'flex',justifyContent:'space-between',padding:'8px 0',borderBottom:'1px solid var(--border)'}}>
                 <span style={{fontSize:12,color:'var(--text2)'}}>{label}</span>
@@ -855,19 +855,19 @@ export default function AdminPage() {
                 <span style={{color:item.status === 'approved' || item.status === 'merged' ? 'var(--green)' : 'var(--text3)'}}>{item.status}</span>
               </div>
             ))}
-            {(adminStats?.recentReviews || []).length === 0 && <div style={{fontSize:12,color:'var(--text3)'}}>최근 리뷰 없음.</div>}
+            {(adminStats?.recentReviews || []).length === 0 && <div style={{fontSize:12,color:'var(--text3)'}}>{txt('최근 리뷰 없음.','No recent reviews.')}</div>}
           </div>
           <div className="card admin-stat-card" style={{gridColumn:'span 2', textAlign:'left'}}>
-            <div className="asc-label" style={{marginBottom:12}}>AI 상태</div>
-            {!aiStatus && <div style={{fontSize:12,color:'var(--text3)'}}>AI 상태 로드 실패.</div>}
+            <div className="asc-label" style={{marginBottom:12}}>{txt('AI 상태','AI Status')}</div>
+            {!aiStatus && <div style={{fontSize:12,color:'var(--text3)'}}>{txt('AI 상태 로드 실패.','Failed to load AI status.')}</div>}
             {aiStatus && (
               <div style={{display:'grid', gap:12}}>
                 <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(130px, 1fr))',gap:10}}>
                   {[
-                    { label:'API 설정', value: aiStatus.configured ? 'OK' : '키 없음', color: aiStatus.configured ? 'var(--green)' : 'var(--red)' },
-                    { label:'모델', value: aiStatus.primaryModel || '없음', color:'var(--blue)' },
-                    { label:'쿨다운', value: aiStatus.providerCooldown ? `${aiStatus.providerCooldownSec}s` : '없음', color: aiStatus.providerCooldown ? 'var(--yellow)' : 'var(--green)' },
-                    { label:'폴백 비율', value: `${aiStatus.metricsToday?.fallbackRate || 0}%`, color: Number(aiStatus.metricsToday?.fallbackRate || 0) > 30 ? 'var(--orange)' : 'var(--green)' },
+                    { label:txt('API 설정','API Config'), value: aiStatus.configured ? 'OK' : txt('키 없음','No key'), color: aiStatus.configured ? 'var(--green)' : 'var(--red)' },
+                    { label:txt('모델','Model'), value: aiStatus.primaryModel || txt('없음','None'), color:'var(--blue)' },
+                    { label:txt('쿨다운','Cooldown'), value: aiStatus.providerCooldown ? `${aiStatus.providerCooldownSec}s` : txt('없음','None'), color: aiStatus.providerCooldown ? 'var(--yellow)' : 'var(--green)' },
+                    { label:txt('폴백 비율','Fallback Rate'), value: `${aiStatus.metricsToday?.fallbackRate || 0}%`, color: Number(aiStatus.metricsToday?.fallbackRate || 0) > 30 ? 'var(--orange)' : 'var(--green)' },
                   ].map(item => (
                     <div key={item.label} style={{padding:'10px 12px',borderRadius:12,background:'var(--bg3)',border:'1px solid var(--border)',minWidth:0}}>
                       <div style={{fontSize:11,color:'var(--text3)',marginBottom:4}}>{item.label}</div>
@@ -884,16 +884,16 @@ export default function AdminPage() {
             )}
           </div>
           <div className="card admin-stat-card" style={{gridColumn:'span 2', textAlign:'left'}}>
-            <div className="asc-label" style={{marginBottom:12}}>Stripe 상태</div>
-            {!stripeOps && <div style={{fontSize:12,color:'var(--text3)'}}>Stripe 상태 로드 실패.</div>}
+            <div className="asc-label" style={{marginBottom:12}}>{txt('Stripe 상태','Stripe Status')}</div>
+            {!stripeOps && <div style={{fontSize:12,color:'var(--text3)'}}>{txt('Stripe 상태 로드 실패.','Failed to load Stripe status.')}</div>}
             {stripeOps && (
               <div style={{display:'grid', gap:12}}>
                 <div style={{display:'flex',gap:12,flexWrap:'wrap'}}>
                   {[
-                    { label:'모드', value: stripeOps.mode, color:'var(--blue)' },
-                    { label:'설정', value: stripeOps.configured ? 'OK' : '미완료', color: stripeOps.configured ? 'var(--green)' : 'var(--red)' },
-                    { label:'Webhook', value: stripeOps.webhookConfigured ? '활성' : '없음', color: stripeOps.webhookConfigured ? 'var(--green)' : 'var(--yellow)' },
-                    { label:'Secret Key', value: stripeOps.secretKeyConfigured ? '설정됨' : '없음', color: stripeOps.secretKeyConfigured ? 'var(--green)' : 'var(--yellow)' },
+                    { label:txt('모드','Mode'), value: stripeOps.mode, color:'var(--blue)' },
+                    { label:txt('설정','Config'), value: stripeOps.configured ? 'OK' : txt('미완료','Incomplete'), color: stripeOps.configured ? 'var(--green)' : 'var(--red)' },
+                    { label:'Webhook', value: stripeOps.webhookConfigured ? txt('활성','Active') : txt('없음','None'), color: stripeOps.webhookConfigured ? 'var(--green)' : 'var(--yellow)' },
+                    { label:'Secret Key', value: stripeOps.secretKeyConfigured ? txt('설정됨','Set') : txt('없음','None'), color: stripeOps.secretKeyConfigured ? 'var(--green)' : 'var(--yellow)' },
                   ].map((item) => (
                     <div key={item.label} style={{minWidth:110,padding:'10px 12px',borderRadius:12,background:'var(--bg3)',border:'1px solid var(--border)'}}>
                       <div style={{fontSize:11,color:'var(--text3)',marginBottom:4}}>{item.label}</div>
@@ -906,16 +906,16 @@ export default function AdminPage() {
                     <div key={planKey} style={{padding:'12px 14px',borderRadius:12,background:'var(--bg3)',border:'1px solid var(--border)'}}>
                       <div style={{fontWeight:800,marginBottom:8}}>{planKey === 'pro' ? 'Pro' : 'Team'}</div>
                       <div style={{fontSize:12,color:'var(--text2)',lineHeight:1.7}}>
-                        월간 Price ID: {planValue.monthlyPriceId ? '설정됨' : '없음'}<br />
-                        연간 Price ID: {planValue.annualPriceId ? '설정됨' : '없음'}<br />
-                        월간 결제 링크: {planValue.monthlyPaymentLink ? '설정됨' : '없음'}<br />
-                        연간 결제 링크: {planValue.annualPaymentLink ? '설정됨' : '없음'}
+                        {txt('월간 Price ID','Monthly Price ID')}: {planValue.monthlyPriceId ? txt('설정됨','Set') : txt('없음','None')}<br />
+                        {txt('연간 Price ID','Annual Price ID')}: {planValue.annualPriceId ? txt('설정됨','Set') : txt('없음','None')}<br />
+                        {txt('월간 결제 링크','Monthly Payment Link')}: {planValue.monthlyPaymentLink ? txt('설정됨','Set') : txt('없음','None')}<br />
+                        {txt('연간 결제 링크','Annual Payment Link')}: {planValue.annualPaymentLink ? txt('설정됨','Set') : txt('없음','None')}
                       </div>
                     </div>
                   ))}
                 </div>
                 <div style={{fontSize:12,color:'var(--text2)'}}>
-                  마지막 이벤트: {stripeOps.lastEvent?.eventType || '없음'}
+                  {txt('마지막 이벤트','Last Event')}: {stripeOps.lastEvent?.eventType || txt('없음','None')}
                   {stripeOps.lastEvent?.recordedAt ? ` · ${new Date(stripeOps.lastEvent.recordedAt).toLocaleString(dateLocale)}` : ''}
                 </div>
                 {stripeOps.lastError && (
@@ -1214,19 +1214,19 @@ export default function AdminPage() {
           <div className="ai-gen-title">🤖 Auto-generate with Gemini AI</div>
           <div className="cf-row">
             <div className="form-group" style={{flex:1}}><label>{txt('문제 유형', 'Problem Type')}</label><select value={aiForm.problemType} onChange={e=>setAiForm(p=>({...p,problemType:e.target.value}))}>{PROBLEM_TYPE_OPTIONS.map(o=><option key={o.value} value={o.value}>{txt(o.ko, o.label)}</option>)}</select></div>
-            <div className="form-group" style={{flex:1}}><label>티어</label><select value={aiForm.tier} onChange={e=>setAiForm(p=>({...p,tier:e.target.value}))}>{TIER_OPTIONS.map(t=><option key={t} value={t}>{t}</option>)}</select></div>
-            <div className="form-group" style={{flex:1}}><label>난이도</label><input type="number" min="1" max="10" value={aiForm.difficulty} onChange={e=>setAiForm(p=>({...p,difficulty:e.target.value}))} /></div>
-            <div className="form-group" style={{flex:2}}><label>주제/키워드</label><input placeholder="예: fibonacci, NameError, 중복 제거..." value={aiForm.topic} onChange={e=>setAiForm(p=>({...p,topic:e.target.value}))} /></div>
+            <div className="form-group" style={{flex:1}}><label>{txt('티어','Tier')}</label><select value={aiForm.tier} onChange={e=>setAiForm(p=>({...p,tier:e.target.value}))}>{TIER_OPTIONS.map(t=><option key={t} value={t}>{t}</option>)}</select></div>
+            <div className="form-group" style={{flex:1}}><label>{txt('난이도','Difficulty')}</label><input type="number" min="1" max="10" value={aiForm.difficulty} onChange={e=>setAiForm(p=>({...p,difficulty:e.target.value}))} /></div>
+            <div className="form-group" style={{flex:2}}><label>{txt('주제/키워드','Topic/Keywords')}</label><input placeholder={txt('예: fibonacci, NameError, 중복 제거...','e.g. fibonacci, NameError, deduplication...')} value={aiForm.topic} onChange={e=>setAiForm(p=>({...p,topic:e.target.value}))} /></div>
           </div>
           <div className="form-group">
-            <label>알고리즘 태그</label>
+            <label>{txt('알고리즘 태그','Algorithm Tags')}</label>
             <div className="tag-picker">{TAG_OPTIONS.map(t=><button key={t} type="button" className={`tag-pick-btn ${aiForm.tags.includes(t)?'selected':''}`} onClick={()=>toggleAiTag(t)}>{t}</button>)}</div>
           </div>
           <div style={{display:'flex',alignItems:'center',gap:12}}>
             <button className="btn btn-primary" onClick={handleAiGenerate} disabled={aiGenerating} style={{padding:'10px 24px'}}>
-              {aiGenerating?<><span className="spinner"/> Gemini 생성 중...</>:'✨ 문제 자동 생성'}
+              {aiGenerating?<><span className="spinner"/> {txt('Gemini 생성 중...','Generating...')}</>:'✨ '+txt('문제 자동 생성','Auto-generate Problem')}
             </button>
-            {aiPreview&&<span style={{fontSize:13,color:'var(--green)'}}>✓ 생성 완료! 아래 내용 확인 후 등록하세요.</span>}
+            {aiPreview&&<span style={{fontSize:13,color:'var(--green)'}}>✓ {txt('생성 완료! 아래 내용 확인 후 등록하세요.','Generated! Review below and save.')}</span>}
           </div>
         </div>
       )}
@@ -1235,27 +1235,27 @@ export default function AdminPage() {
         <div className="card cf-section">
           <div className="cf-section-title">{txt('기본 정보', 'Basic Info')}</div>
           <div className="cf-row">
-            <div className="form-group" style={{flex:3}}><label>문제 제목 *</label><input placeholder="문제 제목" value={form.title} onChange={e=>f('title',e.target.value)} /></div>
+            <div className="form-group" style={{flex:3}}><label>{txt('문제 제목 *','Problem Title *')}</label><input placeholder={txt('문제 제목','Problem title')} value={form.title} onChange={e=>f('title',e.target.value)} /></div>
             <div className="form-group" style={{flex:1}}>
-              <label>유형</label>
+              <label>{txt('유형','Type')}</label>
               <select value={form.problemType} onChange={e=>f('problemType',e.target.value)}>
                 {PROBLEM_TYPE_OPTIONS.map(option => <option key={option.value} value={option.value}>{txt(option.ko, option.label)}</option>)}
               </select>
             </div>
             <div className="form-group" style={{flex:1}}>
-              <label>선호 언어</label>
+              <label>{txt('선호 언어','Preferred Language')}</label>
               <select value={form.preferredLanguage} onChange={e=>f('preferredLanguage',e.target.value)}>
                 {JUDGE_LANGUAGE_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
               </select>
             </div>
-            <div className="form-group" style={{flex:1}}><label>티어</label><select value={form.tier} onChange={e=>f('tier',e.target.value)}>{TIER_OPTIONS.map(t=><option key={t} value={t}>{t}</option>)}</select></div>
-            <div className="form-group" style={{flex:1}}><label>난이도</label><input type="number" min="1" max="10" value={form.difficulty} onChange={e=>f('difficulty',e.target.value)} /></div>
+            <div className="form-group" style={{flex:1}}><label>{txt('티어','Tier')}</label><select value={form.tier} onChange={e=>f('tier',e.target.value)}>{TIER_OPTIONS.map(t=><option key={t} value={t}>{t}</option>)}</select></div>
+            <div className="form-group" style={{flex:1}}><label>{txt('난이도','Difficulty')}</label><input type="number" min="1" max="10" value={form.difficulty} onChange={e=>f('difficulty',e.target.value)} /></div>
           </div>
           <div className="cf-row">
-            <div className="form-group" style={{flex:1}}><label>시간 제한 (초)</label><input type="number" min="1" value={form.timeLimit} onChange={e=>f('timeLimit',e.target.value)} /></div>
-            <div className="form-group" style={{flex:1}}><label>메모리 제한 (MB)</label><input type="number" min="32" value={form.memLimit} onChange={e=>f('memLimit',e.target.value)} /></div>
+            <div className="form-group" style={{flex:1}}><label>{txt('시간 제한 (초)','Time Limit (s)')}</label><input type="number" min="1" value={form.timeLimit} onChange={e=>f('timeLimit',e.target.value)} /></div>
+            <div className="form-group" style={{flex:1}}><label>{txt('메모리 제한 (MB)','Memory Limit (MB)')}</label><input type="number" min="32" value={form.memLimit} onChange={e=>f('memLimit',e.target.value)} /></div>
           </div>
-          <div className="form-group"><label>태그</label><div className="tag-picker">{TAG_OPTIONS.map(t=><button key={t} type="button" className={`tag-pick-btn ${form.tags.includes(t)?'selected':''}`} onClick={()=>toggleTag(t)}>{t}</button>)}</div></div>
+          <div className="form-group"><label>{txt('태그','Tags')}</label><div className="tag-picker">{TAG_OPTIONS.map(t=><button key={t} type="button" className={`tag-pick-btn ${form.tags.includes(t)?'selected':''}`} onClick={()=>toggleTag(t)}>{t}</button>)}</div></div>
         </div>
 
         <div className="card cf-section">
@@ -1287,7 +1287,7 @@ export default function AdminPage() {
             <>
               <div className="form-group">
                 <label>Buggy Code</label>
-                <textarea rows={6} className="mono" placeholder="버그가 있는 코드" value={form.specialConfig.buggyCode} onChange={e=>sf('buggyCode',e.target.value)} style={{resize:'vertical'}} />
+                <textarea rows={6} className="mono" placeholder={txt('버그가 있는 코드','Code with bugs')} value={form.specialConfig.buggyCode} onChange={e=>sf('buggyCode',e.target.value)} style={{resize:'vertical'}} />
               </div>
               <div className="form-group">
                 <label>Answer Keywords (comma-separated)</label>
@@ -1295,7 +1295,7 @@ export default function AdminPage() {
               </div>
               <div className="form-group">
                 <label>Explanation</label>
-                <textarea rows={3} placeholder="무엇이 잘못되었는지 설명" value={form.specialConfig.explanation} onChange={e=>sf('explanation',e.target.value)} style={{resize:'vertical'}} />
+                <textarea rows={3} placeholder={txt('무엇이 잘못되었는지 설명','Explain what is wrong')} value={form.specialConfig.explanation} onChange={e=>sf('explanation',e.target.value)} style={{resize:'vertical'}} />
               </div>
             </>
           )}
@@ -1305,7 +1305,7 @@ export default function AdminPage() {
               <div className="cf-row">
                 <div className="form-group" style={{ flex:1 }}>
                   <label>Scenario Title</label>
-                  <input value={form.specialConfig.scenarioTitle} onChange={e=>sf('scenarioTitle', e.target.value)} placeholder="예) API 응답 속도 저하" />
+                  <input value={form.specialConfig.scenarioTitle} onChange={e=>sf('scenarioTitle', e.target.value)} placeholder={txt('예) API 응답 속도 저하','e.g. API response too slow')} />
                 </div>
                 <div className="form-group" style={{ flex:1 }}>
                   <label>Evaluation Mode</label>
@@ -1316,7 +1316,7 @@ export default function AdminPage() {
               </div>
               <div className="form-group">
                 <label>Scenario Description</label>
-                <textarea rows={4} value={form.specialConfig.scenarioDescription} onChange={e=>sf('scenarioDescription', e.target.value)} placeholder="문제 상황, 목표, 제약 조건을 설명하세요." style={{ resize:'vertical' }} />
+                <textarea rows={4} value={form.specialConfig.scenarioDescription} onChange={e=>sf('scenarioDescription', e.target.value)} placeholder={txt('문제 상황, 목표, 제약 조건을 설명하세요.','Describe the scenario, goals, and constraints.')} style={{ resize:'vertical' }} />
               </div>
 
               <div>
@@ -1333,11 +1333,11 @@ export default function AdminPage() {
                       </div>
                       <label style={{ display:'flex', alignItems:'center', gap:8, fontSize:12, color:'var(--text2)', marginTop:22 }}>
                         <input type="checkbox" checked={file.editable !== false} onChange={e=>updateTroubleshootingFile(index, { editable:e.target.checked })} />
-                        사용자 편집 가능
+                        {txt('사용자 편집 가능','User editable')}
                       </label>
-                      <button type="button" className="btn btn-ghost btn-sm" onClick={()=>removeTroubleshootingFile(index)} style={{ alignSelf:'flex-end' }}>삭제</button>
+                      <button type="button" className="btn btn-ghost btn-sm" onClick={()=>removeTroubleshootingFile(index)} style={{ alignSelf:'flex-end' }}>{txt('삭제','Delete')}</button>
                     </div>
-                    <textarea className="mono" rows={8} value={file.content} onChange={e=>updateTroubleshootingFile(index, { content:e.target.value })} placeholder="파일 내용" style={{ resize:'vertical' }} />
+                    <textarea className="mono" rows={8} value={file.content} onChange={e=>updateTroubleshootingFile(index, { content:e.target.value })} placeholder={txt('파일 내용','File content')} style={{ resize:'vertical' }} />
                   </div>
                 ))}
               </div>

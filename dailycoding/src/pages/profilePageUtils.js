@@ -15,6 +15,20 @@ export const PROFILE_TIER_LABELS = {
   challenger:  'CHALLENGER',
 };
 
+export const PROFILE_TIER_LABELS_KO = {
+  unranked:    '언랭크드',
+  iron:        '아이언',
+  bronze:      '브론즈',
+  silver:      '실버',
+  gold:        '골드',
+  platinum:    '플래티넘',
+  emerald:     '에메랄드',
+  diamond:     '다이아',
+  master:      '마스터',
+  grandmaster: '그랜드마스터',
+  challenger:  '챌린저',
+};
+
 export function buildYearHeatmap(rows = [], today = new Date()) {
   const start = new Date(today);
   start.setDate(today.getDate() - 363);

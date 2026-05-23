@@ -16,11 +16,11 @@ const CATEGORY_LABELS = {
 };
 
 const RARITY_META = {
-  common:    { label: 'COMMON',    color: '#94a3b8' },
-  uncommon:  { label: 'UNCOMMON',  color: '#22c55e' },
-  rare:      { label: 'RARE',      color: '#38bdf8' },
-  epic:      { label: 'EPIC',      color: '#a78bfa' },
-  legendary: { label: 'LEGENDARY', color: '#f59e0b' },
+  common:    { label: 'COMMON',    labelKo: '일반',   color: '#94a3b8' },
+  uncommon:  { label: 'UNCOMMON',  labelKo: '고급',   color: '#22c55e' },
+  rare:      { label: 'RARE',      labelKo: '희귀',   color: '#38bdf8' },
+  epic:      { label: 'EPIC',      labelKo: '영웅',   color: '#a78bfa' },
+  legendary: { label: 'LEGENDARY', labelKo: '전설',   color: '#f59e0b' },
 };
 
 const RARITY_ORDER = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
@@ -110,7 +110,7 @@ function ItemCard({ item, isEquipped, onEquip, stats, lang }) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4, width: '100%', marginTop: 4 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ fontSize: 10, fontWeight: 900, letterSpacing: 0.8, color: rarity.color }}>
-            {rarity.label}
+            {lang === 'ko' ? rarity.labelKo : rarity.label}
           </div>
           {pct !== null && (
             <div style={{ fontSize: 10, color: 'var(--text3)' }} title={txt('전체 유저 중 보유 비율', 'Percentage of all users who own this')}>

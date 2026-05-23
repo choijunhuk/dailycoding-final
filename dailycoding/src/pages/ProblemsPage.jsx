@@ -14,6 +14,7 @@ import {
   getAcceptanceRate,
   getStoredView,
   getTagLabel,
+  getTagLabelLang,
   isCompanyTag,
 
   parsePositiveInt,
@@ -317,7 +318,7 @@ export default function ProblemsPage() {
     search ? { key: 'search', label: `${t('chipSearch')}${search}` } : null,
     tier !== 'all' ? { key: 'tier', label: `${t('chipTier')}${TIERS[tier]?.label || tier}` } : null,
     problemType !== 'all' ? { key: 'problemType', label: `${t('chipType')}${getTypeLabel(problemType)}` } : null,
-    tag !== 'all' ? { key: 'tag', label: `${isCompanyTag(tag) ? txt('기업: ', 'Company: ') : t('chipTag')}${getTagLabel(tag)}` } : null,
+    tag !== 'all' ? { key: 'tag', label: `${isCompanyTag(tag) ? txt('기업: ', 'Company: ') : t('chipTag')}${getTagLabelLang(tag, lang)}` } : null,
     status !== 'all' ? { key: 'status', label: `${t('chipStatus')}${status}` } : null,
     sort !== 'id' ? { key: 'sort', label: `${t('chipSort')}${sort}` } : null,
   ].filter(Boolean)
@@ -774,7 +775,7 @@ export default function ProblemsPage() {
                     color: active ? 'var(--purple)' : 'var(--text2)',
                     cursor:'pointer', fontSize:12, fontWeight:800, fontFamily:'inherit',
                   }}>
-                    {item.name || getTagLabel(item.tag)}{item.count ? <span style={{ marginLeft:5, color:'var(--text3)' }}>{item.count}</span> : null}
+                    {getTagLabelLang(item.tag || item.name, lang)}{item.count ? <span style={{ marginLeft:5, color:'var(--text3)' }}>{item.count}</span> : null}
                   </button>
                 )
               })}
@@ -995,7 +996,7 @@ export default function ProblemsPage() {
                           background: 'var(--bg3)',
                           color: 'var(--text3)',
                           border: '1px solid var(--border)',
-                        }}>{item}</span>
+                        }}>{getTagLabelLang(item, lang)}</span>
                       ))}
                       {problemCompanyTags.slice(0, 1).map(item => (
                         <span key={item} style={{
@@ -1109,7 +1110,7 @@ export default function ProblemsPage() {
                       <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 10, fontWeight: 700, background: 'rgba(86,211,100,.1)', color: 'var(--green)', border: '1px solid rgba(86,211,100,.2)' }}>{txt('공식 해설', 'Official Editorial')}</span>
                     )}
                     {problemAlgorithmTags.slice(0, 2).map(item => (
-                      <span key={item} style={{ padding: '2px 7px', borderRadius: 4, fontSize: 10, background: 'var(--bg3)', color: 'var(--text3)', border: '1px solid var(--border)' }}>{item}</span>
+                      <span key={item} style={{ padding: '2px 7px', borderRadius: 4, fontSize: 10, background: 'var(--bg3)', color: 'var(--text3)', border: '1px solid var(--border)' }}>{getTagLabelLang(item, lang)}</span>
                     ))}
                     {problemCompanyTags.slice(0, 1).map(item => (
                       <span key={item} style={{ padding: '2px 7px', borderRadius: 4, fontSize: 10, background: 'rgba(188,140,255,.1)', color: 'var(--purple)', border: '1px solid rgba(188,140,255,.18)' }}>{getTagLabel(item)}</span>

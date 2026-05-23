@@ -60,7 +60,7 @@ function useCountUp(enabled) {
 
 export default function LandingPage({ onLogin, onSignup, onPricing }) {
   const { theme, toggleTheme } = useTheme()
-  const { lang } = useLang()
+  const { lang, toggleLang } = useLang()
   const txt = (ko, en) => pickLangText(lang, ko, en)
   const dateLocale = getDateLocale(lang)
   const statsRef = useRef(null)
@@ -211,6 +211,9 @@ export default function LandingPage({ onLogin, onSignup, onPricing }) {
             <button className="btn btn-primary" onClick={onSignup}>{txt('무료 시작', 'Start Free')}</button>
             <button className="btn btn-ghost" onClick={toggleTheme} aria-label={txt('테마 전환', 'theme toggle')}>
               {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+            </button>
+            <button className="btn btn-ghost" onClick={toggleLang} style={{ fontWeight: 700, fontSize: 12 }}>
+              {lang === 'ko' ? 'EN' : 'KO'}
             </button>
           </div>
         </div>
@@ -395,15 +398,15 @@ export default function LandingPage({ onLogin, onSignup, onPricing }) {
               <div style={{ fontSize: 11, color: 'var(--blue)', fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 10 }}>{txt('요금제 미리보기', 'Pricing Preview')}</div>
               <div style={{ fontSize: 28, fontWeight: 900, marginBottom: 8 }}>{txt('언제든 유료 플랜으로 업그레이드 가능합니다', 'Upgrade to a paid plan anytime')}</div>
               <div style={{ color: 'var(--text2)', lineHeight: 1.7 }}>
-                {PLAN_META.pro.name} {PLAN_META.pro.compactPrice} ·{' '}
-                {PLAN_META.team.name} {PLAN_META.team.compactPrice}.
+                {PLAN_META.pro.name} {PLAN_META.pro.compactPrice[lang] ?? PLAN_META.pro.compactPrice.ko} ·{' '}
+                {PLAN_META.team.name} {PLAN_META.team.compactPrice[lang] ?? PLAN_META.team.compactPrice.ko}.
               </div>
             </div>
             <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(180px, 1fr))', gap:12 }}>
               {[
                 { name:txt('무료', 'Free'), price:'Free', accent:'var(--text3)' },
-                { name:PLAN_META.pro.name, price:PLAN_META.pro.compactPrice, accent:'var(--blue)' },
-                { name:PLAN_META.team.name, price:PLAN_META.team.compactPrice, accent:'#f2cc60' },
+                { name:PLAN_META.pro.name, price:PLAN_META.pro.compactPrice[lang] ?? PLAN_META.pro.compactPrice.ko, accent:'var(--blue)' },
+                { name:PLAN_META.team.name, price:PLAN_META.team.compactPrice[lang] ?? PLAN_META.team.compactPrice.ko, accent:'#f2cc60' },
               ].map((plan) => (
                 <div key={plan.name} style={{ padding:'14px 16px', borderRadius:18, background:'var(--bg2)', border:`1px solid ${plan.accent}30` }}>
                   <div style={{ fontSize:12, color:plan.accent, fontWeight:900, letterSpacing:'.08em' }}>{plan.name}</div>

@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import { useLang } from '../context/LangContext.jsx';
 import { JUDGE_LANGUAGE_OPTIONS } from '../data/judgeLanguages.js';
-import { pickLangText } from '../utils/languageMode.js';
+import { pickLangText, withVars } from '../utils/languageMode.js';
 import { getSocketUrl } from '../utils/socket.js';
 import './AlgorithmBattlePage.css';
 
@@ -55,13 +55,6 @@ const PROBLEM_TIER_LABELS = {
   platinum: 'Platinum',
   diamond: 'Diamond',
 };
-const TAG_GROUP_LABELS = [
-  { label: '기초', tags: ['입출력', '구현', '수학', '문자열', '정렬'] },
-  { label: '자료구조', tags: ['자료 구조', '해시', '스택', '큐', '우선순위 큐'] },
-  { label: '알고리즘', tags: ['그리디', '이분 탐색', '투 포인터', '누적 합', '다이나믹 프로그래밍', 'DP'] },
-  { label: '그래프', tags: ['그래프 이론', '그래프', 'BFS', 'DFS', '최단 경로', '트리'] },
-  { label: '심화', tags: ['백트래킹', '비트마스크', '분리 집합'] },
-];
 const DEFAULT_PROBLEM_FILTERS = {
   tierMode: 'auto',
   minTier: 'silver',
@@ -72,25 +65,6 @@ const DEFAULT_PROBLEM_FILTERS = {
   bannedTags: [],
 };
 
-const WORKSHOP_EVENT_LABELS = {
-  ON_CORRECT_ANSWER: '정답 제출 시',
-  ON_WRONG_ANSWER: '오답 제출 시',
-  ON_COMPILE_ERROR: '컴파일 오류 시',
-  ON_OPPONENT_CORRECT: '상대방 정답 시',
-  ON_OPPONENT_WRONG: '상대방 오답 시',
-  ON_TIMER_HALF: '시간 절반 경과 시',
-  ON_TIMER_LOW: '시간 60초 미만 시',
-  ON_BATTLE_START: '배틀 시작 시',
-  ON_HP_BELOW_50: '내 HP 50 미만 시',
-  ON_HP_BELOW_25: '내 HP 25 미만 시',
-};
-
-const WORKSHOP_ITEM_LABELS = {
-  shield: '방어막',
-  bomb: '폭탄',
-  heal: '회복',
-  freeze: '정지',
-};
 
 
 function fmtSec(seconds) {
@@ -117,7 +91,7 @@ function sanitizeProblemFilters(filters, tiers) {
   };
 }
 
-function getProblemFilterSummary(filters) {
+function getProblemFilterSummary(filters, t) {
   const parts = [];
   if (filters.tierMode === 'min') parts.push(`${PROBLEM_TIER_LABELS[filters.minTier] || filters.minTier}+`);
   if (filters.tierMode === 'max') parts.push(`≤${PROBLEM_TIER_LABELS[filters.maxTier] || filters.maxTier}`);
@@ -125,10 +99,10 @@ function getProblemFilterSummary(filters) {
   if (filters.tierMode === 'only' && filters.allowedTiers.length) {
     parts.push(filters.allowedTiers.map((tier) => PROBLEM_TIER_LABELS[tier] || tier).join(', '));
   }
-  if (filters.bannedTiers.length) parts.push(`금지 티어: ${filters.bannedTiers.map((tier) => PROBLEM_TIER_LABELS[tier] || tier).join(', ')}`);
-  if (filters.requiredTags.length) parts.push(`태그: ${filters.requiredTags.join(', ')}`);
-  if (filters.bannedTags.length) parts.push(`금지 태그: ${filters.bannedTags.join(', ')}`);
-  return parts.length ? parts.join(' · ') : '자동 추천';
+  if (filters.bannedTiers.length) parts.push(withVars(t('abBannedTiers'), { tiers: filters.bannedTiers.map((tier) => PROBLEM_TIER_LABELS[tier] || tier).join(', ') }));
+  if (filters.requiredTags.length) parts.push(withVars(t('abRequiredTags'), { tags: filters.requiredTags.join(', ') }));
+  if (filters.bannedTags.length) parts.push(withVars(t('abBannedTags'), { tags: filters.bannedTags.join(', ') }));
+  return parts.length ? parts.join(' · ') : t('abAutoRecommend');
 }
 
 function timeLeft(room) {
@@ -143,67 +117,67 @@ function lobbyTimeLeft(room) {
   return diff < 0 ? 0 : Math.min(diff, 300);
 }
 
-function getBattleObjectiveText(config, isTerritoryMode) {
-  if (isTerritoryMode) return '🏴 Claim territory by submitting correct answers';
-  if (config?.winCondition === 'first-correct') return '⚡ First correct submission wins';
-  if (config?.effectsEnabled) return '✨ Correct answer → attack + problem effect';
-  return '⚔️ Correct answer → attack';
+function getBattleObjectiveText(config, isTerritoryMode, txt) {
+  if (isTerritoryMode) return txt('🏴 정답 제출로 영토를 점령하세요', '🏴 Claim territory by submitting correct answers');
+  if (config?.winCondition === 'first-correct') return txt('⚡ 첫 번째 정답 제출이 승리', '⚡ First correct submission wins');
+  if (config?.effectsEnabled) return txt('✨ 정답 → 공격 + 문제 효과', '✨ Correct answer → attack + problem effect');
+  return txt('⚔️ 정답 → 공격', '⚔️ Correct answer → attack');
 }
 
-function formatCombatEvent(event, myId, participantById = {}) {
+function formatCombatEvent(event, myId, participantById = {}, txt = (ko, en) => en) {
   if (!event || !COMBAT_EVENT_TYPES.has(event.type)) return null;
   const payload = event.payload || {};
   const isMe = event.userId === myId;
-  const actor = participantById[String(event.userId)]?.username || (isMe ? 'me' : 'opponent');
+  const actor = participantById[String(event.userId)]?.username || (isMe ? txt('나', 'me') : txt('상대', 'opponent'));
 
   switch (event.type) {
     case 'player.attack':
       return {
         emoji: isMe ? '⚔️' : '🩸',
-        label: `${actor} attack`,
+        label: txt(`${actor} 공격`, `${actor} attack`),
         detail: `+${payload.score || 0}pts${payload.damage ? ` · dmg ${payload.damage}` : ''}`,
         color: isMe ? 'var(--blue)' : 'var(--red)',
       };
     case 'player.miss':
-      return { emoji: '💨', label: `${actor} wrong`, detail: payload.detail || '', color: 'var(--text3)' };
+      return { emoji: '💨', label: txt(`${actor} 오답`, `${actor} wrong`), detail: payload.detail || '', color: 'var(--text3)' };
     case 'problem.effect':
-      return { emoji: '✨', label: payload.effectLabel || 'Problem effect', detail: payload.description || 'Effect triggered', color: 'var(--purple)' };
+      return { emoji: '✨', label: payload.effectLabel || txt('문제 효과', 'Problem effect'), detail: payload.description || txt('효과 발동', 'Effect triggered'), color: 'var(--purple)' };
     case 'item.used': {
       const statStr = payload.stat
         ? Object.entries(payload.stat).map(([k, v]) => `${k} ${v > 0 ? '+' : ''}${v}`).join(' ')
         : '';
-      return { emoji: '🎒', label: payload.itemLabel || 'Item', detail: statStr || 'Used', color: 'var(--yellow)' };
+      return { emoji: '🎒', label: payload.itemLabel || txt('아이템', 'Item'), detail: statStr || txt('사용됨', 'Used'), color: 'var(--yellow)' };
     }
     case 'territory.claimed':
-      return { emoji: '🏴', label: `${actor} claimed`, detail: payload.problemId ? `Problem #${payload.problemId}` : '', color: isMe ? 'var(--blue)' : 'var(--red)' };
+      return { emoji: '🏴', label: txt(`${actor} 점령`, `${actor} claimed`), detail: payload.problemId ? `Problem #${payload.problemId}` : '', color: isMe ? 'var(--blue)' : 'var(--red)' };
     default:
       return null;
   }
 }
 
-function formatSocialEvent(event, myId, participantById = {}) {
+function formatSocialEvent(event, myId, participantById = {}, txt = (ko, en) => en) {
   if (!event || !SOCIAL_EVENT_TYPES.has(event.type)) return null;
   const payload = event.payload || {};
   const isMe = event.userId === myId;
-  const actor = participantById[String(event.userId)]?.username || (isMe ? 'me' : 'opponent');
+  const actor = participantById[String(event.userId)]?.username || (isMe ? txt('나', 'me') : txt('상대', 'opponent'));
 
   switch (event.type) {
     case 'player.joined':
-      return { kind: 'system', text: `${actor} joined.` };
+      return { kind: 'system', text: txt(`${actor} 입장.`, `${actor} joined.`) };
     case 'player.left':
-      return { kind: 'system', text: `${actor} left.` };
+      return { kind: 'system', text: txt(`${actor} 퇴장.`, `${actor} left.`) };
     case 'player.ready':
-      return { kind: 'system', text: `${actor} is ready.` };
+      return { kind: 'system', text: txt(`${actor} 준비 완료.`, `${actor} is ready.`) };
     case 'room.problem_selected':
-      return { kind: 'system', text: 'Battle problem selected.' };
+      return { kind: 'system', text: txt('배틀 문제 선택됨.', 'Battle problem selected.') };
     case 'draft.started':
-      return { kind: 'system', text: 'Draft started. Both players pick conditions and the problem will be finalized.' };
+      return { kind: 'system', text: txt('드래프트 시작. 양쪽이 조건을 선택하면 문제가 확정됩니다.', 'Draft started. Both players pick conditions and the problem will be finalized.') };
     case 'draft.selection':
-      return { kind: 'system', text: `${actor} submitted draft.` };
+      return { kind: 'system', text: txt(`${actor} 드래프트 제출.`, `${actor} submitted draft.`) };
     case 'draft.completed':
-      return { kind: 'system', text: 'Draft complete. Battle problem finalized.' };
+      return { kind: 'system', text: txt('드래프트 완료. 배틀 문제 확정.', 'Draft complete. Battle problem finalized.') };
     case 'room.started':
-      return { kind: 'system', text: 'All players ready. Battle started.' };
+      return { kind: 'system', text: txt('모든 플레이어 준비 완료. 배틀 시작!', 'All players ready. Battle started.') };
     case 'player.chat': {
       const msg = payload.message || '';
       const shortcut = CHAT_SHORTCUTS[msg.toLowerCase()];
@@ -261,14 +235,15 @@ function checkWorkshopCondition(condition, state) {
   return false;
 }
 
-function formatWorkshopMessage(action, actorName = '워크샵') {
-  if (action?.type === 'MODIFY_HP') return `${actorName}: HP ${Number(action.value) >= 0 ? '+' : ''}${action.value}`;
-  if (action?.type === 'SET_HP') return `${actorName}: HP ${action.value}로 설정`;
-  if (action?.type === 'ADD_TIME') return `${actorName}: 시간 ${Number(action.value) >= 0 ? '+' : ''}${action.value}초`;
-  if (action?.type === 'GRANT_ITEM') return `${actorName}: ${WORKSHOP_ITEM_LABELS[action.item] || action.item} 지급`;
-  if (action?.type === 'DOUBLE_DAMAGE') return `${actorName}: ${action.duration}초 동안 데미지 2배`;
-  if (action?.type === 'FREEZE_OPPONENT') return `${actorName}: ${action.duration}초 동안 상대 타이머 정지`;
-  return action?.text || '워크샵 효과가 발동했습니다.';
+function formatWorkshopMessage(action, actorName, t, itemLabels) {
+  const delta = Number(action?.value) >= 0 ? '+' : '';
+  if (action?.type === 'MODIFY_HP') return `${actorName}: HP ${delta}${action.value}`;
+  if (action?.type === 'SET_HP') return withVars(t('abWsSetHp'), { actor: actorName, value: action.value });
+  if (action?.type === 'ADD_TIME') return withVars(t('abWsAddTime'), { actor: actorName, delta, value: action.value });
+  if (action?.type === 'GRANT_ITEM') return withVars(t('abWsGrantItem'), { actor: actorName, item: itemLabels[action.item] || action.item });
+  if (action?.type === 'DOUBLE_DAMAGE') return withVars(t('abWsDoubleDmg'), { actor: actorName, duration: action.duration });
+  if (action?.type === 'FREEZE_OPPONENT') return withVars(t('abWsFreeze'), { actor: actorName, duration: action.duration });
+  return action?.text || t('abWsDefault');
 }
 
 function TerritoryBar({ problems, claims, myId, onSelect, selectedIdx }) {
@@ -428,8 +403,26 @@ export default function AlgorithmBattlePage() {
   const [searchParams] = useSearchParams();
   const toast = useToast();
   const { user } = useAuth();
-  const { lang: uiLang } = useLang();
+  const { lang: uiLang, t } = useLang();
   const txt = (ko, en) => pickLangText(uiLang, ko, en);
+  const workshopEventLabels = useMemo(() => ({
+    ON_CORRECT_ANSWER: t('abEvt_ON_CORRECT_ANSWER'),
+    ON_WRONG_ANSWER: t('abEvt_ON_WRONG_ANSWER'),
+    ON_COMPILE_ERROR: t('abEvt_ON_COMPILE_ERROR'),
+    ON_OPPONENT_CORRECT: t('abEvt_ON_OPPONENT_CORRECT'),
+    ON_OPPONENT_WRONG: t('abEvt_ON_OPPONENT_WRONG'),
+    ON_TIMER_HALF: t('abEvt_ON_TIMER_HALF'),
+    ON_TIMER_LOW: t('abEvt_ON_TIMER_LOW'),
+    ON_BATTLE_START: t('abEvt_ON_BATTLE_START'),
+    ON_HP_BELOW_50: t('abEvt_ON_HP_BELOW_50'),
+    ON_HP_BELOW_25: t('abEvt_ON_HP_BELOW_25'),
+  }), [t]);
+  const workshopItemLabels = useMemo(() => ({
+    shield: t('abItem_shield'),
+    bomb: t('abItem_bomb'),
+    heal: t('abItem_heal'),
+    freeze: t('abItem_freeze'),
+  }), [t]);
   const socketRef = useRef(null);
 
   // ── 로비 상태
@@ -556,14 +549,21 @@ export default function AlgorithmBattlePage() {
     [territoryClaims, user?.id]
   );
   const tagGroups = useMemo(() => {
+    const tagGroupDefs = [
+      { label: t('abTagCat_basic'), tags: ['입출력', '구현', '수학', '문자열', '정렬'] },
+      { label: t('abTagCat_ds'), tags: ['자료 구조', '해시', '스택', '큐', '우선순위 큐'] },
+      { label: t('abTagCat_algo'), tags: ['그리디', '이분 탐색', '투 포인터', '누적 합', '다이나믹 프로그래밍', 'DP'] },
+      { label: t('abTagCat_graph'), tags: ['그래프 이론', '그래프', 'BFS', 'DFS', '최단 경로', '트리'] },
+      { label: t('abTagCat_adv'), tags: ['백트래킹', '비트마스크', '분리 집합'] },
+    ];
     const available = new Set(bannableTags);
-    const groups = TAG_GROUP_LABELS
+    const groups = tagGroupDefs
       .map((group) => ({ ...group, tags: group.tags.filter((tag) => available.has(tag)) }))
       .filter((group) => group.tags.length > 0);
     const groupedTags = new Set(groups.flatMap((group) => group.tags));
     const extras = bannableTags.filter((tag) => !groupedTags.has(tag));
     return extras.length > 0 ? [...groups, { label: 'Other', tags: extras }] : groups;
-  }, [bannableTags]);
+  }, [bannableTags, t]);
   const normalizedProblemFilters = useMemo(
     () => sanitizeProblemFilters(problemFilters, problemTiers),
     [problemFilters, problemTiers]
@@ -632,7 +632,7 @@ export default function AlgorithmBattlePage() {
         next.messages.push({
           id: `${Date.now()}_${rule.id}_${next.messages.length}`,
           eventName,
-          text: action.type === 'SHOW_MESSAGE' ? action.text : formatWorkshopMessage(action, actor.username || '워크샵'),
+          text: action.type === 'SHOW_MESSAGE' ? action.text : formatWorkshopMessage(action, actor.username || t('abWsWorkshopActor'), t, workshopItemLabels),
         });
       }
       next.messages = next.messages.slice(-12);
@@ -1137,7 +1137,7 @@ export default function AlgorithmBattlePage() {
   // ════════════════════════════════════════════════
   if (!roomId) {
     const isTerritorySelected = selectedMode === 'territory';
-    const filterSummary = getProblemFilterSummary(normalizedProblemFilters);
+    const filterSummary = getProblemFilterSummary(normalizedProblemFilters, t);
     return (
       <div className="ab-page">
         <div className="ab-header">
@@ -1595,7 +1595,7 @@ export default function AlgorithmBattlePage() {
             {config.rules.map((rule, i) => <li key={i} style={{ color:'var(--text2)' }}>{rule}</li>)}
             {workshopRules.map((rule, i) => (
               <li key={`workshop-${rule.id || i}`} style={{ color:'var(--purple)' }}>
-                {WORKSHOP_EVENT_LABELS[rule.event] || rule.event} → {rule.action?.type || '액션'}
+                {workshopEventLabels[rule.event] || rule.event} → {rule.action?.type || t('abActionLabel')}
               </li>
             ))}
           </ul>
@@ -1742,7 +1742,7 @@ export default function AlgorithmBattlePage() {
                     ))}
                   </select>
                   <span style={{ fontSize: 12, color: 'var(--text3)' }}>
-                    {getBattleObjectiveText(config, isTerritoryMode)}
+                    {getBattleObjectiveText(config, isTerritoryMode, txt)}
                   </span>
                 </div>
 
@@ -1798,15 +1798,15 @@ export default function AlgorithmBattlePage() {
 
           {hasWorkshopMode && (
             <>
-              <div className="ab-section-title">워크샵 효과</div>
+              <div className="ab-section-title">{t('abWsEffectsSection')}</div>
               <div className="ab-submit-card">
-                <strong>{config?.workshopMode?.name || '워크샵 모드'}</strong>
+                <strong>{config?.workshopMode?.name || t('abWsModeName')}</strong>
                 <span>
-                  기본 HP {workshopBaseHp} · 룰 {workshopRules.length}개 · 시간 보정 {Number(workshopRuntime.timeDeltaSec || 0) >= 0 ? '+' : ''}{workshopRuntime.timeDeltaSec || 0}초
+                  {withVars(t('abWsStats'), { hp: workshopBaseHp, rules: workshopRules.length, delta: `${Number(workshopRuntime.timeDeltaSec || 0) >= 0 ? '+' : ''}${workshopRuntime.timeDeltaSec || 0}` })}
                 </span>
                 {workshopRuntime.grantedItems.length > 0 && (
                   <p>
-                    지급 아이템: {workshopRuntime.grantedItems.slice(-4).map((item) => WORKSHOP_ITEM_LABELS[item.item] || item.item).join(', ')}
+                    {withVars(t('abWsGrantedItems'), { items: workshopRuntime.grantedItems.slice(-4).map((item) => workshopItemLabels[item.item] || item.item).join(', ') })}
                   </p>
                 )}
               </div>
@@ -1849,13 +1849,13 @@ export default function AlgorithmBattlePage() {
                     <div key={message.id} className="ab-log-entry" style={{ borderLeft: '2px solid var(--purple)' }}>
                       <span className="ab-log-emoji">🛠️</span>
                       <div>
-                        <strong>{WORKSHOP_EVENT_LABELS[message.eventName] || '워크샵'}</strong>
+                        <strong>{workshopEventLabels[message.eventName] || t('abWsWorkshopActor')}</strong>
                         <span>{message.text}</span>
                       </div>
                     </div>
                   ))}
                   {[...combatEvents].reverse().map((event) => {
-                const fmt = formatCombatEvent(event, user?.id, participantById);
+                const fmt = formatCombatEvent(event, user?.id, participantById, txt);
                 if (!fmt) return null;
                 return (
                   <div key={event.id} className="ab-log-entry" style={{ borderLeft: `2px solid ${fmt.color}` }}>
@@ -1878,7 +1878,7 @@ export default function AlgorithmBattlePage() {
               {socialEvents.length === 0 && spectatorMessages.length === 0
                 ? <div className="ab-log-empty">No messages yet.</div>
                 : [...socialEvents].slice(-40).map((event) => {
-                  const fmt = formatSocialEvent(event, user?.id, participantById);
+                  const fmt = formatSocialEvent(event, user?.id, participantById, txt);
                   if (!fmt) return null;
                   return (
                     <div key={event.id} className={`ab-chat-line ${fmt.kind}`}>

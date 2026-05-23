@@ -87,7 +87,7 @@ export default function GrowthHubPage() {
       </header>
 
       <div style={{ display:'grid', gridTemplateColumns:'minmax(0, 1.25fr) minmax(320px, .75fr)', gap:18 }} className="dashboard-main-grid">
-        <Panel icon={<CalendarDays size={18} color="var(--blue)" />} title={data.weeklyPlan?.title || '이번 주 맞춤 학습 계획'}>
+        <Panel icon={<CalendarDays size={18} color="var(--blue)" />} title={data.weeklyPlan?.title || txt('이번 주 맞춤 학습 계획', 'Personalized Weekly Plan')}>
           <p style={{ color:'var(--text2)', fontSize:13, lineHeight:1.7, marginBottom:14 }}>{data.weeklyPlan?.summary}</p>
           <div style={{ display:'grid', gap:10 }}>
             {(data.weeklyPlan?.days || []).map((item) => (

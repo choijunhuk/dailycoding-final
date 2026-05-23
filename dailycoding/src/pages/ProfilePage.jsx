@@ -14,7 +14,7 @@ import { TIER_POINTS, TIER_ORDER } from '../data/constants.js';
 import { getDateLocale, pickLangText } from '../utils/languageMode.js';
 import ProfileAvatar from '../components/ProfileAvatar.jsx';
 import FollowListModal from '../components/FollowListModal.jsx';
-import { buildYearHeatmap, formatDuration, profileBackgroundToCss, PROFILE_TIER_LABELS, PROFILE_TIER_THRESHOLDS } from './profilePageUtils.js';
+import { buildYearHeatmap, formatDuration, profileBackgroundToCss, PROFILE_TIER_LABELS, PROFILE_TIER_LABELS_KO, PROFILE_TIER_THRESHOLDS } from './profilePageUtils.js';
 import { buildPaymentFeedback, formatCurrentSubscriptionLabel, getProfileUpgradePlans } from './profileSubscriptionUtils.js';
 import { DonutChart, TierBadge, YearHeatmap } from './profilePageWidgets.jsx';
 import './ProfilePage.css';
@@ -640,14 +640,14 @@ export default function ProfilePage() {
       {mainTab==='solved' && (
         <div className="profile-solved-layout fade-up">
           <div className="card profile-donut-card">
-            <div className="profile-solved-count-label">{solvedProblemsMain.length} solved (main)</div>
+            <div className="profile-solved-count-label">{txt(`${solvedProblemsMain.length}개 해결 (메인)`, `${solvedProblemsMain.length} Solved (Main)`)}</div>
             <DonutChart
               data={Object.entries(TIERS).map(([k,v])=>({ color:v.color, count:tierCounts[k]||0 }))}
               total={solvedProblemsMain.length}
             />
             <div style={{ marginTop: 12, display:'grid', gap:6, width:'100%' }}>
-              <div style={{ fontSize: 12, color:'var(--text2)' }}>Fill-in-the-blank: <strong>{practiceTracks.fillBlank?.solvedCount ?? solvedFillBlank.length}</strong> solved · Tier {String(practiceTracks.fillBlank?.tier || 'unranked').toUpperCase()}</div>
-              <div style={{ fontSize: 12, color:'var(--text2)' }}>Bug fix: <strong>{practiceTracks.bugFix?.solvedCount ?? solvedBugFix.length}</strong> solved · Tier {String(practiceTracks.bugFix?.tier || 'unranked').toUpperCase()}</div>
+              <div style={{ fontSize: 12, color:'var(--text2)' }}>{txt('빈칸 채우기', 'Fill-in-the-blank')}: <strong>{practiceTracks.fillBlank?.solvedCount ?? solvedFillBlank.length}</strong> {txt('개 해결', 'solved')} · {txt('티어', 'Tier')} {lang === 'ko' ? (PROFILE_TIER_LABELS_KO[practiceTracks.fillBlank?.tier || 'unranked'] || 'UNRANKED') : String(practiceTracks.fillBlank?.tier || 'unranked').toUpperCase()}</div>
+              <div style={{ fontSize: 12, color:'var(--text2)' }}>{txt('버그 수정', 'Bug fix')}: <strong>{practiceTracks.bugFix?.solvedCount ?? solvedBugFix.length}</strong> {txt('개 해결', 'solved')} · {txt('티어', 'Tier')} {lang === 'ko' ? (PROFILE_TIER_LABELS_KO[practiceTracks.bugFix?.tier || 'unranked'] || 'UNRANKED') : String(practiceTracks.bugFix?.tier || 'unranked').toUpperCase()}</div>
             </div>
           </div>
 
