@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { Reward } from '../models/Reward.js';
+import { BADGE_SHOWCASE_LIMIT, Reward } from '../models/Reward.js';
 import { User } from '../models/User.js';
 import { auth } from '../middleware/auth.js';
 
@@ -10,11 +10,16 @@ router.get('/my', auth, async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
     const progression = await Reward.getProgression(req.user.id);
-    const rewards = await Reward.findByUser(req.user.id);
+    const [rewards, showcasedBadges] = await Promise.all([
+      Reward.findByUser(req.user.id),
+      Reward.findShowcasedBadges(req.user.id),
+    ]);
     res.json({
       rewards,
       equippedBadge: user?.equipped_badge || null,
       equippedTitle: user?.equipped_title || null,
+      showcasedBadges,
+      badgeShowcaseLimit: BADGE_SHOWCASE_LIMIT,
       progression,
     });
   } catch (err) {
@@ -69,6 +74,20 @@ router.post('/equip', auth, async (req, res) => {
   } catch (err) {
     console.error('[rewards/equip]', err.message);
     res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// POST /api/rewards/showcase — 프로필 뱃지 전시 설정
+router.post('/showcase', auth, async (req, res) => {
+  const { code, showcased } = req.body;
+  if (!code) return res.status(400).json({ message: 'Badge code is required.' });
+
+  try {
+    const showcasedBadges = await Reward.setBadgeShowcase(req.user.id, code, showcased !== false);
+    res.json({ showcasedBadges, badgeShowcaseLimit: BADGE_SHOWCASE_LIMIT });
+  } catch (err) {
+    console.error('[rewards/showcase]', err.message);
+    res.status(err.status || 500).json({ message: err.message || 'Server error' });
   }
 });
 

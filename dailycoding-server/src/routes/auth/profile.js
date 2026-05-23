@@ -272,7 +272,10 @@ router.get('/profile/:id', auth, async (req, res) => {
 
     const parsedSocialLinks = safeParseJSON(user.social_links, {});
     const parsedTechStack = safeParseJSON(user.tech_stack, []);
-    const rewards = await Reward.findByUser(id);
+    const [rewards, showcasedBadges] = await Promise.all([
+      Reward.findByUser(id),
+      Reward.findShowcasedBadges(id),
+    ]);
     const battleCount = (battleRows || []).length;
     const battleWins = (battleRows || []).filter((row) => row.result === 'win').length;
     const collaborationScore = Number(collaborationRow?.review_score || 0) + Number(collaborationRow?.suggestion_score || 0);
@@ -333,6 +336,7 @@ router.get('/profile/:id', auth, async (req, res) => {
         collaborationScore,
       },
       rewards,
+      showcasedBadges,
       equippedBackgroundUrl,
     };
 

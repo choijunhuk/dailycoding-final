@@ -730,7 +730,7 @@ export default function RankingPage() {
                   />
                   <div>
                     <div style={{ fontWeight: 600, fontSize: 13, color: isMe ? tm.color : 'var(--text)', display: 'flex', alignItems: 'center', gap: 5 }}>
-                      {rewardMeta[r.equipped_badge || r.equippedBadge]?.icon && <span title={rewardMeta[r.equipped_badge || r.equippedBadge]?.name}>{rewardMeta[r.equipped_badge || r.equippedBadge].icon}</span>}
+                      {rewardMeta[r.equipped_badge || r.equippedBadge]?.icon && <span title={lang === 'ko' ? (rewardMeta[r.equipped_badge || r.equippedBadge]?.name_ko || rewardMeta[r.equipped_badge || r.equippedBadge]?.name) : rewardMeta[r.equipped_badge || r.equippedBadge]?.name}>{rewardMeta[r.equipped_badge || r.equippedBadge].icon}</span>}
                       {r.name}
                       {isMe && (
                         <span style={{
@@ -741,7 +741,7 @@ export default function RankingPage() {
                     </div>
                   {(r.equipped_title || r.equippedTitle) && rewardMeta[r.equipped_title || r.equippedTitle] && (
                     <div style={{ fontSize: 11, color: 'var(--blue)', fontWeight: 700, marginTop: 2 }}>
-                      {rewardMeta[r.equipped_title || r.equippedTitle].icon} {rewardMeta[r.equipped_title || r.equippedTitle].name}
+                      {rewardMeta[r.equipped_title || r.equippedTitle].icon} {lang === 'ko' ? (rewardMeta[r.equipped_title || r.equippedTitle].name_ko || rewardMeta[r.equipped_title || r.equippedTitle].name) : rewardMeta[r.equipped_title || r.equippedTitle].name}
                     </div>
                   )}
                   <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>

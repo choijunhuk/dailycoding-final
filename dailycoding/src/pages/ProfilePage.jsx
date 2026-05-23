@@ -56,7 +56,7 @@ export default function ProfilePage() {
   const location = useLocation();
   const { user, updateUser, applyUser } = useAuth();
   const toast = useToast();
-  const { lang } = useLang();
+  const { lang, t } = useLang();
   const txt = (ko, en) => pickLangText(lang, ko, en);
   const dateLocale = getDateLocale(lang);
   const { solved, submissions, problems: appProblems } = useApp();
@@ -80,6 +80,7 @@ export default function ProfilePage() {
   const [rewards,       setRewards]       = useState([]);
   const [equippedBadge, setEquippedBadge] = useState(user?.equippedBadge || null);
   const [equippedTitle, setEquippedTitle] = useState(user?.equippedTitle || null);
+  const [showcasedBadges, setShowcasedBadges] = useState([]);
   const [progression, setProgression] = useState(null);
   const [followStats,   setFollowStats]   = useState({ followers:0, following:0 });
   const [followModalType, setFollowModalType] = useState(null);
@@ -131,6 +132,7 @@ export default function ProfilePage() {
       setRewards(r.data.rewards || []);
       setEquippedBadge(r.data.equippedBadge);
       setEquippedTitle(r.data.equippedTitle);
+      setShowcasedBadges(r.data.showcasedBadges || []);
       setProgression(r.data.progression || null);
       return api.get('/auth/profile/backgrounds').then(bg => setBackgrounds(bg.data || []));
     }).catch((err) => {
@@ -895,7 +897,7 @@ export default function ProfilePage() {
               {[
                 { label:txt('평균 풀이 시간', 'Average Solve Time'), value: formatDuration(solveStats.avgSolveTime, lang) },
                 { label:txt('총 풀이 시간', 'Total Solve Time'), value: formatDuration(solveStats.totalSolveTime, lang) },
-                { label:txt('최단 풀이', 'Fastest Solve'), value: solveStats.fastestSolve ? `${solveStats.fastestSolve.problemTitle} · ${formatDuration(solveStats.fastestSolve.timeSec, lang)}` : txt('기록 없음', 'No records') },
+                { label:txt('최단 풀이', 'Fastest Solve'), value: solveStats.fastestSolve ? `${solveStats.fastestSolve.problemTitle} · ${formatDuration(solveStats.fastestSolve.timeSec, lang)}` : txt('아직 기록이 없습니다', 'No records yet') },
               ].map((item) => (
                 <div key={item.label} className="card card-pad-sm">
                   <div style={{ fontSize:11, color:'var(--text3)', marginBottom:6 }}>{item.label}</div>
@@ -1371,6 +1373,20 @@ export default function ProfilePage() {
                   </div>
                 ))}
               </div>
+
+              {showcasedBadges.length > 0 && (
+                <div style={{ marginBottom:16 }}>
+                  <div className="profile-rewards-subtitle">{t('profile.showcasedBadges')}</div>
+                  <div className="profile-rewards-grid">
+                    {showcasedBadges.map((badge) => (
+                      <div key={badge.code} className="profile-reward-item equipped">
+                        <div className="reward-icon">{badge.icon}</div>
+                        <div className="reward-name">{lang === 'ko' ? (badge.name_ko || badge.name) : badge.name}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* 뱃지 그리드 */}
               {rewards.filter(r=>r.type==='badge').length>0 && (

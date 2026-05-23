@@ -280,6 +280,10 @@ export default function PublicProfilePage() {
     return <div style={{ maxWidth: 1120, margin: '0 auto', padding: '36px 20px', color: 'var(--text3)' }}>{t('publicProfileNotFound')}</div>
   }
 
+  const showcasedBadges = Array.isArray(profile.showcasedBadges) && profile.showcasedBadges.length > 0
+    ? profile.showcasedBadges
+    : (profile.rewards || []).filter((reward) => reward.type === 'badge').slice(0, 3)
+
   const locale = lang === 'ko' ? 'ko-KR' : 'en-US'
 
   return (
@@ -454,21 +458,16 @@ export default function PublicProfilePage() {
       <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 22, padding: 20 }}>
         <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', marginBottom: 8 }}>{t('publicProfileRewardsTitle')}</div>
         <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 18 }}>{t('publicProfileRewardsDesc')}</div>
-        {!profile.rewards?.length ? (
+        {!showcasedBadges.length ? (
           <div style={{ color: 'var(--text3)', fontSize: 13 }}>{t('publicProfileNoRewards')}</div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(96px, 1fr))', gap: 12 }}>
-            {profile.rewards.slice(0, 9).map((reward) => (
+            {showcasedBadges.map((reward) => (
               <div key={reward.code} style={{ border: '1px solid var(--border)', borderRadius: 16, background: 'var(--bg3)', padding: '14px 10px', textAlign: 'center' }}>
                 <div style={{ fontSize: 28, marginBottom: 8 }}>{reward.icon}</div>
                 <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>{lang === 'ko' ? (reward.name_ko || reward.name) : reward.name}</div>
               </div>
             ))}
-            {profile.rewards.length > 9 ? (
-              <div style={{ border: '1px dashed var(--border)', borderRadius: 16, background: 'var(--bg3)', padding: '14px 10px', textAlign: 'center', display: 'grid', placeItems: 'center', color: 'var(--text2)', fontWeight: 800 }}>
-                {t('publicProfileMoreRewards').replace('{n}', String(profile.rewards.length - 9))}
-              </div>
-            ) : null}
           </div>
         )}
       </div>

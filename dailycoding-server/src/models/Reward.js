@@ -1,5 +1,7 @@
 import { query, queryOne, run } from '../config/mysql.js';
 
+export const BADGE_SHOWCASE_LIMIT = 3;
+
 const XP_UNLOCK_REWARDS = [
   { level: 2,  code: 'badge_xp_rookie' },
   { level: 3,  code: 'title_routine_builder' },
@@ -63,6 +65,16 @@ export const Reward = {
     `, [userId]);
   },
 
+  async findShowcasedBadges(userId) {
+    return query(`
+      SELECT ri.*, ubs.sort_order, ubs.created_at AS showcased_at
+      FROM user_badge_showcase ubs
+      JOIN reward_items ri ON ubs.reward_id = ri.id
+      WHERE ubs.user_id = ? AND ri.type = 'badge'
+      ORDER BY ubs.sort_order ASC, ubs.created_at ASC
+    `, [userId]);
+  },
+
   // 특정 보상 보유 여부
   async hasReward(userId, rewardCode) {
     const row = await queryOne(`
@@ -92,6 +104,50 @@ export const Reward = {
       if (r) results.push(code);
     }
     return results;
+  },
+
+  async setBadgeShowcase(userId, rewardCode, showcased) {
+    const item = await queryOne('SELECT id, type FROM reward_items WHERE code = ?', [rewardCode]);
+    if (!item) {
+      const error = new Error('Reward not found.');
+      error.status = 404;
+      throw error;
+    }
+    if (item.type !== 'badge') {
+      const error = new Error('Only badges can be showcased.');
+      error.status = 400;
+      throw error;
+    }
+
+    const has = await this.hasReward(userId, rewardCode);
+    if (!has) {
+      const error = new Error('You do not own this badge.');
+      error.status = 403;
+      throw error;
+    }
+
+    if (!showcased) {
+      await run('DELETE FROM user_badge_showcase WHERE user_id = ? AND reward_id = ?', [userId, item.id]);
+      return this.findShowcasedBadges(userId);
+    }
+
+    const existing = await queryOne(
+      'SELECT 1 FROM user_badge_showcase WHERE user_id = ? AND reward_id = ?',
+      [userId, item.id]
+    );
+    if (!existing) {
+      const countRow = await queryOne('SELECT COUNT(*) AS cnt FROM user_badge_showcase WHERE user_id = ?', [userId]);
+      if (Number(countRow?.cnt || 0) >= BADGE_SHOWCASE_LIMIT) {
+        const error = new Error('Badge showcase limit exceeded.');
+        error.status = 409;
+        throw error;
+      }
+      await run(
+        'INSERT INTO user_badge_showcase (user_id, reward_id, sort_order) VALUES (?,?,?)',
+        [userId, item.id, Number(countRow?.cnt || 0)]
+      );
+    }
+    return this.findShowcasedBadges(userId);
   },
 
   async getProgression(userId) {
