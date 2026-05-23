@@ -168,7 +168,7 @@ export default function GrowthHubPage() {
           <ul style={{ margin:'0 0 14px 18px', padding:0, color:'var(--text2)', fontSize:13, lineHeight:1.8 }}>
             {(data.discussionGuide?.rules || []).map((rule) => <li key={rule}>{rule}</li>)}
           </ul>
-          <button className="btn btn-ghost btn-sm" onClick={() => navigate(data.discussionGuide?.cta || '/community')}>Community</button>
+          <button className="btn btn-ghost btn-sm" onClick={() => navigate(data.discussionGuide?.cta || '/community')}>{txt('커뮤니티', 'Community')}</button>
         </Panel>
 
         <Panel icon={<Lightbulb size={18} color="var(--orange)" />} title={txt('AI 힌트 단계 사다리', 'AI Hint Step Ladder')}>

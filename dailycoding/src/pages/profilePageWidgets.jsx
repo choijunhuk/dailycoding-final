@@ -1,4 +1,5 @@
 import { getTierImageUrl, getTierGlowStyle } from '../utils/tierImage.js';
+import { useLang } from '../context/LangContext.jsx';
 
 const TIER_BADGE_CFG = {
   unranked:    { color: '#888888' },
@@ -44,6 +45,7 @@ export function TierBadge({ tier, size = 30, title = '' }) {
 }
 
 export function DonutChart({ data, total }) {
+  const { lang } = useLang();
   const cx = 90;
   const cy = 90;
   const r = 72;
@@ -79,7 +81,7 @@ export function DonutChart({ data, total }) {
         ? <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--bg3)" strokeWidth={r - ir} />
         : segments.map((segment, index) => <path key={index} d={segment.d} fill={segment.fill} />)}
       <text x={cx} y={cy - 7} textAnchor="middle" fill="var(--text)" fontSize="24" fontWeight="800" fontFamily="Space Mono,monospace">{total}</text>
-      <text x={cx} y={cy + 13} textAnchor="middle" fill="var(--text3)" fontSize="11">Solved</text>
+      <text x={cx} y={cy + 13} textAnchor="middle" fill="var(--text3)" fontSize="11">{lang === 'ko' ? '해결' : 'Solved'}</text>
     </svg>
   );
 }
