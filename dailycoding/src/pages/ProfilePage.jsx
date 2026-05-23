@@ -897,7 +897,7 @@ export default function ProfilePage() {
               {[
                 { label:txt('평균 풀이 시간', 'Average Solve Time'), value: formatDuration(solveStats.avgSolveTime, lang) },
                 { label:txt('총 풀이 시간', 'Total Solve Time'), value: formatDuration(solveStats.totalSolveTime, lang) },
-                { label:txt('최단 풀이', 'Fastest Solve'), value: solveStats.fastestSolve ? `${solveStats.fastestSolve.problemTitle} · ${formatDuration(solveStats.fastestSolve.timeSec, lang)}` : txt('아직 기록이 없습니다', 'No records yet') },
+                { label:txt('최단 풀이', 'Fastest Solve'), value: solveStats.fastestSolve ? `${solveStats.fastestSolve.problemTitle} · ${formatDuration(solveStats.fastestSolve.timeSec, lang)}` : txt('기록 없음', 'No records') },
               ].map((item) => (
                 <div key={item.label} className="card card-pad-sm">
                   <div style={{ fontSize:11, color:'var(--text3)', marginBottom:6 }}>{item.label}</div>
