@@ -58,7 +58,6 @@ export default function ProblemStatement({
     </div>
     <div className="prob-meta-row">
       <span className="tag" style={{ background: tierInfo.bg, color: tierInfo.color }}>{lang === 'ko' ? (PROFILE_TIER_LABELS_KO[problem.tier] || tierInfo.label) : tierInfo.label}</span>
-      <span className="tag" style={{ background: 'var(--bg3)', color: tierInfo.color, border: `1px solid ${tierInfo.color}40` }}>● {lang === 'ko' ? (PROFILE_TIER_LABELS_KO[problem.tier] || problem.tier?.toUpperCase?.() || problem.tier) : (problem.tier?.toUpperCase?.() || problem.tier)}</span>
       <span className="pmeta">⏱ {problem.timeLimit}s</span>
       <span className="pmeta">💾 {problem.memLimit}MB</span>
       <span className="pmeta mono">#{problem.id}</span>

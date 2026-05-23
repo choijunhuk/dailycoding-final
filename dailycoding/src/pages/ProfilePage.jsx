@@ -1371,7 +1371,7 @@ export default function ProfilePage() {
                     <span style={{ fontSize:20 }}>{item.current ? rewards.find(r=>r.code===item.current)?.icon : (item.type==='badge'?'⬜':'📛')}</span>
                     <div>
                       <div style={{ fontSize:11, color:'var(--text3)', marginBottom:2 }}>{item.label}</div>
-                      <div style={{ fontSize:13, fontWeight:600 }}>{item.current ? rewards.find(r=>r.code===item.current)?.name : txt('없음', 'None')}</div>
+                      <div style={{ fontSize:13, fontWeight:600 }}>{item.current ? (lang === 'ko' ? (rewards.find(r=>r.code===item.current)?.name_ko || rewards.find(r=>r.code===item.current)?.name) : rewards.find(r=>r.code===item.current)?.name) : txt('없음', 'None')}</div>
                     </div>
                     {item.current && (
                       <button className="btn btn-ghost btn-sm" style={{ marginLeft:'auto', fontSize:11 }} onClick={()=>handleEquip(item.type,item.current)}>{txt('해제', 'Unequip')}</button>
@@ -1390,7 +1390,7 @@ export default function ProfilePage() {
                       return (
                         <div key={r.code} onClick={()=>handleEquip('badge',r.code)} className={`profile-reward-item ${isEquipped ? 'equipped' : ''}`}>
                           <div className="reward-icon">{r.icon}</div>
-                          <div className="reward-name">{r.name}</div>
+                          <div className="reward-name">{lang === 'ko' ? (r.name_ko || r.name) : r.name}</div>
                           {isEquipped && <div className="reward-equipped-tag">✓ {txt('장착 중', 'Equipped')}</div>}
                         </div>
                       );
@@ -1410,7 +1410,7 @@ export default function ProfilePage() {
                         <div key={r.code} onClick={()=>handleEquip('title',r.code)} className={`profile-title-item ${isEquipped ? 'equipped' : ''}`}>
                           <span className="title-icon">{r.icon}</span>
                           <div className="title-info">
-                            <div className="title-name">{r.name}</div>
+                            <div className="title-name">{lang === 'ko' ? (r.name_ko || r.name) : r.name}</div>
                             <div className="title-desc">{r.description}</div>
                           </div>
                           {isEquipped && <div className="title-equipped-tag">✓ {txt('장착 중', 'Equipped')}</div>}

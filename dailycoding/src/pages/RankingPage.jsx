@@ -377,7 +377,7 @@ export default function RankingPage() {
                 <span>
                   {myData.rating} / {myProgress.nextRating} →&nbsp;
                   <span style={{ color: TIER_META[myProgress.nextTier]?.color, fontWeight: 700 }}>
-                    {TIER_META[myProgress.nextTier]?.label}
+                    {lang === 'ko' ? (PROFILE_TIER_LABELS_KO[myProgress.nextTier] || TIER_META[myProgress.nextTier]?.label) : TIER_META[myProgress.nextTier]?.label}
                   </span>
                 </span>
               ) : (
@@ -467,7 +467,7 @@ export default function RankingPage() {
           >
             <option value="all">{t('rankingAllTiers')}</option>
             {Object.entries(TIER_META).map(([key, value]) => (
-              <option key={key} value={key}>{value.label}</option>
+              <option key={key} value={key}>{lang === 'ko' ? (PROFILE_TIER_LABELS_KO[key] || value.label) : value.label}</option>
             ))}
           </select>
         )}

@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
 import { useLang } from '../context/LangContext';
 import { PROBLEMS, TIERS } from '../data/problems';
+import { PROFILE_TIER_LABELS_KO } from './profilePageUtils.js';
 import api from '../api.js';
 import EmailVerifyGate from '../components/EmailVerifyGate.jsx';
 import './AiPage.css';
@@ -21,6 +22,7 @@ export default function AiPage() {
   const { problems: appProblems, solved } = useApp();
   const { t, lang } = useLang();
   const txt = (ko, en) => lang === 'ko' ? ko : en;
+  const tierLbl = (tier) => lang === 'ko' ? (PROFILE_TIER_LABELS_KO[tier] || TIERS[tier]?.label || tier) : (TIERS[tier]?.label || tier);
   const [analyzing,  setAnalyzing]  = useState(false);
   const [analysis,   setAnalysis]   = useState(null);
   const [chat,       setChat]       = useState([]);
@@ -207,7 +209,7 @@ export default function AiPage() {
                 className="rec-item" style={{cursor:'pointer'}}>
                 <div className="rec-item-left">
                   <span className="tag" style={{background:ti?.bg||'var(--bg3)',color:ti?.color||'var(--text2)'}}>
-                    {ti?.label||p.tier}
+                    {tierLbl(p.tier)}
                   </span>
                   <div>
                     <div style={{fontWeight:600,fontSize:13}}>{p.title}</div>
@@ -229,7 +231,7 @@ export default function AiPage() {
             <div className="ai-preview">
               <span className="mono" style={{color:'var(--blue)'}}>{Object.keys(solved).length}</span> {t('previewProblems')} ·&nbsp;
               <span className="mono" style={{color:'var(--yellow)'}}>{user?.streak}</span> {t('previewStreak')} ·&nbsp;
-              <span className="mono" style={{color:'var(--green)'}}>{user?.tier}</span> {t('previewTier')}
+              <span className="mono" style={{color:'var(--green)'}}>{tierLbl(user?.tier)}</span> {t('previewTier')}
             </div>
           </div>
         )}
@@ -284,7 +286,7 @@ export default function AiPage() {
             <select value={hintProbId} onChange={e=>{ setHintProbId(e.target.value); setAiHint(null); setHintLevel(0); }}
               style={{flex:1,padding:'8px 12px',borderRadius:8,border:'1px solid var(--border)',background:'var(--bg3)',color:'var(--text)',fontSize:13,fontFamily:'inherit'}}>
               <option value="">{t('hintNoSelect')}</option>
-              {allProblems.map(p=><option key={p.id} value={p.id}>#{p.id} {p.title} ({TIERS[p.tier]?.label||p.tier})</option>)}
+              {allProblems.map(p=><option key={p.id} value={p.id}>#{p.id} {p.title} ({tierLbl(p.tier)})</option>)}
             </select>
             <button className="btn btn-primary btn-sm" onClick={getHint} disabled={!hintProbId||hintLoading} style={{whiteSpace:'nowrap'}}>
               {hintLoading?<><span className="spinner"/> {t('hintAnalyzing')}</>:t('hintReceive')}
@@ -365,7 +367,7 @@ export default function AiPage() {
                   <div key={i} className="rec-item" onClick={()=>goToJudge(title)}>
                     <div className="rec-item-left">
                       <span className="tag" style={{background:ti?.bg||'var(--bg3)',color:ti?.color||'var(--text2)'}}>
-                        {ti?.label||tierKey}
+                        {tierLbl(tierKey)}
                       </span>
                       <div>
                         <div style={{fontWeight:600,fontSize:13}}>{title}</div>

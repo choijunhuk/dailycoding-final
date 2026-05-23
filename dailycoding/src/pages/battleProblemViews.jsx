@@ -33,7 +33,7 @@ export function BattleAdSlot({ slot }) {
     <aside className="bp-ad-slot" data-ad-slot-id={slot.id}>
       <div className="bp-ad-header">
         <strong>{slot.title}</strong>
-        <span className="bp-ad-badge">FREE PLAN AD</span>
+        <span className="bp-ad-badge">{adTxt('무료 광고', 'FREE PLAN AD')}</span>
       </div>
       <p className="bp-ad-desc">{slot.description}</p>
 

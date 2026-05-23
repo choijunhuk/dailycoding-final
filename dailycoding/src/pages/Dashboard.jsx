@@ -414,7 +414,7 @@ export default function Dashboard() {
       {/* 통계 카드 */}
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:12,marginBottom:20}}>
         <StatCard icon={<CheckCircle2 size={20} />} value={solvedList.length}  label={t('solved')}  color="var(--green)" delta={solvedList.length > 0 ? `▲ ${Math.min(99, Math.round(solvedList.length / Math.max(PROBLEMS.length, 1) * 100))}%` : null} onClick={() => navigate('/submissions')} />
-        <StatCard icon={<TrendingUp size={20} />} value={progression ? `Lv.${progression.level}` : (user?.rating||800)}  label={progression ? 'Growth Level' : t('rating')}  color="var(--yellow)" delta={progression ? `${progression.xp.toLocaleString()} XP` : ((user?.streak||0) > 0 ? `+${(user.streak) * 2} Growth` : null)} onClick={() => navigate('/profile')} />
+        <StatCard icon={<TrendingUp size={20} />} value={progression ? `Lv.${progression.level}` : (user?.rating||800)}  label={progression ? txt('성장 레벨', 'Growth Level') : t('rating')}  color="var(--yellow)" delta={progression ? `${progression.xp.toLocaleString()} XP` : ((user?.streak||0) > 0 ? `+${(user.streak) * 2} Growth` : null)} onClick={() => navigate('/profile')} />
         <StatCard icon={<Target size={20} />} value={myRank?`#${myRank}`:'−'} label={t('dashboardMyRank')} color="var(--purple)" delta={t('dashboardRealtimeTrack')} onClick={() => navigate('/ranking')} />
         <div className="card card-pad card-hover" onClick={() => navigate('/battle')} style={{display:'flex',alignItems:'center',gap:14,cursor:'pointer',position:'relative',overflow:'hidden'}}>
           <div className="stat-card-accent" style={{background:'linear-gradient(90deg, rgba(248,81,73,.75), rgba(248,81,73,.16))'}} />
@@ -500,7 +500,7 @@ export default function Dashboard() {
               <div>
                 <div style={{ fontWeight:800, color:'#ffd700' }}>{t('dashboardPromotionActive')}</div>
                 <div style={{ color:'var(--text2)', fontSize:13 }}>
-                  {t('dashboardPromotionRecord').replace('{from}', promotion.active.from_tier).replace('{to}', promotion.active.to_tier).replace('{wins}', String(promotion.active.wins)).replace('{losses}', String(promotion.active.losses))}
+                  {t('dashboardPromotionRecord').replace('{from}', tierLbl(promotion.active.from_tier)).replace('{to}', tierLbl(promotion.active.to_tier)).replace('{wins}', String(promotion.active.wins)).replace('{losses}', String(promotion.active.losses))}
                 </div>
               </div>
               <div style={{ marginLeft:'auto', display:'flex', gap:6 }}>
@@ -529,9 +529,9 @@ export default function Dashboard() {
               background:'linear-gradient(135deg, rgba(255,215,0,.12), var(--bg2))',
             }}>
               <div style={{ fontSize:56 }}>🎉</div>
-              <h3 style={{ margin:'8px 0 6px', fontSize:22, fontWeight:800 }}>{t('dashboardPromotionAchieved').replace('{tier}', promotion.recent.to_tier)}</h3>
+              <h3 style={{ margin:'8px 0 6px', fontSize:22, fontWeight:800 }}>{t('dashboardPromotionAchieved').replace('{tier}', tierLbl(promotion.recent.to_tier))}</h3>
               <p style={{ color:'var(--text2)', marginBottom:14 }}>
-                {t('dashboardPromotionDesc').replace('{wins}', String(promotion.recent.wins)).replace('{from}', promotion.recent.from_tier).replace('{to}', promotion.recent.to_tier)}
+                {t('dashboardPromotionDesc').replace('{wins}', String(promotion.recent.wins)).replace('{from}', tierLbl(promotion.recent.from_tier)).replace('{to}', tierLbl(promotion.recent.to_tier))}
               </p>
               <button className="btn btn-primary btn-sm" onClick={() => navigate('/ranking')}>{t('dashboardCheckRanking')}</button>
             </div>
@@ -592,7 +592,7 @@ export default function Dashboard() {
               <div style={{ fontSize:12, color:'var(--text3)', marginBottom:8, fontWeight:700 }}>🏆 {t('dashboardWeeklyProblem')}</div>
               <div style={{ fontSize:18, fontWeight:800, marginBottom:6 }}>{weeklyChallenge.problemTitle}</div>
               <div style={{ fontSize:13, color:'var(--text2)', marginBottom:12 }}>
-                {weeklyChallenge.tier} · {t('difficulty')} {weeklyChallenge.difficulty} · {t('dashboardRewardLabel')}: {weeklyChallenge.rewardCode}
+                {tierLbl(weeklyChallenge.tier)} · {t('difficulty')} {weeklyChallenge.difficulty} · {t('dashboardRewardLabel')}: {weeklyChallenge.rewardCode}
               </div>
               {weeklyChallenge.isSolved ? (
                 <span style={{ color:'var(--green)', fontSize:13, fontWeight:700 }}>✓ {t('dashboardCompleted')}</span>

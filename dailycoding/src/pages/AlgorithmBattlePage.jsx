@@ -1462,7 +1462,8 @@ export default function AlgorithmBattlePage() {
               </button>
             </div>
           ) : rooms.map((item) => {
-            const modeLabel = battleModes.find((m) => m.key === item.room.mode)?.title || item.room.mode;
+            const _rawMode = battleModes.find((m) => m.key === item.room.mode);
+            const modeLabel = uiLang === 'ko' ? (BATTLE_MODE_KO[item.room.mode]?.title || _rawMode?.title || item.room.mode) : (_rawMode?.title || item.room.mode);
             const isPlaying = item.room.status === 'playing';
             const participantCount = item.participantCount ?? item.participants?.length ?? 0;
             const isFull = participantCount >= item.room.maxPlayers;
