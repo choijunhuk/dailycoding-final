@@ -8,6 +8,7 @@ import { useToast } from '../context/ToastContext.jsx'
 import { useLang } from '../context/LangContext.jsx'
 import api from '../api.js'
 import { pickLangText } from '../utils/languageMode.js'
+import { PROFILE_TIER_LABELS_KO } from './profilePageUtils.js'
 import { Bookmark, CheckCircle2, Filter, Grid, List, Search, Share2, Star, Target, X } from 'lucide-react'
 import {
   FALLBACK_TAGS,
@@ -45,6 +46,7 @@ export default function ProblemsPage() {
   const toast = useToast()
   const { t, lang } = useLang()
   const txt = useCallback((ko, en) => pickLangText(lang, ko, en), [lang])
+  const tierLbl = (tier) => lang === 'ko' ? (PROFILE_TIER_LABELS_KO[tier] || TIERS[tier]?.label || tier) : (TIERS[tier]?.label || tier)
   const PROBLEMS = appProblems.length > 0 ? appProblems : DEFAULT_PROBLEMS
 
   const normalizeProblemTypeFilter = (type) => type === 'algorithm' ? 'coding' : type
@@ -316,7 +318,7 @@ export default function ProblemsPage() {
   const activeFilterCount = [search, problemType !== 'all', tier !== 'all', tag !== 'all', status !== 'all', sort !== 'id'].filter(Boolean).length
   const activeChips = [
     search ? { key: 'search', label: `${t('chipSearch')}${search}` } : null,
-    tier !== 'all' ? { key: 'tier', label: `${t('chipTier')}${TIERS[tier]?.label || tier}` } : null,
+    tier !== 'all' ? { key: 'tier', label: `${t('chipTier')}${tierLbl(tier)}` } : null,
     problemType !== 'all' ? { key: 'problemType', label: `${t('chipType')}${getTypeLabel(problemType)}` } : null,
     tag !== 'all' ? { key: 'tag', label: `${isCompanyTag(tag) ? txt('기업: ', 'Company: ') : t('chipTag')}${getTagLabelLang(tag, lang)}` } : null,
     status !== 'all' ? { key: 'status', label: `${t('chipStatus')}${status}` } : null,
@@ -658,7 +660,7 @@ export default function ProblemsPage() {
                       textAlign: 'left',
                     }}
                   >
-                    <span style={{ fontSize: 10, fontFamily: 'Space Mono,monospace', color: TIERS[item.tier]?.color, width: 58 }}>● {item.tier}</span>
+                    <span style={{ fontSize: 10, fontFamily: 'Space Mono,monospace', color: TIERS[item.tier]?.color, width: 58 }}>● {tierLbl(item.tier)}</span>
                     <span style={{ flex: 1, fontWeight: 500 }}>{item.title}</span>
                     <span style={{ fontSize: 11, color: 'var(--text3)' }}>{t('difficultyShort')} {item.difficulty}</span>
                   </button>
@@ -672,7 +674,7 @@ export default function ProblemsPage() {
             color: 'var(--text)', padding: '8px 12px', fontSize: 13, fontFamily: 'inherit', outline: 'none',
           }}>
             <option value="all">{t('allTiers')}</option>
-            {Object.entries(TIERS).map(([key, value]) => <option key={key} value={key}>{value.label}</option>)}
+            {Object.entries(TIERS).map(([key]) => <option key={key} value={key}>{tierLbl(key)}</option>)}
           </select>
 
           <select value={tag} onChange={e => updateFilter('tag', e.target.value)} style={{
@@ -681,7 +683,7 @@ export default function ProblemsPage() {
           }}>
             <option value="all">{tagLoading ? t('loadingTags') : t('allTags')}</option>
             {algorithmTags.length > 0 && <optgroup label={txt('알고리즘 태그', 'Algorithm Tags')}>
-              {algorithmTags.map(item => <option key={item} value={item}>{item}</option>)}
+              {algorithmTags.map(item => <option key={item} value={item}>{getTagLabelLang(item, lang)}</option>)}
             </optgroup>}
             {companyTags.length > 0 && <optgroup label={txt('기업 인터뷰 태그', 'Company Interview Tags')}>
               {companyTags.map(item => <option key={item} value={item}>{getTagLabel(item)}</option>)}
@@ -1010,7 +1012,7 @@ export default function ProblemsPage() {
                       ))}
                     </div>
                   </div>
-                  <span style={{ fontSize: 11, fontWeight: 700, fontFamily: 'Space Mono,monospace', color: tierMeta.color }}>● {tierMeta.label}</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, fontFamily: 'Space Mono,monospace', color: tierMeta.color }}>● {tierLbl(problem.tier)}</span>
                   <div style={{ textAlign: 'center' }}>
                     <span style={{
                       display: 'inline-flex',
@@ -1104,7 +1106,7 @@ export default function ProblemsPage() {
                       </span>
                     )}
                     <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 10, fontWeight: 700, background: tierMeta.bg, color: tierMeta.color }}>
-                      ● {tierMeta.label}
+                      ● {tierLbl(problem.tier)}
                     </span>
                     {problem.hasEditorial && (
                       <span style={{ padding: '2px 8px', borderRadius: 20, fontSize: 10, fontWeight: 700, background: 'rgba(86,211,100,.1)', color: 'var(--green)', border: '1px solid rgba(86,211,100,.2)' }}>{txt('공식 해설', 'Official Editorial')}</span>
@@ -1198,7 +1200,7 @@ export default function ProblemsPage() {
                   <span style={{
                     padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700,
                     background: TIERS[preview.tier]?.bg, color: TIERS[preview.tier]?.color,
-                  }}>● {TIERS[preview.tier]?.label}</span>
+                  }}>● {tierLbl(preview.tier)}</span>
                   <span style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'Space Mono,monospace' }}>#{preview.id}</span>
                   {(preview.isSolved || solved[preview.id]) && <span style={{ fontSize: 12, color: 'var(--green)' }}>{t('solvedBadge')}</span>}
                 </div>

@@ -438,6 +438,8 @@ router.get('/recommend', auth, async (req, res) => {
       return !problem.isSolved && tierIndex >= 0 && allowedTiers.includes(problem.tier || 'unranked');
     });
 
+    const isKo = req.headers['x-language'] === 'ko';
+    const reasonTier = isKo ? '현재 티어 추천 문제' : 'Recommended for your tier';
     const selected = [];
     const selectedIds = new Set();
     const addProblem = (problem, reason) => {
@@ -449,18 +451,18 @@ router.get('/recommend', auth, async (req, res) => {
     for (const problem of unsolvedAllowed) {
       if (selected.length >= 4) break;
       const matchedTag = (problem.tags || []).find((tag) => weakTags.includes(tag));
-      if (matchedTag) addProblem(problem, `Strengthen weak area: ${matchedTag}`);
+      if (matchedTag) addProblem(problem, isKo ? `취약 태그 강화: ${matchedTag}` : `Strengthen weak area: ${matchedTag}`);
     }
 
     const currentTierProblems = unsolvedAllowed.filter((problem) => (problem.tier || 'unranked') === currentTier);
     for (const problem of currentTierProblems) {
-      if (selected.filter((item) => item.reason === 'Recommended for your tier').length >= 2 && selected.length >= 6) break;
-      addProblem(problem, 'Recommended for your tier');
+      if (selected.filter((item) => item.reason === reasonTier).length >= 2 && selected.length >= 6) break;
+      addProblem(problem, reasonTier);
     }
 
     for (const problem of unsolvedAllowed) {
       if (selected.length >= 6) break;
-      addProblem(problem, 'Recommended for your tier');
+      addProblem(problem, reasonTier);
     }
 
     res.json(selected.slice(0, 6));

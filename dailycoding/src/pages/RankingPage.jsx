@@ -10,6 +10,7 @@ import { pickLangText } from '../utils/languageMode.js';
 import { TIER_THRESHOLDS, TIER_ORDER } from '../data/constants.js';
 import ProfileAvatar from '../components/ProfileAvatar';
 import './RankingPage.css';
+import { PROFILE_TIER_LABELS_KO } from './profilePageUtils.js';
 
 const TIER_META = {
   unranked:    { color:'#888888', bg:'rgba(136,136,136,.12)', label:'Unranked'    },
@@ -58,6 +59,8 @@ const MEDALS = ['🥇','🥈','🥉'];
 function TierBadge({ tier }) {
   const tm = TIER_META[tier] || TIER_META.unranked;
   const glow = getTierGlowStyle(tier);
+  const { lang: _badgeLang } = useLang();
+  const label = _badgeLang === 'ko' ? (PROFILE_TIER_LABELS_KO[tier] || tm.label) : tm.label;
   return (
     <span style={{
       padding: '3px 9px', borderRadius: 20, fontSize: 10, fontWeight: 700,
@@ -66,7 +69,7 @@ function TierBadge({ tier }) {
       ...glow,
     }}>
       <img src={getTierImageUrl(tier)} alt={tier} style={{ width:18, height:18, objectFit:'contain' }} />
-      {tm.label}
+      {label}
     </span>
   );
 }
@@ -368,7 +371,7 @@ export default function RankingPage() {
           <div style={{ marginTop: 18 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, fontSize: 11, color: 'var(--text3)' }}>
               <span style={{ color: TIER_META[myData.tier]?.color, fontWeight: 700 }}>
-                {TIER_META[myData.tier]?.label}
+                {lang === 'ko' ? (PROFILE_TIER_LABELS_KO[myData.tier] || TIER_META[myData.tier]?.label) : TIER_META[myData.tier]?.label}
               </span>
               {myProgress.nextTier ? (
                 <span>

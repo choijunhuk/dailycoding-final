@@ -425,7 +425,7 @@ export default function Dashboard() {
             <div style={{fontFamily:'Space Mono,monospace',fontSize:22,fontWeight:800,color:'var(--red)',lineHeight:1}}>
               {battleSummary.total > 0 ? `${battleSummary.winRate}%` : '0%'}
             </div>
-            <div style={{fontSize:12,color:'var(--text2)',marginTop:3}}>Battle Win Rate</div>
+            <div style={{fontSize:12,color:'var(--text2)',marginTop:3}}>{txt('배틀 승률', 'Battle Win Rate')}</div>
             <div style={{display:'flex',gap:4,marginTop:6}}>
               {(battleSummary.recent || []).slice(0, 5).map((item, index) => (
                 <span key={`${item.roomId || index}-${item.result}`} title={item.result} style={{
@@ -828,7 +828,7 @@ export default function Dashboard() {
                 <div key={k} style={{marginBottom:12}}>
                   <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:5}}>
                     <div style={{display:'flex',alignItems:'center',gap:8}}>
-                      <span style={{fontSize:11,fontWeight:700,fontFamily:'Space Mono,monospace',color:v.color}}>● {v.label}</span>
+                      <span style={{fontSize:11,fontWeight:700,fontFamily:'Space Mono,monospace',color:v.color}}>● {tierLbl(k)}</span>
                     </div>
                     <span style={{fontSize:11,color:'var(--text2)',fontFamily:'Space Mono,monospace'}}>{cnt}/{tot}</span>
                   </div>
@@ -984,7 +984,7 @@ export default function Dashboard() {
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
               {[
                 {icon:<BookOpen size={16} />, label:t('problemList'),  page:'problems',    color:'var(--blue)',   rgba:'rgba(121,192,255,'},
-                {icon:<Sparkles size={16} />, label:'Learning Path',    page:'learning',    color:'var(--purple)', rgba:'rgba(210,168,255,'},
+                {icon:<Sparkles size={16} />, label:txt('학습 경로', 'Learning Path'),    page:'learning',    color:'var(--purple)', rgba:'rgba(210,168,255,'},
                 {icon:<Trophy size={16} />,   label:t('joinContest'),   page:'contest',     color:'var(--yellow)', rgba:'rgba(227,179,65,'},
                 {icon:<FileText size={16} />, label:t('submissions'),   page:'submissions', color:'var(--green)',  rgba:'rgba(86,211,100,'},
               ].map(a=>(

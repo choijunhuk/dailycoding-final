@@ -404,10 +404,11 @@ router.get('/', auth, async (req, res) => {
 // GET /api/submissions/stats
 router.get('/stats', auth, async (req, res) => {
   try {
+    const lang = req.headers['x-language'] === 'ko' ? 'ko' : 'en';
     const [stats, langStats, weaknessStats] = await Promise.all([
       Submission.getStats(req.user.id),
       Submission.getLangStats(req.user.id),
-      Submission.getWeaknessStats(req.user.id),
+      Submission.getWeaknessStats(req.user.id, lang),
     ]);
     res.json({ ...stats, langStats, weaknessStats });
   } catch { res.json({ total:0, correct:0, wrong:0, langStats:[], weaknessStats:[] }); }

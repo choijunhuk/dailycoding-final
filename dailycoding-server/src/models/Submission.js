@@ -64,7 +64,7 @@ export const Submission = {
     };
   },
 
-  async getWeaknessStats(userId) {
+  async getWeaknessStats(userId, lang = 'en') {
     const rows = await query(
       `SELECT
          COALESCE(pt.tag, p.tier, 'other') AS label,
@@ -97,9 +97,13 @@ export const Submission = {
         accuracy,
         missRate,
         priority: misses >= 3 && missRate >= 50 ? 'high' : missRate >= 35 ? 'medium' : 'low',
-        recommendation: misses > 0
-          ? `${row.label || 'other'} type has a recent error rate of ${missRate}%. Try re-solving 2 easier problems with the same tag first.`
-          : `${row.label || 'other'} type is stable. Try expanding to higher difficulty problems.`,
+        recommendation: lang === 'ko'
+          ? (misses > 0
+            ? `${row.label || 'other'} 유형의 최근 오답률이 ${missRate}%입니다. 같은 태그의 쉬운 문제 2개를 먼저 다시 풀어보세요.`
+            : `${row.label || 'other'} 유형은 안정적입니다. 더 높은 난이도로 확장해 보세요.`)
+          : (misses > 0
+            ? `${row.label || 'other'} type has a recent error rate of ${missRate}%. Try re-solving 2 easier problems with the same tag first.`
+            : `${row.label || 'other'} type is stable. Try expanding to higher difficulty problems.`),
         lastSubmittedAt: row.last_submitted_at || null,
       };
     });

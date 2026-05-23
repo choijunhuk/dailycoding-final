@@ -713,13 +713,13 @@ export default function ProfilePage() {
           <div className="card">
             <div className="profile-top100-header">
               <div className="profile-top100-rating">
-                <div className="profile-top100-label">Difficulty sum of top 100 problems</div>
+                <div className="profile-top100-label">{txt('상위 100 문제 난이도 합계', 'Difficulty sum of top 100 problems')}</div>
                 <div className="profile-top100-value">
                   +{top100RatingSum}
                 </div>
               </div>
               <div className="profile-top100-count">
-                <div className="profile-top100-label">Problems counted</div>
+                <div className="profile-top100-label">{txt('반영된 문제 수', 'Problems counted')}</div>
                 <div className="profile-top100-value-small">
                   {top100.length}<span className="profile-top100-total">/100</span>
                 </div>
@@ -738,17 +738,17 @@ export default function ProfilePage() {
               ))}
             </div>
             <div className="profile-top100-note">
-              Click a badge to go to that problem · B=Bronze S=Silver G=Gold P=Platinum D=Diamond
+              {txt('배지 클릭 시 해당 문제로 이동합니다', 'Click a badge to go to that problem')}
             </div>
           </div>
 
           {/* 문제 목록 */}
           <div className="card">
             <div className="profile-panel-header">
-              Problems in Rating ({top100.length})
+              {txt(`레이팅 문제 (${top100.length})`, `Problems in Rating (${top100.length})`)}
             </div>
             {top100.length === 0
-              ? <div className="profile-empty-msg">No problems solved yet.</div>
+              ? <div className="profile-empty-msg">{txt('아직 풀이한 문제가 없습니다.', 'No problems solved yet.')}</div>
               : (
                 <div className="profile-top100-list">
                   {top100.map((p,i)=>(
@@ -820,7 +820,7 @@ export default function ProfilePage() {
 
           {/* Weekly report */}
           <div className="card card-pad">
-            <div className="section-header-title" style={{ marginBottom:14 }}>This Week</div>
+            <div className="section-header-title" style={{ marginBottom:14 }}>{txt('이번 주', 'This Week')}</div>
             {(()=>{
               const now=new Date();
               const weekAgo=new Date(now-7*24*60*60*1000);
@@ -884,7 +884,7 @@ export default function ProfilePage() {
                       <div style={{ display:'flex', justifyContent:'space-between', gap:10, marginBottom:6 }}>
                         <span style={{ fontSize:13, fontWeight:800, color }}>{item.label}</span>
                         <span style={{ fontSize:12, color:'var(--text2)' }}>
-                          Error rate {item.missRate}% · {item.attempts} attempts
+                          {txt(`오답률 ${item.missRate}% · ${item.attempts}회 시도`, `Error rate ${item.missRate}% · ${item.attempts} attempts`)}
                         </span>
                       </div>
                       <div style={{ height:6, background:'var(--bg2)', borderRadius:4, overflow:'hidden', marginBottom:8 }}>
