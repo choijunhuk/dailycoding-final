@@ -77,32 +77,32 @@ export default function ProblemStatement({
             {gameMode === 'ghost'
               ? `${ghostChallenge?.ghost?.username || 'Ghost'} target: ${ghostChallenge?.ghost?.targetTimeSec ? formatTimer(ghostChallenge.ghost.targetTimeSec) : '-'}`
               : dungeonRoom?.damage
-                ? `Deals ${dungeonRoom.damage} damage to boss on correct answer`
-                : 'Submit correct answer to update Game Hub progress.'}
+                ? txt(`보스에게 ${dungeonRoom.damage} 데미지`, `Deals ${dungeonRoom.damage} damage to boss on correct answer`)
+                : txt('정답 제출 시 Game Hub 진행도 업데이트', 'Submit correct answer to update Game Hub progress.')}
           </small>
         </div>
         <button className="btn btn-ghost btn-sm" onClick={() => navigate('/game')}>Game Hub</button>
       </div>
     )}
 
-    <section><h4>Problem</h4><p style={{ whiteSpace: 'pre-line' }}>{problem.desc}</p></section>
+    <section><h4>{txt('문제', 'Problem')}</h4><p style={{ whiteSpace: 'pre-line' }}>{problem.desc}</p></section>
     {!isSpecialProblem && !isBuildProblem && !isTroubleshootingProblem && (
       <>
-        <section><h4>Input</h4><p style={{ whiteSpace: 'pre-line' }}>{problem.inputDesc}</p></section>
-        <section><h4>Output</h4><p style={{ whiteSpace: 'pre-line' }}>{problem.outputDesc}</p></section>
+        <section><h4>{txt('입력', 'Input')}</h4><p style={{ whiteSpace: 'pre-line' }}>{problem.inputDesc}</p></section>
+        <section><h4>{txt('출력', 'Output')}</h4><p style={{ whiteSpace: 'pre-line' }}>{problem.outputDesc}</p></section>
 
         {(problem.examples||[]).map((ex, i) => (
           <section key={i} style={{ border:'1px solid var(--border)', borderRadius:10, overflow:'hidden', marginBottom:8 }}>
             <div style={{ padding:'6px 12px', background:'var(--bg3)', borderBottom:'1px solid var(--border)', fontSize:12, fontWeight:700, color:'var(--text3)' }}>
-              Sample {i + 1}
+              {txt('샘플', 'Sample')} {i + 1}
             </div>
             <div className="ex-grid" style={{ padding:'10px 12px', gap:12 }}>
               <div>
-                <div style={{ fontSize:11, fontWeight:700, color:'var(--text3)', marginBottom:4 }}>Input</div>
+                <div style={{ fontSize:11, fontWeight:700, color:'var(--text3)', marginBottom:4 }}>{txt('입력', 'Input')}</div>
                 <pre className="io-box mono" style={{ margin:0 }}>{ex.input}</pre>
               </div>
               <div>
-                <div style={{ fontSize:11, fontWeight:700, color:'var(--text3)', marginBottom:4 }}>Output</div>
+                <div style={{ fontSize:11, fontWeight:700, color:'var(--text3)', marginBottom:4 }}>{txt('출력', 'Output')}</div>
                 <pre className="io-box mono" style={{ margin:0 }}>{ex.output}</pre>
               </div>
             </div>
@@ -113,14 +113,14 @@ export default function ProblemStatement({
 
     {isBuildProblem && (
       <section>
-        <h4>Build Problem</h4>
+        <h4>{txt('빌드 문제', 'Build Problem')}</h4>
         <p style={{ whiteSpace: 'pre-line', color:'var(--text2)', marginBottom:10 }}>
-          Write only the core logic in the provided skeleton code and submit.
+          {txt('제공된 스켈레톤 코드에 핵심 로직만 작성하고 제출하세요.', 'Write only the core logic in the provided skeleton code and submit.')}
         </p>
         {problem.starterCode && <pre className="io-box mono">{problem.starterCode}</pre>}
         {problem.setupCode && (
           <>
-            <h4>Table Structure</h4>
+            <h4>{txt('테이블 구조', 'Table Structure')}</h4>
             <pre className="io-box mono">{problem.setupCode}</pre>
           </>
         )}

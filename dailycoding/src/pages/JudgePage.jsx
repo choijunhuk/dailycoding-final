@@ -1189,12 +1189,12 @@ export default function JudgePage() {
         {isTroubleshootingProblem && (
           <div className="result-panel troubleshooting-result-panel">
             <div className="result-tabs">
-              <button className="rtab active">Run Result</button>
+              <button className="rtab active">{uiTxt('실행 결과', 'Run Result')}</button>
             </div>
             <div className="result-body">
               {!troubleshootingResult ? (
                 <div style={{ color:'var(--text3)', fontSize:12 }}>
-                  Scores and feedback will appear after running a visible test or submitting.
+                  {uiTxt('테스트 실행 또는 제출 후 점수와 피드백이 표시됩니다.', 'Scores and feedback will appear after running a visible test or submitting.')}
                 </div>
               ) : (
                 <div className="troubleshooting-result-grid">
@@ -1202,11 +1202,11 @@ export default function JudgePage() {
                     <strong style={{ color: RESULT_INFO[troubleshootingResult.result]?.color || 'var(--text)' }}>
                       {RESULT_INFO[troubleshootingResult.result]?.label || troubleshootingResult.result}
                     </strong>
-                    <span>Total Score {troubleshootingResult.totalScore ?? 0}/100</span>
-                    <span>{troubleshootingResult.testPassCount ?? 0}/{troubleshootingResult.totalTestCount ?? 0} tests</span>
+                    <span>{uiTxt('총점', 'Total Score')} {troubleshootingResult.totalScore ?? 0}/100</span>
+                    <span>{troubleshootingResult.testPassCount ?? 0}/{troubleshootingResult.totalTestCount ?? 0} {uiTxt('테스트', 'tests')}</span>
                     <span>{troubleshootingResult.executionTimeMs ?? '-'}ms</span>
                   </div>
-                  <pre className="troubleshooting-feedback">{troubleshootingResult.feedback || 'No feedback'}</pre>
+                  <pre className="troubleshooting-feedback">{troubleshootingResult.feedback || uiTxt('피드백 없음', 'No feedback')}</pre>
                   {Array.isArray(troubleshootingResult.tests) && troubleshootingResult.tests.length > 0 && (
                     <div className="troubleshooting-test-list">
                       {troubleshootingResult.tests.map((test, index) => (
@@ -1225,15 +1225,15 @@ export default function JudgePage() {
 
         {!isSpecialProblem && !isTroubleshootingProblem && <div className={`result-panel ${bottomTab === 'review' ? 'expanded' : ''}`}>
           <div className="result-tabs">
-            <button className={`rtab ${bottomTab === 'custom' ? 'active' : ''}`} onClick={() => setBottomTab('custom')}>Custom Input</button>
-            <button className={`rtab ${bottomTab === 'review' ? 'active' : ''}`} onClick={() => setBottomTab('review')}>🔍 AI Code Review</button>
+            <button className={`rtab ${bottomTab === 'custom' ? 'active' : ''}`} onClick={() => setBottomTab('custom')}>{uiTxt('커스텀 입력', 'Custom Input')}</button>
+            <button className={`rtab ${bottomTab === 'review' ? 'active' : ''}`} onClick={() => setBottomTab('review')}>🔍 {uiTxt('AI 코드 리뷰', 'AI Code Review')}</button>
           </div>
 
           {bottomTab === 'custom' && (
             <div className="custom-body">
               <textarea className="custom-input mono" placeholder={t('judgeCustomInputPlaceholder')} value={customInput} onChange={e => setCustomInput(e.target.value)} />
               <button className="btn btn-ghost btn-sm" style={{ marginTop: 8, alignSelf: 'flex-start' }}
-                onClick={() => runCode({ input: customInput })}>▶ Run</button>
+                onClick={() => runCode({ input: customInput })}>{uiTxt('▶ 실행', '▶ Run')}</button>
             </div>
           )}
 
@@ -1266,10 +1266,10 @@ export default function JudgePage() {
                   </div>
                   <div style={{ textAlign:'center' }}>
                     <div style={{ fontSize:14, fontWeight:700, color:'var(--text)', marginBottom:4 }}>
-                      {reviewLoading ? 'AI is analyzing your code...' : 'AI Code Review Ready'}
+                      {reviewLoading ? uiTxt('AI가 코드를 분석 중...', 'AI is analyzing your code...') : uiTxt('AI 코드 리뷰 준비됨', 'AI Code Review Ready')}
                     </div>
                     <div style={{ fontSize:12, color:'var(--text3)', maxWidth: 280, lineHeight: 1.5 }}>
-                      Get instant feedback on correctness, efficiency, and potential improvements.
+                      {uiTxt('정확성, 효율성 및 개선 사항에 대한 즉각적인 피드백을 받으세요.', 'Get instant feedback on correctness, efficiency, and potential improvements.')}
                     </div>
                   </div>
                   {!reviewLoading && (
