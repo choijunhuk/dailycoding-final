@@ -8,6 +8,7 @@ import { useToast } from '../context/ToastContext.jsx';
 import { useLang } from '../context/LangContext.jsx';
 import { JUDGE_LANGUAGE_OPTIONS } from '../data/judgeLanguages.js';
 import { pickLangText, withVars } from '../utils/languageMode.js';
+import { getTagLabelLang } from './problemsPageUtils.js';
 import { getSocketUrl } from '../utils/socket.js';
 import './AlgorithmBattlePage.css';
 
@@ -1207,7 +1208,7 @@ export default function AlgorithmBattlePage() {
             )}
 
             <div className="ab-option-group">
-              <label>언어</label>
+              <label>{txt('언어', 'Language')}</label>
               <select
                 value={preferredLanguage}
                 onChange={(e) => setPreferredLanguage(e.target.value)}
@@ -1220,32 +1221,32 @@ export default function AlgorithmBattlePage() {
             </div>
 
             <div className="ab-option-group">
-              <label>워크샵 모드</label>
+              <label>{txt('워크샵 모드', 'Workshop Mode')}</label>
               <select
                 value={selectedWorkshopModeId}
                 onChange={(e) => setSelectedWorkshopModeId(e.target.value)}
                 className="ab-lang-select"
               >
-                <option value="">사용 안 함</option>
+                <option value="">{txt('사용 안 함', 'None')}</option>
                 {workshopModes.map((mode) => (
                   <option key={mode.id} value={mode.id}>{mode.name}</option>
                 ))}
               </select>
               <button type="button" className="btn btn-ghost btn-sm" onClick={() => navigate('/workshop-gallery')}>
-                <Wrench size={13} /> 갤러리
+                <Wrench size={13} /> {txt('갤러리', 'Gallery')}
               </button>
             </div>
 
             <div className="ab-option-group">
-              <label>비공개 방</label>
+              <label>{txt('비공개 방', 'Private Room')}</label>
               <button
                 type="button"
                 className={`ab-private-toggle ${isPrivate ? 'active' : ''}`}
                 onClick={() => setIsPrivate((v) => !v)}
               >
-                {isPrivate ? <><Lock size={14} /> 비공개 ON</> : <><Unlock size={14} /> 공개</>}
+                {isPrivate ? <><Lock size={14} /> {txt('비공개 ON', 'Private ON')}</> : <><Unlock size={14} /> {txt('공개', 'Public')}</>}
               </button>
-              {isPrivate && <p className="ab-private-hint">방 생성 후 초대 코드를 공유하세요.</p>}
+              {isPrivate && <p className="ab-private-hint">{txt('방 생성 후 초대 코드를 공유하세요.', 'Share invite code after creating room.')}</p>}
             </div>
           </div>
 
@@ -1255,7 +1256,7 @@ export default function AlgorithmBattlePage() {
               <div>
                 <strong>{selectedWorkshopMode.name}</strong>
                 <span>
-                  기본 HP {selectedWorkshopMode.config?.baseHp || 100} · 제한 시간 {fmtSec(selectedWorkshopMode.config?.timeLimit || selectedDuration)} · 룰 {(selectedWorkshopMode.config?.rules || []).length}개
+                  {txt(`기본 HP ${selectedWorkshopMode.config?.baseHp || 100} · 제한 시간 ${fmtSec(selectedWorkshopMode.config?.timeLimit || selectedDuration)} · 룰 ${(selectedWorkshopMode.config?.rules || []).length}개`, `Base HP ${selectedWorkshopMode.config?.baseHp || 100} · Time ${fmtSec(selectedWorkshopMode.config?.timeLimit || selectedDuration)} · Rules: ${(selectedWorkshopMode.config?.rules || []).length}`)}
                 </span>
               </div>
             </div>
@@ -1265,15 +1266,15 @@ export default function AlgorithmBattlePage() {
             <div className="ab-draft-lobby-note">
               <Shield size={16} />
               <div>
-                <strong>드래프트는 방 입장 후 진행됩니다</strong>
-                <span>방 생성 시 문제 조건을 설정하지 않습니다. 양쪽 플레이어가 준비 후 조건을 선택하고 문제가 확정됩니다.</span>
+                <strong>{txt('드래프트는 방 입장 후 진행됩니다', 'Draft begins after entering the room')}</strong>
+                <span>{txt('방 생성 시 문제 조건을 설정하지 않습니다. 양쪽 플레이어가 준비 후 조건을 선택하고 문제가 확정됩니다.', 'No problem conditions are set at room creation. Both players select conditions after readying up and the problem is confirmed.')}</span>
               </div>
             </div>
           ) : (
             <div className={`ab-filter-panel ${showProblemFilters ? 'open' : 'compact'}`}>
               <div className="ab-filter-head">
                 <div>
-                  <strong>문제 필터</strong>
+                  <strong>{txt('문제 필터', 'Problem Filter')}</strong>
                   <span>{filterSummary}</span>
                 </div>
                 <div className="ab-filter-actions">
@@ -1291,7 +1292,7 @@ export default function AlgorithmBattlePage() {
                     className="btn btn-ghost btn-sm"
                     onClick={() => setShowProblemFilters((v) => !v)}
                   >
-                    {showProblemFilters ? '접기' : '필터'}
+                    {showProblemFilters ? txt('접기', 'Collapse') : txt('필터', 'Filter')}
                   </button>
                 </div>
               </div>
@@ -1299,14 +1300,14 @@ export default function AlgorithmBattlePage() {
               {showProblemFilters && (
                 <div className="ab-filter-grid">
                   <div className="ab-filter-block">
-                    <label>티어 범위</label>
+                    <label>{txt('티어 범위', 'Tier Range')}</label>
                     <div className="ab-segmented">
                       {[
-                        ['auto', '자동'],
-                        ['min', '이상'],
-                        ['max', '이하'],
-                        ['range', '범위'],
-                        ['only', '선택'],
+                        ['auto', txt('자동', 'Auto')],
+                        ['min', txt('이상', 'Min+')],
+                        ['max', txt('이하', 'Max')],
+                        ['range', txt('범위', 'Range')],
+                        ['only', txt('선택', 'Select')],
                       ].map(([key, label]) => (
                         <button
                           type="button"
@@ -1379,7 +1380,7 @@ export default function AlgorithmBattlePage() {
                                 className={normalizedProblemFilters.requiredTags.includes(tag) ? 'active include' : ''}
                                 onClick={() => toggleFilterTag('requiredTags', tag)}
                               >
-                                {tag}
+                                {getTagLabelLang(tag, uiLang)}
                               </button>
                             ))}
                           </div>
@@ -1402,7 +1403,7 @@ export default function AlgorithmBattlePage() {
                                 className={normalizedProblemFilters.bannedTags.includes(tag) ? 'active danger' : ''}
                                 onClick={() => toggleFilterTag('bannedTags', tag)}
                               >
-                                {tag}
+                                {getTagLabelLang(tag, uiLang)}
                               </button>
                             ))}
                           </div>
@@ -1416,37 +1417,37 @@ export default function AlgorithmBattlePage() {
           )}
 
           <button className="btn btn-primary ab-create-btn" onClick={createRoom} disabled={creating}>
-            {creating ? <span className="spinner" /> : <Plus size={16} />} 방 만들기
+            {creating ? <span className="spinner" /> : <Plus size={16} />} {txt('방 만들기', 'Create Room')}
           </button>
         </section>
 
         {/* 코드로 입장 */}
         <section className="ab-join-code-section">
-          <div className="ab-section-title">초대 코드로 입장</div>
+          <div className="ab-section-title">{txt('초대 코드로 입장', 'Join by Code')}</div>
           <div className="ab-join-code-row">
             <input
               value={joinCode}
               onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
               onKeyDown={(e) => e.key === 'Enter' && joinByCode()}
-              placeholder="6자리 초대 코드 입력"
+              placeholder={txt('6자리 초대 코드 입력', 'Enter 6-digit invite code')}
               maxLength={8}
               className="mono"
             />
             <button className="btn btn-ghost" onClick={joinByCode} disabled={joiningByCode || !joinCode.trim()}>
-              {joiningByCode ? <span className="spinner" /> : '입장'}
+              {joiningByCode ? <span className="spinner" /> : txt('입장', 'Join')}
             </button>
           </div>
         </section>
 
         {/* 공개 방 목록 */}
         <section className="ab-room-list">
-          <div className="ab-section-title">공개 방 / 관전</div>
+          <div className="ab-section-title">{txt('공개 방 / 관전', 'Public Rooms / Spectate')}</div>
           {rooms.length === 0 ? (
             <div className="ab-empty ab-empty-cta">
-              <strong>첫 번째 방을 만들어보세요</strong>
-              <span>스피드부터 테리토리 모드까지 도전하세요.</span>
+              <strong>{txt('첫 번째 방을 만들어보세요', 'Create the first room')}</strong>
+              <span>{txt('스피드부터 테리토리 모드까지 도전하세요.', 'Challenge yourself in speed to territory modes.')}</span>
               <button className="btn btn-primary btn-sm" onClick={createRoom} disabled={creating}>
-                {creating ? <span className="spinner" /> : <Plus size={14} />} 방 만들기
+                {creating ? <span className="spinner" /> : <Plus size={14} />} {txt('방 만들기', 'Create Room')}
               </button>
             </div>
           ) : rooms.map((item) => {
@@ -1458,10 +1459,10 @@ export default function AlgorithmBattlePage() {
               <div key={item.room.id} className={`ab-room-row ${isPlaying ? 'playing' : 'waiting'}`}>
                 <div>
                   <strong>
-                    {item.problem?.title || (isPlaying ? '진행 중' : modeLabel)}
+                    {item.problem?.title || (isPlaying ? txt('진행 중', 'In Progress') : modeLabel)}
                   </strong>
                   <span>
-                    {modeLabel} · {participantCount}/{item.room.maxPlayers} · {isPlaying ? `⏱ ${fmtSec(timeLeft(item.room))} 남음` : (() => { const ll = lobbyTimeLeft(item.room); return ll != null ? `⏳ ${fmtSec(ll)} 대기` : '대기 중'; })()}
+                    {modeLabel} · {participantCount}/{item.room.maxPlayers} · {isPlaying ? `⏱ ${fmtSec(timeLeft(item.room))} ${txt('남음', 'left')}` : (() => { const ll = lobbyTimeLeft(item.room); return ll != null ? `⏳ ${fmtSec(ll)} ${txt('대기', 'wait')}` : txt('대기 중', 'Waiting'); })()}
                   </span>
                 </div>
                 <div className="ab-room-row-actions">
@@ -1480,20 +1481,20 @@ export default function AlgorithmBattlePage() {
                           toast?.show(err.response?.data?.message || 'Failed to delete room', 'error');
                         }
                       }}
-                    >삭제</button>
+                    >{txt('삭제', 'Delete')}</button>
                   )}
                   {!isPlaying && (
                     <button
                       className="btn btn-ghost btn-sm"
                       onClick={() => spectateRoom(item.room.id)}
-                    >관전</button>
+                    >{txt('관전', 'Spectate')}</button>
                   )}
                   <button
                     className={isPlaying ? 'btn btn-primary btn-sm' : 'btn btn-ghost btn-sm'}
                     onClick={() => (isPlaying ? spectateRoom(item.room.id) : joinRoom(item.room.id))}
                     disabled={!isPlaying && isFull}
                   >
-                    {isPlaying ? '관전' : isFull ? '만석' : '입장'}
+                    {isPlaying ? txt('관전', 'Spectate') : isFull ? txt('만석', 'Full') : txt('입장', 'Join')}
                   </button>
                 </div>
               </div>

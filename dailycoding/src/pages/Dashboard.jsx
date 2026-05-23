@@ -449,8 +449,8 @@ export default function Dashboard() {
         <div className="dashboard-game-banner-icon"><Sparkles size={22} /></div>
         <div className="dashboard-game-banner-body">
           <span>NEW GAME HUB</span>
-          <strong>Ghost Battle · Daily Dungeon · Season Conquest — all in one place</strong>
-          <small>Ghost {gameSummary.ghost} · Dungeon {gameSummary.dungeon}% · Territories {gameSummary.territory}</small>
+          <strong>{txt('Ghost Battle · Daily Dungeon · 시즌 정복 — 한 곳에서', 'Ghost Battle · Daily Dungeon · Season Conquest — all in one place')}</strong>
+          <small>Ghost {gameSummary.ghost} · Dungeon {gameSummary.dungeon}% · {txt('영역', 'Territories')} {gameSummary.territory}</small>
         </div>
         <button className="btn btn-primary btn-sm" onClick={(e) => { e.stopPropagation(); navigate('/game'); }}>Game Hub</button>
       </div>

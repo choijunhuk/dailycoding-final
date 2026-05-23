@@ -355,7 +355,7 @@ export default function TopNav() {
               fontSize: 12, fontWeight: 800, cursor: 'pointer', marginRight: 4, transition: 'transform 0.15s',
               boxShadow: '0 6px 14px rgba(88, 166, 255, 0.18)'
             }} onMouseEnter={e=>e.currentTarget.style.transform='scale(1.05)'} onMouseLeave={e=>e.currentTarget.style.transform='none'}>
-              <span style={{ fontSize: 10, color:'var(--blue)', letterSpacing:'.08em', textTransform:'uppercase' }}>Upgrade</span>
+              <span style={{ fontSize: 10, color:'var(--blue)', letterSpacing:'.08em', textTransform:'uppercase' }}>{t('upgrade')}</span>
               <span>{PLAN_META.pro.name} ${PLAN_META.pro.monthlyPrice} · {PLAN_META.team.name} ${PLAN_META.team.monthlyPrice}</span>
             </button>
           )}

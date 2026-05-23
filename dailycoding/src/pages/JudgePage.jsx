@@ -1251,9 +1251,9 @@ export default function JudgePage() {
                 }}>
                   {aiQuotaNotice}{' '}
                   <Link to="/pricing" style={{ color:'var(--blue)', fontWeight:700, textDecoration:'none' }}>
-                    Upgrade to Pro
+                    {uiTxt('Pro로 업그레이드', 'Upgrade to Pro')}
                   </Link>
-                  {' '}for unlimited access.
+                  {' '}{uiTxt('무제한 이용 가능', 'for unlimited access.')}
                 </div>
               )}
               {!aiReview ? (
