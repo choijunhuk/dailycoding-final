@@ -893,7 +893,7 @@ export default function JudgePage() {
 
           {leftTab === 'problem' && similarProblems.length > 0 && (
             <div className="prob-content fade-in" style={{ borderTop:'1px solid var(--border)', marginTop:0, paddingTop:16 }}>
-              <div style={{ fontSize:12, fontWeight:700, color:'var(--text2)', marginBottom:10 }}>🔗 Related Problems</div>
+              <div style={{ fontSize:12, fontWeight:700, color:'var(--text2)', marginBottom:10 }}>{uiTxt('🔗 연관 문제', '🔗 Related Problems')}</div>
               <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
                 {similarProblems.slice(0,4).map(p => {
                   const t = TIERS[p.tier] || {}

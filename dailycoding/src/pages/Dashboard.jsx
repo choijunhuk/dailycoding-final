@@ -13,6 +13,8 @@ import OnboardingModal from '../components/OnboardingModal.jsx';
 import { useLang } from '../context/LangContext.jsx';
 import { withVars } from '../utils/languageMode.js';
 import { buildDailyFocusPlan } from './dashboardPlanUtils.js';
+import { PROFILE_TIER_LABELS_KO } from './profilePageUtils.js';
+import { getTagLabelLang } from './problemsPageUtils.js';
 
 const TIER_META = {
   unranked:    { label:'Unranked',    color:'#888',    next:'Iron',        bg:'rgba(136,136,136,.06)' },
@@ -90,6 +92,9 @@ export default function Dashboard() {
   const { solved, grassData, problems: appProblems } = useApp();
   const toast = useToast();
   const { t, lang } = useLang();
+  const txt = (ko, en) => lang === 'ko' ? ko : en;
+  const tierLbl = (tier) => lang === 'ko' ? (PROFILE_TIER_LABELS_KO[tier] || TIERS[tier]?.label || tier) : (TIERS[tier]?.label || tier);
+  const CAUSE_KO = { 'Wrong Answer': '오답', 'Compile Error': '컴파일 오류', 'Time Limit Exceeded': '시간 초과', 'Runtime Error': '런타임 오류', 'Memory Limit Exceeded': '메모리 초과' };
   const [weeklyChallenge, setWeeklyChallenge] = useState(null);
   const [followFeed, setFollowFeed] = useState([]);
   const [promotion, setPromotion] = useState({ active: null, recent: null });
@@ -536,16 +541,16 @@ export default function Dashboard() {
             <div className="dashboard-xp-card card card-hover">
               <div className="dashboard-xp-head">
                 <div>
-                  <div className="dashboard-xp-kicker">Personal Growth Rewards</div>
+                  <div className="dashboard-xp-kicker">{txt('개인 성장 보상', 'Personal Growth Rewards')}</div>
                   <div className="dashboard-xp-title">Lv.{progression.level} · {progression.xp.toLocaleString()} XP</div>
                 </div>
-                <button className="btn btn-ghost btn-sm" onClick={() => navigate('/profile')}>Profile Rewards</button>
+                <button className="btn btn-ghost btn-sm" onClick={() => navigate('/profile')}>{txt('프로필 보상', 'Profile Rewards')}</button>
               </div>
               <div className="dashboard-xp-bar">
                 <div style={{ width:`${Math.min(100, Math.max(0, progression.progressPercent || 0))}%` }} />
               </div>
               <div className="dashboard-xp-note">
-                Mission rewards do not affect ranking points — they accumulate as XP, badges, titles, and profile backgrounds only.
+                {txt('미션 보상은 랭킹 점수에 영향을 주지 않으며 XP, 뱃지, 칭호, 프로필 배경으로만 쌓입니다.', 'Mission rewards do not affect ranking points — they accumulate as XP, badges, titles, and profile backgrounds only.')}
               </div>
             </div>
           )}
@@ -606,10 +611,10 @@ export default function Dashboard() {
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:12,marginBottom:14}}>
               <div>
                 <div style={{fontWeight:800,fontSize:14,display:'flex',alignItems:'center',gap:8}}>
-                  <Target size={16} />Wrong Answer Recovery Queue
+                  <Target size={16} />{txt('오답 복구 큐', 'Wrong Answer Recovery Queue')}
                 </div>
                 <div style={{fontSize:12,color:'var(--text3)',marginTop:4,lineHeight:1.5}}>
-                  {recoveryQueue.summary || 'Retry incorrect problems to eliminate weaknesses.'}
+                  {recoveryQueue.summary || txt('틀린 문제를 다시 풀어 약점을 없애세요.', 'Retry incorrect problems to eliminate weaknesses.')}
                 </div>
               </div>
               <span style={{
@@ -641,7 +646,7 @@ export default function Dashboard() {
                           {item.problemTitle}
                         </button>
                         <div style={{fontSize:11,color:'var(--text3)',marginTop:4}}>
-                          {item.cause} · {TIERS[item.tier]?.label || item.tier} · {item.lang}
+                          {(lang === 'ko' ? CAUSE_KO[item.cause] || item.cause : item.cause)} · {tierLbl(item.tier)} · {item.lang}
                         </div>
                       </div>
                       <span style={{
@@ -662,7 +667,7 @@ export default function Dashboard() {
                             background:'rgba(121,192,255,.08)',
                             color:'var(--blue)',fontSize:10,fontWeight:700,
                           }}>
-                            {tagName}
+                            {getTagLabelLang(tagName, lang)}
                           </span>
                         ))}
                       </div>
@@ -672,13 +677,13 @@ export default function Dashboard() {
                         className="btn btn-primary btn-sm"
                         onClick={() => navigate(`/problems/${item.problemId}`)}
                       >
-                        Retry
+                        {txt('다시 풀기', 'Retry')}
                       </button>
                       <button
                         className="btn btn-ghost btn-sm"
                         onClick={() => navigate('/submissions', { state: { scope: 'me', result: item.result, highlightId: item.submissionId, autoCoach: true } })}
                       >
-                        View AI Coach
+                        {txt('AI 코치 보기', 'View AI Coach')}
                       </button>
                     </div>
                   </div>
@@ -686,7 +691,7 @@ export default function Dashboard() {
               </div>
             ) : (
               <div style={{padding:'14px 0',fontSize:13,color:'var(--text3)',lineHeight:1.7}}>
-                No unresolved wrong answers right now. Try recommended problems or battles to discover new weaknesses.
+                {txt('현재 미해결 오답이 없습니다. 추천 문제나 배틀로 새로운 약점을 발견해 보세요.', 'No unresolved wrong answers right now. Try recommended problems or battles to discover new weaknesses.')}
               </div>
             )}
           </div>
@@ -733,7 +738,7 @@ export default function Dashboard() {
                 {reviewQueue.slice(0,5).map((item) => (
                   <button key={item.problemId} onClick={() => navigate('/problems/'+item.problemId)} style={{border:'1px solid var(--border)',borderRadius:12,padding:'10px 12px',background:'var(--bg3)',color:'var(--text)',textAlign:'left',cursor:'pointer',display:'flex',justifyContent:'space-between',gap:10}}>
                     <span style={{fontWeight:700}}>{item.title}</span>
-                    <span style={{fontSize:11,color:TIERS[item.tier]?.color||'var(--text3)'}}>{TIERS[item.tier]?.label||item.tier}</span>
+                    <span style={{fontSize:11,color:TIERS[item.tier]?.color||'var(--text3)'}}>{tierLbl(item.tier)}</span>
                   </button>
                 ))}
               </div>
@@ -742,12 +747,12 @@ export default function Dashboard() {
 
           {tagStats.length > 0 && (
             <div className="card card-pad card-hover">
-              <div style={{fontWeight:800,fontSize:15,marginBottom:12,display:'flex',alignItems:'center',gap:8}}><Target size={16} />Tag Proficiency</div>
+              <div style={{fontWeight:800,fontSize:15,marginBottom:12,display:'flex',alignItems:'center',gap:8}}><Target size={16} />{txt('태그별 정확도', 'Tag Proficiency')}</div>
               <div style={{display:'grid',gap:10}}>
                 {tagStats.slice(0,6).map((item) => (
                   <div key={item.tag}>
                     <div style={{display:'flex',justifyContent:'space-between',fontSize:12,marginBottom:5}}>
-                      <span style={{fontWeight:700}}>{item.tag}</span>
+                      <span style={{fontWeight:700}}>{getTagLabelLang(item.tag, lang)}</span>
                       <span style={{color:'var(--text3)'}}>{item.accuracy}% · {item.correct}/{item.total}</span>
                     </div>
                     <div style={{height:8,borderRadius:999,background:'var(--bg3)',overflow:'hidden'}}>
@@ -784,7 +789,7 @@ export default function Dashboard() {
                       padding:'4px 9px',borderRadius:20,fontSize:11,fontWeight:800,
                       background:TIERS[problem.tier]?.bg||'var(--bg3)',
                       color:TIERS[problem.tier]?.color||'var(--text2)',
-                    }}>● {TIERS[problem.tier]?.label||problem.tier}</span>
+                    }}>● {tierLbl(problem.tier)}</span>
                     <strong>{problem.title}</strong>
                     {problem.reason && (
                       <span style={{
@@ -845,7 +850,7 @@ export default function Dashboard() {
           {/* 랭킹 TOP5 */}
           <div className="card card-pad card-hover">
             <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
-              <div style={{fontWeight:700,fontSize:14,display:'flex',alignItems:'center',gap:8}}><Trophy size={16} />Live Ranking</div>
+              <div style={{fontWeight:700,fontSize:14,display:'flex',alignItems:'center',gap:8}}><Trophy size={16} />{txt('실시간 랭킹', 'Live Ranking')}</div>
               <button onClick={()=>navigate('/ranking')} style={{
                 fontSize:12,color:'var(--blue)',background:'none',border:'none',cursor:'pointer',
               }}>{t('dashboardViewAll')}</button>
@@ -926,7 +931,7 @@ export default function Dashboard() {
                   <span style={{flex:1,fontSize:13,fontWeight:500}}>{p.title}</span>
                   <span className="badge badge-blue">{user?.defaultLanguage || 'python'}</span>
                   <span style={{fontSize:10,color:TIERS[p.tier]?.color,fontFamily:'Space Mono,monospace'}}>
-                    {TIERS[p.tier]?.label||p.tier}
+                    {tierLbl(p.tier)}
                   </span>
                 </div>
               ))

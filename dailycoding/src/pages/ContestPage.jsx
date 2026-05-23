@@ -41,7 +41,8 @@ export default function ContestPage() {
   const { isAdmin } = useAuth();
   const { addNotification, problems: allProblems } = useApp();
   const toast = useToast();
-  const { t } = useLang();
+  const { t, lang } = useLang();
+  const txt = (ko, en) => lang === 'ko' ? ko : en;
 
   const [contests,   setContests]   = useState([]);
   const [filter,     setFilter]     = useState('all');
@@ -384,7 +385,7 @@ export default function ContestPage() {
         <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
           {isAdmin && <button className="btn btn-ghost" onClick={() => { setShowCreationRequests(true); fetchCreationRequests(); }}>📋 Creation Requests</button>}
           {isAdmin && <button className="btn btn-danger" onClick={() => setShowCreate(true)}>{t('createContestBtn')}</button>}
-          {!isAdmin && <button className="btn btn-ghost" onClick={() => setShowRequestForm(true)}>📋 Request a Contest</button>}
+          {!isAdmin && <button className="btn btn-ghost" onClick={() => setShowRequestForm(true)}>📋 {txt('대회 개최 요청', 'Request a Contest')}</button>}
         </div>
       </div>
 
@@ -853,8 +854,8 @@ export default function ContestPage() {
       {showRequestForm && (
         <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setShowRequestForm(false)}>
           <div className="modal-box card fade-up" style={{maxWidth:480,width:'95vw'}}>
-            <h2>📋 Request a Contest</h2>
-            <p style={{fontSize:13,color:'var(--text2)',marginBottom:16}}>An admin will review your request and create the contest.</p>
+            <h2>📋 {txt('대회 개최 요청', 'Request a Contest')}</h2>
+            <p style={{fontSize:13,color:'var(--text2)',marginBottom:16}}>{txt('관리자가 요청을 검토하고 대회를 개설합니다.', 'An admin will review your request and create the contest.')}</p>
             <div style={{display:'flex',flexDirection:'column',gap:10}}>
               <div className="form-group">
                 <label style={{fontSize:12,color:'var(--text3)',marginBottom:4,display:'block'}}>Contest Name *</label>
@@ -957,6 +958,8 @@ export default function ContestPage() {
 function LiveContestView({ contest, onExit, isAdmin }) {
   const { solved } = useApp();
   const navigate = useNavigate();
+  const { lang } = useLang();
+  const txt = (ko, en) => lang === 'ko' ? ko : en;
   const [elapsed,  setElapsed]  = useState(0);
 
   // 실제 카운트다운 타이머
@@ -1023,7 +1026,7 @@ function LiveContestView({ contest, onExit, isAdmin }) {
           ))}
         </div>
         <div className="lv-ranking card">
-          <div className="lv-panel-title">🏆 Live Rankings</div>
+          <div className="lv-panel-title">🏆 {txt('실시간 순위', 'Live Rankings')}</div>
           {[...board.map(p=>({...p, name: p.username||p.name})),
             {name:isAdmin?'(Admin)':'Me',score:Object.keys(mySolved).length,isMe:!isAdmin}]
             .sort((a,b)=>b.score-a.score).map((p,i)=>(

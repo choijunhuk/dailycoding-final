@@ -1,5 +1,8 @@
 import { Bookmark, Share2 } from 'lucide-react';
 import { formatTimer } from './JudgeTimer.jsx';
+import { useLang } from '../../context/LangContext.jsx';
+import { PROFILE_TIER_LABELS_KO } from '../profilePageUtils.js';
+import { getTagLabelLang } from '../problemsPageUtils.js';
 
 export default function ProblemStatement({
   problem,
@@ -35,6 +38,8 @@ export default function ProblemStatement({
   mySubmissions,
   setLeftTab,
 }) {
+  const { lang } = useLang();
+  const txt = (ko, en) => lang === 'ko' ? ko : en;
   if (!problem) return null;
 
   return (
@@ -44,23 +49,23 @@ export default function ProblemStatement({
       <h2 style={{ margin:0 }}>{problem.title}</h2>
       <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
         <button className="btn btn-ghost btn-sm" onClick={handleBookmarkClick}>
-          <Bookmark size={14} fill={isBookmarked ? 'currentColor' : 'none'} /> {isBookmarked ? 'Bookmarked' : 'Bookmark'}
+          <Bookmark size={14} fill={isBookmarked ? 'currentColor' : 'none'} /> {isBookmarked ? txt('북마크됨', 'Bookmarked') : txt('북마크', 'Bookmark')}
         </button>
         <button className="btn btn-ghost btn-sm" onClick={handleShareSubmission}>
-          <Share2 size={14} /> Share
+          <Share2 size={14} /> {txt('공유', 'Share')}
         </button>
       </div>
     </div>
     <div className="prob-meta-row">
-      <span className="tag" style={{ background: tierInfo.bg, color: tierInfo.color }}>{tierInfo.label}</span>
-      <span className="tag" style={{ background: 'var(--bg3)', color: tierInfo.color, border: `1px solid ${tierInfo.color}40` }}>● {problem.tier?.toUpperCase?.() || problem.tier}</span>
+      <span className="tag" style={{ background: tierInfo.bg, color: tierInfo.color }}>{lang === 'ko' ? (PROFILE_TIER_LABELS_KO[problem.tier] || tierInfo.label) : tierInfo.label}</span>
+      <span className="tag" style={{ background: 'var(--bg3)', color: tierInfo.color, border: `1px solid ${tierInfo.color}40` }}>● {lang === 'ko' ? (PROFILE_TIER_LABELS_KO[problem.tier] || problem.tier?.toUpperCase?.() || problem.tier) : (problem.tier?.toUpperCase?.() || problem.tier)}</span>
       <span className="pmeta">⏱ {problem.timeLimit}s</span>
       <span className="pmeta">💾 {problem.memLimit}MB</span>
       <span className="pmeta mono">#{problem.id}</span>
     </div>
     <div className="prob-tag-row">
-      {(problem.tags||[]).map(t => (
-        <span key={t} className="tag" style={{ background: 'var(--bg3)', color: 'var(--text2)' }}>{t}</span>
+      {(problem.tags||[]).map(tag => (
+        <span key={tag} className="tag" style={{ background: 'var(--bg3)', color: 'var(--text2)' }}>{getTagLabelLang(tag, lang)}</span>
       ))}
     </div>
 
@@ -124,17 +129,17 @@ export default function ProblemStatement({
 
     {isSpecialProblem && problemType === 'fill-blank' && (
       <section>
-        <h4>Code Template {problem?.preferredLanguage && <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text2)', marginLeft: 6 }}>({problem.preferredLanguage})</span>}</h4>
-        <pre className="io-box mono">{specialConfig?.codeTemplate || 'No template available.'}</pre>
-        {specialConfig?.hint && <p style={{ marginTop: 8, color: 'var(--text2)' }}>💡 Hint: {specialConfig.hint}</p>}
+        <h4>{txt('코드 템플릿', 'Code Template')} {problem?.preferredLanguage && <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text2)', marginLeft: 6 }}>({problem.preferredLanguage})</span>}</h4>
+        <pre className="io-box mono">{specialConfig?.codeTemplate || txt('템플릿 없음', 'No template available.')}</pre>
+        {specialConfig?.hint && <p style={{ marginTop: 8, color: 'var(--text2)' }}>💡 {txt('힌트', 'Hint')}: {specialConfig.hint}</p>}
       </section>
     )}
 
     {isSpecialProblem && problemType === 'bug-fix' && (
       <section>
-        <h4>Buggy Code {problem?.preferredLanguage && <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text2)', marginLeft: 6 }}>({problem.preferredLanguage})</span>}</h4>
-        <pre className="io-box mono">{specialConfig?.buggyCode || 'No buggy code available.'}</pre>
-        {specialConfig?.hint && <p style={{ marginTop: 8, color: 'var(--text2)' }}>💡 Hint: {specialConfig.hint}</p>}
+        <h4>{txt('버그 코드', 'Buggy Code')} {problem?.preferredLanguage && <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text2)', marginLeft: 6 }}>({problem.preferredLanguage})</span>}</h4>
+        <pre className="io-box mono">{specialConfig?.buggyCode || txt('버그 코드 없음', 'No buggy code available.')}</pre>
+        {specialConfig?.hint && <p style={{ marginTop: 8, color: 'var(--text2)' }}>💡 {txt('힌트', 'Hint')}: {specialConfig.hint}</p>}
       </section>
     )}
 
@@ -173,13 +178,13 @@ export default function ProblemStatement({
 
     {/* 통계 */}
     <div style={{marginTop:20}}>
-      <h4>📈 Problem Stats</h4>
+      <h4>📈 {txt('문제 통계', 'Problem Stats')}</h4>
       <div className="stat-rows">
         {[
-          ['Acceptance', problemAcceptanceText],
-          ['Submissions', problemSubmitCount.toLocaleString()],
-          ['Solved', problemSolvedCount.toLocaleString()],
-          ['Difficulty',  `${problem.difficulty} / 10`],
+          [txt('정답률', 'Acceptance'), problemAcceptanceText],
+          [txt('제출', 'Submissions'), problemSubmitCount.toLocaleString()],
+          [txt('해결', 'Solved'), problemSolvedCount.toLocaleString()],
+          [txt('난이도', 'Difficulty'), `${problem.difficulty} / 10`],
         ].map(([k,v])=>(
           <div key={k} className="stat-row"><span>{k}</span><span className="mono" style={{color:'var(--blue)'}}>{v}</span></div>
         ))}
@@ -190,13 +195,13 @@ export default function ProblemStatement({
       <div style={{ marginTop:16, padding:'16px 18px', background:'var(--bg3)', border:'1px solid var(--border)', borderRadius:12 }}>
         <div style={{ display:'flex', justifyContent:'space-between', gap:12, alignItems:'center', flexWrap:'wrap' }}>
           <div>
-            <h4 style={{ margin:'0 0 4px' }}>🧭 Solution Guide</h4>
+            <h4 style={{ margin:'0 0 4px' }}>🧭 {txt('풀이 가이드', 'Solution Guide')}</h4>
             <p style={{ margin:0, fontSize:12, color:'var(--text3)' }}>
-              Solve the problem or upgrade to Pro to access AI walkthrough with approach and complexity analysis.
+              {txt('문제를 풀거나 Pro로 업그레이드하면 접근법과 복잡도 분석을 포함한 AI 풀이를 볼 수 있습니다.', 'Solve the problem or upgrade to Pro to access AI walkthrough with approach and complexity analysis.')}
             </p>
           </div>
           <button className="btn btn-primary btn-sm" onClick={loadWalkthrough} disabled={walkthroughLoading || (!solved[problem.id] && isFreePlan)}>
-            {walkthroughLoading ? <><span className="spinner"/> Generating</> : solved[problem.id] || !isFreePlan ? 'View Walkthrough' : '🔒 Solve First'}
+            {walkthroughLoading ? <><span className="spinner"/> {txt('생성 중', 'Generating')}</> : solved[problem.id] || !isFreePlan ? txt('풀이 보기', 'View Walkthrough') : txt('🔒 먼저 풀기', '🔒 Solve First')}
           </button>
         </div>
         {walkthrough && (
