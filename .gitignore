@@ -13,6 +13,7 @@ build/
 .DS_Store
 *.log
 npm-debug.log*
+logs.*
 
 # Environment
 *.env
@@ -37,3 +38,27 @@ coverage/
 *.tmp
 .cache/
 .omx/
+.omc/
+.omg/
+.playwright-mcp/
+
+# Local AI/workflow/plugin artifacts
+.agents/
+.claude/skills/
+.codex-plugins/
+skills-lock.json
+CODEX_PROMPT*.md
+
+# Root-level screenshots and copied assets
+/*.png
+/*.jpg
+/*.jpeg
+/*.webp
+/*.avif
+/*.svg
+!dailycoding/public/**/*.png
+!dailycoding/public/**/*.jpg
+!dailycoding/public/**/*.jpeg
+!dailycoding/public/**/*.webp
+!dailycoding/public/**/*.avif
+!dailycoding/public/**/*.svg
