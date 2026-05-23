@@ -123,6 +123,7 @@ async function initDatabase() {
     await runSql(join(__dir, 'migrations', '041_backfill_unranked_tiers.sql'));
     await runSql(join(__dir, 'migrations', '042_battle_modes.sql'));
     await runSql(join(__dir, 'migrations', '043_reward_items_name_ko.sql'));
+    await runSql(join(__dir, 'migrations', '044_reward_items_description_ko.sql'));
     logger.info('✅ DB 스키마 초기화 완료');
   } catch (err) {
     logger.warn('⚠️  DB 초기화 스킵:', { message: err.message });
@@ -878,19 +879,21 @@ async function seedGrowthCollections() {
       item.name,
       item.nameKo || null,
       item.description,
+      item.descriptionKo || null,
       item.rarity,
       item.icon ?? '',
       item.category || null,
       item.sort_order || 0,
     ]);
-    const rewardPlaceholders = REWARD_SEEDS.map(() => '(?,?,?,?,?,?,?,?,?)').join(',');
+    const rewardPlaceholders = REWARD_SEEDS.map(() => '(?,?,?,?,?,?,?,?,?,?)').join(',');
     await dbRun(
-      `INSERT INTO reward_items (code, type, name, name_ko, description, rarity, icon, category, sort_order)
+      `INSERT INTO reward_items (code, type, name, name_ko, description, description_ko, rarity, icon, category, sort_order)
        VALUES ${rewardPlaceholders}
        ON DUPLICATE KEY UPDATE
          name = VALUES(name),
          name_ko = VALUES(name_ko),
          description = VALUES(description),
+         description_ko = VALUES(description_ko),
          rarity = VALUES(rarity),
          icon = VALUES(icon),
          category = VALUES(category),

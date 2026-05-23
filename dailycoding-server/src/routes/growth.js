@@ -56,7 +56,7 @@ function rowsToProblems(rows = []) {
   }));
 }
 
-async function getWeeklyPlan(userId) {
+async function getWeeklyPlan(userId, isKo = false) {
   const recovery = await Submission.getRecoveryQueue(userId, { limit: 3 });
   const rows = await query(
     `SELECT p.id, p.title, p.tier, p.difficulty,
@@ -95,22 +95,22 @@ async function getWeeklyPlan(userId) {
     tier: item.tier,
     difficulty: item.difficulty,
     tags: item.tags,
-    reason: `${item.cause} recovery: ${item.action}`,
+    reason: isKo ? `${item.cause} 복습: ${item.action}` : `${item.cause} recovery: ${item.action}`,
     recoverySubmissionId: item.submissionId,
   }));
 
   return {
-    title: 'This Week\'s Personalized Study Plan',
-    summary: 'Recovery problems are placed first, and the remaining slots are filled with unsolved problems at the right difficulty.',
+    title: isKo ? '이번 주 맞춤 학습 플랜' : 'This Week\'s Personalized Study Plan',
+    summary: isKo ? '복습 문제가 먼저 배치되고, 남은 슬롯은 적절한 난이도의 미풀이 문제로 채워집니다.' : 'Recovery problems are placed first, and the remaining slots are filled with unsolved problems at the right difficulty.',
     days: [...recoveryProblems, ...fresh].slice(0, 7).map((problem, index) => ({
       day: index + 1,
-      label: index < recoveryProblems.length ? 'Recovery' : index < 5 ? 'Training' : 'Challenge',
+      label: index < recoveryProblems.length ? (isKo ? '복습' : 'Recovery') : index < 5 ? (isKo ? '훈련' : 'Training') : (isKo ? '도전' : 'Challenge'),
       ...problem,
     })),
   };
 }
 
-async function getBattleAnalysis(userId) {
+async function getBattleAnalysis(userId, isKo = false) {
   const rows = await query(
     `SELECT result, score_for, score_against, solved_for, solved_against, opponent_name, created_at
      FROM battle_history
@@ -143,10 +143,10 @@ async function getBattleAnalysis(userId) {
       solvedAgainst: latest.solved_against,
     } : null,
     insight: list.length === 0
-      ? 'No battle history yet. After your first battle, we will analyze the turning points.'
+      ? (isKo ? '아직 배틀 기록이 없습니다. 첫 배틀 후 전환점을 분석해 드립니다.' : 'No battle history yet. After your first battle, we will analyze the turning points.')
       : losses > wins
-        ? 'In recent battles, stability matters more than speed. Try recovering wrong answers first, then rematch with the same tags.'
-        : 'Your battle momentum is good. Try increasing the pressure with higher difficulty or race mode.',
+        ? (isKo ? '최근 배틀에서는 속도보다 안정성이 중요합니다. 오답 복구를 먼저 하고 같은 태그로 재도전해 보세요.' : 'In recent battles, stability matters more than speed. Try recovering wrong answers first, then rematch with the same tags.')
+        : (isKo ? '배틀 흐름이 좋습니다. 더 높은 난이도나 스피드 레이스로 압박을 높여보세요.' : 'Your battle momentum is good. Try increasing the pressure with higher difficulty or race mode.'),
   };
 }
 
@@ -178,9 +178,10 @@ async function getGrowthShareCard(userId) {
 
 router.get('/', async (req, res) => {
   try {
+    const isKo = req.headers['x-language'] === 'ko';
     const [weeklyPlan, battleAnalysis, shareCard, recoveryQueue] = await Promise.all([
-      getWeeklyPlan(req.user.id),
-      getBattleAnalysis(req.user.id),
+      getWeeklyPlan(req.user.id, isKo),
+      getBattleAnalysis(req.user.id, isKo),
       getGrowthShareCard(req.user.id),
       Submission.getRecoveryQueue(req.user.id, { limit: 5 }),
     ]);

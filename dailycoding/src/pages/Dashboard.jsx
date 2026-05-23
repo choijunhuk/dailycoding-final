@@ -729,7 +729,7 @@ export default function Dashboard() {
             <div className="card card-pad card-hover">
               <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:12,marginBottom:12}}>
                 <div>
-                  <div style={{fontSize:11,color:'var(--orange)',fontWeight:800,letterSpacing:.5}}>REVIEW QUEUE</div>
+                  <div style={{fontSize:11,color:'var(--orange)',fontWeight:800,letterSpacing:.5}}>{txt('복습 큐', 'REVIEW QUEUE')}</div>
                   <h3 style={{fontSize:17,fontWeight:800,margin:'4px 0 0'}}>{t('dashReviewQueue')}</h3>
                 </div>
                 <span style={{fontSize:12,color:'var(--text3)'}}>{withVars(t('dashQueuePending'), { n: reviewQueue.length })}</span>

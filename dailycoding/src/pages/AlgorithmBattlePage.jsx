@@ -30,9 +30,9 @@ const SOCIAL_EVENT_TYPES = new Set([
   'player.chat', 'player.emote',
 ]);
 const DURATION_PRESETS = [
-  { label: '⚡ Blitz 5m', sec: 300 },
-  { label: '⚔️ Standard 10m', sec: 600 },
-  { label: '🏔️ Marathon 20m', sec: 1200 },
+  { label: '⚡ Blitz 5m', labelKo: '⚡ 블리츠 5분', sec: 300 },
+  { label: '⚔️ Standard 10m', labelKo: '⚔️ 스탠다드 10분', sec: 600 },
+  { label: '🏔️ Marathon 20m', labelKo: '🏔️ 마라톤 20분', sec: 1200 },
 ];
 const FALLBACK_MODES = [
   { key: 'sort-speed', title: '⚡ Speed Race', description: 'Pure speed — first to submit the correct answer wins instantly.', winCondition: 'first-correct', rules: ['First correct submission wins immediately', 'Tie broken by score if time runs out'], itemsEnabled: false, effectsEnabled: false, problemCount: 1 },
@@ -1212,7 +1212,7 @@ export default function AlgorithmBattlePage() {
                       className={selectedDuration === d.sec ? 'active' : ''}
                       onClick={() => setSelectedDuration(d.sec)}
                     >
-                      {d.label}
+                      {uiLang === 'ko' ? d.labelKo : d.label}
                     </button>
                   ))}
                 </div>
@@ -1296,7 +1296,7 @@ export default function AlgorithmBattlePage() {
                       className="btn btn-ghost btn-sm"
                       onClick={() => setProblemFilters(DEFAULT_PROBLEM_FILTERS)}
                     >
-                      Reset
+                      {txt('초기화', 'Reset')}
                     </button>
                   )}
                   <button

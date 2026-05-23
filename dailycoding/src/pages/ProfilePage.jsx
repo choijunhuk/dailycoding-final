@@ -222,7 +222,7 @@ export default function ProfilePage() {
   const solvedByTier = useMemo(() => {
     const groups = Object.entries(TIERS).map(([tier, meta]) => ({
       tier,
-      label: meta.label,
+      label: lang === 'ko' ? (PROFILE_TIER_LABELS_KO[tier] || meta.label) : meta.label,
       color: meta.color,
       problems: solvedProblems.filter((problem) => problem.tier === tier),
     }));
@@ -666,7 +666,7 @@ export default function ProfilePage() {
               const pct = solvedProblems.length ? (cnt/solvedProblems.length*100).toFixed(1) : '0.0';
               return (
                 <div key={k} className="profile-dist-row">
-                  <span className="dist-level" style={{ color:v.color }}>● {v.label}</span>
+                  <span className="dist-level" style={{ color:v.color }}>● {lang === 'ko' ? (PROFILE_TIER_LABELS_KO[k] || v.label) : v.label}</span>
                   <div className="dist-bar-bg">
                     <div className="dist-bar-fill" style={{ width:`${solvedProblems.length?cnt/solvedProblems.length*100:0}%`, background:v.color }}/>
                   </div>
@@ -1411,7 +1411,7 @@ export default function ProfilePage() {
                           <span className="title-icon">{r.icon}</span>
                           <div className="title-info">
                             <div className="title-name">{lang === 'ko' ? (r.name_ko || r.name) : r.name}</div>
-                            <div className="title-desc">{r.description}</div>
+                            <div className="title-desc">{lang === 'ko' ? (r.description_ko || r.description) : r.description}</div>
                           </div>
                           {isEquipped && <div className="title-equipped-tag">✓ {txt('장착 중', 'Equipped')}</div>}
                         </div>
