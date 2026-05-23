@@ -893,9 +893,9 @@ export default function ProfilePage() {
             <div className="section-header-title" style={{ marginBottom:12 }}>{txt('풀이 시간 통계', 'Solve Time Stats')}</div>
             <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(140px, 1fr))', gap:10, marginBottom:14 }}>
               {[
-                { label:txt('평균 풀이 시간', 'Average Solve Time'), value: formatDuration(solveStats.avgSolveTime) },
-                { label:txt('총 풀이 시간', 'Total Solve Time'), value: formatDuration(solveStats.totalSolveTime) },
-                { label:txt('최단 풀이', 'Fastest Solve'), value: solveStats.fastestSolve ? `${solveStats.fastestSolve.problemTitle} · ${formatDuration(solveStats.fastestSolve.timeSec)}` : txt('기록 없음', 'No records') },
+                { label:txt('평균 풀이 시간', 'Average Solve Time'), value: formatDuration(solveStats.avgSolveTime, lang) },
+                { label:txt('총 풀이 시간', 'Total Solve Time'), value: formatDuration(solveStats.totalSolveTime, lang) },
+                { label:txt('최단 풀이', 'Fastest Solve'), value: solveStats.fastestSolve ? `${solveStats.fastestSolve.problemTitle} · ${formatDuration(solveStats.fastestSolve.timeSec, lang)}` : txt('기록 없음', 'No records') },
               ].map((item) => (
                 <div key={item.label} className="card card-pad-sm">
                   <div style={{ fontSize:11, color:'var(--text3)', marginBottom:6 }}>{item.label}</div>
@@ -907,9 +907,9 @@ export default function ProfilePage() {
               <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
                 {Object.entries(solveStats.solveTimeByTier).map(([tierName, stat]) => (
                   <div key={tierName} className="list-item-hover" style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'10px 12px', border:'1px solid var(--border)', borderRadius:10 }}>
-                    <span style={{ fontSize:12, fontWeight:700, textTransform:'capitalize' }}>{tierName}</span>
+                    <span style={{ fontSize:12, fontWeight:700 }}>{getTierLabel(tierName, lang)}</span>
                     <span style={{ fontSize:12, color:'var(--text2)' }}>
-                      {txt('평균', 'Avg')} {formatDuration(stat.avgSec)} · {stat.count}{txt('문제', ' problems')}
+                      {txt('평균', 'Avg')} {formatDuration(stat.avgSec, lang)} · {stat.count}{txt('문제', ' problems')}
                     </span>
                   </div>
                 ))}

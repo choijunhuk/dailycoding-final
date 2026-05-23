@@ -22,10 +22,11 @@ function parseConfig(raw) {
   try { return JSON.parse(raw); } catch { return {}; }
 }
 
-function formatDuration(sec) {
+function formatDuration(sec, lang = 'en') {
   const total = Math.max(0, Number(sec) || 0);
   const min = Math.floor(total / 60);
   const rest = total % 60;
+  if (lang === 'ko') return min > 0 ? `${min}분 ${rest}초` : `${rest}초`;
   return min > 0 ? `${min}m ${rest}s` : `${rest}s`;
 }
 
@@ -137,10 +138,10 @@ export default function ExamPage() {
             <div style={{ display:'grid', gap:14, marginBottom:16 }}>
               <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(130px, 1fr))', gap:10 }}>
                 {[
-                  { label:'Accuracy', value:`${result.report.accuracy}%`, color:'var(--green)' },
-                  { label:'Time Used', value:formatDuration(result.report.timeUsedSec), color:'var(--blue)' },
-                  { label:'Pace Rate', value:`${result.report.paceRate}%`, color:'var(--yellow)' },
-                  { label:'Unanswered', value:`${result.report.emptyCount} problems`, color:'var(--text3)' },
+                  { label: lang === 'ko' ? '정확도' : 'Accuracy', value:`${result.report.accuracy}%`, color:'var(--green)' },
+                  { label: lang === 'ko' ? '사용 시간' : 'Time Used', value:formatDuration(result.report.timeUsedSec, lang), color:'var(--blue)' },
+                  { label: lang === 'ko' ? '풀이 속도' : 'Pace Rate', value:`${result.report.paceRate}%`, color:'var(--yellow)' },
+                  { label: lang === 'ko' ? '미답변' : 'Unanswered', value: lang === 'ko' ? `${result.report.emptyCount}문제` : `${result.report.emptyCount} problems`, color:'var(--text3)' },
                 ].map((item) => (
                   <div key={item.label} style={{ padding:'12px 14px', border:'1px solid var(--border)', borderRadius:10, background:'var(--bg3)' }}>
                     <div style={{ fontSize:11, color:'var(--text3)', marginBottom:5 }}>{item.label}</div>

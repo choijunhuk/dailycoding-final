@@ -20,6 +20,9 @@ test('formatDuration handles empty and normal durations', () => {
   assert.equal(formatDuration(0), 'No record');
   assert.equal(formatDuration(45), '45s');
   assert.equal(formatDuration(125), '2m 5s');
+  assert.equal(formatDuration(0, 'ko'), '기록 없음');
+  assert.equal(formatDuration(45, 'ko'), '45초');
+  assert.equal(formatDuration(125, 'ko'), '2분 5초');
 });
 
 test('profileBackgroundToCss supports solid, gradient, and image backgrounds', () => {

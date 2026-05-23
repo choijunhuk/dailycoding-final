@@ -213,7 +213,7 @@ export function CodingProblem({ problem, code, lang, lockedLanguageLabel, onCode
       )}
       <div className="bp-code-header">
         <span className="bp-lang-select" style={{ display: 'inline-flex', alignItems: 'center' }}>
-          {lockedLanguageLabel || lang || 'No language'}
+          {lockedLanguageLabel || lang || txt('언어 없음', 'No language')}
         </span>
         <button
           type="button"

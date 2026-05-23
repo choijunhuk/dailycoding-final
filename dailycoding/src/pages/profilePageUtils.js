@@ -54,14 +54,14 @@ export function buildYearHeatmap(rows = [], today = new Date()) {
   return cells;
 }
 
-export function formatDuration(seconds) {
-  if (!seconds || seconds <= 0) return 'No record';
+export function formatDuration(seconds, lang = 'en') {
+  if (!seconds || seconds <= 0) return lang === 'ko' ? '기록 없음' : 'No record';
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
   const secs = seconds % 60;
-  if (hours > 0) return `${hours}h ${minutes}m`;
-  if (minutes > 0) return `${minutes}m ${secs}s`;
-  return `${secs}s`;
+  if (hours > 0) return lang === 'ko' ? `${hours}시간 ${minutes}분` : `${hours}h ${minutes}m`;
+  if (minutes > 0) return lang === 'ko' ? `${minutes}분 ${secs}초` : `${minutes}m ${secs}s`;
+  return lang === 'ko' ? `${secs}초` : `${secs}s`;
 }
 
 export function profileBackgroundToCss(value) {

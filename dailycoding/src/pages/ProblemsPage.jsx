@@ -280,9 +280,9 @@ export default function ProblemsPage() {
     const fromServer = (tagTaxonomy.topTags || [])
       .map((item) => (typeof item === 'string' ? { tag: item, count: 0 } : item))
       .filter((item) => item?.tag && !isCompanyTag(item.tag))
-      .slice(0, 18)
+      .slice(0, 10)
     if (fromServer.length > 0) return fromServer
-    return algorithmTags.slice(0, 18).map((item) => ({ tag: item, count: 0 }))
+    return algorithmTags.slice(0, 10).map((item) => ({ tag: item, count: 0 }))
   }, [algorithmTags, tagTaxonomy.topTags])
   const companyDiscoveryTags = useMemo(() => {
     const fromServer = (tagTaxonomy.companyTags || []).filter((item) => item?.tag)
