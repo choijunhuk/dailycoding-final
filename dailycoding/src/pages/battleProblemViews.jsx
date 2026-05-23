@@ -24,6 +24,8 @@ const BATTLE_EDITOR_OPTIONS = Object.freeze({
 });
 
 export function BattleAdSlot({ slot }) {
+  const { lang: adLang } = useLang();
+  const adTxt = (ko, en) => adLang === 'ko' ? ko : en;
   if (!slot) return null;
   const isVideo = slot.type === 'video';
 
@@ -41,8 +43,8 @@ export function BattleAdSlot({ slot }) {
             <img src={slot.imageUrl} alt={slot.title} />
           ) : (
             <div className="bp-ad-placeholder">
-              <span>Ad image preview</span>
-              <small>Set `imageUrl` to replace this with an actual banner.</small>
+              <span>{adTxt('이미지 광고 미리보기', 'Ad image preview')}</span>
+              <small>{adTxt('imageUrl을 설정하면 실제 배너로 교체됩니다.', 'Set `imageUrl` to replace this with an actual banner.')}</small>
             </div>
           )}
         </div>
@@ -57,8 +59,8 @@ export function BattleAdSlot({ slot }) {
             </video>
           ) : (
             <div className="bp-ad-placeholder">
-              <span>Ad video preview</span>
-              <small>Set `videoUrl` to replace this with an actual video ad.</small>
+              <span>{adTxt('동영상 광고 미리보기', 'Ad video preview')}</span>
+              <small>{adTxt('videoUrl을 설정하면 실제 동영상 광고로 교체됩니다.', 'Set `videoUrl` to replace this with an actual video ad.')}</small>
             </div>
           )}
         </div>

@@ -21,7 +21,7 @@ export default function TournamentPage() {
   const { isAdmin, user } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
-  const { t } = useLang();
+  const { t, lang } = useLang();
 
   const statusLabel = {
     open: t('tournamentStatus_open'),
@@ -553,7 +553,7 @@ export default function TournamentPage() {
                             {match.player2Id ? userById.get(match.player2Id) || `User ${match.player2Id}` : <span style={{ color: 'var(--text3)', fontStyle: 'italic' }}>BYE</span>}
                           </div>
                           {isBye && (
-                            <span style={{ fontSize: 11, color: 'var(--text3)', fontStyle: 'italic' }}>Bye</span>
+                            <span style={{ fontSize: 11, color: 'var(--text3)', fontStyle: 'italic' }}>{lang === 'ko' ? '부전승' : 'Bye'}</span>
                           )}
                           {match.battleId && !match.winnerId && (
                             <button className="btn btn-primary btn-sm" onClick={() => navigate(`/battle/watch/${match.battleId}`)}>
