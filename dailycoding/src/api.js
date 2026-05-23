@@ -45,8 +45,10 @@ function forceLogout(message) {
     sessionStorage.setItem('postLoginRedirect', currentPath);
   }
   clearSessionMarker();
+  const isKo = (localStorage.getItem('dc_lang') || 'ko') === 'ko';
+  const defaultMsg = isKo ? '세션이 만료되었습니다. 다시 로그인해 주세요.' : 'Your session has expired. Please log in again.';
   window.dispatchEvent(new CustomEvent(AUTH_EXPIRED_EVENT, {
-    detail: { message: message || 'Your session has expired. Please log in again.', path: currentPath },
+    detail: { message: message || defaultMsg, path: currentPath },
   }));
 }
 

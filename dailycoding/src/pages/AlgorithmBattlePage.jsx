@@ -43,6 +43,15 @@ const FALLBACK_MODES = [
   { key: 'draft-ban', title: '🚫 Draft Ban', description: 'Strategic 1v1 — both players ban/pick tiers and tags before the problem is locked in.', winCondition: 'hp-knockout', rules: ['No problem conditions at room creation', 'Draft starts after both players ready', 'Problem locked after draft', 'Correct answer → opponent HP loss + effect'], itemsEnabled: true, effectsEnabled: true, problemCount: 1, draftEnabled: true },
 ];
 
+const BATTLE_MODE_KO = {
+  'sort-speed': { title: '⚡ 스피드 레이스', description: '순수 속도 — 가장 먼저 정답을 제출한 플레이어가 즉시 승리합니다.', rules: ['가장 먼저 정답 제출 시 즉시 승리', '시간 종료 시 점수로 동점 처리'] },
+  'survival': { title: '💀 서바이벌', description: '상대방 HP를 0으로 만드세요! 정답을 제출할수록 공격력이 강해집니다.', rules: ['정답 → 상대 HP 감소', '상대 HP 0 = 즉시 승리'] },
+  'duel-effects': { title: '✨ 이펙트 듀얼', description: '정답 제출 시 태그 기반 버프/디버프 발동! 랜덤 이펙트로 역전 가능한 HP 전투.', rules: ['정답 → 상대 HP 손실 + 문제 이펙트', '아이템 쿨다운 20초', 'HP 0 = 패배'] },
+  'chaos-items': { title: '🎒 아이템 카오스', description: '빠른 쿨다운 아이템으로 상대를 흔들어라! 아이템 전략이 승부를 결정합니다.', rules: ['아이템 쿨다운 12초(빠름)', '정답 → 상대 HP 손실', 'HP 0 = 패배'] },
+  'territory': { title: '🏴 영토 정복', description: '5개 문제가 동시 공개! 먼저 풀어 영토를 차지하고, 가장 많은 영토를 가진 플레이어가 승리.', rules: ['5개 문제 동시 공개', '정답 → 해당 문제 영토 획득', '가장 많은 영토를 가진 플레이어 승리'] },
+  'draft-ban': { title: '🚫 드래프트 밴', description: '전략적 1v1 — 두 플레이어가 티어와 태그를 밴/픽한 후 문제가 확정됩니다.', rules: ['방 생성 시 문제 조건 없음', '두 플레이어 준비 후 드래프트 시작', '드래프트 후 문제 확정', '정답 → 상대 HP 손실 + 이펙트'] },
+};
+
 const FALLBACK_BANNABLE_TAGS = [
   '구현', '수학', '문자열', '정렬', '자료 구조', '해시',
   '그리디', '이분 탐색', '투 포인터', '누적 합', '다이나믹 프로그래밍',
@@ -1143,14 +1152,14 @@ export default function AlgorithmBattlePage() {
       <div className="ab-page">
         <div className="ab-header">
           <div>
-            <h1>Real-Time Algorithm Battle</h1>
-            <p>Compete across 5 modes — Speed, HP Survival, Effects, Items, Territory.</p>
+            <h1>{txt('실시간 알고리즘 배틀', 'Real-Time Algorithm Battle')}</h1>
+            <p>{txt('5가지 모드 — 스피드, HP 서바이벌, 이펙트, 아이템, 영토.', 'Compete across 5 modes — Speed, HP Survival, Effects, Items, Territory.')}</p>
           </div>
         </div>
 
         {/* 방 만들기 카드 */}
         <section className="ab-create-card">
-          <div className="ab-section-title">Create Room</div>
+          <div className="ab-section-title">{txt('방 만들기', 'Create Room')}</div>
 
           {/* 모드 선택 */}
           <div className="ab-mode-strip">
@@ -1166,8 +1175,8 @@ export default function AlgorithmBattlePage() {
               >
                 {mode.itemsEnabled ? <Shield size={16} /> : <Swords size={16} />}
                 <div>
-                  <strong>{mode.title}</strong>
-                  <span>{mode.description}</span>
+                  <strong>{uiLang === 'ko' ? (BATTLE_MODE_KO[mode.key]?.title || mode.title) : mode.title}</strong>
+                  <span>{uiLang === 'ko' ? (BATTLE_MODE_KO[mode.key]?.description || mode.description) : mode.description}</span>
                 </div>
               </button>
             ))}
@@ -1177,10 +1186,10 @@ export default function AlgorithmBattlePage() {
           {battleModes.find(m => m.key === selectedMode)?.rules && (
             <div className="ab-rules-card">
               <div className="ab-rules-title">
-                📋 {battleModes.find(m => m.key === selectedMode)?.title} Rules
+                📋 {uiLang === 'ko' ? (BATTLE_MODE_KO[selectedMode]?.title || battleModes.find(m => m.key === selectedMode)?.title) : battleModes.find(m => m.key === selectedMode)?.title} {txt('규칙', 'Rules')}
               </div>
               <ul>
-                {(battleModes.find(m => m.key === selectedMode)?.rules || []).map((rule, i) => (
+                {(uiLang === 'ko' ? (BATTLE_MODE_KO[selectedMode]?.rules || battleModes.find(m => m.key === selectedMode)?.rules || []) : (battleModes.find(m => m.key === selectedMode)?.rules || [])).map((rule, i) => (
                   <li key={i}>{rule}</li>
                 ))}
               </ul>
@@ -1191,7 +1200,7 @@ export default function AlgorithmBattlePage() {
           <div className="ab-create-options">
             {!isTerritorySelected && (
               <div className="ab-option-group">
-                <label>Game Time</label>
+                <label>{txt('게임 시간', 'Game Time')}</label>
                 <div className="ab-duration-pills">
                   {DURATION_PRESETS.map((d) => (
                     <button
