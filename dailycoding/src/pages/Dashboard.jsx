@@ -456,7 +456,7 @@ export default function Dashboard() {
       </div>
 
       {dailyFocusPlan.length > 0 && (
-        <div className="dashboard-learning-modes" aria-label="Today's learning routine">
+        <div className="dashboard-learning-modes" aria-label={txt('오늘의 학습 루틴', "Today's learning routine")}>
           {dailyFocusPlan.map((item) => {
             const Icon = DAILY_FOCUS_ICONS[item.icon] || Target;
             return (
