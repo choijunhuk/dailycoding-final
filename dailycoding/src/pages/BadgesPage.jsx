@@ -89,7 +89,7 @@ function ItemCard({ item, isEquipped, onEquip, stats, lang }) {
       </div>
 
       <div style={{ fontWeight: 800, fontSize: 14, color: earned ? 'var(--text)' : 'var(--text3)' }}>
-        {item.name}
+        {lang === 'ko' ? (item.name_ko || item.name) : item.name}
       </div>
 
       {isTitle && (
