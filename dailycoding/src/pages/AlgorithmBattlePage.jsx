@@ -299,6 +299,8 @@ function DraftBanPanel({
   submitting,
   isSpectating,
 }) {
+  const { lang: draftLang } = useLang();
+  const dtxt = (ko, en) => pickLangText(draftLang, ko, en);
   const submittedByUser = new Set((draft?.selections || []).map((selection) => Number(selection.userId)));
   const mySubmitted = me?.userId != null && submittedByUser.has(Number(me.userId));
   const canSubmit = !isSpectating && !mySubmitted && !submitting;
@@ -320,11 +322,11 @@ function DraftBanPanel({
     <div className="ab-draft-panel">
       <div className="ab-draft-head">
         <div>
-          <strong>Draft Phase</strong>
-          <span>{draft?.submittedCount || 0}/{draft?.requiredCount || 2} submitted</span>
+          <strong>{dtxt('드래프트 단계', 'Draft Phase')}</strong>
+          <span>{draft?.submittedCount || 0}/{draft?.requiredCount || 2} {dtxt('제출됨', 'submitted')}</span>
         </div>
         <button className="btn btn-primary btn-sm" onClick={onSubmit} disabled={!canSubmit}>
-          {mySubmitted ? 'Submitted ✓' : submitting ? <span className="spinner" /> : 'Submit Draft'}
+          {mySubmitted ? dtxt('제출 완료 ✓', 'Submitted ✓') : submitting ? <span className="spinner" /> : dtxt('드래프트 제출', 'Submit Draft')}
         </button>
       </div>
 
@@ -332,14 +334,14 @@ function DraftBanPanel({
         {participants.map((player) => (
           <div key={player.userId} className={submittedByUser.has(Number(player.userId)) ? 'done' : ''}>
             <span>{player.username}{player.userId === me?.userId ? ' (me)' : ''}</span>
-            <strong>{submittedByUser.has(Number(player.userId)) ? 'LOCKED' : 'PICKING'}</strong>
+            <strong>{submittedByUser.has(Number(player.userId)) ? dtxt('확정', 'LOCKED') : dtxt('선택 중', 'PICKING')}</strong>
           </div>
         ))}
       </div>
 
       <div className="ab-draft-grid">
         <div className="ab-draft-block">
-          <label>Ban Tier</label>
+          <label>{dtxt('티어 밴', 'Ban Tier')}</label>
           <div className="ab-chip-list">
             {problemTiers.map((tier) => (
               <button
@@ -356,7 +358,7 @@ function DraftBanPanel({
         </div>
 
         <div className="ab-draft-block">
-          <label>Pick Preferred Tags</label>
+          <label>{dtxt('선호 태그 선택', 'Pick Preferred Tags')}</label>
           <div className="ab-tag-groups compact">
             {tagGroups.map((group) => (
               <div key={`draft-pick-${group.label}`} className="ab-tag-group">
@@ -1360,7 +1362,7 @@ export default function AlgorithmBattlePage() {
                   </div>
 
                   <div className="ab-filter-block">
-                    <label>Banned Tiers</label>
+                    <label>{txt('밴 티어', 'Banned Tiers')}</label>
                     <div className="ab-chip-list">
                       {problemTiers.map((tier) => (
                         <button
@@ -1376,7 +1378,7 @@ export default function AlgorithmBattlePage() {
                   </div>
 
                   <div className="ab-filter-block wide">
-                    <label>Required Tags</label>
+                    <label>{txt('필수 태그', 'Required Tags')}</label>
                     <div className="ab-tag-groups">
                       {tagGroups.map((group) => (
                         <div key={`required-${group.label}`} className="ab-tag-group">
@@ -1399,7 +1401,7 @@ export default function AlgorithmBattlePage() {
                   </div>
 
                   <div className="ab-filter-block wide">
-                    <label>Banned Tags</label>
+                    <label>{txt('밴 태그', 'Banned Tags')}</label>
                     <div className="ab-tag-groups">
                       {tagGroups.map((group) => (
                         <div key={`banned-${group.label}`} className="ab-tag-group">
@@ -1546,23 +1548,23 @@ export default function AlgorithmBattlePage() {
       <div className="ab-room-page">
         {/* 상단 바 */}
         <div className="ab-room-top">
-          <button className="btn btn-ghost btn-sm" onClick={leave}>← Leave</button>
+          <button className="btn btn-ghost btn-sm" onClick={leave}>← {txt('나가기', 'Leave')}</button>
           <div className="ab-room-title">
-            <strong>{isDrafting ? 'Draft in progress' : activeProblem?.title || 'Battle'}</strong>
+            <strong>{isDrafting ? txt('드래프트 진행 중', 'Draft in progress') : activeProblem?.title || txt('배틀', 'Battle')}</strong>
             <span>
               {config?.title || currentRoom?.mode} ·{' '}
               {currentRoom?.status === 'waiting'
-                ? isDrafting ? `Draft (${draftState?.submittedCount || 0}/${draftState?.requiredCount || 2})` : lobbyLeft != null ? `Waiting (${fmtSec(lobbyLeft)} left)` : 'Waiting'
+                ? isDrafting ? `${txt('드래프트', 'Draft')} (${draftState?.submittedCount || 0}/${draftState?.requiredCount || 2})` : lobbyLeft != null ? `${txt('대기', 'Waiting')} (${fmtSec(lobbyLeft)} ${txt('남음', 'left')})` : txt('대기 중', 'Waiting')
                 : currentRoom?.status === 'playing'
                   ? config?.winCondition === 'first-correct'
-                  ? '⚡ First correct → instant win'
+                  ? txt('⚡ 첫 정답 → 즉시 승리', '⚡ First correct → instant win')
                   : `⏱ ${fmtSec(displayedRoomTimeLeft)}`
-                : 'Ended'}
+                : txt('종료', 'Ended')}
           </span>
         </div>
         <div className="ab-room-actions">
           <button className="btn btn-ghost btn-sm" onClick={() => setShowRules(v => !v)} title="View mode rules">
-            📋 Rules
+            📋 {txt('규칙', 'Rules')}
           </button>
           {currentRoom?.inviteCode && (
             <button className="btn btn-ghost btn-sm ab-invite-code" onClick={copyInviteCode} title="Copy invite code">
@@ -1570,21 +1572,21 @@ export default function AlgorithmBattlePage() {
             </button>
           )}
           {currentRoom?.status === 'waiting' && Number(currentRoom?.createdBy) === Number(user?.id) && (
-            <button className="btn btn-danger btn-sm" onClick={deleteRoom}>Delete Room</button>
+            <button className="btn btn-danger btn-sm" onClick={deleteRoom}>{txt('방 삭제', 'Delete Room')}</button>
           )}
             {currentRoom?.status === 'waiting' && !isDrafting && (
               <button className="btn btn-success btn-sm" onClick={ready} disabled={me?.isReady || isSpectating}>
-                {me?.isReady ? 'Ready ✓' : 'Ready'}
+                {me?.isReady ? txt('준비 완료 ✓', 'Ready ✓') : txt('준비', 'Ready')}
               </button>
             )}
             {isDrafting && (
               <button className="btn btn-success btn-sm" disabled>
-                Draft in progress
+                {txt('드래프트 진행 중', 'Draft in progress')}
               </button>
             )}
           {currentRoom?.status === 'playing' && (
             <button className="btn btn-primary btn-sm" onClick={submit} disabled={submitting || isSpectating}>
-              {isSpectating ? 'Spectating' : submitting ? <span className="spinner" /> : <><Play size={13} /> Submit</>}
+              {isSpectating ? txt('관전 중', 'Spectating') : submitting ? <span className="spinner" /> : <><Play size={13} /> {txt('제출', 'Submit')}</>}
             </button>
           )}
         </div>
@@ -1593,16 +1595,16 @@ export default function AlgorithmBattlePage() {
       {countdown != null && <div className="ab-countdown">{countdown > 0 ? countdown : '🔥 Start!'}</div>}
       {isSpectating && (
         <div className="ab-spectator-banner">
-          👀 Spectator mode. Submit / items / ready are disabled — watch the live battle.
+          👀 {txt('관전 모드. 제출 / 아이템 / 준비는 비활성화 — 라이브 배틀을 시청하세요.', 'Spectator mode. Submit / items / ready are disabled — watch the live battle.')}
         </div>
       )}
 
       {/* 모드 규칙 패널 */}
       {showRules && config?.rules && (
         <div style={{ margin:'0 16px', padding:'12px 16px', background:'var(--bg2)', border:'1px solid var(--border)', borderRadius:10, fontSize:13 }}>
-          <div style={{ fontWeight:700, marginBottom:8 }}>📋 {config.title} Rules</div>
+          <div style={{ fontWeight:700, marginBottom:8 }}>📋 {uiLang === 'ko' ? (BATTLE_MODE_KO[currentRoom?.mode]?.title || config.title) : config.title} {txt('규칙', 'Rules')}</div>
           <ul style={{ margin:0, paddingLeft:18, display:'flex', flexDirection:'column', gap:4 }}>
-            {config.rules.map((rule, i) => <li key={i} style={{ color:'var(--text2)' }}>{rule}</li>)}
+            {(uiLang === 'ko' ? (BATTLE_MODE_KO[currentRoom?.mode]?.rules || config.rules) : config.rules).map((rule, i) => <li key={i} style={{ color:'var(--text2)' }}>{rule}</li>)}
             {workshopRules.map((rule, i) => (
               <li key={`workshop-${rule.id || i}`} style={{ color:'var(--purple)' }}>
                 {workshopEventLabels[rule.event] || rule.event} → {rule.action?.type || t('abActionLabel')}
@@ -1643,7 +1645,7 @@ export default function AlgorithmBattlePage() {
       <div className={`ab-room-grid ab-mobile-${mobileTab}`}>
         {/* 왼쪽: 플레이어 상태 */}
         <aside className="ab-left">
-          <div className="ab-section-title">Players</div>
+          <div className="ab-section-title">{txt('플레이어', 'Players')}</div>
           <div className="ab-player-list">
             {displayedParticipants.map((player) => (
               <PlayerCard
@@ -1659,7 +1661,7 @@ export default function AlgorithmBattlePage() {
 
           {isTerritoryMode && (
             <>
-              <div className="ab-section-title" style={{ marginTop: 12 }}>Territory Status</div>
+              <div className="ab-section-title" style={{ marginTop: 12 }}>{txt('영토 현황', 'Territory Status')}</div>
               <div className="ab-territory-score">
                   {displayedParticipants.map((p) => {
                   const count = Object.values(territoryClaims).filter((uid) => uid === p.userId).length;
@@ -1676,7 +1678,7 @@ export default function AlgorithmBattlePage() {
 
           {!isTerritoryMode && (
             <>
-              <div className="ab-section-title" style={{ marginTop: 12 }}>Rankings</div>
+              <div className="ab-section-title" style={{ marginTop: 12 }}>{txt('순위', 'Rankings')}</div>
               <div className="ab-rank-list">
                 {sortedParticipants.map((player, idx) => (
                   <div key={player.userId}>
@@ -1974,8 +1976,8 @@ export default function AlgorithmBattlePage() {
               ))}
             </div>
             <div className="ab-result-actions">
-              <button className="btn btn-primary" onClick={createAgain}>Play Again</button>
-              <button className="btn btn-ghost" onClick={() => navigate('/battle')}>Lobby</button>
+              <button className="btn btn-primary" onClick={createAgain}>{txt('다시 하기', 'Play Again')}</button>
+              <button className="btn btn-ghost" onClick={() => navigate('/battle')}>{txt('로비', 'Lobby')}</button>
             </div>
           </div>
         </div>
