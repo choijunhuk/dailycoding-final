@@ -46,7 +46,7 @@ export default function ProblemsPage() {
   const toast = useToast()
   const { t, lang } = useLang()
   const txt = useCallback((ko, en) => pickLangText(lang, ko, en), [lang])
-  const tierLbl = (tier) => getTierLabel(tier, lang) || TIERS[tier]?.label || tier
+  const tierLbl = (tier) => getTierLabel(tier, lang || 'ko') || tier
   const PROBLEMS = appProblems.length > 0 ? appProblems : DEFAULT_PROBLEMS
 
   const normalizeProblemTypeFilter = (type) => type === 'algorithm' ? 'coding' : type

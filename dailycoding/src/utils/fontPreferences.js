@@ -56,9 +56,26 @@ export function applyAppFontSizePreference(fontSize) {
   return normalized;
 }
 
-export function applyAppTypographyPreference({ fontFamily = 'noto', fontSize = 14 } = {}) {
-  return {
+export function normalizeAppZoom(value) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) return 100;
+  return Math.min(130, Math.max(80, Math.round(parsed / 5) * 5));
+}
+
+export function applyAppZoomPreference(zoom) {
+  const normalized = normalizeAppZoom(zoom);
+  document.body.style.zoom = normalized === 100 ? '' : String(normalized / 100);
+  localStorage.setItem('dc_app_zoom', String(normalized));
+  return normalized;
+}
+
+export function applyAppTypographyPreference({ fontFamily = 'noto', fontSize = 14, uiZoom } = {}) {
+  const result = {
     font: applyAppFontPreference(fontFamily),
     fontSize: applyAppFontSizePreference(fontSize),
   };
+  if (uiZoom !== undefined) {
+    result.zoom = applyAppZoomPreference(uiZoom);
+  }
+  return result;
 }

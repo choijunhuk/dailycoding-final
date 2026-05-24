@@ -4,7 +4,7 @@ import { useToast } from '../context/ToastContext';
 import api from '../api';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { useLang } from '../context/LangContext.jsx';
-import { FONT_OPTIONS, applyAppTypographyPreference, normalizeAppFontSize } from '../utils/fontPreferences.js';
+import { FONT_OPTIONS, applyAppTypographyPreference, normalizeAppFontSize, normalizeAppZoom, applyAppZoomPreference } from '../utils/fontPreferences.js';
 import ProfileAvatar from '../components/ProfileAvatar.jsx';
 import { Bell, Code2, Lock, Monitor, Shield, User } from 'lucide-react';
 
@@ -341,21 +341,21 @@ function UiSettings({ data, onSave, saving, theme, setTheme, lang, setLang, t })
   const [s, setS] = useState(data || {});
   const selectedFont = s.fontFamily || 'noto';
   const selectedFontSize = normalizeAppFontSize(s.fontSize || s.code_font_size || 14);
+  const selectedZoom = normalizeAppZoom(s.uiZoom || 100);
 
   function updateFont(fontId) {
-    applyAppTypographyPreference({ fontFamily: fontId, fontSize: selectedFontSize });
+    applyAppTypographyPreference({ fontFamily: fontId, fontSize: selectedFontSize, uiZoom: selectedZoom });
     setS(p => ({ ...p, fontFamily: fontId }));
   }
 
-  function updateFontSize(fontSize) {
-    const normalized = normalizeAppFontSize(fontSize);
-    applyAppTypographyPreference({ fontFamily: selectedFont, fontSize: normalized });
-    setS(p => ({ ...p, fontSize: normalized, code_font_size: normalized }));
+  function updateZoom(zoom) {
+    const normalized = applyAppZoomPreference(zoom);
+    setS(p => ({ ...p, uiZoom: normalized }));
   }
 
   function saveUiSettings() {
-    applyAppTypographyPreference({ fontFamily: selectedFont, fontSize: selectedFontSize });
-    onSave({ ...s, fontSize: selectedFontSize, code_font_size: selectedFontSize });
+    applyAppTypographyPreference({ fontFamily: selectedFont, fontSize: selectedFontSize, uiZoom: selectedZoom });
+    onSave({ ...s, uiZoom: selectedZoom });
   }
 
   return (
@@ -414,22 +414,21 @@ function UiSettings({ data, onSave, saving, theme, setTheme, lang, setLang, t })
         </div>
         <div style={{ fontSize:12, color:'var(--text3)', marginBottom:6 }}>{t('appFontDesc')}</div>
       </Field>
-      <Field label={t('appFontSize')}>
+      <Field label={t('uiScale')}>
         <div style={{ display:'grid', gap:10, marginBottom:12 }}>
           <div style={{ display:'flex', alignItems:'center', gap:12 }}>
             <input
               type="range"
-              min={10}
-              max={24}
-              value={selectedFontSize}
-              onChange={e => updateFontSize(e.target.value)}
+              min={80}
+              max={130}
+              step={5}
+              value={selectedZoom}
+              onChange={e => updateZoom(e.target.value)}
               style={{ maxWidth:240 }}
             />
-            <span style={{ fontSize:14, fontWeight:800, color:'var(--blue)', minWidth:44 }}>{selectedFontSize}px</span>
+            <span style={{ fontSize:14, fontWeight:800, color:'var(--blue)', minWidth:44 }}>{selectedZoom}%</span>
           </div>
-          <div style={{ padding:'14px 16px', borderRadius:12, background:'var(--bg2)', border:'1px solid var(--border)', fontSize:'var(--app-font-size)', lineHeight:1.6 }}>
-            {t('appFontSizePreview')}
-          </div>
+          <div style={{ fontSize:12, color:'var(--text3)' }}>{t('uiScaleDesc')}</div>
         </div>
       </Field>
       <ToggleRow label={t('animations')} desc={t('animationsDesc')} checked={s.animations ?? true} onChange={v => setS(p => ({ ...p, animations: v }))} />
