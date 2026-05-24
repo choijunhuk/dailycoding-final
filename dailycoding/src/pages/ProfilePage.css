@@ -146,6 +146,22 @@
   color: var(--yellow);
   border: 1px solid rgba(227, 179, 65, .3);
 }
+.profile-equipped-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 700;
+  background: rgba(88, 166, 255, .12);
+  color: var(--blue);
+  border: 1px solid rgba(88, 166, 255, .3);
+}
+.profile-equipped-badge-name {
+  font-size: 10px;
+  font-weight: 700;
+}
 .profile-edit-btn {
   margin-left: 4px;
   font-size: 11px;

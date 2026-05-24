@@ -93,7 +93,7 @@ export default function Dashboard() {
   const toast = useToast();
   const { t, lang } = useLang();
   const txt = (ko, en) => lang === 'ko' ? ko : en;
-  const tierLbl = (tier) => getTierLabel(tier, lang) || TIERS[tier]?.label || tier;
+  const tierLbl = (tier) => getTierLabel(tier, lang || 'ko') || tier;
   const CAUSE_KO = { 'Wrong Answer': '오답', 'Compile Error': '컴파일 오류', 'Time Limit Exceeded': '시간 초과', 'Runtime Error': '런타임 오류', 'Memory Limit Exceeded': '메모리 초과' };
   const [weeklyChallenge, setWeeklyChallenge] = useState(null);
   const [followFeed, setFollowFeed] = useState([]);

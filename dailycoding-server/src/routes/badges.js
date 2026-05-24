@@ -2,6 +2,14 @@ import { Router } from 'express';
 import { auth } from '../middleware/auth.js';
 import { query, queryOne } from '../config/mysql.js';
 import { TIER_ORDER, TIER_THRESHOLDS } from '../shared/constants.js';
+import {
+  grantSolveMilestoneBadges,
+  grantStreakBadges,
+  grantTierBadge,
+  grantBattleWinBadges,
+  grantMultilangBadge,
+} from '../services/badgeService.js';
+import { Reward } from '../models/Reward.js';
 
 const router = Router();
 
@@ -44,9 +52,11 @@ const TIER_TARGETS = new Map([
   ['badge_platinum', 'platinum'],
   ['title_platinum', 'platinum'],
   ['badge_emerald', 'emerald'],
+  ['title_emerald', 'emerald'],
   ['badge_diamond', 'diamond'],
   ['title_diamond', 'diamond'],
   ['badge_master', 'master'],
+  ['title_master', 'master'],
   ['badge_grandmaster', 'grandmaster'],
   ['badge_challenger', 'challenger'],
 ]);
@@ -227,6 +237,72 @@ router.get('/titles', auth, async (req, res) => {
     res.json({ titles: enrichedTitles, earnedCount, totalCount: enrichedTitles.length });
   } catch (err) {
     console.error('[badges/titles]', err.message);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// POST /api/badges/sync — 현재 스탯 기반으로 미지급 배지/칭호 일괄 지급
+router.post('/sync', auth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const ctx = await getRewardContext(userId);
+
+    // Solve milestones
+    await grantSolveMilestoneBadges(userId, ctx.solvedCount);
+    // Streak milestones
+    await grantStreakBadges(userId, ctx.streak);
+    // Battle win milestones
+    await grantBattleWinBadges(userId, ctx.battleWins);
+    // Multilang badge
+    await grantMultilangBadge(userId);
+    // XP level unlocks
+    await Reward.syncLevelUnlocks(userId, ctx.xpLevel);
+
+    // Tier badges — grant all tiers at or below current
+    const currentTierIdx = TIER_ORDER.indexOf(ctx.tier);
+    const tierCodes = [];
+    for (const [code, targetTier] of TIER_TARGETS.entries()) {
+      if (TIER_ORDER.indexOf(targetTier) <= currentTierIdx) tierCodes.push(code);
+    }
+    for (const code of tierCodes) await Reward.grant(userId, code);
+
+    // Speedrun: any correct submission within 10 minutes
+    const speedRow = await queryOne(
+      `SELECT 1 FROM submissions WHERE user_id = ? AND result = 'correct' AND solve_time_sec > 0 AND solve_time_sec <= 600 LIMIT 1`,
+      [userId]
+    );
+    if (speedRow) {
+      await Reward.grant(userId, 'badge_speedrun');
+      await Reward.grant(userId, 'title_speedster');
+    }
+
+    // Gold killer: correct solve on gold+ tier problem
+    const goldRow = await queryOne(
+      `SELECT 1 FROM submissions s
+       JOIN problems p ON s.problem_id = p.id
+       WHERE s.user_id = ? AND s.result = 'correct'
+         AND p.tier IN ('gold','platinum','emerald','diamond','master','grandmaster','challenger')
+       LIMIT 1`,
+      [userId]
+    );
+    if (goldRow) await Reward.grant(userId, 'badge_gold_killer');
+
+    // Night owl: correct solve between midnight and 4am
+    const nightRow = await queryOne(
+      `SELECT 1 FROM submissions WHERE user_id = ? AND result = 'correct' AND HOUR(created_at) < 4 LIMIT 1`,
+      [userId]
+    );
+    if (nightRow) {
+      await Reward.grant(userId, 'badge_nightowl');
+      await Reward.grant(userId, 'title_night_coder');
+    }
+
+    // First solve title (may have been missed if grant happened before title was seeded)
+    if (ctx.solvedCount >= 1) await Reward.grant(userId, 'title_first_solve');
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[badges/sync]', err.message);
     res.status(500).json({ message: 'Server error' });
   }
 });

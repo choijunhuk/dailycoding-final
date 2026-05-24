@@ -478,9 +478,10 @@ export default function ProfilePage() {
           {/* 정보 */}
           <div className="profile-header-info">
             <div className="profile-header-name-row">
-              {equippedBadge && (
-                <span className="profile-equipped-badge" title={lang === 'ko' ? (equippedBadgeMeta?.name_ko || equippedBadgeMeta?.name) : equippedBadgeMeta?.name}>
-                  {equippedBadgeMeta?.icon}
+              {equippedBadge && equippedBadgeMeta && (
+                <span className="profile-equipped-badge" title={lang === 'ko' ? (equippedBadgeMeta.name_ko || equippedBadgeMeta.name) : equippedBadgeMeta.name}>
+                  {equippedBadgeMeta.icon}{' '}
+                  <span className="profile-equipped-badge-name">{lang === 'ko' ? (equippedBadgeMeta.name_ko || equippedBadgeMeta.name) : equippedBadgeMeta.name}</span>
                 </span>
               )}
               <span className="profile-username">{headerDisplayName}</span>
@@ -1034,7 +1035,12 @@ export default function ProfilePage() {
                 />
                 <div className="profile-live-info">
                   <div className="profile-live-name-row">
-                    {equippedBadgeMeta && <span>{equippedBadgeMeta.icon}</span>}
+                    {equippedBadgeMeta && (
+                      <span className="profile-equipped-badge" style={{ fontSize: 10 }}>
+                        {equippedBadgeMeta.icon}{' '}
+                        <span className="profile-equipped-badge-name">{lang === 'ko' ? (equippedBadgeMeta.name_ko || equippedBadgeMeta.name) : equippedBadgeMeta.name}</span>
+                      </span>
+                    )}
                     <strong>{headerDisplayName}</strong>
                     <span className="profile-live-tier" style={{ color:tc, borderColor:`${tc}55`, background:`${tc}16` }}>
                       {getTierLabel(user?.tier || 'unranked', lang) || PROFILE_TIER_LABELS[user?.tier || 'unranked']}

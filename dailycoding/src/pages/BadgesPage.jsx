@@ -154,32 +154,33 @@ function ItemCard({ item, isEquipped, isShowcased, onEquip, onToggleShowcase, st
         )}
         {earned ? (
           <>
-            {isTitle ? (
-              <button
-                type="button"
-                onClick={() => onEquip(item.type, item.code)}
-                style={{
-                  marginTop: 4, padding: '5px 0', width: '100%',
-                  border: `1px solid ${isEquipped ? 'var(--purple)' : 'var(--blue)'}`,
-                  borderRadius: 8,
-                  background: isEquipped ? 'rgba(167,139,250,.15)' : 'rgba(88,166,255,.12)',
-                  color: isEquipped ? 'var(--purple)' : 'var(--blue)',
-                  fontSize: 11, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit',
-                  transition: 'opacity 0.15s',
-                }}
-              >
-                {isEquipped ? t('rewards.equippedTitle') : t('rewards.equipTitle')}
-              </button>
-            ) : (
+            <button
+              type="button"
+              onClick={() => onEquip(item.type, item.code)}
+              style={{
+                marginTop: 4, padding: '5px 0', width: '100%',
+                border: `1px solid ${isEquipped ? 'var(--purple)' : 'var(--blue)'}`,
+                borderRadius: 8,
+                background: isEquipped ? 'rgba(167,139,250,.15)' : 'rgba(88,166,255,.12)',
+                color: isEquipped ? 'var(--purple)' : 'var(--blue)',
+                fontSize: 11, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit',
+                transition: 'opacity 0.15s',
+              }}
+            >
+              {isEquipped
+                ? (isTitle ? t('rewards.equippedTitle') : t('rewards.equippedBadge'))
+                : (isTitle ? t('rewards.equipTitle') : t('rewards.equipBadge'))}
+            </button>
+            {!isTitle && (
               <button
                 type="button"
                 onClick={() => onToggleShowcase(item.code, !isShowcased)}
                 style={{
                   marginTop: 4, padding: '5px 0', width: '100%',
-                  border: `1px solid ${isShowcased ? 'var(--red)' : 'var(--blue)'}`,
+                  border: `1px solid ${isShowcased ? 'var(--red)' : 'var(--border)'}`,
                   borderRadius: 8,
-                  background: isShowcased ? 'rgba(248,81,73,.12)' : 'rgba(88,166,255,.12)',
-                  color: isShowcased ? 'var(--red)' : 'var(--blue)',
+                  background: isShowcased ? 'rgba(248,81,73,.12)' : 'transparent',
+                  color: isShowcased ? 'var(--red)' : 'var(--text3)',
                   fontSize: 11, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit',
                   transition: 'opacity 0.15s',
                 }}
@@ -255,6 +256,7 @@ export default function BadgesPage() {
   const [activeTab, setActiveTab] = useState('badges');
 
   useEffect(() => {
+    api.post('/badges/sync').catch(() => {});
     Promise.all([
       api.get('/badges'),
       api.get('/badges/titles'),
