@@ -1,5 +1,22 @@
 const FALLBACK_COLOR = 'var(--blue)';
 
+const TIER_LABELS_KO = {
+  unranked: '언랭크드', iron: '아이언', bronze: '브론즈', silver: '실버', gold: '골드',
+  platinum: '플래티넘', emerald: '에메랄드', diamond: '다이아몬드',
+  master: '마스터', grandmaster: '그랜드마스터', challenger: '챌린저',
+};
+const TIER_LABELS_EN = {
+  unranked: 'Unranked', iron: 'Iron', bronze: 'Bronze', silver: 'Silver', gold: 'Gold',
+  platinum: 'Platinum', emerald: 'Emerald', diamond: 'Diamond',
+  master: 'Master', grandmaster: 'Grandmaster', challenger: 'Challenger',
+};
+
+function tierLabel(tier, lang) {
+  if (!tier) return '';
+  const key = String(tier).toLowerCase();
+  return (lang === 'ko' ? TIER_LABELS_KO[key] : TIER_LABELS_EN[key]) || String(tier).toUpperCase();
+}
+
 function pickLangText(lang, ko, en) {
   return lang === 'ko' ? ko : en;
 }
@@ -8,12 +25,12 @@ function compactText(value, fallback = '') {
   return String(value || fallback).trim();
 }
 
-function problemLabel(problem) {
+function problemLabel(problem, lang) {
   if (!problem) return '';
   const tags = Array.isArray(problem.tags) && problem.tags.length > 0
     ? problem.tags.slice(0, 2).join(' · ')
     : '';
-  const tier = compactText(problem.tier);
+  const tier = tierLabel(problem.tier, lang);
   return [tier, tags].filter(Boolean).join(' · ');
 }
 
@@ -39,7 +56,7 @@ export function buildDailyFocusPlan({
       key: 'today-problem',
       title: txt('오늘의 추천 문제', "Today's Recommended Problem"),
       description: compactText(todayProblem.title, `Problem ${todayProblem.id}`),
-      stat: problemLabel(todayProblem) || txt(`전체 진행률 ${solvedRatio}%`, `Overall Progress ${solvedRatio}%`),
+      stat: problemLabel(todayProblem, lang) || txt(`전체 진행률 ${solvedRatio}%`, `Overall Progress ${solvedRatio}%`),
       path: `/problems/${todayProblem.id}`,
       color: 'var(--blue)',
       icon: 'target',
@@ -61,7 +78,7 @@ export function buildDailyFocusPlan({
       key: 'weekly-challenge',
       title: txt('주간 챌린지', 'Weekly Challenge'),
       description: compactText(weeklyChallenge.problemTitle, `Problem ${weeklyChallenge.problemId}`),
-      stat: [weeklyChallenge.tier, weeklyChallenge.difficulty ? txt(`난이도 ${weeklyChallenge.difficulty}`, `Difficulty ${weeklyChallenge.difficulty}`) : ''].filter(Boolean).join(' · '),
+      stat: [tierLabel(weeklyChallenge.tier, lang), weeklyChallenge.difficulty ? txt(`난이도 ${weeklyChallenge.difficulty}`, `Difficulty ${weeklyChallenge.difficulty}`) : ''].filter(Boolean).join(' · '),
       path: `/problems/${weeklyChallenge.problemId}`,
       color: 'var(--purple)',
       icon: 'trophy',
