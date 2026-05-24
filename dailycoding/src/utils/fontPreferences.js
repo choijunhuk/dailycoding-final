@@ -45,7 +45,7 @@ export function applyAppFontPreference(fontId) {
 export function normalizeAppFontSize(value) {
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return 14;
-  return Math.min(18, Math.max(12, Math.round(parsed)));
+  return Math.min(24, Math.max(10, Math.round(parsed)));
 }
 
 export function applyAppFontSizePreference(fontSize) {

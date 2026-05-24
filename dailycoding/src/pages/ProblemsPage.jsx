@@ -664,8 +664,8 @@ export default function ProblemsPage() {
             color: 'var(--text)', padding: '8px 12px', fontSize: 13, fontFamily: 'inherit', outline: 'none',
           }}>
             <option value="all">{tagLoading ? t('loadingTags') : t('allTags')}</option>
-            {algorithmTags.length > 0 && <optgroup label={txt('알고리즘 태그', 'Algorithm Tags')}>
-              {algorithmTags.map(item => <option key={item} value={item}>{getTagLabelLang(item, lang)}</option>)}
+            {topDiscoveryTags.length > 0 && <optgroup label={txt('알고리즘 태그', 'Algorithm Tags')}>
+              {topDiscoveryTags.map(item => <option key={item.tag ?? item} value={item.tag ?? item}>{getTagLabelLang(item.tag ?? item, lang)}</option>)}
             </optgroup>}
             {companyTags.length > 0 && <optgroup label={txt('기업 인터뷰 태그', 'Company Interview Tags')}>
               {companyTags.map(item => <option key={item} value={item}>{getTagLabel(item)}</option>)}

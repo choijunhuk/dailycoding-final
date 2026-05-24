@@ -419,8 +419,8 @@ function UiSettings({ data, onSave, saving, theme, setTheme, lang, setLang, t })
           <div style={{ display:'flex', alignItems:'center', gap:12 }}>
             <input
               type="range"
-              min={12}
-              max={18}
+              min={10}
+              max={24}
               value={selectedFontSize}
               onChange={e => updateFontSize(e.target.value)}
               style={{ maxWidth:240 }}
@@ -461,7 +461,7 @@ function EditorSettings({ data, onSave, saving }) {
       <ToggleRow label={t('lineNumbers')} checked={s.line_numbers ?? true} onChange={v => setS(p => ({ ...p, line_numbers: v }))} />
       <Field label={t('fontSize')}>
         <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-          <input type="range" min={11} max={20} value={s.font_size ?? 14}
+          <input type="range" min={10} max={28} value={s.font_size ?? 14}
             onChange={e => setS(p => ({ ...p, font_size: Number(e.target.value) }))} style={{ width:180 }} />
           <span style={{ fontSize:14 }}>{s.font_size ?? 14}px</span>
         </div>

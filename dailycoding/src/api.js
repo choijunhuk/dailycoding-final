@@ -23,7 +23,7 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  const lang = localStorage.getItem('dc_lang') || 'en';
+  const lang = localStorage.getItem('dc_lang') || 'ko';
   config.headers = config.headers || {};
   config.headers['X-Language'] = lang;
   config.headers['Accept-Language'] = lang === 'ko' ? 'ko-KR,ko;q=0.9,en;q=0.8' : 'en-US,en;q=0.9,ko;q=0.8';
