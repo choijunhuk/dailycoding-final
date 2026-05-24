@@ -5,7 +5,6 @@ import { TIER_ORDER, TIER_THRESHOLDS } from '../shared/constants.js';
 import {
   grantSolveMilestoneBadges,
   grantStreakBadges,
-  grantTierBadge,
   grantBattleWinBadges,
   grantMultilangBadge,
 } from '../services/badgeService.js';

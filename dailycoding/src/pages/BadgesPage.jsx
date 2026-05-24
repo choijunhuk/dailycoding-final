@@ -256,14 +256,15 @@ export default function BadgesPage() {
   const [activeTab, setActiveTab] = useState('badges');
 
   useEffect(() => {
-    api.post('/badges/sync').catch(() => {});
-    Promise.all([
-      api.get('/badges'),
-      api.get('/badges/titles'),
-      api.get('/badges/stats').catch(() => ({ data: {} })),
-      api.get('/rewards/my').catch(() => ({ data: null })),
-    ])
-      .then(([badgesRes, titlesRes, statsRes, rewardsRes]) => {
+    (async () => {
+      await api.post('/badges/sync').catch(() => {});
+      try {
+        const [badgesRes, titlesRes, statsRes, rewardsRes] = await Promise.all([
+          api.get('/badges'),
+          api.get('/badges/titles'),
+          api.get('/badges/stats').catch(() => ({ data: {} })),
+          api.get('/rewards/my').catch(() => ({ data: null })),
+        ]);
         const badgeList = badgesRes.data?.badges || [];
         const titleList = titlesRes.data?.titles || [];
         setBadges(badgeList);
@@ -276,9 +277,12 @@ export default function BadgesPage() {
         setEarnedCount((badgesRes.data?.earnedCount || 0) + (titlesRes.data?.earnedCount || 0));
         setTotalCount((badgesRes.data?.totalCount || 0) + (titlesRes.data?.totalCount || 0));
         if (rewardsRes.data) setProgression(rewardsRes.data.progression || null);
-      })
-      .catch(() => toast?.show(t('rewards.loadFailed'), 'error'))
-      .finally(() => setLoading(false));
+      } catch {
+        toast?.show(t('rewards.loadFailed'), 'error');
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, []);
 
   const handleEquip = async (type, code) => {
