@@ -443,6 +443,13 @@ function UiSettings({ data, onSave, saving, theme, setTheme, lang, setLang, t })
               style={{ maxWidth:240 }}
             />
             <span style={{ fontSize:14, fontWeight:800, color:'var(--blue)', minWidth:44 }}>{selectedFontSize}px</span>
+            {selectedFontSize !== 14 && (
+              <button
+                className="btn btn-ghost"
+                style={{ fontSize:12, padding:'2px 8px' }}
+                onClick={() => updateFontSize(14)}
+              >{t('resetDefault')}</button>
+            )}
           </div>
           <div style={{ fontSize:12, color:'var(--text3)' }}>{t('appFontSizeDesc')}</div>
         </div>
