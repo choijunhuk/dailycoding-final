@@ -749,7 +749,7 @@ export default function AlgorithmBattlePage() {
         seen.add(id);
         return true;
       }));
-    } catch { setRooms([]); }
+    } catch { /* keep stale list on poll failure */ }
   }, []);
 
   const loadBattleModes = useCallback(async () => {
@@ -770,8 +770,9 @@ export default function AlgorithmBattlePage() {
       setWorkshopModes(data.modes || []);
     } catch {
       setWorkshopModes([]);
+      toast?.show(txt('워크샵 모드 목록을 불러오지 못했습니다.', 'Failed to load workshop modes.'), 'error');
     }
-  }, []);
+  }, [toast, txt]);
 
   const loadRoom = useCallback(async (id = roomId) => {
     if (!id) return;
