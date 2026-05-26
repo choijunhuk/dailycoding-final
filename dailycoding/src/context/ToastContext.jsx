@@ -42,7 +42,7 @@ export function ToastProvider({ children }) {
               background: c.bg, border: `1px solid ${c.border}`,
               borderRadius: 10, padding: '11px 16px',
               display: 'flex', alignItems: 'center', gap: 10,
-              fontSize: 13, fontFamily: 'Noto Sans KR, sans-serif',
+              fontSize: 13, fontFamily: 'inherit',
               color: 'var(--text)',
               boxShadow: '0 4px 20px rgba(0,0,0,.4)',
               animation: 'toastIn .3s cubic-bezier(.34,1.56,.64,1)',

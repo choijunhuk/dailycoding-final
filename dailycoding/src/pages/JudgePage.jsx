@@ -10,6 +10,7 @@ import api from '../api.js';
 import { useToast } from '../context/ToastContext.jsx';
 import { useLang } from '../context/LangContext.jsx';
 import { pickLangText } from '../utils/languageMode.js';
+import { getTierLabel } from '../utils/labelMaps.js';
 import {
   DEFAULT_CODE,
   getDraftStorageKey,
@@ -960,7 +961,7 @@ export default function JudgePage() {
                       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'10px 14px',borderBottom:'1px solid var(--border)'}}>
                         <div style={{display:'flex',alignItems:'center',gap:8}}>
                           <span style={{fontSize:12,fontWeight:700,color:'var(--blue)'}}>{s.username}</span>
-                          <span style={{fontSize:10,color:'var(--text3)',fontFamily:'Space Mono,monospace'}}>{s.tier}</span>
+                          <span style={{fontSize:10,color:'var(--text3)',fontFamily:'Space Mono,monospace'}}>{getTierLabel(s.tier, uiLang)}</span>
                         </div>
                         <div style={{display:'flex',gap:8,fontSize:11,color:'var(--text3)'}}>
                           <span>{s.lang}</span>
@@ -1005,7 +1006,7 @@ export default function JudgePage() {
                       <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
                         <span style={{fontSize:20}}>{comment.avatarEmoji || '🙂'}</span>
                         <span style={{fontSize:12,fontWeight:700,color:'var(--blue)'}}>{comment.nickname || comment.username}</span>
-                        <span style={{fontSize:10,color:'var(--text3)',fontFamily:'Space Mono,monospace'}}>{comment.tier}</span>
+                        <span style={{fontSize:10,color:'var(--text3)',fontFamily:'Space Mono,monospace'}}>{getTierLabel(comment.tier, uiLang)}</span>
                       </div>
                       <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap',justifyContent:'flex-end'}}>
                         <span style={{fontSize:11,color:'var(--text3)'}}>{new Date(comment.createdAt).toLocaleString('ko-KR')}</span>
@@ -1030,7 +1031,7 @@ export default function JudgePage() {
                           <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
                             <span style={{fontSize:18}}>{reply.avatarEmoji || '🙂'}</span>
                             <span style={{fontSize:12,fontWeight:700,color:'var(--blue)'}}>{reply.nickname || reply.username}</span>
-                            <span style={{fontSize:10,color:'var(--text3)',fontFamily:'Space Mono,monospace'}}>{reply.tier}</span>
+                            <span style={{fontSize:10,color:'var(--text3)',fontFamily:'Space Mono,monospace'}}>{getTierLabel(reply.tier, uiLang)}</span>
                           </div>
                           <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap',justifyContent:'flex-end'}}>
                             <span style={{fontSize:11,color:'var(--text3)'}}>{new Date(reply.createdAt).toLocaleString('ko-KR')}</span>
