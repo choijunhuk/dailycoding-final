@@ -1116,6 +1116,7 @@ const STRINGS = {
     wgLoadError: '워크샵 갤러리를 불러오지 못했습니다.',
     wgRulesNone: '룰 없음',
     wgRulesCount: '{n}개 룰',
+    wgTemplateSection: '템플릿으로 빠르게 시작',
     // ── TournamentPage ────────────────────────────
     tournamentTitle: '🏟 토너먼트',
     tournamentDesc: '8/16/32인 단판 코딩 배틀 토너먼트를 진행합니다.',
@@ -2413,6 +2414,7 @@ const STRINGS = {
     wgLoadError: 'Could not load workshop gallery.',
     wgRulesNone: 'No rules',
     wgRulesCount: '{n} rules',
+    wgTemplateSection: 'Start from a Template',
     // ── TournamentPage ────────────────────────────
     tournamentTitle: '🏟 Tournament',
     tournamentDesc: 'Run 8/16/32-person single-elimination coding battle tournaments.',

@@ -182,7 +182,7 @@ export default function WorkshopGalleryPage() {
       <section className="wg-templates">
         <div className="wg-templates-head">
           <Layers size={16} />
-          <span>{lang === 'en' ? 'Start from a Template' : '템플릿으로 빠르게 시작'}</span>
+          <span>{t('wgTemplateSection')}</span>
         </div>
         <div className="wg-templates-grid">
           {PRESET_TEMPLATES.map((tpl) => (
@@ -251,7 +251,7 @@ export default function WorkshopGalleryPage() {
                   <span>♥ {mode.likeCount}</span>
                   <span>{rulePreview(mode)}</span>
                   {view === 'mine' && !mode.isPublic && (
-                    <span style={{ color: 'var(--text3)', fontSize: 11 }}>{lang === 'en' ? 'Private' : '비공개'}</span>
+                    <span style={{ color: 'var(--text3)', fontSize: 11 }}>{t('visPrivate')}</span>
                   )}
                 </div>
                 <div className="wg-actions">
