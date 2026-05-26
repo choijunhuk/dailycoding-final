@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Eye, Play, Plus, Save, Trash2 } from 'lucide-react';
 import api from '../api.js';
@@ -193,7 +193,7 @@ export default function WorkshopPage() {
     updateConfig({ rules: rules.filter((rule) => rule.id !== ruleId) });
   };
 
-  const save = async () => {
+  const save = useCallback(async () => {
     if (!name.trim()) {
       toast?.show(t('workshopNameRequired'), 'warning');
       return;
@@ -211,7 +211,18 @@ export default function WorkshopPage() {
     } finally {
       setSaving(false);
     }
-  };
+  }, [name, description, isPublic, config, id, navigate, toast, t]);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+        e.preventDefault();
+        save();
+      }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [save]);
 
   if (loading) {
     return <main className="workshop-page"><div className="workshop-loading">{t('loading')}</div></main>;
