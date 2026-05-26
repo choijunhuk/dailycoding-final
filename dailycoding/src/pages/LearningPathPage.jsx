@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import api from '../api.js';
 import { useApp } from '../context/AppContext';
 import { useLang } from '../context/LangContext.jsx';
+import { getTierLabel } from '../utils/labelMaps.js';
 import { pickLangText } from '../utils/languageMode.js';
 import { TechIcon } from '../components/icons/BrandIcon.jsx';
 
@@ -958,8 +959,8 @@ export default function LearningPathPage() {
                     {problem?.title || `#${problemId}`}
                   </span>
                   {problem?.tier && (
-                    <span style={{ color: TIER_COLOR[problem.tier] || 'var(--text3)', fontSize: 11, fontWeight: 800, textTransform: 'capitalize' }}>
-                      {problem.tier}
+                    <span style={{ color: TIER_COLOR[problem.tier] || 'var(--text3)', fontSize: 11, fontWeight: 800 }}>
+                      {getTierLabel(problem.tier, lang)}
                     </span>
                   )}
                   <span style={{ marginLeft: 'auto', color: 'var(--blue)', fontSize: 12, fontWeight: 800 }}>{t('learningPathStart')}</span>
@@ -1148,9 +1149,8 @@ export default function LearningPathPage() {
                 <span style={{ flex: 1, fontSize: 13, fontWeight: 500 }}>{problem.title}</span>
                 <span style={{
                   fontSize: 11, fontWeight: 700, color: TIER_COLOR[problem.tier] || 'var(--text3)',
-                  textTransform: 'capitalize',
                 }}>
-                  {problem.tier}
+                  {getTierLabel(problem.tier, lang)}
                 </span>
               </button>
             );

@@ -2,11 +2,12 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../api.js';
 import { useLang } from '../context/LangContext.jsx';
+import { getTierLabel } from '../utils/labelMaps.js';
 
 export default function SheetDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const [sheet, setSheet] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
@@ -60,7 +61,7 @@ export default function SheetDetailPage() {
             textAlign:'left',
             cursor:'pointer',
           }}>
-            {index + 1}. {problem.title} · {problem.tier}
+            {index + 1}. {problem.title} · {getTierLabel(problem.tier, lang)}
           </button>
         ))}
       </div>
