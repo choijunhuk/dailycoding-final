@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Heart, Layers, Play, Plus, Search, Wrench } from 'lucide-react';
 import api from '../api.js';
+import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import { useLang } from '../context/LangContext.jsx';
 import { withVars } from '../utils/languageMode.js';
@@ -71,11 +72,27 @@ const PRESET_TEMPLATES = [
       rules: [
         { id: 'tpl_1', event: 'ON_CORRECT_ANSWER', condition: { type: 'always' }, action: { type: 'MODIFY_HP', target: 'self', value: 20 } },
         { id: 'tpl_2', event: 'ON_WRONG_ANSWER', condition: { type: 'always' }, action: { type: 'DOUBLE_DAMAGE', duration: 5 } },
-        { id: 'tpl_3', event: 'ON_TIMER_LOW', condition: { type: 'always' }, action: { type: 'SHOW_MESSAGE', text: '⚡ 시간이 얼마 남지 않았습니다!' } },
+        {
+          id: 'tpl_3',
+          event: 'ON_TIMER_LOW',
+          condition: { type: 'always' },
+          action: { type: 'SHOW_MESSAGE', textKo: '⚡ 시간이 얼마 남지 않았습니다!', textEn: '⚡ Time is almost up!' },
+        },
       ],
     },
   },
 ];
+
+function applyLangToTemplate(template, lang) {
+  const rules = (template.config.rules || []).map((rule) => {
+    if (rule.action?.type === 'SHOW_MESSAGE' && (rule.action.textKo || rule.action.textEn)) {
+      const { textKo, textEn, ...rest } = rule.action;
+      return { ...rule, action: { ...rest, text: lang === 'en' ? (textEn || textKo) : (textKo || textEn) } };
+    }
+    return rule;
+  });
+  return { ...template, config: { ...template.config, rules } };
+}
 
 const SORT_KEYS = [
   { key: 'like_count', tKey: 'wgSortLike' },
@@ -87,12 +104,19 @@ export default function WorkshopGalleryPage() {
   const navigate = useNavigate();
   const toast = useToast();
   const { t, lang } = useLang();
+  const { user } = useAuth();
   const [modes, setModes] = useState([]);
   const [sort, setSort] = useState('like_count');
   const [query, setQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
   const [loading, setLoading] = useState(true);
 
-  const params = useMemo(() => ({ sort, q: query.trim(), limit: 50 }), [query, sort]);
+  useEffect(() => {
+    const id = setTimeout(() => setDebouncedQuery(query.trim()), 300);
+    return () => clearTimeout(id);
+  }, [query]);
+
+  const params = useMemo(() => ({ sort, q: debouncedQuery, limit: 50 }), [debouncedQuery, sort]);
 
   const loadModes = useCallback(async () => {
     setLoading(true);
@@ -151,7 +175,7 @@ export default function WorkshopGalleryPage() {
               key={tpl.nameKo}
               type="button"
               className="wg-template-card"
-              onClick={() => navigate('/workshop', { state: { template: tpl } })}
+              onClick={() => navigate('/workshop', { state: { template: applyLangToTemplate(tpl, lang) } })}
             >
               <span className="wg-template-emoji">{tpl.emoji}</span>
               <strong>{lang === 'en' ? tpl.nameEn : tpl.nameKo}</strong>
@@ -186,32 +210,35 @@ export default function WorkshopGalleryPage() {
         <div className="wg-empty">{t('wgEmpty')}</div>
       ) : (
         <section className="wg-grid">
-          {modes.map((mode) => (
-            <article className="wg-card" key={mode.id}>
-              <div className="wg-card-icon"><Wrench size={20} /></div>
-              <div className="wg-card-main">
-                <h2>{mode.name}</h2>
-                <p>{mode.description || t('wgNoDesc')}</p>
-              </div>
-              <div className="wg-stats">
-                <span>{mode.authorUsername || t('wgUnknownAuthor')}</span>
-                <span>▶ {mode.playCount}</span>
-                <span>♥ {mode.likeCount}</span>
-                <span>{rulePreview(mode)}</span>
-              </div>
-              <div className="wg-actions">
-                <button type="button" className="btn btn-primary" onClick={() => navigate(`/battle?workshopModeId=${mode.id}`)}>
-                  <Play size={15} /> {t('wgPlayBtn')}
-                </button>
-                <button type="button" className={`wg-like ${mode.liked ? 'active' : ''}`} onClick={() => toggleLike(mode.id)}>
-                  <Heart size={15} /> {mode.likeCount}
-                </button>
-                <button type="button" className="btn btn-ghost" onClick={() => navigate(`/workshop/${mode.id}`)}>
-                  {t('wgViewBtn')}
-                </button>
-              </div>
-            </article>
-          ))}
+          {modes.map((mode) => {
+            const isOwner = user && Number(mode.authorId) === Number(user.id);
+            return (
+              <article className="wg-card" key={mode.id}>
+                <div className="wg-card-icon"><Wrench size={20} /></div>
+                <div className="wg-card-main">
+                  <h2>{mode.name}</h2>
+                  <p>{mode.description || t('wgNoDesc')}</p>
+                </div>
+                <div className="wg-stats">
+                  <span>{mode.authorUsername || t('wgUnknownAuthor')}</span>
+                  <span>▶ {mode.playCount}</span>
+                  <span>♥ {mode.likeCount}</span>
+                  <span>{rulePreview(mode)}</span>
+                </div>
+                <div className="wg-actions">
+                  <button type="button" className="btn btn-primary" onClick={() => navigate(`/battle?workshopModeId=${mode.id}`)}>
+                    <Play size={15} /> {t('wgPlayBtn')}
+                  </button>
+                  <button type="button" className={`wg-like ${mode.liked ? 'active' : ''}`} onClick={() => toggleLike(mode.id)}>
+                    <Heart size={15} /> {mode.likeCount}
+                  </button>
+                  <button type="button" className="btn btn-ghost" onClick={() => navigate(`/workshop/${mode.id}`)}>
+                    {isOwner ? t('wgEditBtn') : t('wgViewBtn')}
+                  </button>
+                </div>
+              </article>
+            );
+          })}
         </section>
       )}
     </main>

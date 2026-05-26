@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { Eye, Plus, Save, Trash2 } from 'lucide-react';
+import { Eye, Play, Plus, Save, Trash2 } from 'lucide-react';
 import api from '../api.js';
 import { useToast } from '../context/ToastContext.jsx';
 import { useLang } from '../context/LangContext.jsx';
@@ -228,6 +228,11 @@ export default function WorkshopPage() {
           <button type="button" className="btn btn-ghost" onClick={() => navigate('/workshop-gallery')}>
             {t('workshopGalleryBtn')}
           </button>
+          {id && (
+            <button type="button" className="btn btn-ghost" onClick={() => navigate(`/battle?workshopModeId=${id}`)}>
+              <Play size={16} /> {t('wgPlayBtn')}
+            </button>
+          )}
           <button type="button" className="btn btn-primary" onClick={save} disabled={saving}>
             {saving ? <span className="spinner" /> : <Save size={16} />} {t('save')}
           </button>
@@ -276,7 +281,12 @@ export default function WorkshopPage() {
           <div className="workshop-rules-head">
             <div>
               <div className="workshop-section-title">{t('workshopRulesBuilder')}</div>
-              <p>{withVars(t('workshopRulesCount'), { n: rules.length })}</p>
+              <p>
+                {withVars(t('workshopRulesCount'), { n: rules.length })}
+                <span style={{ marginLeft: 8, fontSize: 11, color: rules.length >= 20 ? 'var(--red)' : 'var(--text3)' }}>
+                  ({rules.length}/20)
+                </span>
+              </p>
             </div>
             <button type="button" className="btn btn-ghost" onClick={addRule}>
               <Plus size={16} /> {t('workshopAddRule')}
