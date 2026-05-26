@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Eye, Play, Plus, Save, Trash2 } from 'lucide-react';
 import api from '../api.js';
+import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import { useLang } from '../context/LangContext.jsx';
 import { withVars } from '../utils/languageMode.js';
@@ -76,9 +77,12 @@ export default function WorkshopPage() {
   const location = useLocation();
   const toast = useToast();
   const { t, lang } = useLang();
+  const { user } = useAuth();
   const template = !id ? location.state?.template : null;
   const [loading, setLoading] = useState(Boolean(id));
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [authorId, setAuthorId] = useState(null);
   const [name, setName] = useState(template ? (lang === 'en' ? template.nameEn : template.nameKo) : '');
   const [description, setDescription] = useState(template ? (lang === 'en' ? template.descEn : template.descKo) : '');
   const [isPublic, setIsPublic] = useState(true);
@@ -144,6 +148,7 @@ export default function WorkshopPage() {
         setDescription(mode.description || '');
         setIsPublic(Boolean(mode.isPublic));
         setConfig({ ...DEFAULT_CONFIG, ...(mode.config || {}) });
+        setAuthorId(Number(mode.authorId) || null);
       })
       .catch((err) => {
         toast?.show(err.response?.data?.message || t('workshopLoadError'), 'error');
@@ -213,6 +218,20 @@ export default function WorkshopPage() {
     }
   }, [name, description, isPublic, config, id, navigate, toast, t]);
 
+  const deleteMode = useCallback(async () => {
+    if (!window.confirm(t('workshopDeleteConfirm'))) return;
+    setDeleting(true);
+    try {
+      await api.delete(`/battle-modes/${id}`);
+      toast?.show(t('workshopDeleteSuccess'), 'success');
+      navigate('/workshop-gallery', { replace: true });
+    } catch (err) {
+      toast?.show(err.response?.data?.message || t('workshopDeleteFailed'), 'error');
+    } finally {
+      setDeleting(false);
+    }
+  }, [id, navigate, toast, t]);
+
   useEffect(() => {
     const handler = (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 's') {
@@ -242,6 +261,11 @@ export default function WorkshopPage() {
           {id && (
             <button type="button" className="btn btn-ghost" onClick={() => navigate(`/battle?workshopModeId=${id}`)}>
               <Play size={16} /> {t('wgPlayBtn')}
+            </button>
+          )}
+          {id && user && Number(user.id) === authorId && (
+            <button type="button" className="btn btn-danger" onClick={deleteMode} disabled={deleting}>
+              <Trash2 size={16} /> {t('workshopDeleteMode')}
             </button>
           )}
           <button type="button" className="btn btn-primary" onClick={save} disabled={saving}>

@@ -110,6 +110,7 @@ export default function WorkshopGalleryPage() {
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [loading, setLoading] = useState(true);
+  const [view, setView] = useState('gallery');
 
   useEffect(() => {
     const id = setTimeout(() => setDebouncedQuery(query.trim()), 300);
@@ -121,7 +122,8 @@ export default function WorkshopGalleryPage() {
   const loadModes = useCallback(async () => {
     setLoading(true);
     try {
-      const { data } = await api.get('/battle-modes', { params });
+      const endpoint = view === 'mine' ? '/battle-modes/mine' : '/battle-modes';
+      const { data } = await api.get(endpoint, { params: view === 'mine' ? { limit: 50 } : params });
       setModes(data.modes || []);
     } catch (err) {
       toast?.show(err.response?.data?.message || t('wgLoadError'), 'error');
@@ -129,7 +131,7 @@ export default function WorkshopGalleryPage() {
     } finally {
       setLoading(false);
     }
-  }, [params, toast, t]);
+  }, [view, params, toast, t]);
 
   useEffect(() => {
     loadModes();
@@ -187,7 +189,7 @@ export default function WorkshopGalleryPage() {
 
       <section className="wg-toolbar">
         <div className="wg-tabs">
-          {SORT_KEYS.map((tab) => (
+          {view === 'gallery' && SORT_KEYS.map((tab) => (
             <button
               type="button"
               key={tab.key}
@@ -197,17 +199,28 @@ export default function WorkshopGalleryPage() {
               {t(tab.tKey)}
             </button>
           ))}
+          {user && (
+            <button
+              type="button"
+              className={view === 'mine' ? 'active' : ''}
+              onClick={() => setView((v) => v === 'mine' ? 'gallery' : 'mine')}
+            >
+              {t('wgMyModes')}
+            </button>
+          )}
         </div>
-        <label className="wg-search">
-          <Search size={16} />
-          <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t('wgSearchPlaceholder')} />
-        </label>
+        {view === 'gallery' && (
+          <label className="wg-search">
+            <Search size={16} />
+            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t('wgSearchPlaceholder')} />
+          </label>
+        )}
       </section>
 
       {loading ? (
         <div className="wg-empty">{t('loading')}</div>
       ) : modes.length === 0 ? (
-        <div className="wg-empty">{t('wgEmpty')}</div>
+        <div className="wg-empty">{view === 'mine' ? t('wgMyModesEmpty') : t('wgEmpty')}</div>
       ) : (
         <section className="wg-grid">
           {modes.map((mode) => {
@@ -224,16 +237,21 @@ export default function WorkshopGalleryPage() {
                   <span>▶ {mode.playCount}</span>
                   <span>♥ {mode.likeCount}</span>
                   <span>{rulePreview(mode)}</span>
+                  {view === 'mine' && !mode.isPublic && (
+                    <span style={{ color: 'var(--text3)', fontSize: 11 }}>{lang === 'en' ? 'Private' : '비공개'}</span>
+                  )}
                 </div>
                 <div className="wg-actions">
                   <button type="button" className="btn btn-primary" onClick={() => navigate(`/battle?workshopModeId=${mode.id}`)}>
                     <Play size={15} /> {t('wgPlayBtn')}
                   </button>
-                  <button type="button" className={`wg-like ${mode.liked ? 'active' : ''}`} onClick={() => toggleLike(mode.id)}>
-                    <Heart size={15} /> {mode.likeCount}
-                  </button>
+                  {view === 'gallery' && (
+                    <button type="button" className={`wg-like ${mode.liked ? 'active' : ''}`} onClick={() => toggleLike(mode.id)}>
+                      <Heart size={15} /> {mode.likeCount}
+                    </button>
+                  )}
                   <button type="button" className="btn btn-ghost" onClick={() => navigate(`/workshop/${mode.id}`)}>
-                    {isOwner ? t('wgEditBtn') : t('wgViewBtn')}
+                    {isOwner || view === 'mine' ? t('wgEditBtn') : t('wgViewBtn')}
                   </button>
                 </div>
               </article>
