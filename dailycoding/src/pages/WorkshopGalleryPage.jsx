@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Heart, Layers, Play, Plus, Search, Wrench } from 'lucide-react';
+import { Copy, Heart, Layers, Play, Plus, Search, Wrench } from 'lucide-react';
 import api from '../api.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
@@ -148,6 +148,19 @@ export default function WorkshopGalleryPage() {
     }
   };
 
+  const cloneMode = async (mode) => {
+    try {
+      const cloneName = `${mode.name} (${lang === 'en' ? 'Copy' : '복제본'})`;
+      const { data } = await api.post('/battle-modes', {
+        name: cloneName, description: mode.description || '', isPublic: false, config: mode.config || {},
+      });
+      toast?.show(t('workshopCloneSuccess'), 'success');
+      navigate(`/workshop/${data.mode.id}`);
+    } catch (err) {
+      toast?.show(err.response?.data?.message || t('workshopCloneFailed'), 'error');
+    }
+  };
+
   const rulePreview = (mode) => {
     const count = mode?.config?.rules?.length || 0;
     if (count === 0) return t('wgRulesNone');
@@ -253,6 +266,11 @@ export default function WorkshopGalleryPage() {
                   <button type="button" className="btn btn-ghost" onClick={() => navigate(`/workshop/${mode.id}`)}>
                     {isOwner || view === 'mine' ? t('wgEditBtn') : t('wgViewBtn')}
                   </button>
+                  {user && !isOwner && view === 'gallery' && (
+                    <button type="button" className="btn btn-ghost" onClick={() => cloneMode(mode)} title={t('workshopClone')}>
+                      <Copy size={15} />
+                    </button>
+                  )}
                 </div>
               </article>
             );
