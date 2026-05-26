@@ -70,7 +70,7 @@ export default function CodeEditor({
   <div className="editor-toolbar">
     {!isSpecialProblem && !isTroubleshootingProblem && (
       <select className="lang-select mono" value={lang} onChange={e => setLang(e.target.value)}>
-        {availableLangOptions.length === 0 && <option value={lang}>Judging Unavailable</option>}
+        {availableLangOptions.length === 0 && <option value={lang}>{txt('채점 불가', 'Judging Unavailable')}</option>}
         {availableLangOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
     )}

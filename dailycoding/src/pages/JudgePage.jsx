@@ -182,7 +182,7 @@ export default function JudgePage() {
       setProblem(res.data);
     } catch (err) {
       setProblem(null);
-      setProblemError(err.response?.status === 404 ? 'Problem not found.' : 'Failed to load problem.');
+      setProblemError(err.response?.status === 404 ? uiTxt('문제를 찾을 수 없습니다.', 'Problem not found.') : uiTxt('문제를 불러오지 못했습니다.', 'Failed to load problem.'));
     }
   };
 
@@ -836,14 +836,14 @@ export default function JudgePage() {
             }}
               onMouseEnter={e=>e.currentTarget.style.background='var(--bg3)'}
               onMouseLeave={e=>e.currentTarget.style.background='none'}
-            >← Problem</button>
+            >← {uiTxt('문제', 'Problem')}</button>
             <span style={{width:1,height:16,background:'var(--border)'}}/>
             <span style={{fontSize:13,fontWeight:700,color:'var(--text)'}}>
-              {leftTab==='solutions'?'💡 Solutions':leftTab==='discuss'?'💬 Discussion':leftTab==='editorial'?'📘 Editorial':'📝 Submissions'}
+              {leftTab==='solutions'?`💡 ${uiTxt('풀이','Solutions')}`:leftTab==='discuss'?`💬 ${uiTxt('토론','Discussion')}`:leftTab==='editorial'?`📘 ${uiTxt('해설','Editorial')}`:`📝 ${uiTxt('제출 기록','Submissions')}`}
             </span>
             <div style={{flex:1}}/>
             <span style={{fontSize:12,color:solved[problem.id]?'var(--green)':'var(--text3)'}}>
-              {solved[problem.id]?'✅ Solved':'⬜ Unsolved'}
+              {solved[problem.id]?`✅ ${uiTxt('해결','Solved')}`:`⬜ ${uiTxt('미해결','Unsolved')}`}
             </span>
           </div>
         )}
@@ -949,11 +949,11 @@ export default function JudgePage() {
                   </div>
                 ) : (
                   <button className="btn btn-primary btn-sm" onClick={loadSolutions} disabled={solLoading}>
-                    {solLoading ? <><span className="spinner"/> Loading...</> : 'View Solutions'}
+                    {solLoading ? <><span className="spinner"/> {uiTxt('로딩 중...', 'Loading...')}</> : uiTxt('풀이 보기', 'View Solutions')}
                   </button>
                 )
               ) : solutions.length === 0 ? (
-                <p style={{color:'var(--text3)',fontSize:13}}>No solutions yet.</p>
+                <p style={{color:'var(--text3)',fontSize:13}}>{uiTxt('아직 풀이가 없습니다.', 'No solutions yet.')}</p>
               ) : (
                 <div style={{display:'flex',flexDirection:'column',gap:12}}>
                   {solutions.map((s,i) => (
@@ -983,7 +983,7 @@ export default function JudgePage() {
               <div style={{marginTop:12}}>
                 {!user?.emailVerified && (
                   <div style={{marginBottom:10,padding:'10px 12px',borderRadius:8,background:'var(--bg3)',border:'1px solid var(--border)',fontSize:12,color:'var(--text2)'}}>
-                    Please verify your email to post comments.
+                    {uiTxt('댓글을 작성하려면 이메일 인증이 필요합니다.', 'Please verify your email to post comments.')}
                   </div>
                 )}
                 {replyTo && (
@@ -995,11 +995,11 @@ export default function JudgePage() {
                 <textarea rows={3} value={commentText} onChange={e=>setCommentText(e.target.value)}
                   placeholder={t('judgeCommentPlaceholder')} style={{resize:'vertical',marginBottom:8}} disabled={!user?.emailVerified} />
                 <button className="btn btn-primary btn-sm" onClick={postComment} disabled={commentLoading||!commentText.trim()||!user?.emailVerified}>
-                  {commentLoading?<span className="spinner"/>:'Post Comment'}
+                  {commentLoading?<span className="spinner"/>:uiTxt('댓글 작성', 'Post Comment')}
                 </button>
               </div>
               <div style={{marginTop:16,display:'flex',flexDirection:'column',gap:10}}>
-                {comments.length===0&&<p style={{color:'var(--text3)',fontSize:13}}>No comments yet.</p>}
+                {comments.length===0&&<p style={{color:'var(--text3)',fontSize:13}}>{uiTxt('아직 댓글이 없습니다.', 'No comments yet.')}</p>}
                 {(commentsByParent.get(0) || []).map(comment => (
                   <div key={comment.id} style={{background:'var(--bg3)',borderRadius:8,padding:'12px 14px',border:'1px solid var(--border)'}}>
                     <div style={{display:'flex',justifyContent:'space-between',marginBottom:6,gap:10}}>
@@ -1018,10 +1018,10 @@ export default function JudgePage() {
                     <p style={{fontSize:13,color:'var(--text2)',lineHeight:1.6,whiteSpace:'pre-wrap'}}>{comment.content || comment.text}</p>
                     <div style={{display:'flex',gap:12,marginTop:8}}>
                       <button onClick={() => toggleCommentLike(comment.id)} style={{background:'none',border:'none',padding:0,color:comment.isLiked ? 'var(--yellow)' : 'var(--text3)',cursor:'pointer',fontSize:12}}>
-                        {comment.isLiked ? '★' : '☆'} Like {comment.likeCount || 0}
+                        {comment.isLiked ? '★' : '☆'} {uiTxt('좋아요', 'Like')} {comment.likeCount || 0}
                       </button>
                       <button onClick={() => { setReplyTo(comment); setCommentText(`@${comment.username} `); }} style={{background:'none',border:'none',padding:0,color:'var(--blue)',cursor:'pointer',fontSize:12}}>
-                        Reply
+                        {uiTxt('답글', 'Reply')}
                       </button>
                     </div>
 
@@ -1043,10 +1043,10 @@ export default function JudgePage() {
                         <p style={{fontSize:13,color:'var(--text2)',lineHeight:1.6,whiteSpace:'pre-wrap'}}>{reply.content || reply.text}</p>
                         <div style={{display:'flex',gap:12,marginTop:8}}>
                           <button onClick={() => toggleCommentLike(reply.id)} style={{background:'none',border:'none',padding:0,color:reply.isLiked ? 'var(--yellow)' : 'var(--text3)',cursor:'pointer',fontSize:12}}>
-                            {reply.isLiked ? '★' : '☆'} Like {reply.likeCount || 0}
+                            {reply.isLiked ? '★' : '☆'} {uiTxt('좋아요', 'Like')} {reply.likeCount || 0}
                           </button>
                           <button onClick={() => { setReplyTo(comment); setCommentText(`@${reply.username} `); }} style={{background:'none',border:'none',padding:0,color:'var(--blue)',cursor:'pointer',fontSize:12}}>
-                            Reply
+                            {uiTxt('답글', 'Reply')}
                           </button>
                         </div>
                       </div>
@@ -1061,9 +1061,9 @@ export default function JudgePage() {
           {leftTab === 'notes' && (
             <div className="prob-content fade-in">
               <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
-                <h4 style={{margin:0}}>🗒️ My Solution Notes</h4>
+                <h4 style={{margin:0}}>🗒️ {uiTxt('내 풀이 노트', 'My Solution Notes')}</h4>
                 <button className="btn btn-primary btn-sm" onClick={saveNote} disabled={isSavingNote}>
-                  {isSavingNote ? <span className="spinner"/> : 'Save'}
+                  {isSavingNote ? <span className="spinner"/> : uiTxt('저장', 'Save')}
                 </button>
               </div>
               <p style={{fontSize:12,color:'var(--text3)',marginBottom:12}}>{uiTxt('이 메모는 나에게만 보입니다. 풀이 접근법이나 핵심 회고를 적어두세요.', 'This note is only visible to you. Write down your approach or key takeaways.')}</p>

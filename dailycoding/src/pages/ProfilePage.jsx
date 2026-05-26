@@ -1013,7 +1013,7 @@ export default function ProfilePage() {
               {!yearSubsLoaded ? (
                 <div style={{ fontSize:12, color:'var(--text3)', display:'flex', alignItems:'center', gap:6 }}>
                   <span className="spinner" style={{ width:12, height:12, borderWidth:2 }} />
-                  Loading...
+                  {txt('로딩 중...', 'Loading...')}
                 </div>
               ) : yearCorrectSubsLoadFailed ? (
                 <div className="profile-section-error" style={{ padding:0 }}>
@@ -1235,7 +1235,7 @@ export default function ProfilePage() {
                         applyUser(data.user)
                         toast?.show(txt('아바타가 업로드되었습니다.', 'Avatar uploaded.'), 'success')
                       } catch (err) {
-                        toast?.show(err.response?.data?.message || 'Avatar upload failed', 'error')
+                        toast?.show(err.response?.data?.message || txt('아바타 업로드 실패', 'Avatar upload failed'), 'error')
                       }
                     }}
                   />

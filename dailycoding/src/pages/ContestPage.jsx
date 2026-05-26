@@ -611,18 +611,18 @@ export default function ContestPage() {
               </div>
               <div className="modal-row">
                 <div className="form-group">
-                  <label>Max Participants</label>
+                  <label>{txt('최대 참가자 수', 'Max Participants')}</label>
                   <input type="number" min="2" max="200" value={form.max} onChange={e=>setForm(p=>({...p,max:e.target.value}))} />
                 </div>
                 {form.privacy === 'private' && (
                   <div className="form-group" style={{flex:2}}>
-                    <label>Security Code (Password)</label>
+                    <label>{txt('보안 코드 (비밀번호)', 'Security Code (Password)')}</label>
                     <input placeholder={t('contestSecCodePlaceholder')} value={form.securityCode} onChange={e=>setForm(p=>({...p,securityCode:e.target.value}))} />
                   </div>
                 )}
               </div>
               <div className="form-group">
-                <label>Reward Rules (by Rank)</label>
+                <label>{txt('보상 규칙 (순위별)', 'Reward Rules (by Rank)')}</label>
                 <div style={{display:'flex',flexDirection:'column',gap:8}}>
                   {(form.rewardRules || []).map((rule, idx) => (
                     <div key={`reward-rule-${idx}`} style={{display:'grid',gridTemplateColumns:'80px 80px 1fr auto',gap:8,alignItems:'center'}}>
@@ -653,7 +653,7 @@ export default function ContestPage() {
                           rewardRules: prev.rewardRules.map((entry, ridx) => ridx === idx ? { ...entry, rewardCode: e.target.value } : entry),
                         }))}
                       >
-                        <option value="">Select Reward</option>
+                        <option value="">{txt('보상 선택', 'Select Reward')}</option>
                         {rewardCatalog.map((item) => (
                           <option key={item.code} value={item.code}>{item.icon} {item.name} ({item.code})</option>
                         ))}
@@ -664,7 +664,7 @@ export default function ContestPage() {
                         onClick={() => setForm((prev) => ({ ...prev, rewardRules: prev.rewardRules.filter((_, ridx) => ridx !== idx) }))}
                         disabled={(form.rewardRules || []).length <= 1}
                       >
-                        Remove
+                        {txt('삭제', 'Remove')}
                       </button>
                     </div>
                   ))}
@@ -733,7 +733,7 @@ export default function ContestPage() {
                 borderRadius:8,color:'var(--text)',padding:'8px 12px',
                 fontSize:13,fontFamily:'inherit',outline:'none',
               }}>
-                <option value=''>Select a problem...</option>
+                <option value=''>{txt('문제 선택...', 'Select a problem...')}</option>
                 {allProblems
                   .filter(p => !mgmtProblems.some(mp=>mp.id===p.id))
                   .map(p=>(
@@ -1161,9 +1161,9 @@ function VirtualContestView({ payload, onExit }) {
       });
       setRun((prev) => ({ ...(prev || {}), submissions: data.submissions || prev?.submissions || [] }));
       setLastResult(data.execution || null);
-      toast?.show(data.execution?.result === 'correct' ? 'Virtual — Correct!' : 'Check your result.', data.execution?.result === 'correct' ? 'success' : 'info');
+      toast?.show(data.execution?.result === 'correct' ? txt('가상 대회 — 정답!', 'Virtual — Correct!') : txt('결과를 확인하세요.', 'Check your result.'), data.execution?.result === 'correct' ? 'success' : 'info');
     } catch (err) {
-      toast?.show(err.response?.data?.message || 'Virtual submit failed', 'error');
+      toast?.show(err.response?.data?.message || txt('가상 제출 실패', 'Virtual submit failed'), 'error');
     }
     setSubmitting(false);
   };

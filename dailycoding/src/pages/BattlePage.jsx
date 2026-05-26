@@ -545,7 +545,7 @@ export default function BattlePage() {
           setLobbyPhase('idle');
         } else if (r.status === 'declined') {
           setLobbyPhase('idle');
-          setInviteError('The opponent declined your invite.');
+          setInviteError(txt('상대방이 초대를 거절했습니다.', 'The opponent declined your invite.'));
           setRoomId(null);
         }
       } catch {
@@ -830,15 +830,15 @@ export default function BattlePage() {
         <div className="bp-lobby">
           <div className="bp-lobby-hero">
             <div className="bp-lobby-icon">⚔️</div>
-            <h1>Coding Battle</h1>
-            <p>Challenge opponents in real-time coding duels.<br/>The team that captures all territories (problems) first wins!</p>
+            <h1>{txt('코딩 배틀', 'Coding Battle')}</h1>
+            <p>{txt('실시간 코딩 대결로 상대를 이겨보세요.', 'Challenge opponents in real-time coding duels.')}<br/>{txt('모든 영역(문제)을 먼저 차지하는 팀이 승리합니다!', 'The team that captures all territories (problems) first wins!')}</p>
           </div>
 
           <div className="bp-lobby-main">
             <div className="bp-lobby-left">
               {lobbyPhase === 'idle' && (
                 <div className="bp-invite-box">
-                  <div className="bp-invite-title">Invite Opponent</div>
+                  <div className="bp-invite-title">{txt('상대 초대', 'Invite Opponent')}</div>
                   <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
                     {BATTLE_MODES.map(m => (
                       <button
