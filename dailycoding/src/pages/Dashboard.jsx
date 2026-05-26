@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
 import { useToast } from '../context/ToastContext.jsx';
-import { PROBLEMS as DEFAULT_PROBLEMS, TIERS } from '../data/problems';
+import { TIERS } from '../data/problems';
 import api from '../api.js';
 import { useRankingData } from '../hooks/useRankingData.js';
 import { BarChart3, BookOpen, Bot, CheckCircle2, FileText, Flame, Sparkles, Swords, Target, TrendingUp, Trophy } from 'lucide-react';
@@ -15,6 +15,7 @@ import { withVars } from '../utils/languageMode.js';
 import { buildDailyFocusPlan } from './dashboardPlanUtils.js';
 import { getTagLabelLang } from './problemsPageUtils.js';
 import { getTierLabel } from '../utils/labelMaps.js';
+import { copyText } from '../utils/clipboard.js';
 
 const TIER_META = {
   unranked:    { label:'Unranked',    color:'#888',    next:'Iron',        bg:'rgba(136,136,136,.06)' },
@@ -106,11 +107,16 @@ export default function Dashboard() {
   const [reviewQueue, setReviewQueue] = useState([]);
   const [tagStats, setTagStats] = useState([]);
   const [smartRecommendations, setSmartRecommendations] = useState([]);
+  const [reviewQueueLoadFailed, setReviewQueueLoadFailed] = useState(false);
+  const [tagStatsLoadFailed, setTagStatsLoadFailed] = useState(false);
+  const [gameSummaryLoadFailed, setGameSummaryLoadFailed] = useState(false);
+  const [battleSummaryLoadFailed, setBattleSummaryLoadFailed] = useState(false);
+  const [adminStats, setAdminStats] = useState(null);
   const [onboardingOpen, setOnboardingOpen] = useState(false);
   const [copiedReferral, setCopiedReferral] = useState(false);
   const loadErrorToastShownRef = useRef(false);
   const { rankingData } = useRankingData();
-  const PROBLEMS = appProblems.length > 0 ? appProblems : DEFAULT_PROBLEMS;
+  const PROBLEMS = appProblems;
   const recentRank = rankingData.slice(0, 5);
   const myRank = rankingData.find(u => u.id === user?.id)?.rank || null;
   const locale = lang === 'ko' ? 'ko-KR' : 'en-US';
@@ -170,14 +176,52 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!user?.id) return;
-    api.get('/submissions/review-queue').then((res) => setReviewQueue(res.data || [])).catch(() => setReviewQueue([]));
+    let cancelled = false;
+    api.get('/submissions/review-queue')
+      .then((res) => {
+        if (!cancelled) {
+          setReviewQueue(res.data || []);
+          setReviewQueueLoadFailed(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setReviewQueue([]);
+          setReviewQueueLoadFailed(true);
+        }
+      });
     api.get('/submissions/tag-stats').then((res) => {
       const stats = res.data || [];
-      setTagStats(stats);
+      if (!cancelled) {
+        setTagStats(stats);
+        setTagStatsLoadFailed(false);
+      }
       const weakTags = stats.filter((item) => item.total >= 2 && Number(item.accuracy) < 50).slice(0, 4).map((item) => item.tag);
       return api.get('/problems/recommend', { params: weakTags.length ? { weakTags: weakTags.join(',') } : {} });
-    }).then((res) => setSmartRecommendations(res?.data || [])).catch(() => setSmartRecommendations([]));
+    }).then((res) => {
+      if (!cancelled) setSmartRecommendations(res?.data || []);
+    }).catch(() => {
+      if (!cancelled) {
+        setTagStats([]);
+        setSmartRecommendations([]);
+        setTagStatsLoadFailed(true);
+      }
+    });
+    return () => { cancelled = true; };
   }, [user?.id]);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    let cancelled = false;
+    api.get('/admin/stats')
+      .then(({ data }) => {
+        if (!cancelled) setAdminStats(data || null);
+      })
+      .catch(() => {
+        if (!cancelled) setAdminStats(null);
+      });
+    return () => { cancelled = true; };
+  }, [isAdmin]);
 
   // 레이팅 진행도
   const tierBands = [800,1000,1400,2000,2800,9999];
@@ -280,10 +324,14 @@ export default function Dashboard() {
             dungeon: data?.dungeon?.progress?.percent || 0,
             territory: (data?.season?.territories || []).filter((item) => item.controlled).length,
           });
+          setGameSummaryLoadFailed(false);
         }
       })
       .catch(() => {
-        if (!cancelled) setGameSummary({ ghost: 0, dungeon: 0, territory: 0 });
+        if (!cancelled) {
+          setGameSummary({ ghost: 0, dungeon: 0, territory: 0 });
+          setGameSummaryLoadFailed(true);
+        }
       });
     return () => { cancelled = true; };
   }, []);
@@ -292,13 +340,26 @@ export default function Dashboard() {
     let cancelled = false;
     api.get('/battles/summary')
       .then(({ data }) => {
-        if (!cancelled) setBattleSummary(data || { total: 0, wins: 0, draws: 0, losses: 0, winRate: 0, recent: [] });
+        if (!cancelled) {
+          setBattleSummary(data || { total: 0, wins: 0, draws: 0, losses: 0, winRate: 0, recent: [] });
+          setBattleSummaryLoadFailed(false);
+        }
       })
       .catch(() => {
-        if (!cancelled) setBattleSummary({ total: 0, wins: 0, draws: 0, losses: 0, winRate: 0, recent: [] });
+        if (!cancelled) {
+          setBattleSummary({ total: 0, wins: 0, draws: 0, losses: 0, winRate: 0, recent: [] });
+          setBattleSummaryLoadFailed(true);
+        }
       });
     return () => { cancelled = true; };
   }, []);
+
+  const adminProblemCount = adminStats?.problemTypeCounts
+    ? Object.values(adminStats.problemTypeCounts).reduce((sum, count) => sum + Number(count || 0), 0)
+    : PROBLEMS.length;
+  const adminActiveToday = adminStats?.userStats?.activeToday ?? 0;
+  const adminSubmissionsToday = adminStats?.submissionStats?.totalToday ?? 0;
+  const adminCorrectRate = adminStats?.submissionStats?.correctRate ?? 0;
 
   // 관리자 대시보드
   if (isAdmin) return (
@@ -308,10 +369,10 @@ export default function Dashboard() {
         <p style={{color:'var(--text2)',fontSize:13}}>{t('dashboardAdminDesc')}</p>
       </div>
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(180px,1fr))',gap:14,marginBottom:28}}>
-        <StatCard icon={<BookOpen size={20} />} value={PROBLEMS.length}     label={t('dashboardRegisteredProblems')} color="var(--blue)"   />
-        <StatCard icon={<Sparkles size={20} />} value={recentRank.length}   label={t('dashboardActiveUsers')} color="var(--green)"  />
-        <StatCard icon={<CheckCircle2 size={20} />} value={PROBLEMS.reduce((s,p)=>s+(p.solved||p.solved_count||0),0)} label={t('solvedCount')} color="var(--yellow)" />
-        <StatCard icon={<BarChart3 size={20} />} value={PROBLEMS.reduce((s,p)=>s+(p.submissions||p.submit_count||0),0)} label={t('submissionCount')} color="var(--orange)" />
+        <StatCard icon={<BookOpen size={20} />} value={adminProblemCount} label={t('dashboardRegisteredProblems')} color="var(--blue)" />
+        <StatCard icon={<Sparkles size={20} />} value={adminActiveToday} label={t('dashboardActiveToday')} color="var(--green)" />
+        <StatCard icon={<BarChart3 size={20} />} value={adminSubmissionsToday} label={t('dashboardSubmissionsToday')} color="var(--orange)" />
+        <StatCard icon={<CheckCircle2 size={20} />} value={`${adminCorrectRate}%`} label={t('dashboardCorrectRate')} color="var(--yellow)" />
       </div>
       <div className="admin-dash-grid" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16}}>
         <div className="card card-pad">
@@ -423,9 +484,12 @@ export default function Dashboard() {
           </div>
           <div style={{minWidth:0}}>
             <div style={{fontFamily:'Space Mono,monospace',fontSize:22,fontWeight:800,color:'var(--red)',lineHeight:1}}>
-              {battleSummary.total > 0 ? `${battleSummary.winRate}%` : '0%'}
+              {battleSummaryLoadFailed ? '−' : (battleSummary.total > 0 ? `${battleSummary.winRate}%` : '0%')}
             </div>
             <div style={{fontSize:12,color:'var(--text2)',marginTop:3}}>{txt('배틀 승률', 'Battle Win Rate')}</div>
+            {battleSummaryLoadFailed ? (
+              <div className="dashboard-inline-error">{t('dashboardBattleSummaryLoadFailed')}</div>
+            ) : (
             <div style={{display:'flex',gap:4,marginTop:6}}>
               {(battleSummary.recent || []).slice(0, 5).map((item, index) => (
                 <span key={`${item.roomId || index}-${item.result}`} title={item.result} style={{
@@ -441,6 +505,7 @@ export default function Dashboard() {
                 <span style={{fontSize:11,color:'var(--text3)'}}>{t('dashNoRecentResult')}</span>
               )}
             </div>
+            )}
           </div>
         </div>
       </div>
@@ -450,7 +515,7 @@ export default function Dashboard() {
         <div className="dashboard-game-banner-body">
           <span>{txt('새 게임 허브', 'NEW GAME HUB')}</span>
           <strong>{txt('고스트 배틀 · 데일리 던전 · 시즌 정복 — 한 곳에서', 'Ghost Battle · Daily Dungeon · Season Conquest — all in one place')}</strong>
-          <small>{txt('고스트', 'Ghost')} {gameSummary.ghost} · {txt('던전', 'Dungeon')} {gameSummary.dungeon}% · {txt('영역', 'Territories')} {gameSummary.territory}</small>
+          <small>{gameSummaryLoadFailed ? t('dashboardGameSummaryLoadFailed') : `${txt('고스트', 'Ghost')} ${gameSummary.ghost} · ${txt('던전', 'Dungeon')} ${gameSummary.dungeon}% · ${txt('영역', 'Territories')} ${gameSummary.territory}`}</small>
         </div>
         <button className="btn btn-primary btn-sm" onClick={(e) => { e.stopPropagation(); navigate('/game'); }}>{txt('게임 허브', 'Game Hub')}</button>
       </div>
@@ -569,9 +634,13 @@ export default function Dashboard() {
                   style={{ flex:1, background:'var(--bg3)', border:'1px solid var(--border)', borderRadius:8, padding:'8px 12px', color:'var(--text)', fontSize:13 }}
                 />
                 <button className="btn btn-primary" onClick={async () => {
-                  await navigator.clipboard.writeText(referral.inviteUrl)
-                  setCopiedReferral(true)
-                  setTimeout(() => setCopiedReferral(false), 2000)
+                  const copied = await copyText(referral.inviteUrl)
+                  if (copied) {
+                    setCopiedReferral(true)
+                    setTimeout(() => setCopiedReferral(false), 2000)
+                  } else {
+                    toast?.show(t('copyFailed'), 'error')
+                  }
                 }}>
                   {copiedReferral ? t('copied') : t('copy')}
                 </button>
@@ -725,42 +794,52 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {reviewQueue.length > 0 && (
+          {(reviewQueueLoadFailed || reviewQueue.length > 0) && (
             <div className="card card-pad card-hover">
               <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:12,marginBottom:12}}>
                 <div>
                   <div style={{fontSize:11,color:'var(--orange)',fontWeight:800,letterSpacing:.5}}>{txt('복습 큐', 'REVIEW QUEUE')}</div>
                   <h3 style={{fontSize:17,fontWeight:800,margin:'4px 0 0'}}>{t('dashReviewQueue')}</h3>
                 </div>
-                <span style={{fontSize:12,color:'var(--text3)'}}>{withVars(t('dashQueuePending'), { n: reviewQueue.length })}</span>
+                {!reviewQueueLoadFailed && (
+                  <span style={{fontSize:12,color:'var(--text3)'}}>{withVars(t('dashQueuePending'), { n: reviewQueue.length })}</span>
+                )}
               </div>
-              <div style={{display:'grid',gap:8}}>
-                {reviewQueue.slice(0,5).map((item) => (
-                  <button key={item.problemId} onClick={() => navigate('/problems/'+item.problemId)} style={{border:'1px solid var(--border)',borderRadius:12,padding:'10px 12px',background:'var(--bg3)',color:'var(--text)',textAlign:'left',cursor:'pointer',display:'flex',justifyContent:'space-between',gap:10}}>
-                    <span style={{fontWeight:700}}>{item.title}</span>
-                    <span style={{fontSize:11,color:TIERS[item.tier]?.color||'var(--text3)'}}>{tierLbl(item.tier)}</span>
-                  </button>
-                ))}
-              </div>
+              {reviewQueueLoadFailed ? (
+                <div className="dashboard-section-error">{t('dashboardReviewQueueLoadFailed')}</div>
+              ) : (
+                <div style={{display:'grid',gap:8}}>
+                  {reviewQueue.slice(0,5).map((item) => (
+                    <button key={item.problemId} onClick={() => navigate('/problems/'+item.problemId)} style={{border:'1px solid var(--border)',borderRadius:12,padding:'10px 12px',background:'var(--bg3)',color:'var(--text)',textAlign:'left',cursor:'pointer',display:'flex',justifyContent:'space-between',gap:10}}>
+                      <span style={{fontWeight:700}}>{item.title}</span>
+                      <span style={{fontSize:11,color:TIERS[item.tier]?.color||'var(--text3)'}}>{tierLbl(item.tier)}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
-          {tagStats.length > 0 && (
+          {(tagStatsLoadFailed || tagStats.length > 0) && (
             <div className="card card-pad card-hover">
               <div style={{fontWeight:800,fontSize:15,marginBottom:12,display:'flex',alignItems:'center',gap:8}}><Target size={16} />{txt('태그별 정확도', 'Tag Proficiency')}</div>
-              <div style={{display:'grid',gap:10}}>
-                {tagStats.slice(0,6).map((item) => (
-                  <div key={item.tag}>
-                    <div style={{display:'flex',justifyContent:'space-between',fontSize:12,marginBottom:5}}>
-                      <span style={{fontWeight:700}}>{getTagLabelLang(item.tag, lang)}</span>
-                      <span style={{color:'var(--text3)'}}>{item.accuracy}% · {item.correct}/{item.total}</span>
+              {tagStatsLoadFailed ? (
+                <div className="dashboard-section-error">{t('dashboardTagStatsLoadFailed')}</div>
+              ) : (
+                <div style={{display:'grid',gap:10}}>
+                  {tagStats.slice(0,6).map((item) => (
+                    <div key={item.tag}>
+                      <div style={{display:'flex',justifyContent:'space-between',fontSize:12,marginBottom:5}}>
+                        <span style={{fontWeight:700}}>{getTagLabelLang(item.tag, lang)}</span>
+                        <span style={{color:'var(--text3)'}}>{item.accuracy}% · {item.correct}/{item.total}</span>
+                      </div>
+                      <div style={{height:8,borderRadius:999,background:'var(--bg3)',overflow:'hidden'}}>
+                        <div style={{width:`${item.accuracy}%`,height:'100%',background:item.accuracy < 50 ? 'var(--red)' : item.accuracy < 75 ? 'var(--yellow)' : 'var(--green)'}} />
+                      </div>
                     </div>
-                    <div style={{height:8,borderRadius:999,background:'var(--bg3)',overflow:'hidden'}}>
-                      <div style={{width:`${item.accuracy}%`,height:'100%',background:item.accuracy < 50 ? 'var(--red)' : item.accuracy < 75 ? 'var(--yellow)' : 'var(--green)'}} />
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 

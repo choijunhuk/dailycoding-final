@@ -95,7 +95,7 @@ test('outputsMatch accepts harmless whitespace differences', () => {
 
 test('resolveNativeSupportedLanguages only exposes languages with installed runtimes', () => {
   assert.deepEqual(
-    resolveNativeSupportedLanguages({ python3: true, node: true, npx: true, gcc: true, 'g++': false, java: true, javac: true, go: true }),
+    resolveNativeSupportedLanguages({ python3: true, node: true, tsc: true, gcc: true, 'g++': false, java: true, javac: true, go: true }),
     ['python', 'javascript', 'typescript', 'c', 'java', 'go']
   );
 });
@@ -164,7 +164,7 @@ test('judgeCodeNative accepts one-line pair input across installed native langua
     },
     {
       lang: 'typescript',
-      commands: ['node', 'npx'],
+      commands: ['node', 'tsc'],
       code: 'import * as fs from "fs";\nconst [a, b]: number[] = fs.readFileSync(0, "utf8").trim().split(/\\s+/).map(Number);\nconsole.log(a + b);',
     },
     {

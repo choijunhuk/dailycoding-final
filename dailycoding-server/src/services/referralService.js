@@ -60,6 +60,6 @@ export async function claimReferralReward(referredUserId) {
     'UPDATE referrals SET status = ?, reward_granted_at = ? WHERE id = ?',
     ['rewarded', new Date().toISOString().slice(0, 19).replace('T', ' '), referral.id]
   );
-  await Notification.create(referrer.id, '친구가 첫 문제를 풀었습니다! Pro 7일이 추가되었습니다.', 'pricing');
+  await Notification.create(referrer.id, '친구가 첫 문제를 풀었습니다! Pro 7일이 추가되었습니다.', 'pricing', { type: 'reward' });
   return referral;
 }

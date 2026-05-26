@@ -4,7 +4,6 @@ import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
 import api from '../api.js';
 import { useToast } from '../context/ToastContext.jsx';
-import {} from '../data/problems';
 import EmailVerifyGate from '../components/EmailVerifyGate.jsx';
 import { useLang } from '../context/LangContext.jsx';
 import { JUDGE_LANGUAGE_OPTIONS } from '../data/judgeLanguages.js';
@@ -49,6 +48,8 @@ export default function ContestPage() {
   const [searchQuery,setSearchQuery]= useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [joined,     setJoined]     = useState({}); // contestId -> { status: 'joined' | 'pending' | 'rejected' }
+  const [contestsLoading, setContestsLoading] = useState(true);
+  const [contestsLoadError, setContestsLoadError] = useState('');
   const [liveContest,setLiveContest]= useState(null);
   const [virtualContest,setVirtualContest]= useState(null);
   const [form,       setForm]       = useState(createContestForm);
@@ -56,6 +57,7 @@ export default function ContestPage() {
   const [busy,       setBusy]       = useState({});
   const [mgmtContest,setMgmtContest]= useState(null);   // 문제 관리 중인 대회
   const [mgmtProblems,setMgmtProblems]= useState([]);   // 해당 대회 문제 목록
+  const [mgmtProblemsLoadError, setMgmtProblemsLoadError] = useState('');
   const [mgmtAddId,  setMgmtAddId] = useState('');
   const [showCustomForm, setShowCustomForm] = useState(false);
   const [customSaving, setCustomSaving] = useState(false);
@@ -63,12 +65,14 @@ export default function ContestPage() {
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
   const [resultsContest, setResultsContest] = useState(null);
   const [resultsBoard,   setResultsBoard]   = useState([]);
+  const [resultsLoadError, setResultsLoadError] = useState('');
   const [resultsRewards, setResultsRewards] = useState([]);
   const [rewardCatalog, setRewardCatalog] = useState([]);
   
   // 신청 관리
   const [reqContest, setReqContest] = useState(null);
   const [requests, setRequests] = useState([]);
+  const [requestsLoadError, setRequestsLoadError] = useState('');
   const [reqBusy, setReqBusy] = useState({});
 
   // 보안 코드 입력
@@ -81,28 +85,40 @@ export default function ContestPage() {
   const [submittingRequest, setSubmittingRequest] = useState(false);
   const [showCreationRequests, setShowCreationRequests] = useState(false);
   const [creationRequests, setCreationRequests] = useState([]);
+  const [creationRequestsLoadError, setCreationRequestsLoadError] = useState('');
   const [creationReqBusy, setCreationReqBusy] = useState({});
 
   // ★ 서버는 'running' 반환, 클라이언트는 'live' 사용 → 매핑
   const mapStatus = (c) => ({ ...c, status: c.status === 'running' ? 'live' : c.status });
 
-  const fetchContests = async () => {
+  const fetchContests = async ({ background = false } = {}) => {
+    if (!background) {
+      setContestsLoading(true);
+      setContestsLoadError('');
+    }
     try {
       const res = await api.get('/contests');
       const data = (res.data||[]).map(mapStatus);
       setContests(data);
+      setContestsLoadError('');
       // 참가 상태 초기화
       const joinMap = {};
       data.forEach(c => {
         if (c.myStatus) joinMap[c.id] = { status: c.myStatus };
       });
       setJoined(joinMap);
-    } catch { setContests([]); }
+    } catch {
+      if (background) return;
+      setContests([]);
+      setContestsLoadError(t('contestListLoadFailed'));
+    } finally {
+      if (!background) setContestsLoading(false);
+    }
   };
 
   useEffect(() => {
     fetchContests();
-    const interval = setInterval(fetchContests, 30000);
+    const interval = setInterval(() => fetchContests({ background: true }), 30000);
     return () => clearInterval(interval);
   }, []);
 
@@ -186,10 +202,15 @@ export default function ContestPage() {
 
   const openRequests = async (c) => {
     setReqContest(c);
+    setRequests([]);
+    setRequestsLoadError('');
     try {
       const res = await api.get(`/contests/${c.id}/requests`);
       setRequests(res.data || []);
-    } catch { setRequests([]); }
+    } catch {
+      setRequests([]);
+      setRequestsLoadError(txt('참가 신청을 불러오지 못했습니다.', 'Failed to load join requests.'));
+    }
   };
 
   const handleUpdateRequest = async (reqId, status) => {
@@ -241,6 +262,9 @@ export default function ContestPage() {
 
   const openResults = async (c) => {
     setResultsContest(c);
+    setResultsBoard([]);
+    setResultsRewards([]);
+    setResultsLoadError('');
     try {
       const [boardRes, rewardRes] = await Promise.all([
         api.get(`/contests/${c.id}/leaderboard`),
@@ -248,14 +272,23 @@ export default function ContestPage() {
       ]);
       setResultsBoard(boardRes.data || []);
       setResultsRewards(rewardRes.data?.rewardRules || []);
-    } catch { setResultsBoard([]); }
+    } catch {
+      setResultsBoard([]);
+      setResultsRewards([]);
+      setResultsLoadError(txt('대회 결과를 불러오지 못했습니다.', 'Failed to load contest results.'));
+    }
   };
 
   const fetchCreationRequests = async () => {
+    setCreationRequests([]);
+    setCreationRequestsLoadError('');
     try {
       const res = await api.get('/contests/creation-requests');
       setCreationRequests(res.data || []);
-    } catch { setCreationRequests([]); }
+    } catch {
+      setCreationRequests([]);
+      setCreationRequestsLoadError(txt('대회 개최 요청을 불러오지 못했습니다.', 'Failed to load contest creation requests.'));
+    }
   };
 
   const handleSubmitCreationRequest = async () => {
@@ -292,10 +325,15 @@ export default function ContestPage() {
 
   const openMgmt = async (c) => {
     setMgmtContest(c);
+    setMgmtProblems([]);
+    setMgmtProblemsLoadError('');
     try {
       const res = await api.get(`/contests/${c.id}/problems`);
       setMgmtProblems(res.data || []);
-    } catch { setMgmtProblems([]); }
+    } catch {
+      setMgmtProblems([]);
+      setMgmtProblemsLoadError(txt('대회 문제 목록을 불러오지 못했습니다.', 'Failed to load contest problems.'));
+    }
     setMgmtAddId('');
     setShowCustomForm(false);
     setCustomForm(createContestProblemForm());
@@ -383,7 +421,7 @@ export default function ContestPage() {
           <p>{isAdmin ? t('contestAdminDesc') : t('contestUserDesc')}</p>
         </div>
         <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
-          {isAdmin && <button className="btn btn-ghost" onClick={() => { setShowCreationRequests(true); fetchCreationRequests(); }}>📋 Creation Requests</button>}
+          {isAdmin && <button className="btn btn-ghost" onClick={() => { setShowCreationRequests(true); fetchCreationRequests(); }}>📋 {txt('개최 요청', 'Creation Requests')}</button>}
           {isAdmin && <button className="btn btn-danger" onClick={() => setShowCreate(true)}>{t('createContestBtn')}</button>}
           {!isAdmin && <button className="btn btn-ghost" onClick={() => setShowRequestForm(true)}>📋 {txt('대회 개최 요청', 'Request a Contest')}</button>}
         </div>
@@ -440,7 +478,22 @@ export default function ContestPage() {
         </div>
       </div>
 
-      {filtered.length === 0 && (
+      {contestsLoading && (
+        <div className="contest-empty fade-up">
+          <div style={{fontSize:48}}>⏳</div>
+          <p>{t('contestListLoading')}</p>
+        </div>
+      )}
+
+      {!contestsLoading && contestsLoadError && (
+        <div className="contest-empty contest-error fade-up">
+          <div style={{fontSize:48}}>⚠️</div>
+          <p>{contestsLoadError}</p>
+          <button className="btn btn-ghost btn-sm" onClick={() => fetchContests()}>{t('refresh')}</button>
+        </div>
+      )}
+
+      {!contestsLoading && !contestsLoadError && filtered.length === 0 && (
         <div className="contest-empty fade-up">
           <div style={{fontSize:48}}>{searchQuery ? '🔍' : '🏆'}</div>
           <p>
@@ -455,6 +508,7 @@ export default function ContestPage() {
         </div>
       )}
 
+      {!contestsLoading && !contestsLoadError && (
       <div className="contest-grid fade-up">
         {filtered.map(c => {
           const isLive = c.status==='live', isUpcoming=c.status==='upcoming', isEnded=c.status==='ended';
@@ -487,11 +541,11 @@ export default function ContestPage() {
               </div>
               {isAdmin && (
                 <div className="admin-cc-btns">
-                  {isUpcoming && <button className="btn btn-danger btn-sm" onClick={() => handleStart(c.id)}>🔴 Start</button>}
-                  {isLive     && <button className="btn btn-ghost btn-sm"  onClick={() => handleEnd(c.id)}>⏹ End</button>}
-                  {isLive     && <button className="btn btn-danger btn-sm" onClick={() => setLiveContest(c)}>▶ Enter</button>}
-                  <button className="btn btn-ghost btn-sm" onClick={() => openMgmt(c)}>📋 Problems</button>
-                  {c.joinType === 'approval' && <button className="btn btn-ghost btn-sm" onClick={() => openRequests(c)}>👥 Requests</button>}
+                  {isUpcoming && <button className="btn btn-danger btn-sm" onClick={() => handleStart(c.id)}>🔴 {txt('시작', 'Start')}</button>}
+                  {isLive     && <button className="btn btn-ghost btn-sm"  onClick={() => handleEnd(c.id)}>⏹ {txt('종료', 'End')}</button>}
+                  {isLive     && <button className="btn btn-danger btn-sm" onClick={() => setLiveContest(c)}>▶ {txt('입장', 'Enter')}</button>}
+                  <button className="btn btn-ghost btn-sm" onClick={() => openMgmt(c)}>📋 {txt('문제', 'Problems')}</button>
+                  {c.joinType === 'approval' && <button className="btn btn-ghost btn-sm" onClick={() => openRequests(c)}>👥 {txt('신청', 'Requests')}</button>}
                   {!isEnded && <button className="btn btn-sm" style={{background:'rgba(248,81,73,.1)',color:'var(--red)',border:'1px solid rgba(248,81,73,.3)'}} onClick={() => handleDelete(c.id)}>🗑</button>}
                 </div>
               )}
@@ -519,6 +573,7 @@ export default function ContestPage() {
           );
         })}
       </div>
+      )}
 
       {showCreate && isAdmin && (
         <div className="modal-overlay" onClick={e => e.target===e.currentTarget&&setShowCreate(false)}>
@@ -646,7 +701,9 @@ export default function ContestPage() {
 
             {/* Current problem list */}
             <div style={{margin:'14px 0',maxHeight:240,overflowY:'auto'}}>
-              {mgmtProblems.length === 0
+              {mgmtProblemsLoadError
+                ? <div style={{color:'var(--red)',fontSize:13,padding:'8px 0'}}>{mgmtProblemsLoadError}</div>
+                : mgmtProblems.length === 0
                 ? <div style={{color:'var(--text3)',fontSize:13,padding:'8px 0'}}>No problems added yet.</div>
                 : mgmtProblems.map((p,i) => (
                   <div key={p.id} style={{
@@ -741,7 +798,7 @@ export default function ContestPage() {
                   {renderContestCaseEditor('Example', customForm.examples, 'examples', 'var(--blue)')}
                   <div style={{fontSize:12,color:'var(--orange)',fontWeight:700}}>No limit on hidden test cases. Input/output will be visible on the problem detail page.</div>
                   {renderContestCaseEditor('Hidden Test Case', customForm.testcases, 'testcases', 'var(--orange)')}
-                  <textarea rows={2} placeholder="Hint" value={customForm.hint} onChange={(e) => setCustomField('hint', e.target.value)} style={{resize:'vertical'}} />
+                  <textarea rows={2} placeholder={txt('힌트', 'Hint')} value={customForm.hint} onChange={(e) => setCustomField('hint', e.target.value)} style={{resize:'vertical'}} />
                   <textarea rows={4} placeholder={t('contestSolutionPlaceholder')} value={customForm.solution} onChange={(e) => setCustomField('solution', e.target.value)} style={{resize:'vertical'}} />
                   <div style={{display:'flex',justifyContent:'flex-end'}}>
                     <button className="btn btn-primary btn-sm" onClick={handleCreateCustomProblem} disabled={customSaving || !customForm.title.trim() || !customForm.desc.trim()}>
@@ -778,7 +835,9 @@ export default function ContestPage() {
           <div className="modal-box card fade-up" style={{maxWidth:480,width:'95vw'}}>
             <h2>🏆 {resultsContest.name} — {txt('최종 결과', 'Final Results')}</h2>
             <div style={{margin:'14px 0',maxHeight:320,overflowY:'auto'}}>
-              {resultsBoard.length === 0
+              {resultsLoadError
+                ? <div style={{color:'var(--red)',fontSize:13,padding:'8px 0'}}>{resultsLoadError}</div>
+                : resultsBoard.length === 0
                 ? <div style={{color:'var(--text3)',fontSize:13,padding:'8px 0'}}>{txt('참가자 없음.', 'No participants.')}</div>
                 : resultsBoard.map((p,i) => (
                   <div key={p.username} style={{
@@ -815,7 +874,9 @@ export default function ContestPage() {
             <h2>👥 {txt('참가 신청 관리', 'Join Request Management')}</h2>
             <div style={{fontSize:13,color:'var(--text2)',marginBottom:12}}>{reqContest.name} — {txt('대기 중인 신청', 'Pending Requests')}</div>
             <div style={{margin:'14px 0',maxHeight:320,overflowY:'auto'}}>
-              {requests.length === 0
+              {requestsLoadError
+                ? <div style={{color:'var(--red)',fontSize:13,padding:'8px 0',textAlign:'center'}}>{requestsLoadError}</div>
+                : requests.length === 0
                 ? <div style={{color:'var(--text3)',fontSize:13,padding:'8px 0',textAlign:'center'}}>{txt('대기 중인 신청이 없습니다.', 'No pending requests.')}</div>
                 : requests.map((r) => (
                   <div key={r.id} style={{
@@ -888,19 +949,21 @@ export default function ContestPage() {
       {showCreationRequests && (
         <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setShowCreationRequests(false)}>
           <div className="modal-box card fade-up" style={{maxWidth:560,width:'95vw'}}>
-            <h2>📋 Contest Creation Requests</h2>
+            <h2>📋 {txt('대회 개최 요청', 'Contest Creation Requests')}</h2>
             <div style={{maxHeight:420,overflowY:'auto',margin:'14px 0'}}>
-              {creationRequests.length === 0
-                ? <div style={{color:'var(--text3)',fontSize:13,textAlign:'center',padding:'20px 0'}}>No requests found.</div>
+              {creationRequestsLoadError
+                ? <div style={{color:'var(--red)',fontSize:13,textAlign:'center',padding:'20px 0'}}>{creationRequestsLoadError}</div>
+                : creationRequests.length === 0
+                ? <div style={{color:'var(--text3)',fontSize:13,textAlign:'center',padding:'20px 0'}}>{txt('요청이 없습니다.', 'No requests found.')}</div>
                 : creationRequests.map(r => (
                   <div key={r.id} style={{padding:'12px 14px',borderRadius:10,marginBottom:8,background:'var(--bg3)',border:`1px solid ${r.status==='pending'?'var(--border)':r.status==='approved'?'rgba(63,185,80,.3)':'rgba(248,81,73,.3)'}`}}>
                     <div style={{display:'flex',alignItems:'flex-start',gap:12}}>
                       <div style={{flex:1}}>
                         <div style={{fontWeight:700,fontSize:14}}>{r.name}</div>
-                        <div style={{fontSize:11,color:'var(--text3)',marginTop:2}}>by {r.username} ({r.tier}) · {new Date(r.created_at).toLocaleDateString()}</div>
+                        <div style={{fontSize:11,color:'var(--text3)',marginTop:2}}>{txt('작성자', 'by')} {r.username} ({r.tier}) · {new Date(r.created_at).toLocaleDateString()}</div>
                         {r.description && <div style={{fontSize:12,color:'var(--text2)',marginTop:6}}>{r.description}</div>}
-                        {r.desired_date && <div style={{fontSize:12,color:'var(--text3)',marginTop:4}}>Preferred Date: {r.desired_date}</div>}
-                        {r.reason && <div style={{fontSize:12,color:'var(--text2)',marginTop:4}}>Reason: {r.reason}</div>}
+                        {r.desired_date && <div style={{fontSize:12,color:'var(--text3)',marginTop:4}}>{txt('희망 날짜', 'Preferred Date')}: {r.desired_date}</div>}
+                        {r.reason && <div style={{fontSize:12,color:'var(--text2)',marginTop:4}}>{txt('사유', 'Reason')}: {r.reason}</div>}
                       </div>
                       <div style={{display:'flex',flexDirection:'column',gap:6,alignItems:'flex-end'}}>
                         <span style={{fontSize:11,fontWeight:700,color:r.status==='pending'?'var(--yellow)':r.status==='approved'?'var(--green)':'var(--red)'}}>

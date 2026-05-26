@@ -35,7 +35,7 @@ const NATIVE_SUPPORTED_LANGS = Object.freeze(['python', 'javascript', 'typescrip
 const NATIVE_RUNTIME_COMMANDS = Object.freeze({
   python: ['python3'],
   javascript: ['node'],
-  typescript: ['node', 'npx'],
+  typescript: ['node', 'tsc'],
   cpp: ['g++'],
   c: ['gcc'],
   java: ['java', 'javac'],
@@ -710,7 +710,7 @@ const NATIVE_LANG = {
     file: 'main.ts',
     vmKb: 262144,
     run: (d) => `node --max-old-space-size=64 "${d}/dist/main.js"`,
-    compile: (d) => `npx --yes -p typescript tsc --target ES2020 --module CommonJS --outDir "${d}/dist" "${d}/main.ts" "${d}/node-shim.d.ts"`,
+    compile: (d) => `tsc --target ES2020 --module CommonJS --outDir "${d}/dist" "${d}/main.ts" "${d}/node-shim.d.ts"`,
     extraFiles: {
       'node-shim.d.ts': "declare module 'fs' { const fs: any; export = fs; }\ndeclare function require(name: string): any;\ndeclare const process: any;\n",
     },
@@ -736,10 +736,33 @@ function execShell(cmd, stdin, timeoutMs, vmKb = 131072) {
         TEMP: tmpdir(),
       },
       stdio: ['pipe', 'pipe', 'pipe'],
+      detached: true,
     });
 
     let stdout = '', stderr = '', killed = false, outputExceeded = false;
-    const timer = setTimeout(() => { killed = true; proc.kill('SIGKILL'); }, timeoutMs);
+    let settled = false;
+    const killProcessGroup = () => {
+      try {
+        process.kill(-proc.pid, 'SIGKILL');
+      } catch {
+        try {
+          proc.kill('SIGKILL');
+        } catch {
+          // Process may already have exited.
+        }
+      }
+    };
+    const finish = (result) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve(result);
+    };
+    const timer = setTimeout(() => {
+      killed = true;
+      killProcessGroup();
+      finish({ stdout: '', stderr: stderr.trim(), exitCode: -1, timedOut: true });
+    }, timeoutMs);
 
     proc.stdout.on('data', (d) => {
       if (outputExceeded) return;
@@ -747,7 +770,7 @@ function execShell(cmd, stdin, timeoutMs, vmKb = 131072) {
       if (stdout.length > OUTPUT_LIMIT) {
         outputExceeded = true;
         stdout = stdout.slice(0, OUTPUT_LIMIT);
-        proc.kill('SIGKILL');
+        killProcessGroup();
       }
     });
     proc.stderr.on('data', (d) => {
@@ -760,16 +783,14 @@ function execShell(cmd, stdin, timeoutMs, vmKb = 131072) {
     proc.stdin.end();
 
     proc.on('close', (code) => {
-      clearTimeout(timer);
       if (outputExceeded) {
-        resolve({ stdout: '', stderr: '출력 크기 초과 (최대 512KB)', exitCode: -1, timedOut: false, outputExceeded: true });
+        finish({ stdout: '', stderr: '출력 크기 초과 (최대 512KB)', exitCode: -1, timedOut: false, outputExceeded: true });
       } else {
-        resolve({ stdout: stdout.trim(), stderr: stderr.trim(), exitCode: code ?? 0, timedOut: killed });
+        finish({ stdout: stdout.trim(), stderr: stderr.trim(), exitCode: killed ? -1 : code ?? 0, timedOut: killed });
       }
     });
     proc.on('error', (err) => {
-      clearTimeout(timer);
-      resolve({ stdout: '', stderr: err.message, exitCode: -1, timedOut: false });
+      finish({ stdout: '', stderr: err.message, exitCode: -1, timedOut: false });
     });
   });
 }
@@ -800,6 +821,9 @@ export async function judgeCodeNative({ lang, code, examples, timeLimit = 2, use
     if (cfg.compile) {
       const compVmKb = Math.max(effectiveVmKb, 524288); // javac는 최소 512MB 권장
       const comp = await execShell(cfg.compile(workDir), '', 15000, compVmKb);
+      if (comp.timedOut) {
+        return { result: 'timeout', time: '-', mem: '-', detail: '컴파일 시간 초과' };
+      }
       if (comp.exitCode !== 0) {
         return { result: 'compile', time: '-', mem: '-', detail: comp.stderr || '컴파일 오류' };
       }
@@ -854,6 +878,15 @@ export async function runCodeNative({ lang, code, input = '', timeLimit = 2, use
     if (cfg.compile) {
       const compVmKb = Math.max(effectiveVmKb, 524288);
       const comp = await execShell(cfg.compile(workDir), '', 15000, compVmKb);
+      if (comp.timedOut) {
+        return {
+          result: 'timeout',
+          time: '-',
+          mem: '-',
+          detail: '컴파일 시간 초과',
+          output: '',
+        };
+      }
       if (comp.exitCode !== 0) {
         return {
           result: 'compile',

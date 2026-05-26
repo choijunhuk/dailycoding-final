@@ -8,9 +8,10 @@ import { JUDGE_LANGUAGE_OPTIONS, getEffectiveJudgeLanguage, getJudgeLanguageOpti
 import { useSubscriptionStatus } from '../hooks/useSubscriptionStatus.js';
 import { useToast } from '../context/ToastContext.jsx';
 import { useLang } from '../context/LangContext.jsx';
-import { BATTLE_AD_SLOTS, BATTLE_DURATIONS, BATTLE_MODES, BATTLE_SEC, fmtTime, getSocketUrl, POLL_MS, TYPE_COLOR, TYPE_LABEL } from './battlePageUtils.js';
+import { BATTLE_PRO_BENEFITS_SLOTS, BATTLE_DURATIONS, BATTLE_MODES, BATTLE_SEC, fmtTime, getSocketUrl, POLL_MS, TYPE_COLOR, TYPE_LABEL } from './battlePageUtils.js';
 import { BattleAdSlot, BugFixProblem, CodingProblem, FillBlankProblem, getBattleStarterCode } from './battleProblemViews.jsx';
 import { getDateLocale, pickLangText } from '../utils/languageMode.js';
+import { copyText } from '../utils/clipboard.js';
 import { SocialIcon } from '../components/icons/BrandIcon.jsx';
 import './BattlePage.css';
 
@@ -51,7 +52,7 @@ function useTypingSound() {
 
 function BattleReplayViewer({ roomId }) {
   const navigate = useNavigate();
-  const { lang } = useLang();
+  const { lang, t } = useLang();
   const txt = (ko, en) => pickLangText(lang, ko, en);
   const dateLocale = getDateLocale(lang);
   const [replay, setReplay] = useState(null);
@@ -105,9 +106,9 @@ function BattleReplayViewer({ roomId }) {
   return (
     <div className="bp-page bp-replay-page">
       <div className="bp-result">
-        <div className="bp-result-banner draw">🎬 Battle Replay</div>
+        <div className="bp-result-banner draw">{t('battleReplayTitle')}</div>
         <div style={{fontSize:13,color:'var(--text2)',textAlign:'center',marginBottom:16}}>
-          Room {replay.roomId} · {new Date(replay.createdAt).toLocaleString(dateLocale)}
+          {t('battleReplayRoom').replace('{roomId}', replay.roomId)} · {new Date(replay.createdAt).toLocaleString(dateLocale)}
         </div>
 
         <div className="bp-replay-progress">
@@ -115,8 +116,8 @@ function BattleReplayViewer({ roomId }) {
             const progress = progressByUser[player.userId] || { pass: 0, fail: 0 };
             return (
               <div key={player.userId} className="bp-replay-player">
-                <strong>Player {player.userId}</strong>
-                <span className="mono">{progress.pass} pass / {progress.fail} fail</span>
+                <strong>{t('battleReplayPlayer').replace('{id}', String(player.userId))}</strong>
+                <span className="mono">{t('battleReplayPassFail').replace('{pass}', String(progress.pass)).replace('{fail}', String(progress.fail))}</span>
                 <small>{player.result?.toUpperCase?.()} · {player.scoreFor}:{player.scoreAgainst}</small>
               </div>
             );
@@ -134,14 +135,14 @@ function BattleReplayViewer({ roomId }) {
         />
 
         <div className="bp-replay-events">
-          {visibleEvents.length === 0 && <div className="bp-empty-msg">No submission events recorded.</div>}
+          {visibleEvents.length === 0 && <div className="bp-empty-msg">{t('battleReplayNoEvents')}</div>}
           {visibleEvents.map((event, index) => (
             <div key={`${event.ts}-${index}`} className={`bp-replay-event ${event.type}`}>
               <span className="mono">{new Date(event.ts).toLocaleTimeString(dateLocale)}</span>
               <strong>{txt('사용자', 'User')} {event.userId}</strong>
               <span>P{event.problemId}</span>
               <span>{event.language || '-'}</span>
-              <span>{event.type === 'pass' ? 'Pass' : 'Fail'}</span>
+              <span>{event.type === 'pass' ? t('battleReplayPass') : t('battleReplayFail')}</span>
             </div>
           ))}
         </div>
@@ -157,9 +158,10 @@ export default function BattlePage() {
   const params = useParams();
   const { user } = useAuth();
   const toast = useToast();
-  const { lang } = useLang();
+  const { lang, t } = useLang();
   const txt = (ko, en) => pickLangText(lang, ko, en);
   const dateLocale = getDateLocale(lang);
+  const editorSettings = user?.settings?.editor || {};
   const typeLabel = (type) => {
     const labels = {
       coding: txt('코딩', 'Coding'),
@@ -254,7 +256,7 @@ export default function BattlePage() {
       } catch (err) {
         setActiveBattles([]);
         if (err?.response?.status !== 401) {
-          showLoadErrorToast(err?.response?.data?.message || 'Failed to load battle list.');
+          showLoadErrorToast(err?.response?.data?.message || t('battleListLoadFailed'));
         }
       }
     };
@@ -271,7 +273,7 @@ export default function BattlePage() {
       .catch((err) => {
         setHistoryRows([]);
         if (err?.response?.status !== 401) {
-          showLoadErrorToast(err?.response?.data?.message || 'Failed to load battle history.');
+          showLoadErrorToast(err?.response?.data?.message || t('battleHistoryLoadFailed'));
         }
       })
       .finally(() => setHistoryLoading(false));
@@ -524,7 +526,7 @@ export default function BattlePage() {
       setLobbyPhase('invite_sent');
       // invite_sent 상태에서 수락 대기 폴링
     } catch (err) {
-      setInviteError(err.response?.data?.message || 'Failed to send invite');
+      setInviteError(err.response?.data?.message || t('inviteFailedDefault'));
     }
   };
 
@@ -566,7 +568,7 @@ export default function BattlePage() {
       setPhase('countdown');
       setLobbyPhase('idle');
     } catch (err) {
-      setInviteError(err.response?.data?.message || 'Failed to accept invite');
+      setInviteError(err.response?.data?.message || t('acceptInviteFailed'));
     }
   };
 
@@ -659,36 +661,24 @@ export default function BattlePage() {
       startTimer(data.room.startTime, data.room.duration);
       navigate(`/battle/watch/${targetRoomId}`, { replace: true });
     } catch (err) {
-      toast?.show(err?.response?.data?.message || 'Failed to spectate.', 'error');
+      toast?.show(err?.response?.data?.message || t('spectateFailed'), 'error');
     }
   };
 
-  const copyWithFallback = async (text) => {
-    if (navigator.clipboard?.writeText && window.isSecureContext) {
-      await navigator.clipboard.writeText(text);
-      return true;
-    }
-
-    const textarea = document.createElement('textarea');
-    textarea.value = text;
-    textarea.setAttribute('readonly', 'true');
-    textarea.style.position = 'fixed';
-    textarea.style.opacity = '0';
-    document.body.appendChild(textarea);
-    textarea.select();
-    textarea.setSelectionRange(0, text.length);
-    const copied = document.execCommand('copy');
-    document.body.removeChild(textarea);
-    return copied;
+  const getBattleReplayUrl = (roomId) => {
+    if (!roomId) return '';
+    const origin = window.location?.origin || '';
+    return `${origin}/battle/${roomId}/replay`;
   };
 
   const buildShareText = (battleRoom, currentPlayer, opponentPlayer, didWin, didDraw) => {
     const outcome = didWin ? txt('승리', 'won') : didDraw ? txt('무승부', 'drew') : txt('패배', 'lost');
     const primaryProblemTitle = battleRoom?.problems?.[0]?.title || txt('배틀 문제', 'battle problem');
     const elapsedSec = Math.max(0, BATTLE_SEC - timeLeft);
+    const replayUrl = getBattleReplayUrl(battleRoom?.id);
     return txt(
-      `DailyCoding 배틀에서 ${outcome}했습니다! 🔥 문제: ${primaryProblemTitle} | 점수 ${currentPlayer?.score ?? 0}:${opponentPlayer?.score ?? 0} | ${elapsedSec}초 경과`,
-      `I ${outcome} a DailyCoding battle! 🔥 Problem: ${primaryProblemTitle} | Score ${currentPlayer?.score ?? 0}:${opponentPlayer?.score ?? 0} | ${elapsedSec}s elapsed`,
+      `DailyCoding 배틀에서 ${outcome}했습니다! 🔥 문제: ${primaryProblemTitle} | 점수 ${currentPlayer?.score ?? 0}:${opponentPlayer?.score ?? 0} | ${elapsedSec}초 경과${replayUrl ? ` | 리플레이 ${replayUrl}` : ''}`,
+      `I ${outcome} a DailyCoding battle! 🔥 Problem: ${primaryProblemTitle} | Score ${currentPlayer?.score ?? 0}:${opponentPlayer?.score ?? 0} | ${elapsedSec}s elapsed${replayUrl ? ` | Replay ${replayUrl}` : ''}`,
     );
   };
 
@@ -704,16 +694,16 @@ export default function BattlePage() {
     try {
       if (navigator.share && window.matchMedia?.('(max-width: 768px)')?.matches) {
         await navigator.share({ text: shareText });
-        toast?.show('Result shared successfully.', 'success');
+        toast?.show(t('shareShared'), 'success');
         return;
       }
 
-      const copied = await copyWithFallback(shareText);
+      const copied = await copyText(shareText);
       if (!copied) throw new Error('copy_failed');
-      toast?.show('Result copied to clipboard.', 'success');
+      toast?.show(t('shareCopied'), 'success');
     } catch (error) {
       if (error?.name === 'AbortError') return;
-      toast?.show('Failed to share result.', 'error');
+      toast?.show(t('shareFailed'), 'error');
     }
   };
 
@@ -761,9 +751,9 @@ export default function BattlePage() {
       setInviteError('');
       setTimeLeft(BATTLE_SEC);
       navigate('/battle', { replace: true });
-      toast?.show('Rematch request sent.', 'success');
+      toast?.show(t('rematchSent'), 'success');
     } catch (error) {
-      toast?.show(error?.response?.data?.message || 'Failed to send rematch request.', 'error');
+      toast?.show(error?.response?.data?.message || t('rematchFailed'), 'error');
     } finally {
       setRematchPending(false);
     }
@@ -833,10 +823,10 @@ export default function BattlePage() {
       <div className="bp-page">
         {isFreePlan && (
           <div className="bp-free-plan-banner">
-            Free plan users can use 1:1 Battle, but ad slots will be shown.
+            {t('freePlanBattleBanner')}
           </div>
         )}
-        {isFreePlan && <BattleAdSlot slot={BATTLE_AD_SLOTS.lobby} />}
+        {isFreePlan && <BattleAdSlot slot={BATTLE_PRO_BENEFITS_SLOTS.lobby} />}
         <div className="bp-lobby">
           <div className="bp-lobby-hero">
             <div className="bp-lobby-icon">⚔️</div>
@@ -912,9 +902,9 @@ export default function BattlePage() {
                 <div className="bp-waiting-box">
                   <div className="bp-spinner" />
                   <div className="bp-waiting-text">
-                    Waiting for <strong>{opponentName}</strong> to accept...
+                    {t('waitingAcceptance').split('{name}')[0]}<strong>{opponentName}</strong>{t('waitingAcceptance').split('{name}')[1] || ''}
                   </div>
-                  <div className="bp-waiting-sub">The opponent must accept within 2 minutes.</div>
+                  <div className="bp-waiting-sub">{t('waitingSub')}</div>
                   <button className="bp-btn-ghost" onClick={() => {
                     setLobbyPhase('idle');
                     setRoomId(null);
@@ -1011,13 +1001,19 @@ export default function BattlePage() {
                             <div style={{ fontSize:11, color:'var(--text3)' }}>
                               {(row.problems || []).map((problem) => problem.title).join(' · ')}
                             </div>
-                            <div style={{ display:'flex', justifyContent:'flex-end', width:'100%' }}>
+                            <div style={{ display:'flex', justifyContent:'flex-end', width:'100%', gap:8, flexWrap:'wrap' }}>
+                              <button
+                                className="bp-btn-small"
+                                onClick={() => navigate(`/battle/${row.roomId}/replay`)}
+                              >
+                                {t('battleReplayView')}
+                              </button>
                               <button
                                 className="bp-btn-small"
                                 onClick={() => requestRematch(row.roomId, row.opponentName)}
                                 disabled={rematchPending}
                               >
-                                Rematch
+                                {t('rematchBtn')}
                               </button>
                             </div>
                           </div>
@@ -1116,7 +1112,7 @@ export default function BattlePage() {
 
     return (
       <div className="bp-page bp-battle-page">
-        {isFreePlan && <BattleAdSlot slot={BATTLE_AD_SLOTS.battle} />}
+        {isFreePlan && <BattleAdSlot slot={BATTLE_PRO_BENEFITS_SLOTS.battle} />}
         {isSpectator && <div className="bp-spectator-banner">👁️ {txt('관전 중입니다 (읽기 전용)', 'Spectating (read-only)')}</div>}
         
         {/* ── 상단 HUD ── */}
@@ -1132,10 +1128,10 @@ export default function BattlePage() {
 
           <div className="bp-hud-center">
             {room?.battleMode === 'race'
-              ? <div className="bp-timer" style={{ fontSize: 18, letterSpacing: 1 }}>🏁 First to Finish</div>
+              ? <div className="bp-timer" style={{ fontSize: 18, letterSpacing: 1 }}>{t('battleFirstToFinish')}</div>
               : <div className={`bp-timer ${timeLeft < 60 ? 'urgent' : timeLeft < 300 ? 'warning' : ''}`}>{fmtTime(timeLeft)}</div>
             }
-            {opponentTyping && <div className="bp-opp-typing">⌨️ Typing...</div>}
+            {opponentTyping && <div className="bp-opp-typing">{t('opponentTypingLabel')}</div>}
           </div>
 
           <div className={`bp-hud-player team2 ${myTeamId === 'team_2' ? 'me' : ''}`}>
@@ -1150,13 +1146,13 @@ export default function BattlePage() {
 
         <div className="bp-scoreboard" aria-label="Current battle score">
           <div className="bp-score-card mine">
-            <span className="bp-score-label">My Score</span>
-            <strong>{myTeamScore} pts</strong>
-            <small>{me?.username || 'Me'}</small>
+            <span className="bp-score-label">{t('battleMyScore')}</span>
+            <strong>{t('resultPts').replace('{n}', String(myTeamScore))}</strong>
+            <small>{me?.username || txt('나', 'Me')}</small>
           </div>
           <div className="bp-score-card opponent">
-            <span className="bp-score-label">Opponent Score</span>
-            <strong>{opponentTeamScore} pts</strong>
+            <span className="bp-score-label">{t('battleOpponentScore')}</span>
+            <strong>{t('resultPts').replace('{n}', String(opponentTeamScore))}</strong>
             <small>{opponentLabel}</small>
           </div>
         </div>
@@ -1223,6 +1219,7 @@ export default function BattlePage() {
                   locked={isLocked || isSpectator}
                   result={submitResults[pid]}
                   judgeDetail={judgeDetails[pid]}
+                  editorSettings={editorSettings}
                 />
               )}
 
@@ -1237,20 +1234,20 @@ export default function BattlePage() {
               )}
 
               {(!isSpectator && (submitResults[pid] === false || submitResults[pid] === 'wrong')) && (
-                <div className="bp-feedback wrong">Incorrect. Please try again.</div>
+                <div className="bp-feedback wrong">{t('wrongAnswerFeedback')}</div>
               )}
               {(!isSpectator && (isMine || submitResults[pid] === true || submitResults[pid] === 'correct')) && (
-                <div className="bp-feedback correct">Correct! Territory captured 🎉</div>
+                <div className="bp-feedback correct">{t('correctFeedback')}</div>
               )}
               {(!isSpectator && submitResults[pid] === 'error') && (
-                <div className="bp-feedback error">{judgeDetails[pid]?.detail || 'An error occurred during grading. Please try again.'}</div>
+                <div className="bp-feedback error">{judgeDetails[pid]?.detail || t('gradingErrorFeedback')}</div>
               )}
               {(!isSpectator && submitResults[pid] === 'locked') && (
-                <div className="bp-feedback locked">This territory has already been claimed by the opposing team.</div>
+                <div className="bp-feedback locked">{t('lockedByOpponentBadge')}</div>
               )}
               {(isSpectator && lockedTeamId) && (
                 <div className={`bp-feedback ${lockedTeamId === 'team_1' ? 'team1' : 'team2'}`}>
-                  {lockedTeamId === 'team_1' ? 'Team 1' : 'Team 2'} has captured this territory.
+                  {t('teamCaptured').replace('{team}', lockedTeamId === 'team_1' ? t('battleTeamOne') : t('battleTeamTwo'))}
                 </div>
               )}
             </>
@@ -1309,24 +1306,24 @@ export default function BattlePage() {
       <div className="bp-page">
         <div className="bp-result">
           <div className={`bp-result-banner ${won ? 'win' : draw ? 'draw' : 'lose'}`}>
-            {won ? '🏆 Victory!' : draw ? '🤝 Draw' : '💀 Defeat'}
+            {won ? t('battleWin') : draw ? t('battleDraw') : t('battleLose')}
           </div>
           <div className="bp-result-scores">
             <div className="bp-result-player me">
-              <div className="bp-result-name">{me?.username} (You)</div>
-              <div className="bp-result-pts">{myScore} pts</div>
-              <div className="bp-result-solved">{me?.solved?.length ?? 0} solved</div>
+              <div className="bp-result-name">{me?.username} {t('resultSelf')}</div>
+              <div className="bp-result-pts">{t('resultPts').replace('{n}', String(myScore))}</div>
+              <div className="bp-result-solved">{t('resultSolved').replace('{n}', String(me?.solved?.length ?? 0))}</div>
             </div>
             <div className="bp-result-vs">VS</div>
             <div className="bp-result-player opp">
               <div className="bp-result-name">{opp?.username}</div>
-              <div className="bp-result-pts">{oppScore} pts</div>
-              <div className="bp-result-solved">{opp?.solved?.length ?? 0} solved</div>
+              <div className="bp-result-pts">{t('resultPts').replace('{n}', String(oppScore))}</div>
+              <div className="bp-result-solved">{t('resultSolved').replace('{n}', String(opp?.solved?.length ?? 0))}</div>
             </div>
           </div>
 
           <div className="bp-result-territory">
-            <div className="bp-result-section-title">Territory Results</div>
+            <div className="bp-result-section-title">{t('territoryResult')}</div>
             <div className="bp-territory">
               {(room.problems || []).map((p, i) => {
                 const lockedBy = room.locked?.[String(p.id)];
@@ -1337,7 +1334,7 @@ export default function BattlePage() {
                     <span className="bp-territory-num">{i + 1}</span>
                     <span className="bp-territory-type">{typeLabel(p.type)}</span>
                     <span className="bp-territory-flag">
-                      {byMe ? `🏳️ My Team` : byOpp ? `🏴 Opponent` : '—'}
+                      {byMe ? t('myTeamFlag') : byOpp ? t('oppTeamFlag') : '—'}
                     </span>
                   </div>
                 );

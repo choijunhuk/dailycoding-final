@@ -9,7 +9,7 @@ const COMPETE_MODES = [
     href: '/battle',
     icon: Swords,
     accent: 'var(--red)',
-    desc: { ko: '실시간 1v1 또는 팀 대전 — HP, 아이템, 이펙트, 정복 등 5가지 모드로 경쟁하세요.', en: 'Real-time 1v1 or team battle — compete across 5 modes including HP, items, effects, and conquest.' },
+    desc: { ko: '실시간 1v1 배틀 — 스피드, HP, 아이템, 이펙트, 영토 정복 모드로 경쟁하세요.', en: 'Real-time 1v1 battle — compete in speed, HP, items, effects, and territory modes.' },
   },
   {
     title: { ko: '토너먼트', en: 'Tournament' },

@@ -17,7 +17,7 @@ test('buildYearHeatmap creates 364 cells and applies levels', () => {
 });
 
 test('formatDuration handles empty and normal durations', () => {
-  assert.equal(formatDuration(0), 'No record');
+  assert.equal(formatDuration(0), 'No records');
   assert.equal(formatDuration(45), '45s');
   assert.equal(formatDuration(125), '2m 5s');
   assert.equal(formatDuration(0, 'ko'), '기록 없음');

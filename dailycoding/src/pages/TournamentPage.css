@@ -171,6 +171,14 @@
   font-size: 12px;
 }
 
+.tournament-error-state {
+  color: var(--red);
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+  text-align: center;
+}
+
 .tournament-detail {
   flex: 1;
   padding: 18px;

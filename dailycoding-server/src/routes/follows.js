@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { auth } from '../middleware/auth.js';
 import { query as dbQuery, run as dbRun, queryOne } from '../config/mysql.js';
 import { User } from '../models/User.js';
+import { Notification } from '../models/Notification.js';
 import redis from '../config/redis.js';
 
 const router = Router();
@@ -176,10 +177,20 @@ router.post('/:id', auth, async (req, res) => {
   if (!targetId || isNaN(targetId)) return res.status(400).json({ message: 'Invalid user ID.' });
   if (targetId === req.user.id) return res.status(400).json({ message: 'You cannot follow yourself.' });
   try {
-    await dbRun(
+    const result = await dbRun(
       'INSERT IGNORE INTO follows (follower_id, following_id) VALUES (?,?)',
       [req.user.id, targetId]
     );
+    if (result?.affectedRows > 0) {
+      const follower = await User.findById(req.user.id).catch(() => null);
+      const name = follower?.nickname || follower?.username || 'Someone';
+      Notification.create(
+        targetId,
+        `${name} started following you.`,
+        `/user/${req.user.id}`,
+        { type: 'follow' }
+      ).catch(() => {});
+    }
     await redis.del(`feed:${req.user.id}`);
     res.json({ following: true });
   } catch (err) {

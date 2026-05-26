@@ -251,6 +251,22 @@
   color: var(--text3);
 }
 
+.dashboard-inline-error,
+.dashboard-section-error {
+  color: var(--red);
+  line-height: 1.5;
+}
+
+.dashboard-inline-error {
+  margin-top: 6px;
+  font-size: 11px;
+}
+
+.dashboard-section-error {
+  padding: 10px 0 2px;
+  font-size: 13px;
+}
+
 @media (max-width: 720px) {
   .dashboard-game-banner {
     grid-template-columns: 1fr;

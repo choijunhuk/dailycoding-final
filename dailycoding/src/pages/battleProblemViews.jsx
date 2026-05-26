@@ -23,28 +23,44 @@ const BATTLE_EDITOR_OPTIONS = Object.freeze({
   wordWrap: 'on',
 });
 
+function resolveBattleEditorOptions(editorSettings = {}) {
+  return {
+    ...BATTLE_EDITOR_OPTIONS,
+    fontSize: editorSettings.font_size || editorSettings.fontSize || BATTLE_EDITOR_OPTIONS.fontSize,
+    minimap: { enabled: !!editorSettings.minimap },
+    tabSize: editorSettings.tab_size || editorSettings.tabSize || BATTLE_EDITOR_OPTIONS.tabSize,
+    fontFamily: editorSettings.font_family || BATTLE_EDITOR_OPTIONS.fontFamily,
+    lineNumbers: editorSettings.line_numbers !== false ? 'on' : 'off',
+    autoClosingBrackets: editorSettings.auto_close_brackets === false ? 'never' : BATTLE_EDITOR_OPTIONS.autoClosingBrackets,
+    wordWrap: editorSettings.word_wrap === false ? 'off' : BATTLE_EDITOR_OPTIONS.wordWrap,
+  };
+}
+
 export function BattleAdSlot({ slot }) {
-  const { lang: adLang } = useLang();
+  const { lang: adLang, t } = useLang();
   const adTxt = (ko, en) => adLang === 'ko' ? ko : en;
   if (!slot) return null;
   const isVideo = slot.type === 'video';
+  const title = slot.titleKey ? t(slot.titleKey) : slot.title;
+  const description = slot.descriptionKey ? t(slot.descriptionKey) : slot.description;
+  const ctaText = slot.ctaKey ? t(slot.ctaKey) : slot.ctaText;
 
   return (
     <aside className="bp-ad-slot" data-ad-slot-id={slot.id}>
       <div className="bp-ad-header">
-        <strong>{slot.title}</strong>
-        <span className="bp-ad-badge">{adTxt('무료 광고', 'FREE PLAN AD')}</span>
+        <strong>{title}</strong>
+        <span className="bp-ad-badge">{t('proBenefitsLabel')}</span>
       </div>
-      <p className="bp-ad-desc">{slot.description}</p>
+      <p className="bp-ad-desc">{description}</p>
 
       {!isVideo && (
         <div className="bp-ad-media bp-ad-media-image">
           {slot.imageUrl ? (
-            <img src={slot.imageUrl} alt={slot.title} />
+            <img src={slot.imageUrl} alt={title} />
           ) : (
             <div className="bp-ad-placeholder">
-              <span>{adTxt('이미지 광고 미리보기', 'Ad image preview')}</span>
-              <small>{adTxt('imageUrl을 설정하면 실제 배너로 교체됩니다.', 'Set `imageUrl` to replace this with an actual banner.')}</small>
+              <span>{t('proBenefitsRemoveTitle')}</span>
+              <small>{t('proBenefitsRemoveDesc')}</small>
             </div>
           )}
         </div>
@@ -55,20 +71,22 @@ export function BattleAdSlot({ slot }) {
           {slot.videoUrl ? (
             <video controls playsInline muted poster={slot.posterUrl || undefined} preload="metadata">
               <source src={slot.videoUrl} />
-              Your browser does not support the video tag.
+              {adTxt('브라우저가 동영상을 지원하지 않습니다.', 'Your browser does not support the video tag.')}
             </video>
           ) : (
             <div className="bp-ad-placeholder">
-              <span>{adTxt('동영상 광고 미리보기', 'Ad video preview')}</span>
-              <small>{adTxt('videoUrl을 설정하면 실제 동영상 광고로 교체됩니다.', 'Set `videoUrl` to replace this with an actual video ad.')}</small>
+              <span>{t('proBenefitsAiTitle')}</span>
+              <small>{t('proBenefitsAiDesc')}</small>
             </div>
           )}
         </div>
       )}
 
-      <a className="bp-ad-cta" href={slot.ctaUrl || '#'} onClick={(event) => slot.ctaUrl === '#' && event.preventDefault()}>
-        {slot.ctaText || adTxt('자세히 보기', 'Learn more')}
-      </a>
+      {slot.ctaUrl ? (
+        <a className="bp-ad-cta" href={slot.ctaUrl}>
+          {ctaText || adTxt('자세히 보기', 'Learn more')}
+        </a>
+      ) : null}
     </aside>
   );
 }
@@ -174,7 +192,7 @@ const RESULT_LABEL = {
   },
 };
 
-export function CodingProblem({ problem, code, lang, lockedLanguageLabel, onCodeChange, onInsertStarter, locked, result, judgeDetail }) {
+export function CodingProblem({ problem, code, lang, lockedLanguageLabel, onCodeChange, onInsertStarter, locked, result, judgeDetail, editorSettings }) {
   const { lang: uiLang } = useLang();
   const txt = (ko, en) => pickLangText(uiLang, ko, en);
   const resultLabel = (RESULT_LABEL[uiLang] || RESULT_LABEL.en)[result] || result;
@@ -243,11 +261,11 @@ export function CodingProblem({ problem, code, lang, lockedLanguageLabel, onCode
           <Editor
             height="100%"
             language={monacoLanguage}
-            theme={isDark ? 'vs-dark' : 'vs'}
+            theme={editorSettings?.theme || (isDark ? 'vs-dark' : 'vs')}
             value={code || ''}
             onChange={(value) => onCodeChange(value || '')}
             options={{
-              ...BATTLE_EDITOR_OPTIONS,
+              ...resolveBattleEditorOptions(editorSettings),
               readOnly: locked || result === 'correct',
             }}
           />

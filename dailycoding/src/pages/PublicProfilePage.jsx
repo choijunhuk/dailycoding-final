@@ -175,6 +175,8 @@ export default function PublicProfilePage() {
   const [grass, setGrass] = useState([])
   const [submissions, setSubmissions] = useState([])
   const [activity, setActivity] = useState([])
+  const [submissionsLoadFailed, setSubmissionsLoadFailed] = useState(false)
+  const [activityLoadFailed, setActivityLoadFailed] = useState(false)
   const [followModalType, setFollowModalType] = useState(null)
 
   useEffect(() => {
@@ -185,8 +187,12 @@ export default function PublicProfilePage() {
         const [profileRes, grassRes, submissionsRes, activityRes] = await Promise.all([
           api.get(`/auth/profile/${id}`),
           api.get(`/auth/grass/${id}`),
-          api.get('/submissions', { params: { scope: 'all', userId: id, limit: 20 } }).catch(() => ({ data: [] })),
-          api.get(`/users/${id}/activity`, { params: { limit: 20 } }).catch(() => ({ data: { items: [] } })),
+          api.get('/submissions', { params: { scope: 'all', userId: id, limit: 20 } })
+            .then((response) => ({ ok: true, data: response.data }))
+            .catch(() => ({ ok: false, data: [] })),
+          api.get(`/users/${id}/activity`, { params: { limit: 20 } })
+            .then((response) => ({ ok: true, data: response.data }))
+            .catch(() => ({ ok: false, data: { items: [] } })),
         ])
         if (cancelled) return
         const today = new Date()
@@ -205,6 +211,8 @@ export default function PublicProfilePage() {
         }
         setProfile(profileRes.data)
         setGrass(last30)
+        setSubmissionsLoadFailed(!submissionsRes.ok)
+        setActivityLoadFailed(!activityRes.ok)
         setSubmissions((submissionsRes.data || []).filter((item) => Number(item.userId) === Number(id)).slice(0, 12))
         setActivity(activityRes.data?.items || [])
       } catch (error) {
@@ -213,6 +221,8 @@ export default function PublicProfilePage() {
           setGrass([])
           setSubmissions([])
           setActivity([])
+          setSubmissionsLoadFailed(false)
+          setActivityLoadFailed(false)
           toast?.show(error.response?.data?.message || t('publicProfileLoadFailed'), 'error')
         }
       } finally {
@@ -242,6 +252,7 @@ export default function PublicProfilePage() {
   const heatmapLevelLabels = [t('heatmapNone'), t('heatmapLow'), t('heatmapMedium'), t('heatmapHigh'), t('heatmapVeryHigh')]
   const problemUnit = lang === 'ko' ? '개' : ''
   const isSelf = Number(user?.id) === Number(id)
+  const submissionsHidden = profile?.submissionsPublic === false && !isSelf
 
   const openSubmission = (submission) => {
     navigate('/submissions', {
@@ -395,12 +406,20 @@ export default function PublicProfilePage() {
         <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 22, padding: 20 }}>
           <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', marginBottom: 8 }}>{t('publicProfileDistributionTitle')}</div>
           <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 18 }}>{t('publicProfileDistributionDesc')}</div>
-          <DonutChart counts={tierCounts} centerLabel={t('publicProfileSolvedProblems')} />
+          {submissionsHidden ? (
+            <div style={{ color: 'var(--text3)', fontSize: 13, padding: '18px 0' }}>{t('publicProfileSubmissionsPrivate')}</div>
+          ) : (
+            <DonutChart counts={tierCounts} centerLabel={t('publicProfileSolvedProblems')} />
+          )}
         </div>
         <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 22, padding: 20 }}>
           <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', marginBottom: 8 }}>{t('publicProfileThirtyDayActivityTitle')}</div>
           <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 18 }}>{t('publicProfileThirtyDayActivityDesc')}</div>
-          <Heatmap cells={grass} caption={t('publicProfileRecentThirtyDays')} levelLabels={heatmapLevelLabels} problemUnit={problemUnit} />
+          {submissionsHidden ? (
+            <div style={{ color: 'var(--text3)', fontSize: 13, padding: '18px 0' }}>{t('publicProfileSubmissionsPrivate')}</div>
+          ) : (
+            <Heatmap cells={grass} caption={t('publicProfileRecentThirtyDays')} levelLabels={heatmapLevelLabels} problemUnit={problemUnit} />
+          )}
         </div>
       </div>
 
@@ -410,10 +429,10 @@ export default function PublicProfilePage() {
             <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', marginBottom: 8 }}>{t('publicProfileSolvedSectionTitle')}</div>
             <div style={{ fontSize: 12, color: 'var(--text3)' }}>{t('publicProfileSolvedSectionDesc')}</div>
           </div>
-          <div style={{ fontSize: 12, color: 'var(--text2)', fontWeight: 800 }}>{t('publicProfileSolvedShown').replace('{n}', String(profile.solvedProblems?.length || 0))}</div>
+          <div style={{ fontSize: 12, color: 'var(--text2)', fontWeight: 800 }}>{submissionsHidden ? t('publicProfileSubmissionsPrivate') : t('publicProfileSolvedShown').replace('{n}', String(profile.solvedProblems?.length || 0))}</div>
         </div>
-        {!solvedGroups.length ? (
-          <div style={{ color: 'var(--text3)', fontSize: 13, padding: '18px 0' }}>{t('publicProfileNoSolvedProblems')}</div>
+        {submissionsHidden || !solvedGroups.length ? (
+          <div style={{ color: 'var(--text3)', fontSize: 13, padding: '18px 0' }}>{submissionsHidden ? t('publicProfileSubmissionListHidden') : t('publicProfileNoSolvedProblems')}</div>
         ) : (
           <div style={{ display: 'grid', gap: 14 }}>
             {solvedGroups.map(({ tier, problems }) => (
@@ -477,11 +496,13 @@ export default function PublicProfilePage() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
             <div>
               <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)' }}>{t('publicProfilePublicSubmissionsTitle')}</div>
-              <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 4 }}>{profile.submissionsPublic === false && !isSelf ? t('publicProfileSubmissionsPrivate') : t('publicProfileRecentSubmissions')}</div>
+              <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 4 }}>{submissionsHidden ? t('publicProfileSubmissionsPrivate') : t('publicProfileRecentSubmissions')}</div>
             </div>
           </div>
-          {profile.submissionsPublic === false && !isSelf ? (
+          {submissionsHidden ? (
             <div style={{ color: 'var(--text3)', fontSize: 13, padding: '18px 0' }}>{t('publicProfileSubmissionListHidden')}</div>
+          ) : submissionsLoadFailed ? (
+            <div style={{ color: 'var(--text3)', fontSize: 13, padding: '18px 0' }}>{t('publicProfileSubmissionsLoadFailed')}</div>
           ) : submissions.length === 0 ? (
             <div style={{ color: 'var(--text3)', fontSize: 13, padding: '18px 0' }}>{t('publicProfileNoSubmissions')}</div>
           ) : (
@@ -545,7 +566,7 @@ export default function PublicProfilePage() {
             <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', marginBottom: 8 }}>{t('publicProfileSummaryTitle')}</div>
             <div style={{ display: 'grid', gap: 10, fontSize: 13, color: 'var(--text2)' }}>
               <div>{t('publicProfileJoinedDate')}: <span style={{ color: 'var(--text)' }}>{profile.joinDate || '-'}</span></div>
-              <div>{t('publicProfileSolvedCount')}: <span style={{ color: 'var(--text)' }}>{profile.solvedCount || 0}</span></div>
+              <div>{t('publicProfileSolvedCount')}: <span style={{ color: 'var(--text)' }}>{submissionsHidden ? '-' : (profile.solvedCount || 0)}</span></div>
               <div>{t('publicProfileTotalLikes')}: <span style={{ color: 'var(--text)' }}>{profile.totalLikes || 0}</span></div>
               <div>{t('publicProfileReplyCount')}: <span style={{ color: 'var(--text)' }}>{profile.replyCount || 0}</span></div>
               <div>{t('publicProfileAcceptedAnswers')}: <span style={{ color: 'var(--text)' }}>{profile.acceptedAnswers || 0}</span></div>
@@ -556,7 +577,9 @@ export default function PublicProfilePage() {
         <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 22, padding: 20 }}>
           <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text)', marginBottom: 8 }}>{t('publicProfileActivityTitle')}</div>
           <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 18 }}>{t('publicProfileActivityDesc')}</div>
-          {activity.length === 0 ? (
+          {activityLoadFailed ? (
+            <div style={{ color: 'var(--text3)', fontSize: 13 }}>{t('publicProfileActivityLoadFailed')}</div>
+          ) : activity.length === 0 ? (
             <div style={{ color: 'var(--text3)', fontSize: 13 }}>{t('publicProfileNoActivity')}</div>
           ) : (
             <div style={{ display: 'grid', gap: 10 }}>

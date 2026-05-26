@@ -55,7 +55,7 @@ export function buildYearHeatmap(rows = [], today = new Date()) {
 }
 
 export function formatDuration(seconds, lang = 'en') {
-  if (!seconds || seconds <= 0) return lang === 'ko' ? '기록 없음' : 'No record';
+  if (!seconds || seconds <= 0) return lang === 'ko' ? '기록 없음' : 'No records';
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
   const secs = seconds % 60;

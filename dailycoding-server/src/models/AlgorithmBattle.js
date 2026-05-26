@@ -631,9 +631,19 @@ async function findProblemIds(count = 1, {
     usedIds.add(Number(row.id));
   }
 
-  // fallback if DB doesn't have enough problems
-  const fallback = result[0] || rows.find((row) => !normalizedTiers.length || normalizedTiers.includes(String(row.tier || '').toLowerCase()))?.id || 900001;
-  while (result.length < count) result.push(fallback);
+  if (result.length < count) {
+    const err = new Error('Not enough eligible battle problems match the selected conditions.');
+    err.status = 400;
+    err.details = {
+      requested: count,
+      available: result.length,
+      tiers: normalizedTiers,
+      bannedTiers: normalizedBannedTiers,
+      requiredTags: normalizedRequiredTags,
+      bannedTags: normalizedBannedTags,
+    };
+    throw err;
+  }
 
   return result;
 }

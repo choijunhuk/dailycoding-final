@@ -18,6 +18,7 @@ export default function TournamentPage() {
   const toast = useToast();
   const navigate = useNavigate();
   const { t, lang } = useLang();
+  const txt = (ko, en) => (lang === 'ko' ? ko : en);
 
   const statusLabel = {
     open: t('tournamentStatus_open'),
@@ -37,19 +38,26 @@ export default function TournamentPage() {
   const [selected, setSelected] = useState(null);
   const [form, setForm] = useState({ name: '', size: 8, isPrivate: false, joinPassword: '', minTier: '', maxTier: '', bannedTags: [], showAdvanced: false });
   const [busy, setBusy] = useState(false);
+  const [listLoading, setListLoading] = useState(true);
+  const [listLoadError, setListLoadError] = useState('');
   const [showGuide, setShowGuide] = useState(false);
   const [joinPasswordInput, setJoinPasswordInput] = useState('');
   const [showJoinPassword, setShowJoinPassword] = useState(false);
   const pollRef = useRef(null);
 
   const load = useCallback(async () => {
+    setListLoading(true);
+    setListLoadError('');
     try {
       const { data } = await api.get('/tournaments');
       setItems(Array.isArray(data) ? data : []);
     } catch {
       setItems([]);
+      setListLoadError(t('tournamentListLoadFailed'));
+    } finally {
+      setListLoading(false);
     }
-  }, []);
+  }, [t]);
 
   const refreshSelected = useCallback(async (id) => {
     if (!id) return;
@@ -78,13 +86,13 @@ export default function TournamentPage() {
       const { data } = await api.get(`/tournaments/${id}`);
       setSelected(data);
     } catch {
-      toast?.show('Failed to load tournament.', 'error');
+      toast?.show(txt('토너먼트를 불러오지 못했습니다.', 'Failed to load tournament.'), 'error');
     }
   };
 
   const create = async () => {
     if (!form.name.trim()) return;
-    if (!user) { toast?.show('Login required.', 'error'); return; }
+    if (!user) { toast?.show(t('tournamentLoginPrompt'), 'error'); return; }
     setBusy(true);
     try {
       const { data } = await api.post('/tournaments', {
@@ -99,15 +107,15 @@ export default function TournamentPage() {
       setItems((prev) => [data, ...prev]);
       setSelected(data);
       setForm({ name: '', size: 8, isPrivate: false, joinPassword: '', minTier: '', maxTier: '', bannedTags: [], showAdvanced: false });
-      toast?.show('Tournament created! Gather participants and start the bracket.', 'success');
+      toast?.show(txt('토너먼트를 만들었습니다. 참가자가 모이면 대진표를 시작하세요.', 'Tournament created. Gather participants and start the bracket.'), 'success');
     } catch (err) {
-      toast?.show(err.response?.data?.message || 'Failed to create tournament.', 'error');
+      toast?.show(err.response?.data?.message || txt('토너먼트 생성에 실패했습니다.', 'Failed to create tournament.'), 'error');
     }
     setBusy(false);
   };
 
   const join = async (id, password = null) => {
-    if (!user) { toast?.show('Login to join.', 'error'); return; }
+    if (!user) { toast?.show(txt('참가하려면 로그인하세요.', 'Log in to join.'), 'error'); return; }
     setBusy(true);
     try {
       const { data } = await api.post(`/tournaments/${id}/join`, { password });
@@ -115,9 +123,9 @@ export default function TournamentPage() {
       setShowJoinPassword(false);
       setJoinPasswordInput('');
       await load();
-      toast?.show('Joined! Watch for notifications when the bracket starts.', 'success');
+      toast?.show(txt('참가했습니다. 대진표가 시작되면 알림을 확인하세요.', 'Joined. Watch for notifications when the bracket starts.'), 'success');
     } catch (err) {
-      toast?.show(err.response?.data?.message || 'Failed to join.', 'error');
+      toast?.show(err.response?.data?.message || txt('참가에 실패했습니다.', 'Failed to join.'), 'error');
     }
     setBusy(false);
   };
@@ -140,23 +148,23 @@ export default function TournamentPage() {
       const { data } = await api.post(`/tournaments/${id}/start`);
       setSelected(data);
       await load();
-      toast?.show('Bracket created! Participants can now create battles for each match.', 'success');
+      toast?.show(txt('대진표를 만들었습니다. 참가자는 각 매치의 배틀을 시작할 수 있습니다.', 'Bracket created. Participants can now create battles for each match.'), 'success');
     } catch (err) {
-      toast?.show(err.response?.data?.message || 'Failed to start.', 'error');
+      toast?.show(err.response?.data?.message || txt('대진표 시작에 실패했습니다.', 'Failed to start.'), 'error');
     }
     setBusy(false);
   };
 
   const deleteTournament = async (id) => {
-    if (!window.confirm('Delete this tournament?')) return;
+    if (!window.confirm(txt('이 토너먼트를 삭제할까요?', 'Delete this tournament?'))) return;
     setBusy(true);
     try {
       await api.delete(`/tournaments/${id}`);
       setSelected(null);
       await load();
-      toast?.show('Tournament deleted.', 'success');
+      toast?.show(txt('토너먼트를 삭제했습니다.', 'Tournament deleted.'), 'success');
     } catch (err) {
-      toast?.show(err.response?.data?.message || 'Failed to delete.', 'error');
+      toast?.show(err.response?.data?.message || txt('토너먼트 삭제에 실패했습니다.', 'Failed to delete.'), 'error');
     }
     setBusy(false);
   };
@@ -166,10 +174,10 @@ export default function TournamentPage() {
     try {
       const { data } = await api.post(`/tournaments/${selected.id}/matches/${match.id}/battle`);
       setSelected(data.tournament);
-      toast?.show('Battle room created! Starts when the opponent joins.', 'success');
+      toast?.show(txt('배틀 방을 만들었습니다. 상대가 입장하면 시작됩니다.', 'Battle room created. Starts when the opponent joins.'), 'success');
       if (data.roomId) navigate(`/battle/watch/${data.roomId}`);
     } catch (err) {
-      toast?.show(err.response?.data?.message || 'Failed to create match battle.', 'error');
+      toast?.show(err.response?.data?.message || txt('매치 배틀 생성에 실패했습니다.', 'Failed to create match battle.'), 'error');
     }
     setBusy(false);
   };
@@ -338,7 +346,22 @@ export default function TournamentPage() {
       <div className="tournament-layout">
         <div className="tournament-list card">
           <h2>{t('tournamentListTitle')}</h2>
-          {items.length === 0 && (
+          {listLoading && (
+            <div className="tournament-empty">
+              <div style={{ fontSize: 28, marginBottom: 8 }}>⏳</div>
+              <div>{t('tournamentListLoading')}</div>
+            </div>
+          )}
+          {!listLoading && listLoadError && (
+            <div className="tournament-empty tournament-error-state">
+              <div style={{ fontSize: 28, marginBottom: 8 }}>⚠️</div>
+              <div>{listLoadError}</div>
+              <button type="button" className="btn btn-ghost btn-sm" onClick={load}>
+                {t('refresh')}
+              </button>
+            </div>
+          )}
+          {!listLoading && !listLoadError && items.length === 0 && (
             <div className="tournament-empty">
               <div style={{ fontSize: 28, marginBottom: 8 }}>🏟</div>
               <div>{t('tournamentEmpty')}</div>
@@ -346,7 +369,7 @@ export default function TournamentPage() {
                     : <div style={{ fontSize: 11, marginTop: 4 }}>{t('tournamentLoginPrompt')}</div>}
             </div>
           )}
-          {items.map((item) => {
+          {!listLoading && !listLoadError && items.map((item) => {
             const expiresAt = item.expiresAt ? new Date(item.expiresAt) : null;
             const minsLeft = expiresAt ? Math.max(0, Math.floor((expiresAt - Date.now()) / 60000)) : null;
             return (

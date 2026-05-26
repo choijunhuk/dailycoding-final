@@ -5,6 +5,7 @@ import { getJudgeLanguageOption } from '../../data/judgeLanguages.js';
 import JudgeTimer from './JudgeTimer.jsx';
 import { useLang } from '../../context/LangContext.jsx';
 import { pickLangText } from '../../utils/languageMode.js';
+import { copyText } from '../../utils/clipboard.js';
 
 const Editor = lazy(() => import('@monaco-editor/react'));
 
@@ -62,6 +63,7 @@ export default function CodeEditor({
 }) {
   const { lang: uiLang } = useLang();
   const txt = (ko, en) => pickLangText(uiLang, ko, en);
+  const editorTheme = editorSettings.theme || (isDark ? 'vs-dark' : 'vs');
 
   return (
     <>
@@ -92,9 +94,14 @@ export default function CodeEditor({
     <div style={{ flex: 1 }} />
     {/* ★ 코드 도구 */}
     <div className="editor-tool-group">
-      <button className="btn btn-ghost btn-sm" onClick={() => {
-        navigator.clipboard.writeText(isTroubleshootingProblem ? (activeTroubleshootingFile?.content || '') : code);
-        toast?.show(txt('📋 코드가 클립보드에 복사되었습니다.', '📋 Code copied to clipboard.'), 'info');
+      <button className="btn btn-ghost btn-sm" onClick={async () => {
+        const copied = await copyText(isTroubleshootingProblem ? (activeTroubleshootingFile?.content || '') : code);
+        toast?.show(
+          copied
+            ? txt('📋 코드가 클립보드에 복사되었습니다.', '📋 Code copied to clipboard.')
+            : txt('코드 복사에 실패했습니다. 브라우저 권한을 확인해주세요.', 'Failed to copy code. Check browser permissions.'),
+          copied ? 'info' : 'error',
+        );
       }} title={txt('코드 복사', 'Copy Code')}><Copy size={14} /> {txt('복사', 'Copy')}</button>
       {!isSpecialProblem && !isTroubleshootingProblem && <button className="btn btn-ghost btn-sm" onClick={saveSnippet} title={txt('현재 코드를 스니펫으로 저장', 'Save current code as snippet')}><FileCode2 size={14} /> {txt('스니펫 저장', 'Save Snippet')}</button>}
       {!isSpecialProblem && !isTroubleshootingProblem && <button className="btn btn-ghost btn-sm" onClick={clearSnippet} title={txt('저장된 스니펫 삭제', 'Delete saved snippet')}><Trash2 size={14} /> {txt('삭제', 'Delete')}</button>}
@@ -190,7 +197,7 @@ export default function CodeEditor({
               <Editor
                 height="100%"
                 language={inferMonacoLanguage(activeTroubleshootingFile.path)}
-                theme={isDark ? "vs-dark" : "vs"}
+                theme={editorTheme}
                 value={activeTroubleshootingFile.content}
                 onChange={(v) => updateTroubleshootingFile(activeTroubleshootingFile.path, v || '')}
                 options={{
@@ -283,7 +290,7 @@ export default function CodeEditor({
           ) : (
             <Editor
               height="100%" language={availableLangOptions.find(o => o.value === lang)?.monaco || getJudgeLanguageOption(lang)?.monaco || 'python'}
-              theme={isDark ? "vs-dark" : "vs"} value={code} onChange={v => setCode(v || '')}
+              theme={editorTheme} value={code} onChange={v => setCode(v || '')}
               options={{
                 fontSize: editorSettings.font_size || 14,
                 minimap: { enabled: !!editorSettings.minimap },

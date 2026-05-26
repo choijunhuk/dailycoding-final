@@ -131,8 +131,8 @@ router.get('/plans', (req, res) => {
   res.json({
     plans: [
       { id: 'free', name: 'Free', priceMonthly: 0, priceAnnual: 0, features: ['Full problem access', 'AI hints 5 times/day', 'Basic statistics'] },
-      { id: 'pro', name: 'Pro', priceMonthly: SUBSCRIPTION_PRICE.pro_monthly, priceAnnual: SUBSCRIPTION_PRICE.pro_yearly, features: ['Unlimited AI hints', 'Ad-free', 'Priority matching', 'Advanced analytics'] },
-      { id: 'team', name: 'Team', priceMonthly: TEAM_SUBSCRIPTION_PRICE.monthly, priceAnnual: TEAM_SUBSCRIPTION_PRICE.yearly, features: ['All Pro features', 'Team dashboard', 'Custom contests', 'API integration'] },
+      { id: 'pro', name: 'Pro', priceMonthly: SUBSCRIPTION_PRICE.pro_monthly, priceAnnual: SUBSCRIPTION_PRICE.pro_yearly, features: ['Unlimited AI hints', 'Ad-free solving screens', 'Profile reward showcase'] },
+      { id: 'team', name: 'Team', priceMonthly: TEAM_SUBSCRIPTION_PRICE.monthly, priceAnnual: TEAM_SUBSCRIPTION_PRICE.yearly, features: ['All Pro features', 'Team dashboard', 'Custom contests', 'Member management'] },
     ]
   });
 });

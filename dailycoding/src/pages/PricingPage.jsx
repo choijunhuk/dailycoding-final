@@ -18,6 +18,7 @@ export default function PricingPage() {
   const [openFaq, setOpenFaq] = useState(null);
   const plans = useMemo(() => getPlanList(lang), [lang]);
   const pricingFaq = useMemo(() => getPricingFaq(lang), [lang]);
+  const effectiveCurrentTier = user ? currentTier : null;
 
   const pricingSummary = useMemo(() => (
     plans.map((plan) => ({
@@ -30,12 +31,13 @@ export default function PricingPage() {
   ), [billingPeriod, plans, t]);
 
   const handleUpgrade = async (planId) => {
-    if (planId === 'free' || planId === currentTier) return;
+    if (planId === currentTier && user) return;
     if (!user) {
       sessionStorage.setItem('postLoginRedirect', '/pricing');
       navigate('/login', { state: { mode: 'register' } });
       return;
     }
+    if (planId === 'free') return;
     const result = await startCheckout(planId, billingPeriod);
     if (!result.ok) {
       toast?.show(result.reason || t('pricingCheckoutError'), 'error');
@@ -257,24 +259,24 @@ export default function PricingPage() {
 
                 <button
                   onClick={() => handleUpgrade(plan.id)}
-                  disabled={plan.id === currentTier || loadingPlan === plan.id}
+                  disabled={plan.id === effectiveCurrentTier || loadingPlan === plan.id}
                   style={{
                     width: '100%',
                     padding: '14px 0',
                     borderRadius: 16,
                     border: 'none',
-                    cursor: plan.id === currentTier ? 'default' : 'pointer',
+                    cursor: plan.id === effectiveCurrentTier ? 'default' : 'pointer',
                     fontSize: 15,
                     fontWeight: 900,
                     fontFamily: 'inherit',
-                    background: plan.id === currentTier ? 'var(--bg3)' : plan.highlight ? plan.accent : 'var(--bg3)',
-                    color: plan.id === currentTier ? 'var(--text3)' : plan.highlight ? '#0d1117' : plan.accent,
+                    background: plan.id === effectiveCurrentTier ? 'var(--bg3)' : plan.highlight ? plan.accent : 'var(--bg3)',
+                    color: plan.id === effectiveCurrentTier ? 'var(--text3)' : plan.highlight ? '#0d1117' : plan.accent,
                     boxShadow: plan.highlight ? `0 10px 24px ${plan.accent}35` : 'none',
                   }}
                 >
                   {loadingPlan === plan.id
                     ? t('pricingLoadingPlan')
-                    : plan.id === currentTier
+                    : plan.id === effectiveCurrentTier
                       ? t('pricingCurrentPlan')
                       : plan.id === 'free'
                         ? t('pricingStartFree')

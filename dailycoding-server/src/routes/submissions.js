@@ -213,7 +213,7 @@ router.post('/', auth, requireVerified, async (req, res) => {
       if (evaluation.correct && !alreadySolved) {
         await Promise.all([
           Problem.incrementSolved(Number(problemId)),
-          Notification.create(req.user.id, `🧩 "${prob.title}" Correct! (Special Type)`, 'submissions'),
+          Notification.create(req.user.id, `🧩 "${prob.title}" Correct! (Special Type)`, 'submissions', { type: 'reward' }),
           User.onSolve(req.user.id, prob),
         ]);
         redis.clearPrefix('ranking:').catch(() => {});
@@ -450,7 +450,7 @@ router.get('/judge-status', auth, async (req, res) => {
 router.post('/:submissionId/reviews', auth, requireVerified, async (req, res) => {
   try {
     const review = await CodeReview.createReview(Number(req.params.submissionId), req.user.id);
-    await Notification.create(review.authorId, 'A new review has been posted on your code.', `/reviews/${review.id}`);
+    await Notification.create(review.authorId, 'A new review has been posted on your code.', `/reviews/${review.id}`, { type: 'review' });
     res.status(201).json(review);
   } catch (err) {
     const status = err?.status || 500;

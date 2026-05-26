@@ -6,6 +6,7 @@ import api from '../api';
 import { useToast } from '../context/ToastContext';
 import { useLang } from '../context/LangContext.jsx';
 import { pickLangText } from '../utils/languageMode.js';
+import { copyText } from '../utils/clipboard.js';
 import ProfileAvatar from '../components/ProfileAvatar';
 
 function fmtDate(value) {
@@ -107,9 +108,9 @@ export default function TeamDashboard() {
       setInviteLink(link);
       setInviteExpiresAt(data.expiresAt || null);
       setInviteCopied(false);
-      await navigator.clipboard.writeText(link);
-      setInviteCopied(true);
-      toast.show(t('teamInviteCopied'), 'success');
+      const copied = await copyText(link);
+      setInviteCopied(copied);
+      toast.show(copied ? t('teamInviteCopied') : t('teamInviteCreated'), copied ? 'success' : 'info');
     } catch (err) {
       toast.show(err.response?.data?.message || t('teamInviteFailed'), 'error');
     } finally {
@@ -120,9 +121,9 @@ export default function TeamDashboard() {
   const copyInviteLink = async () => {
     if (!inviteLink) return;
     try {
-      await navigator.clipboard.writeText(inviteLink);
-      setInviteCopied(true);
-      toast.show(t('copied'), 'success');
+      const copied = await copyText(inviteLink);
+      setInviteCopied(copied);
+      toast.show(copied ? t('copied') : t('copyFailed'), copied ? 'success' : 'error');
     } catch {
       toast.show(t('copyFailed'), 'error');
     }

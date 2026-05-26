@@ -124,7 +124,7 @@ router.post('/', auth, adminOnly, validateBody(contestSchema), async (req, res) 
       rewardRules: normalizedRules,
     });
     const userIds = await loadContestNotificationUserIds();
-    await Notification.broadcast(userIds, `🏆 New contest "${name}" is now available!`, 'contest');
+    await Notification.broadcast(userIds, `🏆 New contest "${name}" is now available!`, 'contest', { type: 'contest' });
     res.status(201).json(c);
   } catch (err) { console.error('[contests/create]', err.message); return internalError(res); }
 });
@@ -134,7 +134,7 @@ router.patch('/:id/start', auth, adminOnly, async (req, res) => {
     const c = await Contest.updateStatus(Number(req.params.id), 'running');
     if (!c) return errorResponse(res, 404, 'NOT_FOUND', 'Contest not found.');
     const userIds = await loadContestNotificationUserIds();
-    await Notification.broadcast(userIds, `🔴 Contest "${c.name}" has started!`, 'contest');
+    await Notification.broadcast(userIds, `🔴 Contest "${c.name}" has started!`, 'contest', { type: 'contest' });
     res.json(c);
   } catch (err) { console.error('[contests/start]', err.message); return internalError(res); }
 });
@@ -150,7 +150,8 @@ router.patch('/:id/end', auth, adminOnly, async (req, res) => {
       await Notification.create(
         grant.userId,
         `🏆 Contest "${c.name}" rank #${grant.rankPosition} reward (${grant.rewardCode}) has been granted.`,
-        'contest'
+        'contest',
+        { type: 'reward' }
       );
     }
 
@@ -209,7 +210,7 @@ router.post('/:id/join', auth, requireVerified, async (req, res) => {
       return res.json({ status: 'pending', message: 'Your join request has been submitted. Please wait for admin approval.' });
     } else {
       await Contest.join(c.id, req.user.id);
-      await Notification.create(req.user.id, `✅ Successfully joined "${c.name}"!`, 'contest');
+      await Notification.create(req.user.id, `✅ Successfully joined "${c.name}"!`, 'contest', { type: 'contest' });
       return res.json({ status: 'joined', message: 'Joined successfully.' });
     }
   } catch (err) { console.error('[contests/join]', err.message); return internalError(res); }

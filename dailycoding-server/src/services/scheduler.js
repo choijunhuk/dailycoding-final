@@ -30,7 +30,8 @@ async function endExpiredContests() {
         await Notification.create(
           grant.userId,
           `🏁 "${updated?.name || contest.name}" 대회가 자동 종료됐고 ${grant.rankPosition}위 보상이 지급됐습니다.`,
-          'contest'
+          'contest',
+          { type: 'reward' }
         );
       }
 

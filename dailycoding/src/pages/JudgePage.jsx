@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { Link, useParams, useLocation, useNavigate } from 'react-router-dom';
 import confetti from 'canvas-confetti';
-import { PROBLEMS, TIERS } from '../data/problems';
+import { TIERS } from '../data/problems';
 import { getEffectiveJudgeLanguage, getJudgeLanguageOption, getJudgeLanguageOptionsForSupported } from '../data/judgeLanguages.js';
 import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
@@ -18,12 +18,13 @@ import {
   parseSpecialConfig,
   RESULT_INFO_COLORS,
 } from './judgePageUtils.js';
-import { JUDGE_AD_SLOT } from './battlePageUtils.js';
+import { JUDGE_PRO_BENEFITS_SLOT } from './battlePageUtils.js';
 import ProblemStatement from './judge/ProblemStatement.jsx';
 import CodeEditor from './judge/CodeEditor.jsx';
 import TestResultPanel from './judge/TestResultPanel.jsx';
 import { BattleAdSlot } from './battleProblemViews.jsx';
 import { useSubscriptionStatus } from '../hooks/useSubscriptionStatus.js';
+import { copyText } from '../utils/clipboard.js';
 import './JudgePage.css';
 
 const TROUBLESHOOTING_TYPES = new Set(['troubleshooting', 'performance-fix', 'refactor-fix']);
@@ -55,22 +56,6 @@ function formatAcceptanceStat(problem, t) {
 }
 
 
-async function copyText(text) {
-  if (navigator.clipboard?.writeText && window.isSecureContext) {
-    await navigator.clipboard.writeText(text)
-    return
-  }
-  const textarea = document.createElement('textarea')
-  textarea.value = text
-  textarea.setAttribute('readonly', 'true')
-  textarea.style.position = 'fixed'
-  textarea.style.opacity = '0'
-  document.body.appendChild(textarea)
-  textarea.select()
-  document.execCommand('copy')
-  document.body.removeChild(textarea)
-}
-
 export default function JudgePage() {
   const { id } = useParams();
   const location = useLocation();
@@ -92,7 +77,7 @@ export default function JudgePage() {
   };
   const { solved, submissions, addSubmission, problems: appProblems, bookmarks, toggleBookmark, loadProblems, loadSubmissions } = useApp();
   const toast = useToast();
-  const allProblems    = appProblems.length > 0 ? appProblems : PROBLEMS;
+  const allProblems    = appProblems;
   const initProblem    = location.state?.problem || allProblems.find(p => String(p.id) === id) || null;
   const gameMode       = location.state?.gameMode || null;
   const ghostChallenge = location.state?.ghostChallenge || null;
@@ -280,6 +265,7 @@ export default function JudgePage() {
 
   // Auto-save code
   useEffect(() => {
+    if (editorSettings.autoSave === false) return undefined;
     if (code && problem?.id) {
       const key = getDraftStorageKey(problem.id, lang);
       const t = setTimeout(() => {
@@ -287,7 +273,8 @@ export default function JudgePage() {
       }, 800);
       return () => clearTimeout(t);
     }
-  }, [code, problem?.id, lang]);
+    return undefined;
+  }, [code, editorSettings.autoSave, problem?.id, lang]);
 
   // Reset timer + load note on problem change
   useEffect(() => {
@@ -504,10 +491,16 @@ export default function JudgePage() {
       const shareUrl = `${window.location.origin}/share/${data.slug}`
       if (navigator.share && window.matchMedia?.('(max-width: 768px)')?.matches) {
         await navigator.share({ title: `${problem.title} Submission Share`, text: `${problem.title} Submission Result`, url: shareUrl })
+        toast?.show(uiTxt('공유 링크를 열었습니다.', 'Share sheet opened.'), 'success')
       } else {
-        await copyText(shareUrl)
+        const copied = await copyText(shareUrl)
+        toast?.show(
+          copied
+            ? uiTxt('공유 링크를 복사했습니다.', 'Share link copied.')
+            : uiTxt('공유 링크가 생성됐지만 복사하지 못했습니다. 주소를 직접 복사해주세요.', 'Share link was created, but could not be copied. Please copy the address manually.'),
+          copied ? 'success' : 'warning'
+        )
       }
-      toast?.show(uiTxt('공유 링크를 복사했습니다.', 'Share link copied.'), 'success')
     } catch (err) {
       if (err?.name === 'AbortError') return
       toast?.show(uiLang === 'ko' ? '공유 링크 생성에 실패했습니다.' : (err?.response?.data?.message || 'Failed to create share link.'), 'error')
@@ -1185,7 +1178,7 @@ export default function JudgePage() {
       />
 
         {/* ★ 광고 슬롯 (무료 플랜) */}
-        {isFreePlan && <BattleAdSlot slot={JUDGE_AD_SLOT} />}
+        {isFreePlan && <BattleAdSlot slot={JUDGE_PRO_BENEFITS_SLOT} />}
 
         {/* Bottom panel */}
         {isTroubleshootingProblem && (

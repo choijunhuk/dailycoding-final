@@ -7,7 +7,6 @@ import { TIER_THRESHOLDS } from '../data/constants.js'
 import { PLAN_META } from '../data/pricingPlans.js'
 import api from '../api.js'
 import { getDateLocale, pickLangText } from '../utils/languageMode.js'
-import { SocialIcon } from '../components/icons/BrandIcon.jsx'
 import { getTierLabel } from '../utils/labelMaps.js'
 
 const TIERS = [
@@ -23,13 +22,6 @@ const TIERS = [
   { name: 'Challenger',  label: 'Challenger',  color: '#f1c40f', range: 'Top 3 players' },
 ]
 
-const STATS = [
-  { value: 5000, suffix: '+', label: '풀린 문제 수' },
-  { value: 1200, suffix: '+', label: '멤버 수' },
-  { value: 98, suffix: '%', label: '정확도' },
-  { value: 5, suffix: '', label: '배틀 모드' },
-]
-
 const CODE_LINES = [
   'function solve(input) {',
   '  const values = input.trim().split("\\n")',
@@ -38,8 +30,9 @@ const CODE_LINES = [
   'console.log(solve("1\\n2\\n3")) // 6',
 ]
 
-function useCountUp(enabled) {
-  const [values, setValues] = useState(STATS.map(() => 0))
+function useCountUp(targets, enabled) {
+  const [values, setValues] = useState(targets.map(() => 0))
+  const targetsKey = targets.join('|')
 
   useEffect(() => {
     if (!enabled) return undefined
@@ -49,13 +42,13 @@ function useCountUp(enabled) {
     const tick = (now) => {
       const progress = Math.min(1, (now - startedAt) / 1000)
       const eased = 1 - Math.pow(1 - progress, 3)
-      setValues(STATS.map((item) => Math.round(item.value * eased)))
+      setValues(targets.map((value) => Math.round(value * eased)))
       if (progress < 1) frame = window.requestAnimationFrame(tick)
     }
 
     frame = window.requestAnimationFrame(tick)
     return () => window.cancelAnimationFrame(frame)
-  }, [enabled])
+  }, [enabled, targetsKey])
 
   return values
 }
@@ -69,7 +62,31 @@ export default function LandingPage({ onLogin, onSignup, onPricing }) {
   const [statsVisible, setStatsVisible] = useState(false)
   const [typedText, setTypedText] = useState('')
   const [activeBattleCount, setActiveBattleCount] = useState(null)
-  const countValues = useCountUp(statsVisible)
+  const [siteStats, setSiteStats] = useState(null)
+  const openAfterLogin = (path) => {
+    sessionStorage.setItem('postLoginRedirect', path)
+    onLogin?.()
+  }
+
+  const footerGroups = [
+    {
+      title: txt('서비스', 'Service'),
+      links: [
+        { label: txt('문제', 'Problems'), action: () => openAfterLogin('/problems') },
+        { label: txt('랭킹', 'Ranking'), action: () => openAfterLogin('/ranking') },
+        { label: txt('요금제', 'Pricing'), action: onPricing },
+        { label: txt('커뮤니티', 'Community'), action: () => openAfterLogin('/community') },
+      ],
+    },
+    {
+      title: txt('지원', 'Support'),
+      links: [
+        { label: txt('문의', 'Contact'), href: 'mailto:choijunhuk2007@gmail.com' },
+        { label: txt('이용약관', 'Terms'), href: '/terms' },
+        { label: txt('개인정보처리방침', 'Privacy Policy'), href: '/privacy' },
+      ],
+    },
+  ]
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -106,6 +123,27 @@ export default function LandingPage({ onLogin, onSignup, onPricing }) {
   }, [])
 
   useEffect(() => {
+    let cancelled = false
+    api.get('/stats')
+      .then(({ data }) => {
+        if (!cancelled) {
+          setSiteStats({
+            users: Number(data?.users || 0),
+            problems: Number(data?.problems || 0),
+            submissions: Number(data?.submissions || 0),
+            correct: Number(data?.correct || 0),
+          })
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setSiteStats(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
     let lineIndex = 0
     let charIndex = 0
     let timer = 0
@@ -135,12 +173,14 @@ export default function LandingPage({ onLogin, onSignup, onPricing }) {
   }, [])
 
   const tierRows = useMemo(() => TIERS, [])
+  const statsLoaded = Boolean(siteStats)
   const localizedStats = [
-    { value: 5000, suffix: '+', label: txt('풀린 문제 수', 'Problems Solved') },
-    { value: 1200, suffix: '+', label: txt('멤버 수', 'Members') },
-    { value: 98, suffix: '%', label: txt('정확도', 'Accuracy') },
-    { value: 5, suffix: '', label: txt('배틀 모드', 'Battle Modes') },
+    { value: siteStats?.correct ?? 0, loaded: statsLoaded, suffix: '', label: txt('정답 제출', 'Accepted Submissions') },
+    { value: siteStats?.users ?? 0, loaded: statsLoaded, suffix: '', label: txt('인증 멤버', 'Verified Members') },
+    { value: siteStats?.submissions ? Math.round((siteStats.correct / Math.max(1, siteStats.submissions)) * 100) : 0, loaded: statsLoaded, suffix: '%', label: txt('정답률', 'Acceptance Rate') },
+    { value: siteStats?.problems ?? 0, loaded: statsLoaded, suffix: '', label: txt('공개 문제', 'Public Problems') },
   ]
+  const countValues = useCountUp(localizedStats.map((item) => item.value), statsVisible)
   const localizedSteps = [
     { id: 1, title: txt('회원가입', 'Sign Up'), desc: txt('30초만에 계정을 만들고 바로 문제를 풀기 시작하세요.', 'Create an account in 30 seconds and start solving immediately.') },
     { id: 2, title: txt('데일리 루틴 실행', 'Run Your Daily Routine'), desc: txt('추천 문제, 오답 복습, 데일리 미션을 한 화면에서 처리하세요.', 'Handle recommended problems, wrong-answer review, and daily missions on one screen.') },
@@ -181,10 +221,10 @@ export default function LandingPage({ onLogin, onSignup, onPricing }) {
       tag: txt('보상', 'Rewards'),
     },
   ]
-  const localizedTestimonials = [
-    { name: 'KimDev', tier: 'gold', text: txt('하루 한 문제씩 꾸준히 풀었더니 실력이 눈에 띄게 달라졌어요.', 'Solving one problem a day consistently made my improvement obvious.'), company: txt('카카오 인턴', 'Kakao Intern') },
-    { name: 'LeeCoding', tier: 'platinum', text: txt('어떤 오답을 다시 풀어야 할지 바로 보여줘서 복습 목록이 쌓이지 않아요.', 'It shows exactly which wrong answers to retry, so my review queue does not pile up.'), company: txt('스타트업 재직', 'Startup Engineer') },
-    { name: 'ParkAlgo', tier: 'silver', text: txt('배틀보다 데일리 루틴 추적이 더 동기부여가 돼요. 계속 돌아오게 됩니다.', 'Daily routine tracking motivates me even more than battles. It keeps me coming back.'), company: txt('대학원생', 'Graduate Student') },
+  const localizedScenarios = [
+    { name: txt('데일리 루틴형', 'Daily Routine'), tier: 'gold', text: txt('하루 한 문제, 오답 복구, 주간 챌린지를 한 흐름으로 이어갑니다.', 'Connect one daily problem, wrong-answer recovery, and weekly challenges into one flow.'), company: txt('꾸준함 중심', 'Consistency-first') },
+    { name: txt('복습 집중형', 'Recovery Focus'), tier: 'platinum', text: txt('틀린 제출을 다시 찾지 않고, 복습 후보를 바로 열어 재도전합니다.', 'Open retry candidates directly instead of digging through old wrong submissions.'), company: txt('오답 관리', 'Wrong-answer review') },
+    { name: txt('배틀 훈련형', 'Battle Training'), tier: 'silver', text: txt('실시간 배틀과 게임 허브로 시간 압박 속 풀이 감각을 점검합니다.', 'Use live battles and the game hub to practice under time pressure.'), company: txt('실전 감각', 'Match practice') },
   ]
 
   return (
@@ -241,7 +281,7 @@ export default function LandingPage({ onLogin, onSignup, onPricing }) {
                 {txt('무료 시작', 'Start Free')} <ArrowRight size={16} />
               </button>
               <button className="btn btn-ghost" onClick={() => document.getElementById('landing-demo')?.scrollIntoView({ behavior: 'smooth' })} style={{ padding: '14px 22px', fontSize: 15 }}>
-                {txt('데모 보기', 'View Demo')} <PlayCircle size={16} />
+                {txt('미리보기', 'Preview')} <PlayCircle size={16} />
               </button>
             </div>
             <div style={{display:'flex',gap:10,flexWrap:'wrap',marginBottom:24}}>
@@ -267,26 +307,26 @@ export default function LandingPage({ onLogin, onSignup, onPricing }) {
             <div className="card card-hover glow-blue" style={{ padding: 18, background: 'rgba(13,17,23,.75)', border: '1px solid rgba(121,192,255,.18)' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
                 <div>
-                  <div style={{ fontSize: 11, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: 1 }}>{txt('실시간 배틀 미리보기', 'Real-time Battle Preview')}</div>
-                  <div style={{ fontSize: 15, fontWeight: 800, marginTop: 4 }}>{txt('HP 100 · 아이템 배틀', 'HP 100 · Item Battle')}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: 1 }}>{txt('샘플 배틀 화면', 'Sample Battle Preview')}</div>
+                  <div style={{ fontSize: 15, fontWeight: 800, marginTop: 4 }}>{txt('실제 배틀 모드 예시', 'Example Battle Mode')}</div>
                 </div>
-                <span className="badge badge-blue">LIVE</span>
+                <span className="badge badge-blue">{txt('샘플', 'SAMPLE')}</span>
               </div>
               <div style={{ background: '#0b0f14', borderRadius: 16, border: '1px solid rgba(121,192,255,.15)', overflow: 'hidden' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderBottom: '1px solid rgba(121,192,255,.1)' }}>
                   <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#f85149' }} />
                   <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#e3b341' }} />
                   <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#56d364' }} />
-                  <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--text3)' }}>sum-problem.py</span>
+                  <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--text3)' }}>{txt('샘플 풀이.py', 'sample-solve.py')}</span>
                 </div>
                 <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,padding:'12px 14px',borderBottom:'1px solid rgba(121,192,255,.1)'}}>
                   <div style={{padding:10,borderRadius:12,background:'rgba(63,185,80,.08)',border:'1px solid rgba(63,185,80,.18)'}}>
                     <div style={{fontSize:11,color:'var(--text3)'}}>{txt('나', 'Me')}</div>
-                    <div style={{fontWeight:900,color:'#56d364'}}>HP 72 · 320 pts</div>
+                    <div style={{fontWeight:900,color:'#56d364'}}>{txt('샘플 HP 72 · 320 pts', 'Sample HP 72 · 320 pts')}</div>
                   </div>
                   <div style={{padding:10,borderRadius:12,background:'rgba(248,81,73,.08)',border:'1px solid rgba(248,81,73,.18)'}}>
                     <div style={{fontSize:11,color:'var(--text3)'}}>{txt('상대방', 'Opponent')}</div>
-                    <div style={{fontWeight:900,color:'#f85149'}}>HP 41 · 280 pts</div>
+                    <div style={{fontWeight:900,color:'#f85149'}}>{txt('샘플 HP 41 · 280 pts', 'Sample HP 41 · 280 pts')}</div>
                   </div>
                 </div>
                 <pre style={{ margin: 0, minHeight: 220, padding: '18px 18px 22px', color: '#c9d1d9', fontSize: 13, lineHeight: 1.8, fontFamily: "'Space Mono', monospace", whiteSpace: 'pre-wrap' }}>
@@ -297,11 +337,11 @@ export default function LandingPage({ onLogin, onSignup, onPricing }) {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 10, marginTop: 14 }}>
                 <div style={{ padding: '12px 14px', borderRadius: 14, background: 'rgba(86,211,100,.08)', border: '1px solid rgba(86,211,100,.18)' }}>
                   <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 6 }}>{txt('정답', 'Correct')}</div>
-                  <div style={{ fontSize: 13, fontWeight: 700 }}>⚔️ {txt('상대 HP -28', 'Opponent HP -28')}</div>
+                  <div style={{ fontSize: 13, fontWeight: 700 }}>⚔️ {txt('예시 타격 · 상대 HP -28', 'Example hit · Opponent HP -28')}</div>
                 </div>
                 <div style={{ padding: '12px 14px', borderRadius: 14, background: 'rgba(121,192,255,.08)', border: '1px solid rgba(121,192,255,.18)' }}>
                   <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 6 }}>{txt('영토', 'Territory')}</div>
-                  <div style={{ fontSize: 13, fontWeight: 700 }}>{txt('5문제 점령', '5 problems captured')}</div>
+                  <div style={{ fontSize: 13, fontWeight: 700 }}>{txt('예시 영토 · 5문제 점령', 'Example territory · 5 problems captured')}</div>
                 </div>
               </div>
             </div>
@@ -314,7 +354,7 @@ export default function LandingPage({ onLogin, onSignup, onPricing }) {
           {localizedStats.map((item, index) => (
             <div key={item.label} className={`animate-fade-in-up animate-delay-${Math.min(index + 1, 3)}`} style={{ textAlign: 'center' }}>
               <div style={{ fontSize: 28, fontWeight: 900, fontFamily: "'Space Mono', monospace", color: 'var(--blue)' }}>
-                {countValues[index].toLocaleString(dateLocale)}{item.suffix}
+                {item.loaded ? `${countValues[index].toLocaleString(dateLocale)}${item.suffix}` : '-'}
               </div>
               <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 4 }}>{item.label}</div>
             </div>
@@ -356,18 +396,18 @@ export default function LandingPage({ onLogin, onSignup, onPricing }) {
 
       <section style={{ maxWidth: 1120, margin: '0 auto', padding: '80px 24px 24px' }}>
         <div style={{ textAlign: 'center', marginBottom: 44 }}>
-          <div style={{ fontSize: 12, color: 'var(--blue)', fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 10 }}>{txt('사용자 후기', 'Testimonials')}</div>
-          <h2 style={{ fontSize: 'clamp(28px, 5vw, 42px)', fontWeight: 900, marginBottom: 10 }}>{txt('성장에 진심인 개발자들이 먼저 선택했습니다', 'Developers serious about growth chose it first')}</h2>
+          <div style={{ fontSize: 12, color: 'var(--blue)', fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase', marginBottom: 10 }}>{txt('사용 시나리오', 'Use Cases')}</div>
+          <h2 style={{ fontSize: 'clamp(28px, 5vw, 42px)', fontWeight: 900, marginBottom: 10 }}>{txt('학습 방식에 맞게 루틴을 잡습니다', 'Shape the routine around how you learn')}</h2>
           <p style={{ maxWidth: 620, margin: '0 auto', color: 'var(--text2)', lineHeight: 1.7 }}>{txt('데일리코딩은 학습, 피드백, 경쟁을 하나의 흐름으로 엮어 진짜 실력 향상에 집중할 수 있게 합니다.', 'DailyCoding ties learning, feedback, and competition into one flow so you can focus on real improvement.')}</p>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 18 }}>
-          {localizedTestimonials.map((item, index) => (
+          {localizedScenarios.map((item, index) => (
             <div key={item.name} className={`card card-hover animate-fade-in-up animate-delay-${Math.min(index + 1, 3)}`} style={{ padding: '22px 20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
                 <div style={{ fontWeight: 800 }}>{item.name}</div>
                 <span style={{ padding: '4px 8px', borderRadius: 999, background: 'var(--bg3)', color: 'var(--blue)', fontSize: 11, fontWeight: 700 }}>{getTierLabel(item.tier, lang)}</span>
               </div>
-              <div style={{ color: 'var(--text2)', lineHeight: 1.7, fontSize: 14, minHeight: 72 }}>"{item.text}"</div>
+              <div style={{ color: 'var(--text2)', lineHeight: 1.7, fontSize: 14, minHeight: 72 }}>{item.text}</div>
               <div style={{ marginTop: 18, fontSize: 12, color: 'var(--text3)' }}>{item.company}</div>
             </div>
           ))}
@@ -426,19 +466,20 @@ export default function LandingPage({ onLogin, onSignup, onPricing }) {
 
       <footer style={{ background: 'var(--bg2)', borderTop: '1px solid var(--border)' }}>
         <div style={{ maxWidth: 1120, margin: '0 auto', padding: '36px 24px 24px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 24 }}>
-          {[
-            { title: txt('서비스', 'Service'), links: [txt('문제', 'Problems'), txt('랭킹', 'Ranking'), txt('요금제', 'Pricing'), txt('커뮤니티', 'Community')], pricingLabel: txt('요금제', 'Pricing') },
-            { title: txt('리소스', 'Resources'), links: [txt('도움말', 'Help'), txt('문의', 'Contact'), txt('API 상태', 'API Status'), txt('가이드', 'Guide')], pricingLabel: txt('요금제', 'Pricing') },
-            { title: txt('회사', 'Company'), links: [txt('이용약관', 'Terms'), txt('개인정보처리방침', 'Privacy Policy'), txt('학생 할인', 'Student Discount'), txt('채용', 'Careers')], pricingLabel: txt('요금제', 'Pricing') },
-            { title: txt('소셜', 'Social'), links: ['GitHub', 'Discord', txt('블로그', 'Blog'), 'Instagram'], pricingLabel: txt('요금제', 'Pricing'), social: true },
-          ].map((group) => (
+          {footerGroups.map((group) => (
             <div key={group.title}>
               <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 12 }}>{group.title}</div>
               <div style={{ display: 'grid', gap: 8 }}>
                 {group.links.map((link) => (
-                  <button key={link} onClick={link === group.pricingLabel ? onPricing : undefined} style={{ background: 'none', border: 'none', padding: 0, textAlign: 'left', color: 'var(--text2)', cursor: link === group.pricingLabel ? 'pointer' : 'default', fontSize: 13 }}>
-                    {group.social ? <span style={{ display:'inline-flex', alignItems:'center', gap:6 }}><SocialIcon name={link} size={14} />{link}</span> : link}
-                  </button>
+                  link.href ? (
+                    <a key={link.label} href={link.href} style={{ color: 'var(--text2)', textDecoration: 'none', fontSize: 13 }}>
+                      {link.label}
+                    </a>
+                  ) : (
+                    <button key={link.label} onClick={link.action} style={{ background: 'none', border: 'none', padding: 0, textAlign: 'left', color: 'var(--text2)', cursor: 'pointer', fontSize: 13 }}>
+                      {link.label}
+                    </button>
+                  )
                 ))}
               </div>
             </div>

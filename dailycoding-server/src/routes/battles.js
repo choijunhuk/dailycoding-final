@@ -9,10 +9,10 @@ import { normalizeJudgeLanguage } from '../services/judge.js';
 import { getCachedJudgeRuntime } from '../services/judgeRuntimeCache.js';
 import { executeSubmissionFlow } from '../services/submissionExecution.js';
 import { completeMission } from '../services/missionService.js';
-import { pushToUser } from '../services/pushNotifier.js';
 import { recordPromotionLoss } from '../services/promotionService.js';
 import { grantBattleWinBadges } from '../services/badgeService.js';
 import { evaluateBugFixAnswer, evaluateFillBlankAnswer } from '../services/battleAnswerEvaluation.js';
+import { Notification } from '../models/Notification.js';
 import redis from '../config/redis.js';
 import { query, run } from '../config/mysql.js';
 
@@ -551,11 +551,12 @@ router.post('/:id/rematch', async (req, res) => {
         from: req.user.id,
       });
     }
-    pushToUser(invited.id, {
-      title: 'DailyCoding Rematch Request',
-      body: `${inviter.username} has challenged you to a rematch.`,
-      url: `/battle?room=${room.id}`,
-    }).catch(() => {});
+    Notification.create(
+      invited.id,
+      `${inviter.username} has challenged you to a rematch.`,
+      `/battle?room=${room.id}`,
+      { type: 'battle' }
+    ).catch(() => {});
 
     res.json({
       roomId: room.id,
@@ -603,11 +604,12 @@ router.post('/invite', async (req, res) => {
       { id: invited.id, username: invited.username },
       { preferredLanguage: normalizedLanguage, battleMode: normalizedBattleMode }
     );
-    pushToUser(invited.id, {
-      title: 'DailyCoding Battle Invitation',
-      body: `${inviter.username} has challenged you to a battle.`,
-      url: `/battle?room=${room.id}`,
-    }).catch(() => {});
+    Notification.create(
+      invited.id,
+      `${inviter.username} has challenged you to a battle.`,
+      `/battle?room=${room.id}`,
+      { type: 'battle' }
+    ).catch(() => {});
     res.json({ roomId: room.id });
   } catch (err) {
     return internalError(res);

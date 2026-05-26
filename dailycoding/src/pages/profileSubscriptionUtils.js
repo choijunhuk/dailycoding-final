@@ -31,8 +31,8 @@ export function getProfileUpgradePlans(lang = 'ko') {
       features: [
         pickLangText(lang, '무제한 AI 힌트', 'Unlimited AI Hints'),
         pickLangText(lang, '광고 제거', 'Ad-free'),
-        pickLangText(lang, '우선 배틀 매칭', 'Priority Battle Matching'),
-        pickLangText(lang, '상세 분석 리포트', 'Detailed Analysis Reports'),
+        pickLangText(lang, '프로필 보상 전시', 'Profile reward showcase'),
+        pickLangText(lang, 'AI 코드 리뷰 확장', 'Expanded AI code review'),
       ],
     },
     {
@@ -44,7 +44,7 @@ export function getProfileUpgradePlans(lang = 'ko') {
         pickLangText(lang, 'Pro 모든 기능', 'Everything in Pro'),
         pickLangText(lang, '팀 대시보드', 'Team Dashboard'),
         pickLangText(lang, '커스텀 대회', 'Custom Contests'),
-        pickLangText(lang, 'API 접근', 'API Access'),
+        pickLangText(lang, '멤버 및 권한 관리', 'Member and role management'),
       ],
     },
   ];

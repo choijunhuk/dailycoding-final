@@ -101,16 +101,23 @@ export default function AdminPage() {
   const [flaggedSubmissions, setFlaggedSubmissions] = useState([]);
   const [flaggedLoading, setFlaggedLoading] = useState(false);
 
-  useEffect(() => { api.get('/problems').then(r=>setProblems(r.data)).catch(()=>{}); }, []);
   useEffect(() => {
-    if (activeTab==='users') api.get('/auth/users').then(r=>setUsers(Array.isArray(r.data?.users) ? r.data.users : [])).catch(()=>{});
-    if (activeTab==='contests') api.get('/contests').then(r=>setContests(r.data)).catch(()=>{});
-    if (activeTab==='battle') api.get('/admin/battle-settings').then(r=>setBattleSettings(r.data)).catch(()=>{});
+    api.get('/problems')
+      .then(r=>setProblems(r.data))
+      .catch(()=>toast?.show(txt('문제 목록을 불러오지 못했습니다.', 'Failed to load problems.'), 'error'));
+  }, []);
+  useEffect(() => {
+    if (activeTab==='users') api.get('/auth/users').then(r=>setUsers(Array.isArray(r.data?.users) ? r.data.users : [])).catch(()=>toast?.show(txt('사용자 목록을 불러오지 못했습니다.', 'Failed to load users.'), 'error'));
+    if (activeTab==='contests') api.get('/contests').then(r=>setContests(r.data)).catch(()=>toast?.show(txt('대회 목록을 불러오지 못했습니다.', 'Failed to load contests.'), 'error'));
+    if (activeTab==='battle') api.get('/admin/battle-settings').then(r=>setBattleSettings(r.data)).catch(()=>toast?.show(txt('배틀 설정을 불러오지 못했습니다.', 'Failed to load battle settings.'), 'error'));
     if (activeTab==='flagged') {
       setFlaggedLoading(true);
       api.get('/admin/flagged-submissions')
         .then(r => setFlaggedSubmissions(r.data?.rows || []))
-        .catch(() => setFlaggedSubmissions([]))
+        .catch(() => {
+          setFlaggedSubmissions([]);
+          toast?.show(txt('신고 제출 목록을 불러오지 못했습니다.', 'Failed to load flagged submissions.'), 'error');
+        })
         .finally(() => setFlaggedLoading(false));
     }
     if (activeTab==='stats') {
@@ -140,31 +147,43 @@ export default function AdminPage() {
     setCommunityLoading(true);
     api.get(`/community-problems/admin?status=${communityFilter}`)
       .then(r => setCommunitySubmissions(r.data.rows || []))
-      .catch(() => {})
+      .catch(() => {
+        setCommunitySubmissions([]);
+        toast?.show(txt('사용자 제출 문제를 불러오지 못했습니다.', 'Failed to load user problem submissions.'), 'error');
+      })
       .finally(() => setCommunityLoading(false));
   }, [activeTab, communityFilter]);
 
   const handleCommunityApprove = async (id) => {
-    if (!window.confirm('이 문제를 승인하고 공식 문제로 등록하시겠습니까?')) return;
+    if (!window.confirm(txt('이 문제를 승인하고 공식 문제로 등록하시겠습니까?', 'Approve this problem and publish it as an official problem?'))) return;
     try {
       await api.post(`/community-problems/admin/${id}/approve`);
-      toast?.show('✅ 문제가 등록되었습니다.', 'success');
+      toast?.show(txt('문제가 등록되었습니다.', 'Problem published.'), 'success');
       setCommunitySubmissions(s => s.filter(x => x.id !== id));
       setCommunityDetail(null);
     } catch (err) {
-      toast?.show(err.response?.data?.message || '승인 실패', 'error');
+      toast?.show(err.response?.data?.message || txt('승인 실패', 'Approval failed'), 'error');
     }
   };
 
   const handleCommunityReject = async (id) => {
     try {
       await api.post(`/community-problems/admin/${id}/reject`, { note: communityRejectNote });
-      toast?.show('거절되었습니다.', 'success');
+      toast?.show(txt('거절되었습니다.', 'Rejected.'), 'success');
       setCommunitySubmissions(s => s.filter(x => x.id !== id));
       setCommunityDetail(null);
       setCommunityRejectNote('');
     } catch (err) {
-      toast?.show(err.response?.data?.message || '거절 실패', 'error');
+      toast?.show(err.response?.data?.message || txt('거절 실패', 'Rejection failed'), 'error');
+    }
+  };
+
+  const openCommunityDetail = async (id) => {
+    try {
+      const { data } = await api.get(`/community-problems/admin/${id}`);
+      setCommunityDetail(data);
+    } catch (err) {
+      toast?.show(err.response?.data?.message || txt('제출 문제 상세를 불러오지 못했습니다.', 'Failed to load submitted problem details.'), 'error');
     }
   };
 
@@ -172,17 +191,17 @@ export default function AdminPage() {
     try {
       await api.patch(`/admin/flagged-submissions/${id}/review`);
       setFlaggedSubmissions(rows => rows.map(row => row.id === id ? { ...row, reviewed: 1 } : row));
-      toast?.show('Marked as reviewed.', 'success');
+      toast?.show(txt('검토 완료로 표시했습니다.', 'Marked as reviewed.'), 'success');
     } catch (err) {
-      toast?.show(err.response?.data?.message || 'Failed to mark as reviewed', 'error');
+      toast?.show(err.response?.data?.message || txt('검토 완료 처리에 실패했습니다.', 'Failed to mark as reviewed'), 'error');
     }
   };
 
   if (!isAdmin) return (
     <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'calc(100vh - 54px)',flexDirection:'column',gap:12}}>
       <div style={{fontSize:48}}>🚫</div>
-      <p style={{color:'var(--text2)'}}>Admin access only.</p>
-      <button className="btn btn-primary" onClick={()=>navigate('/')}>Go Back</button>
+      <p style={{color:'var(--text2)'}}>{txt('관리자만 접근할 수 있습니다.', 'Admin access only.')}</p>
+      <button className="btn btn-primary" onClick={()=>navigate('/')}>{txt('돌아가기', 'Go Back')}</button>
     </div>
   );
 
@@ -324,7 +343,10 @@ export default function AdminPage() {
         examples:d.examples?.length?d.examples:[{input:'',output:''}], testcases:makeEmptyCases(),
         hint:d.hint||'', solution:d.solution||'', specialConfig,
       });
-    } catch { addNotification('❌ AI generation failed. Please try again.'); toast?.show('❌ AI generation failed', 'error'); }
+    } catch {
+      addNotification(txt('AI 문제 생성에 실패했습니다. 다시 시도하세요.', 'AI generation failed. Please try again.'));
+      toast?.show(txt('AI 문제 생성 실패', 'AI generation failed'), 'error');
+    }
     setAiGenerating(false);
   };
 
@@ -333,36 +355,36 @@ export default function AdminPage() {
     const specialConfig = buildSpecialConfigPayload();
     if (form.problemType === 'fill-blank') {
       if (!specialConfig?.codeTemplate?.trim()) {
-        toast?.show('Fill in the Blank problems require a code template.', 'warning');
+        toast?.show(txt('빈칸 채우기 문제에는 코드 템플릿이 필요합니다.', 'Fill in the Blank problems require a code template.'), 'warning');
         return;
       }
       if (!Array.isArray(specialConfig?.blanks) || specialConfig.blanks.length === 0) {
-        toast?.show('Enter at least one blank answer separated by commas or newlines.', 'warning');
+        toast?.show(txt('빈칸 정답을 쉼표 또는 줄바꿈으로 하나 이상 입력하세요.', 'Enter at least one blank answer separated by commas or newlines.'), 'warning');
         return;
       }
     }
     if (form.problemType === 'bug-fix') {
       if (!specialConfig?.buggyCode?.trim()) {
-        toast?.show('Bug Fix problems require buggy code.', 'warning');
+        toast?.show(txt('버그 수정 문제에는 버그가 있는 코드가 필요합니다.', 'Bug Fix problems require buggy code.'), 'warning');
         return;
       }
       if (!Array.isArray(specialConfig?.keywords) || specialConfig.keywords.length === 0) {
-        toast?.show('Enter at least one answer keyword separated by commas or newlines.', 'warning');
+        toast?.show(txt('정답 키워드를 쉼표 또는 줄바꿈으로 하나 이상 입력하세요.', 'Enter at least one answer keyword separated by commas or newlines.'), 'warning');
         return;
       }
     }
     if (isTroubleshootingForm) {
       const scenario = buildTroubleshootingPayload();
       if (!scenario.scenarioTitle.trim()) {
-        toast?.show('Please enter a scenario title.', 'warning');
+        toast?.show(txt('시나리오 제목을 입력하세요.', 'Please enter a scenario title.'), 'warning');
         return;
       }
       if (!scenario.initialFiles.length) {
-        toast?.show('Add at least one troubleshooting file.', 'warning');
+        toast?.show(txt('트러블슈팅 파일을 하나 이상 추가하세요.', 'Add at least one troubleshooting file.'), 'warning');
         return;
       }
       if (!scenario.visibleTests.length && !scenario.hiddenTests.length) {
-        toast?.show('Add at least one visible or hidden test.', 'warning');
+        toast?.show(txt('공개 또는 숨김 테스트를 하나 이상 추가하세요.', 'Add at least one visible or hidden test.'), 'warning');
         return;
       }
     }
@@ -383,20 +405,20 @@ export default function AdminPage() {
         const res = await api.put(`/problems/${editTarget}`, payload);
         savedProblem = res.data;
         setProblems(p=>p.map(pr=>pr.id===editTarget?res.data:pr));
-        toast?.show(`✏️ "${form.title}" updated.`, 'info');
+        toast?.show(txt(`"${form.title}" 문제가 수정되었습니다.`, `"${form.title}" updated.`), 'info');
         loadProblems();
       } else {
         const res = await api.post('/problems', payload);
         savedProblem = res.data;
         setProblems(p=>[res.data,...p]);
-        toast?.show(`🆕 "${form.title}" 문제 등록 완료!`, 'success');
+        toast?.show(txt(`"${form.title}" 문제가 등록되었습니다.`, `"${form.title}" created.`), 'success');
         loadProblems();
       }
       if (isTroubleshootingForm && savedProblem?.id) {
         await api.post(`/admin/problems/${savedProblem.id}/troubleshooting`, buildTroubleshootingPayload());
       }
       setView('list'); setEditTarget(null); setForm(createEmptyForm()); setAiPreview(null); setAiPanel(false);
-    } catch (err) { toast?.show('❌ 저장 실패: '+(err.response?.data?.message||''), 'error'); }
+    } catch (err) { toast?.show(`${txt('저장 실패:', 'Save failed:')} ${err.response?.data?.message||''}`, 'error'); }
     setSaving(false);
   };
 
@@ -454,10 +476,11 @@ export default function AdminPage() {
               evaluationMode: cfg.evaluationMode || 'command',
             },
           }));
-        }).catch(() => {});
+        }).catch(() => {
+          toast?.show(txt('트러블슈팅 설정을 불러오지 못했습니다.', 'Failed to load troubleshooting settings.'), 'warning');
+        });
       }
     }).catch(() => {
-      // fallback
       setForm({
         title:prob.title, tier:prob.tier, problemType: prob.problemType || 'coding', preferredLanguage: prob.preferredLanguage || 'python', tags:prob.tags||[],
         timeLimit:String(prob.timeLimit||2), memLimit:String(prob.memLimit||256), difficulty:String(prob.difficulty||5),
@@ -466,6 +489,7 @@ export default function AdminPage() {
         hint:prob.hint||'', solution:prob.solution||'', specialConfig: createEmptySpecialConfig(),
       });
       setEditTarget(prob.id); setView('create');
+      toast?.show(txt('상세 정보를 불러오지 못해 목록 데이터로 편집합니다.', 'Could not load full details. Editing with list data.'), 'warning');
     });
   };
 
@@ -474,32 +498,32 @@ export default function AdminPage() {
     try {
       const { data } = await api.put('/admin/battle-settings', battleSettings);
       setBattleSettings(data);
-      toast?.show('⚔️ 배틀 설정이 즉시 적용되었습니다.', 'success');
+      toast?.show(txt('배틀 설정이 즉시 적용되었습니다.', 'Battle settings applied immediately.'), 'success');
     } catch (err) {
-      toast?.show(err.response?.data?.message || '배틀 설정 저장 실패', 'error');
+      toast?.show(err.response?.data?.message || txt('배틀 설정 저장 실패', 'Failed to save battle settings'), 'error');
     } finally {
       setBattleSettingsSaving(false);
     }
   };
 
-  const handleDelete = (id, title) => setConfirmModal({ msg:`문제 "${title}"을 삭제하시겠습니까?`, onConfirm: async () => { try { await api.delete(`/problems/${id}`); setProblems(p=>p.filter(pr=>pr.id!==id)); loadProblems(); toast?.show('🗑 문제 삭제됨', 'info'); } catch(err) { toast?.show('❌ 삭제 실패: '+(err.response?.data?.message||err.message), 'error'); } } });
-  const handleDeleteContest = (id, name) => setConfirmModal({ msg:`대회 "${name}"을 삭제하시겠습니까?`, onConfirm: async () => { try { await api.delete(`/contests/${id}`); setContests(p=>p.filter(c=>c.id!==id)); loadContests(); toast?.show('🗑 대회 삭제됨', 'info'); } catch(err) { toast?.show('❌ 삭제 실패: '+(err.response?.data?.message||err.message), 'error'); } } });
+  const handleDelete = (id, title) => setConfirmModal({ msg:txt(`문제 "${title}"을 삭제하시겠습니까?`, `Delete problem "${title}"?`), onConfirm: async () => { try { await api.delete(`/problems/${id}`); setProblems(p=>p.filter(pr=>pr.id!==id)); loadProblems(); toast?.show(txt('문제가 삭제되었습니다.', 'Problem deleted.'), 'info'); } catch(err) { toast?.show(`${txt('삭제 실패:', 'Delete failed:')} ${err.response?.data?.message||err.message}`, 'error'); } } });
+  const handleDeleteContest = (id, name) => setConfirmModal({ msg:txt(`대회 "${name}"을 삭제하시겠습니까?`, `Delete contest "${name}"?`), onConfirm: async () => { try { await api.delete(`/contests/${id}`); setContests(p=>p.filter(c=>c.id!==id)); loadContests(); toast?.show(txt('대회가 삭제되었습니다.', 'Contest deleted.'), 'info'); } catch(err) { toast?.show(`${txt('삭제 실패:', 'Delete failed:')} ${err.response?.data?.message||err.message}`, 'error'); } } });
   const handleContestStart = async (id) => {
     try {
       await api.patch(`/contests/${id}/start`);
       setContests(p=>p.map(c=>c.id===id?{...c,status:'live'}:c));
-      toast?.show('🔴 Contest started!', 'success');
+      toast?.show(txt('대회가 시작되었습니다.', 'Contest started.'), 'success');
     } catch {
-      toast?.show('대회 시작 실패', 'error');
+      toast?.show(txt('대회 시작 실패', 'Failed to start contest'), 'error');
     }
   };
   const handleContestEnd = async (id) => {
     try {
       await api.patch(`/contests/${id}/end`);
       setContests(p=>p.map(c=>c.id===id?{...c,status:'ended'}:c));
-      toast?.show('🏁 Contest ended', 'info');
+      toast?.show(txt('대회가 종료되었습니다.', 'Contest ended.'), 'info');
     } catch {
-      toast?.show('대회 종료 실패', 'error');
+      toast?.show(txt('대회 종료 실패', 'Failed to end contest'), 'error');
     }
   };
   const handleRoleChange = async (uid, role) => {
@@ -507,15 +531,15 @@ export default function AdminPage() {
       await api.patch(`/auth/users/${uid}/role`,{role});
       setUsers(p=>p.map(u=>u.id===uid?{...u,role}:u));
     } catch {
-      toast?.show('역할 변경 실패', 'error');
+      toast?.show(txt('역할 변경 실패', 'Failed to change role'), 'error');
     }
   };
-  const handleDeleteUser = (uid, name) => setConfirmModal({ msg:`사용자 "${name}"을 삭제하시겠습니까?`, onConfirm: async () => {
+  const handleDeleteUser = (uid, name) => setConfirmModal({ msg:txt(`사용자 "${name}"을 삭제하시겠습니까?`, `Delete user "${name}"?`), onConfirm: async () => {
     try {
       await api.delete(`/auth/users/${uid}`);
       setUsers(p=>p.filter(u=>u.id!==uid));
     } catch {
-      toast?.show('Failed to delete user', 'error');
+      toast?.show(txt('사용자 삭제 실패', 'Failed to delete user'), 'error');
     }
   } });
   const handleResetPw = (uid, name) => {
@@ -527,10 +551,10 @@ export default function AdminPage() {
     if (!pwInput || pwInput.length < 8) return;
     try {
       await api.patch(`/auth/users/${pwModal.uid}/reset-password`, { newPassword: pwInput });
-      toast?.show(`🔒 ${pwModal.name} 비밀번호 초기화 완료`, 'success');
+      toast?.show(txt(`${pwModal.name} 비밀번호 초기화 완료`, `${pwModal.name} password reset complete`), 'success');
       setPwModal(null);
     } catch (err) {
-      toast?.show('❌ ' + (err.response?.data?.message || 'Failed'), 'error');
+      toast?.show(err.response?.data?.message || txt('비밀번호 초기화 실패', 'Failed to reset password'), 'error');
     }
   };
 
@@ -539,9 +563,9 @@ export default function AdminPage() {
     try {
       const labelMap = { all: txt('전체','All'), leaderboards: txt('랭킹','Rankings'), heatmaps: txt('활동','Activity'), problems: txt('문제','Problems') };
       await api.post('/admin/cache/clear', { target });
-      toast?.show(`✅ ${labelMap[target] || target} ${txt('캐시가 초기화되었습니다.','cache cleared.')}`, 'success');
+      toast?.show(`${labelMap[target] || target} ${txt('캐시가 초기화되었습니다.','cache cleared.')}`, 'success');
     } catch (err) {
-      toast?.show('❌ 캐시 초기화 실패', 'error');
+      toast?.show(txt('캐시 초기화 실패', 'Failed to clear cache'), 'error');
     } finally {
       setClearing(null);
     }
@@ -549,7 +573,7 @@ export default function AdminPage() {
 
   const handleSaveWeeklyChallenge = async () => {
     if (!weeklyForm.problemId) {
-      toast?.show('Please enter a problem ID.', 'warning');
+      toast?.show(txt('문제 ID를 입력하세요.', 'Please enter a problem ID.'), 'warning');
       return;
     }
     setWeeklySaving(true);
@@ -560,7 +584,7 @@ export default function AdminPage() {
       });
       const { data } = await api.get('/weekly');
       setWeeklyChallenge(data);
-      toast?.show(txt('🏆 이번 주 챌린지가 설정되었습니다.','🏆 Weekly challenge set.'), 'success');
+      toast?.show(txt('이번 주 챌린지가 설정되었습니다.','Weekly challenge set.'), 'success');
     } catch (err) {
       toast?.show(err.response?.data?.message || txt('주간 챌린지 설정 실패','Failed to set weekly challenge'), 'error');
     } finally {
@@ -579,7 +603,7 @@ export default function AdminPage() {
         <div key={i} style={{background:'var(--bg3)',border:`1px solid ${color}30`,borderRadius:8,padding:12,marginBottom:8}}>
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
             <span style={{fontSize:12,fontWeight:700,color}}>{label} {i+1}</span>
-            <button type="button" onClick={()=>f(fieldKey,items.filter((_,j)=>j!==i))} style={{background:'none',border:'none',color:'var(--red)',cursor:'pointer',fontSize:13}}>✕ Delete</button>
+            <button type="button" onClick={()=>f(fieldKey,items.filter((_,j)=>j!==i))} style={{background:'none',border:'none',color:'var(--red)',cursor:'pointer',fontSize:13}}>✕ {txt('삭제', 'Delete')}</button>
           </div>
           <div className="cf-row" style={{margin:0,gap:8}}>
             <div style={{flex:1}}>
@@ -785,7 +809,7 @@ export default function AdminPage() {
             </div>
           ))}
           <div className="card admin-stat-card" style={{gridColumn:'span 2'}}>
-            <div className="asc-label" style={{marginBottom:12}}>User Tier Distribution</div>
+            <div className="asc-label" style={{marginBottom:12}}>{txt('유저 티어 분포', 'User Tier Distribution')}</div>
             <div style={{display:'flex',gap:16,flexWrap:'wrap'}}>
               {Object.entries({ unranked:'#666', ...TIER_COLORS }).map(([tier,color])=>{
                 const cnt = adminStats?.tierDistribution?.[tier] ?? 0;
@@ -794,15 +818,15 @@ export default function AdminPage() {
             </div>
           </div>
           <div className="card admin-stat-card" style={{gridColumn:'span 2', textAlign:'left'}}>
-            <div className="asc-label" style={{marginBottom:12}}>Popular Problems TOP 5</div>
-            {adminStatsLoading && <div style={{fontSize:12,color:'var(--text3)'}}>Loading stats...</div>}
+            <div className="asc-label" style={{marginBottom:12}}>{txt('인기 문제 TOP 5', 'Popular Problems TOP 5')}</div>
+            {adminStatsLoading && <div style={{fontSize:12,color:'var(--text3)'}}>{txt('통계를 불러오는 중...', 'Loading stats...')}</div>}
             {!adminStatsLoading && (adminStats?.popularProblems || []).map((problem, index, arr) => {
               const max = Math.max(...arr.map((item) => item.solveCount || 0), 1);
               return (
                 <div key={problem.id} style={{marginBottom:index < arr.length - 1 ? 12 : 0}}>
                   <div style={{display:'flex',justifyContent:'space-between',gap:10,fontSize:12,marginBottom:6}}>
                     <span>{problem.title}</span>
-                    <span style={{color:'var(--text3)'}}>{problem.solveCount} solved</span>
+                    <span style={{color:'var(--text3)'}}>{problem.solveCount} {txt('해결', 'solved')}</span>
                   </div>
                   <div style={{height:8,background:'var(--bg3)',borderRadius:4,overflow:'hidden'}}>
                     <div style={{width:`${(problem.solveCount / max) * 100}%`,height:'100%',background:'var(--blue)',borderRadius:4}} />
@@ -812,7 +836,7 @@ export default function AdminPage() {
             })}
           </div>
           <div className="card admin-stat-card" style={{gridColumn:'span 2', textAlign:'left'}}>
-            <div className="asc-label" style={{marginBottom:12}}>Problems by Type</div>
+            <div className="asc-label" style={{marginBottom:12}}>{txt('유형별 문제', 'Problems by Type')}</div>
             <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(130px,1fr))',gap:10}}>
               {Object.entries(adminStats?.problemTypeCounts || {}).map(([type, count]) => (
                 <div key={type} style={{padding:'10px 12px',borderRadius:12,background:'var(--bg3)',border:'1px solid var(--border)'}}>
@@ -820,7 +844,7 @@ export default function AdminPage() {
                   <div className="mono" style={{fontSize:22,fontWeight:800,color:'var(--blue)'}}>{count}</div>
                 </div>
               ))}
-              {Object.keys(adminStats?.problemTypeCounts || {}).length === 0 && <div style={{fontSize:12,color:'var(--text3)'}}>No problem type data.</div>}
+              {Object.keys(adminStats?.problemTypeCounts || {}).length === 0 && <div style={{fontSize:12,color:'var(--text3)'}}>{txt('문제 유형 데이터가 없습니다.', 'No problem type data.')}</div>}
             </div>
           </div>
           <div className="card admin-stat-card" style={{textAlign:'left'}}>
@@ -836,30 +860,30 @@ export default function AdminPage() {
               </div>
             ))}
             <div style={{fontSize:12,color:'var(--text3)',marginTop:10}}>
-              Total {adminStats?.battleStatus?.total || 0} rooms
+              {txt('전체', 'Total')} {adminStats?.battleStatus?.total || 0} {txt('개 방', 'rooms')}
             </div>
           </div>
           <div className="card admin-stat-card" style={{textAlign:'left'}}>
-            <div className="asc-label" style={{marginBottom:12}}>Avg. Solve Time (performance-fix)</div>
+            <div className="asc-label" style={{marginBottom:12}}>{txt('평균 풀이 시간 (성능 최적화)', 'Avg. Solve Time (performance-fix)')}</div>
             <div className="asc-value mono" style={{color:'var(--orange)'}}>
               {adminStats?.performanceFixAverageSolveTimeMs ? `${adminStats.performanceFixAverageSolveTimeMs}ms` : '—'}
             </div>
             <div style={{fontSize:12,color:'var(--text3)',marginTop:8}}>
-              Average execution time of correct performance-fix submissions.
+              {txt('정답 처리된 성능 최적화 제출의 평균 실행 시간입니다.', 'Average execution time of correct performance-fix submissions.')}
             </div>
           </div>
           <div className="card admin-stat-card" style={{gridColumn:'span 2', textAlign:'left'}}>
-            <div className="asc-label" style={{marginBottom:12}}>Recent Submissions</div>
+            <div className="asc-label" style={{marginBottom:12}}>{txt('최근 제출', 'Recent Submissions')}</div>
             {(adminStats?.recentSubmissions || []).slice(0, 6).map((item) => (
               <div key={item.id} style={{display:'flex',justifyContent:'space-between',gap:10,padding:'8px 0',borderBottom:'1px solid var(--border)',fontSize:12}}>
                 <span>{item.username} · {item.problemTitle}</span>
                 <span style={{color:item.result === 'correct' ? 'var(--green)' : 'var(--text3)'}}>{item.result}</span>
               </div>
             ))}
-            {(adminStats?.recentSubmissions || []).length === 0 && <div style={{fontSize:12,color:'var(--text3)'}}>No recent submissions.</div>}
+            {(adminStats?.recentSubmissions || []).length === 0 && <div style={{fontSize:12,color:'var(--text3)'}}>{txt('최근 제출이 없습니다.', 'No recent submissions.')}</div>}
           </div>
           <div className="card admin-stat-card" style={{gridColumn:'span 2', textAlign:'left'}}>
-            <div className="asc-label" style={{marginBottom:12}}>Recent Reviews</div>
+            <div className="asc-label" style={{marginBottom:12}}>{txt('최근 리뷰', 'Recent Reviews')}</div>
             {(adminStats?.recentReviews || []).slice(0, 6).map((item) => (
               <div key={item.id} style={{display:'flex',justifyContent:'space-between',gap:10,padding:'8px 0',borderBottom:'1px solid var(--border)',fontSize:12}}>
                 <span>{item.reviewerUsername} → {item.authorUsername} · {item.problemTitle}</span>
@@ -887,8 +911,8 @@ export default function AdminPage() {
                   ))}
                 </div>
                 <div style={{fontSize:12,color:'var(--text2)',lineHeight:1.8}}>
-                  Today: {aiStatus.metricsToday?.success || 0} success · {aiStatus.metricsToday?.fallback || 0} fallback · {aiStatus.metricsToday?.providerCalls || 0} provider calls
-                  {aiStatus.fallbackModels?.length ? <><br/>Fallback models: {aiStatus.fallbackModels.slice(0, 4).join(', ')}</> : null}
+                  {txt('오늘', 'Today')}: {aiStatus.metricsToday?.success || 0} {txt('성공', 'success')} · {aiStatus.metricsToday?.fallback || 0} {txt('폴백', 'fallback')} · {aiStatus.metricsToday?.providerCalls || 0} {txt('공급자 호출', 'provider calls')}
+                  {aiStatus.fallbackModels?.length ? <><br/>{txt('대체 모델', 'Fallback models')}: {aiStatus.fallbackModels.slice(0, 4).join(', ')}</> : null}
                   {aiStatus.lastEvent?.at ? <><br/>{txt('마지막 이벤트', 'Last event')}: {aiStatus.lastEvent.source}{aiStatus.lastEvent.reason ? ` (${aiStatus.lastEvent.reason})` : ''} · {new Date(aiStatus.lastEvent.at).toLocaleString(dateLocale)}</> : null}
                 </div>
               </div>
@@ -971,7 +995,7 @@ export default function AdminPage() {
                   </div>
                 </>
               ) : (
-                <div style={{color:'var(--text3)'}}>No challenge set for this week.</div>
+                <div style={{color:'var(--text3)'}}>{txt('이번 주 챌린지가 설정되지 않았습니다.', 'No challenge set for this week.')}</div>
               )}
             </div>
           </div>
@@ -984,13 +1008,13 @@ export default function AdminPage() {
           <div className="card" style={{padding:24}}>
             <h3 style={{marginBottom:8}}>🛡️ Flagged Submissions</h3>
             <p style={{fontSize:13,color:'var(--text2)',marginBottom:18}}>
-              List of correct submissions with high similarity to shared solutions, flagged for admin review.
+              {txt('공유된 풀이와 유사도가 높은 정답 제출을 관리자 검토 대상으로 표시합니다.', 'List of correct submissions with high similarity to shared solutions, flagged for admin review.')}
             </p>
             {flaggedLoading ? (
-              <div style={{color:'var(--text3)',fontSize:13}}>Loading...</div>
+              <div style={{color:'var(--text3)',fontSize:13}}>{txt('불러오는 중...', 'Loading...')}</div>
             ) : flaggedSubmissions.length === 0 ? (
               <div style={{padding:24,textAlign:'center',color:'var(--text3)',background:'var(--bg3)',borderRadius:12}}>
-                No flagged submissions to review.
+                {txt('검토할 유사 제출이 없습니다.', 'No flagged submissions to review.')}
               </div>
             ) : (
               <div style={{display:'flex',flexDirection:'column',gap:10}}>
@@ -1099,11 +1123,11 @@ export default function AdminPage() {
               )}
               {(communityDetail.examples||[]).length > 0 && (
                 <div style={{marginBottom:14}}>
-                  <div style={{fontSize:12,color:'var(--text3)',marginBottom:6}}>Sample I/O</div>
+                  <div style={{fontSize:12,color:'var(--text3)',marginBottom:6}}>{txt('샘플 입출력', 'Sample I/O')}</div>
                   {communityDetail.examples.map((ex,i) => (
                     <div key={i} style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:6}}>
-                      <pre className="io-box mono" style={{margin:0,fontSize:12}}>{ex.input||'(none)'}</pre>
-                      <pre className="io-box mono" style={{margin:0,fontSize:12}}>{ex.output||'(none)'}</pre>
+                      <pre className="io-box mono" style={{margin:0,fontSize:12}}>{ex.input || txt('(없음)', '(none)')}</pre>
+                      <pre className="io-box mono" style={{margin:0,fontSize:12}}>{ex.output || txt('(없음)', '(none)')}</pre>
                     </div>
                   ))}
                 </div>
@@ -1113,9 +1137,9 @@ export default function AdminPage() {
                   <div style={{display:'flex',gap:10,flexWrap:'wrap',alignItems:'flex-start'}}>
                     <button className="btn btn-success" onClick={()=>handleCommunityApprove(communityDetail.id)}>✅ {txt('승인 및 문제 등록', 'Approve & Register Problem')}</button>
                     <div style={{display:'flex',flexDirection:'column',gap:6,flex:1,minWidth:200}}>
-                      <input className="input" placeholder="거절 사유 (선택)" value={communityRejectNote}
+                      <input className="input" placeholder={txt('거절 사유 (선택)', 'Rejection reason (optional)')} value={communityRejectNote}
                         onChange={e=>setCommunityRejectNote(e.target.value)} />
-                      <button className="btn btn-danger btn-sm" onClick={()=>handleCommunityReject(communityDetail.id)}>❌ Reject</button>
+                      <button className="btn btn-danger btn-sm" onClick={()=>handleCommunityReject(communityDetail.id)}>❌ {txt('거절', 'Reject')}</button>
                     </div>
                   </div>
                 </div>
@@ -1124,7 +1148,7 @@ export default function AdminPage() {
           ) : (
             <div className="card" style={{overflow:'hidden'}}>
               <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'14px 18px',borderBottom:'1px solid var(--border)'}}>
-                <h3 style={{margin:0}}>💡 User Problem Submissions</h3>
+                <h3 style={{margin:0}}>💡 {txt('사용자 제출 문제', 'User Problem Submissions')}</h3>
                 <div style={{display:'flex',gap:6}}>
                   {['pending','approved','rejected'].map(s=>(
                     <button key={s} className={`btn btn-sm ${communityFilter===s?'btn-primary':'btn-ghost'}`}
@@ -1135,9 +1159,9 @@ export default function AdminPage() {
                 </div>
               </div>
               {communityLoading ? (
-                <div style={{padding:24,textAlign:'center',color:'var(--text3)'}}>Loading...</div>
+                <div style={{padding:24,textAlign:'center',color:'var(--text3)'}}>{txt('불러오는 중...', 'Loading...')}</div>
               ) : communitySubmissions.length === 0 ? (
-                <div style={{padding:24,textAlign:'center',color:'var(--text3)'}}>No submissions found.</div>
+                <div style={{padding:24,textAlign:'center',color:'var(--text3)'}}>{txt('제출된 문제가 없습니다.', 'No submissions found.')}</div>
               ) : (
                 <table className="admin-table">
                   <thead>
@@ -1154,8 +1178,8 @@ export default function AdminPage() {
                         <td className="mono" style={{fontSize:12}}>{s.difficulty}/10</td>
                         <td style={{fontSize:11,color:'var(--text3)'}}>{new Date(s.created_at).toLocaleDateString('en-US')}</td>
                         <td>
-                          <button className="btn btn-ghost btn-sm" onClick={()=>api.get(`/community-problems/admin/${s.id}`).then(r=>setCommunityDetail(r.data)).catch(()=>{})}>
-                            View
+                          <button className="btn btn-ghost btn-sm" onClick={()=>openCommunityDetail(s.id)}>
+                            {txt('보기', 'View')}
                           </button>
                         </td>
                       </tr>
@@ -1172,12 +1196,12 @@ export default function AdminPage() {
       {confirmModal && (
         <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setConfirmModal(null)}>
           <div className="modal-box card fade-up" style={{maxWidth:380}}>
-            <h3 style={{marginBottom:8}}>⚠️ Confirm Delete</h3>
+            <h3 style={{marginBottom:8}}>⚠️ {txt('삭제 확인', 'Confirm Delete')}</h3>
             <p style={{fontSize:13,color:'var(--text2)',marginBottom:20}}>{confirmModal.msg}</p>
             <div className="modal-actions" style={{display:'flex',gap:10,justifyContent:'flex-end'}}>
               <button className="btn btn-ghost" onClick={()=>setConfirmModal(null)}>{txt('취소', 'Cancel')}</button>
               <button className="btn btn-primary" style={{background:'var(--red)',borderColor:'var(--red)'}}
-                onClick={async()=>{ await confirmModal.onConfirm(); setConfirmModal(null); }}>삭제</button>
+                onClick={async()=>{ await confirmModal.onConfirm(); setConfirmModal(null); }}>{txt('삭제', 'Delete')}</button>
             </div>
           </div>
         </div>
@@ -1185,23 +1209,23 @@ export default function AdminPage() {
       {pwModal && (
         <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setPwModal(null)}>
           <div className="modal-box card fade-up" style={{maxWidth:400}}>
-            <h3 style={{marginBottom:4}}>🔒 Reset Password</h3>
-            <p style={{fontSize:13,color:'var(--text2)',marginBottom:16}}>Enter a new password for "{pwModal.name}".</p>
+            <h3 style={{marginBottom:4}}>🔒 {txt('비밀번호 재설정', 'Reset Password')}</h3>
+            <p style={{fontSize:13,color:'var(--text2)',marginBottom:16}}>{txt(`"${pwModal.name}"의 새 비밀번호를 입력하세요.`, `Enter a new password for "${pwModal.name}".`)}</p>
             <div className="form-group">
-              <label style={{fontSize:12,fontWeight:600}}>New Password (min 8 characters)</label>
+              <label style={{fontSize:12,fontWeight:600}}>{txt('새 비밀번호 (최소 8자)', 'New Password (min 8 characters)')}</label>
               <input
                 type="password"
                 value={pwInput}
                 onChange={e=>setPwInput(e.target.value)}
                 onKeyDown={e=>e.key==='Enter'&&confirmResetPw()}
-                placeholder="새 비밀번호 입력"
+                placeholder={txt('새 비밀번호 입력', 'Enter new password')}
                 autoFocus
                 style={{width:'100%',marginTop:6}}
               />
             </div>
             <div className="modal-actions" style={{marginTop:16,display:'flex',gap:10,justifyContent:'flex-end'}}>
               <button className="btn btn-ghost" onClick={()=>setPwModal(null)}>{txt('취소', 'Cancel')}</button>
-              <button className="btn btn-primary" onClick={confirmResetPw} disabled={!pwInput||pwInput.length<8}>확인</button>
+              <button className="btn btn-primary" onClick={confirmResetPw} disabled={!pwInput||pwInput.length<8}>{txt('확인', 'Confirm')}</button>
             </div>
           </div>
         </div>
@@ -1213,10 +1237,10 @@ export default function AdminPage() {
   return (
     <div className="admin-page">
       <div className="admin-header fade-up">
-        <div><h1>{editTarget!==null?'✏️ Edit Problem':'➕ Create Problem'}</h1><p>Write manually or use AI auto-generation.</p></div>
+        <div><h1>{editTarget!==null?txt('✏️ 문제 수정', '✏️ Edit Problem'):txt('➕ 문제 생성', '➕ Create Problem')}</h1><p>{txt('직접 작성하거나 AI 자동 생성을 사용할 수 있습니다.', 'Write manually or use AI auto-generation.')}</p></div>
         <div style={{display:'flex',gap:10}}>
-          {editTarget===null&&<button className={`btn ${aiPanel?'btn-primary':'btn-ghost'}`} onClick={()=>setAiPanel(p=>!p)}>🤖 AI Generate</button>}
-          <button className="btn btn-ghost" onClick={()=>{setView('list');setEditTarget(null);setForm(createEmptyForm());setAiPreview(null);setAiPanel(false);}}>← List</button>
+          {editTarget===null&&<button className={`btn ${aiPanel?'btn-primary':'btn-ghost'}`} onClick={()=>setAiPanel(p=>!p)}>🤖 {txt('AI 생성', 'AI Generate')}</button>}
+          <button className="btn btn-ghost" onClick={()=>{setView('list');setEditTarget(null);setForm(createEmptyForm());setAiPreview(null);setAiPanel(false);}}>← {txt('목록', 'List')}</button>
         </div>
       </div>
 
@@ -1288,7 +1312,7 @@ export default function AdminPage() {
                 <textarea rows={6} className="mono" placeholder={'e.g. if n <= ___1___:'} value={form.specialConfig.codeTemplate} onChange={e=>sf('codeTemplate',e.target.value)} style={{resize:'vertical'}} />
               </div>
               <div className="form-group">
-                <label>Answer List (comma-separated)</label>
+                <label>{txt('정답 목록 (쉼표로 구분)', 'Answer List (comma-separated)')}</label>
                 <input placeholder="예) 1, 1, 2" value={form.specialConfig.blanksText} onChange={e=>sf('blanksText',e.target.value)} />
               </div>
             </>
@@ -1326,20 +1350,20 @@ export default function AdminPage() {
                 </div>
               </div>
               <div className="form-group">
-                <label>Scenario Description</label>
+                <label>{txt('시나리오 설명', 'Scenario Description')}</label>
                 <textarea rows={4} value={form.specialConfig.scenarioDescription} onChange={e=>sf('scenarioDescription', e.target.value)} placeholder={txt('문제 상황, 목표, 제약 조건을 설명하세요.','Describe the scenario, goals, and constraints.')} style={{ resize:'vertical' }} />
               </div>
 
               <div>
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
-                  <div className="cf-section-title" style={{ margin:0 }}>Files</div>
-                  <button type="button" className="btn btn-ghost btn-sm" onClick={addTroubleshootingFile}>Add File</button>
+                  <div className="cf-section-title" style={{ margin:0 }}>{txt('파일', 'Files')}</div>
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={addTroubleshootingFile}>{txt('파일 추가', 'Add File')}</button>
                 </div>
                 {(form.specialConfig.initialFiles || []).map((file, index) => (
                   <div key={`${file.path}-${index}`} style={{ border:'1px solid var(--border)', borderRadius:10, padding:12, marginBottom:10, background:'var(--bg3)' }}>
                     <div className="cf-row">
                       <div className="form-group" style={{ flex:2 }}>
-                        <label>Path</label>
+                        <label>{txt('경로', 'Path')}</label>
                         <input value={file.path} onChange={e=>updateTroubleshootingFile(index, { path:e.target.value })} placeholder="server.js" />
                       </div>
                       <label style={{ display:'flex', alignItems:'center', gap:8, fontSize:12, color:'var(--text2)', marginTop:22 }}>
@@ -1354,33 +1378,33 @@ export default function AdminPage() {
               </div>
 
               {[
-                ['visibleTests', 'Visible Tests'],
-                ['hiddenTests', 'Hidden Tests'],
+                ['visibleTests', txt('공개 테스트', 'Visible Tests')],
+                ['hiddenTests', txt('숨김 테스트', 'Hidden Tests')],
               ].map(([field, label]) => (
                 <div key={field}>
                   <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
                     <div className="cf-section-title" style={{ margin:0 }}>{label}</div>
-                    <button type="button" className="btn btn-ghost btn-sm" onClick={()=>addTroubleshootingTest(field)}>Add Test</button>
+                    <button type="button" className="btn btn-ghost btn-sm" onClick={()=>addTroubleshootingTest(field)}>{txt('테스트 추가', 'Add Test')}</button>
                   </div>
                   {(form.specialConfig[field] || []).map((test, index) => (
                     <div key={`${field}-${index}`} className="cf-row" style={{ alignItems:'flex-end', marginBottom:8 }}>
                       <div className="form-group" style={{ flex:1 }}>
-                        <label>Name</label>
+                        <label>{txt('이름', 'Name')}</label>
                         <input value={test.name || ''} onChange={e=>updateTroubleshootingTest(field, index, { name:e.target.value })} />
                       </div>
                       <div className="form-group" style={{ flex:2 }}>
-                        <label>Command</label>
+                        <label>{txt('명령어', 'Command')}</label>
                         <input className="mono" value={test.commandText || ''} onChange={e=>updateTroubleshootingTest(field, index, { commandText:e.target.value })} placeholder="node test.js" />
                       </div>
                       <div className="form-group" style={{ flex:2 }}>
-                        <label>Expected Output</label>
+                        <label>{txt('예상 출력', 'Expected Output')}</label>
                         <input className="mono" value={test.expectedOutput || ''} onChange={e=>updateTroubleshootingTest(field, index, { expectedOutput:e.target.value })} />
                       </div>
                       <div className="form-group" style={{ flex:1 }}>
                         <label>timeout ms</label>
                         <input type="number" value={test.timeoutMs || ''} onChange={e=>updateTroubleshootingTest(field, index, { timeoutMs:e.target.value })} />
                       </div>
-                      <button type="button" className="btn btn-ghost btn-sm" onClick={()=>removeTroubleshootingTest(field, index)}>Delete</button>
+                      <button type="button" className="btn btn-ghost btn-sm" onClick={()=>removeTroubleshootingTest(field, index)}>{txt('삭제', 'Delete')}</button>
                     </div>
                   ))}
                 </div>
@@ -1393,8 +1417,8 @@ export default function AdminPage() {
                 <div className="form-group" style={{ flex:1 }}><label>memoryLimitMb</label><input type="number" value={form.specialConfig.memoryLimitMb} onChange={e=>sf('memoryLimitMb', e.target.value)} /></div>
               </div>
               <div className="cf-row">
-                <div className="form-group" style={{ flex:1 }}><label>Allowed Files</label><textarea rows={2} value={form.specialConfig.allowedFilesText} onChange={e=>sf('allowedFilesText', e.target.value)} placeholder="server.js, db.js" style={{ resize:'vertical' }} /></div>
-                <div className="form-group" style={{ flex:1 }}><label>Forbidden Patterns</label><textarea rows={2} value={form.specialConfig.forbiddenPatternsText} onChange={e=>sf('forbiddenPatternsText', e.target.value)} placeholder="eval\\(, child_process" style={{ resize:'vertical' }} /></div>
+                <div className="form-group" style={{ flex:1 }}><label>{txt('허용 파일', 'Allowed Files')}</label><textarea rows={2} value={form.specialConfig.allowedFilesText} onChange={e=>sf('allowedFilesText', e.target.value)} placeholder="server.js, db.js" style={{ resize:'vertical' }} /></div>
+                <div className="form-group" style={{ flex:1 }}><label>{txt('금지 패턴', 'Forbidden Patterns')}</label><textarea rows={2} value={form.specialConfig.forbiddenPatternsText} onChange={e=>sf('forbiddenPatternsText', e.target.value)} placeholder="eval\\(, child_process" style={{ resize:'vertical' }} /></div>
               </div>
               <div className="form-group">
                 <label>scoring_rules JSON</label>

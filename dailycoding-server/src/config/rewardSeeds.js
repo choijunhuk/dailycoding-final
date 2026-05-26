@@ -41,6 +41,7 @@ export const REWARD_SEEDS = [
   { code: 'badge_nightowl',    type: 'badge', name: 'Night Owl',           nameKo: '야행성',           description: 'Solved a problem between midnight and 4am.', descriptionKo: '자정~새벽 4시 사이에 문제를 풀었습니다.', rarity: 'uncommon', icon: '🦉', category: 'explore', sort_order: 20 },
   { code: 'badge_gold_killer', type: 'badge', name: 'Gold Killer',         nameKo: '골드 킬러',        description: 'First solved a Gold or higher problem.',  descriptionKo: '골드 이상 문제를 처음으로 풀었습니다.', rarity: 'rare',     icon: '✨', category: 'explore', sort_order: 30 },
   { code: 'badge_multilang',   type: 'badge', name: 'Polyglot',            nameKo: '멀티 언어',        description: 'Answered correctly in 3 or more languages.', descriptionKo: '3개 이상의 언어로 정답을 제출했습니다.', rarity: 'rare',  icon: '🌐', category: 'explore', sort_order: 40 },
+  { code: 'weekly_solver',     type: 'badge', name: 'Weekly Solver',       nameKo: '주간 챌린저',      description: 'Solved the weekly challenge problem.',       descriptionKo: '이번 주 챌린지 문제를 해결했습니다.',    rarity: 'uncommon', icon: '📅', category: 'coding',  sort_order: 70 },
 
   // ── Titles ────────────────────────────────────────────────────────────────
   { code: 'title_bronze',          type: 'title', name: 'Bronze Coder',     nameKo: '브론즈 코더',     description: 'Bronze Achieved',       descriptionKo: '브론즈 달성',     rarity: 'common',   icon: null, category: 'ranking', sort_order: 10 },

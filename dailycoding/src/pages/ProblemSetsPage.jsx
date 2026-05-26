@@ -5,6 +5,7 @@ import api from '../api.js';
 import { useToast } from '../context/ToastContext.jsx';
 import { useLang } from '../context/LangContext.jsx';
 import { formatWithLang, pickLangText } from '../utils/languageMode.js';
+import { copyText } from '../utils/clipboard.js';
 
 const FRONTEND_BASE = window.location.origin;
 
@@ -13,9 +14,15 @@ function ProblemSetCard({ set, onEdit, onDelete, onShare, onRevokeShare, lang })
   const toast = useToast();
   const txt = (ko, en) => pickLangText(lang, ko, en);
 
-  const copyLink = () => {
+  const copyLink = async () => {
     const url = `${FRONTEND_BASE}/problem-sets/shared/${set.shareToken}`;
-    navigator.clipboard?.writeText(url).then(() => toast?.show(txt('링크가 복사되었습니다!', 'Link copied!'), 'success'));
+    const copied = await copyText(url);
+    toast?.show(
+      copied
+        ? txt('링크가 복사되었습니다!', 'Link copied!')
+        : txt('링크 복사에 실패했습니다. 미리보기에서 주소를 복사해주세요.', 'Could not copy the link. Open preview and copy the address.'),
+      copied ? 'success' : 'error'
+    );
   };
 
   return (
@@ -216,21 +223,25 @@ export default function ProblemSetsPage() {
   const txt = (ko, en) => pickLangText(lang, ko, en);
   const [sets, setSets] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [editModal, setEditModal] = useState(null);
   const [importUrl, setImportUrl] = useState('');
   const [importing, setImporting] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError('');
     try {
       const { data } = await api.get('/problem-sets');
       setSets(data.sets || []);
     } catch {
-      toast?.show(txt('불러오기 실패', 'Failed to load.'), 'error');
+      setSets([]);
+      setLoadError(pickLangText(lang, '문제 세트를 불러오지 못했습니다.', 'Failed to load problem sets.'));
+      toast?.show(pickLangText(lang, '불러오기 실패', 'Failed to load.'), 'error');
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [lang, toast]);
 
   useEffect(() => { if (!token) load(); }, [token, load]);
 
@@ -267,8 +278,14 @@ export default function ProblemSetsPage() {
     try {
       const { data } = await api.post(`/problem-sets/${id}/share`);
       const url = `${FRONTEND_BASE}/problem-sets/shared/${data.token}`;
-      navigator.clipboard?.writeText(url).then(() => toast?.show(txt('공유 링크가 복사되었습니다!', 'Share link copied!'), 'success'));
-      load();
+      const copied = await copyText(url);
+      toast?.show(
+        copied
+          ? txt('공유 링크가 복사되었습니다!', 'Share link copied!')
+          : txt('공유 링크가 생성되었습니다. 세트 카드의 미리보기에서 주소를 복사해주세요.', 'Share link created. Open the set preview and copy the address.'),
+        copied ? 'success' : 'info'
+      );
+      await load();
     } catch {
       toast?.show(txt('공유 링크 생성 실패', 'Failed to create share link.'), 'error');
     }
@@ -346,7 +363,20 @@ export default function ProblemSetsPage() {
 
       {loading && <div style={{ textAlign: 'center', padding: 40, color: 'var(--text3)' }}>{txt('로딩 중...', 'Loading...')}</div>}
 
-      {!loading && sets.length === 0 && (
+      {!loading && loadError && (
+        <div style={{
+          textAlign: 'center', padding: '48px 24px', border: '1px dashed var(--border)',
+          borderRadius: 12, color: 'var(--red)',
+        }}>
+          <BookOpen size={32} style={{ marginBottom: 12, opacity: 0.5 }} />
+          <p style={{ margin: '0 0 16px' }}>{loadError}</p>
+          <button className="btn btn-ghost" onClick={load}>
+            {txt('다시 시도', 'Retry')}
+          </button>
+        </div>
+      )}
+
+      {!loading && !loadError && sets.length === 0 && (
         <div style={{
           textAlign: 'center', padding: '48px 24px', border: '1px dashed var(--border)',
           borderRadius: 12, color: 'var(--text3)',
@@ -359,6 +389,7 @@ export default function ProblemSetsPage() {
         </div>
       )}
 
+      {!loadError && (
       <div style={{ display: 'grid', gap: 14, gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))' }}>
         {sets.map((set) => (
           <ProblemSetCard
@@ -372,6 +403,7 @@ export default function ProblemSetsPage() {
           />
         ))}
       </div>
+      )}
     </div>
   );
 }

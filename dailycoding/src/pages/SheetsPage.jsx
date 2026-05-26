@@ -16,18 +16,30 @@ export default function SheetsPage() {
   const { t, lang } = useLang();
   const [category, setCategory] = useState('all');
   const [sheets, setSheets] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
     let ignore = false;
+    setLoading(true);
+    setLoadError('');
     api.get('/sheets', { params: category === 'all' ? {} : { category } })
       .then(({ data }) => {
-        if (!ignore) setSheets(Array.isArray(data) ? data : []);
+        if (!ignore) {
+          setSheets(Array.isArray(data) ? data : []);
+        }
       })
       .catch(() => {
-        if (!ignore) setSheets([]);
+        if (!ignore) {
+          setSheets([]);
+          setLoadError(t('sheetListLoadFailed'));
+        }
+      })
+      .finally(() => {
+        if (!ignore) setLoading(false);
       });
     return () => { ignore = true; };
-  }, [category]);
+  }, [category, t]);
 
   return (
     <div style={{ padding:'28px 24px 48px', maxWidth:1100, margin:'0 auto' }}>
@@ -39,6 +51,15 @@ export default function SheetsPage() {
           </button>
         ))}
       </div>
+      {loading && (
+        <div style={{ color:'var(--text2)', padding:'18px 0' }}>{t('sheetListLoading')}</div>
+      )}
+      {!loading && loadError && (
+        <div style={{ color:'var(--red)', padding:'18px 0' }}>{loadError}</div>
+      )}
+      {!loading && !loadError && sheets.length === 0 && (
+        <div style={{ color:'var(--text2)', padding:'18px 0' }}>{t('sheetListEmpty')}</div>
+      )}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(260px, 1fr))', gap:16 }}>
         {sheets.map((sheet) => (
           <div key={sheet.id} style={{ borderRadius:12, overflow:'hidden', border:'1px solid var(--border)', background:'var(--bg2)' }}>

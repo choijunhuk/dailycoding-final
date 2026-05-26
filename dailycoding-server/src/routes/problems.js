@@ -262,7 +262,8 @@ async function notifyProblemCommentMentions(content, authorId, problemTitle) {
         Notification.create(
           mentioned.id,
           `💬 @${username} was mentioned in the discussion for "${problemTitle.slice(0, 30)}".`,
-          'problems'
+          'problems',
+          { type: 'mention' }
         ).catch((err) => console.warn('[problem-comment mention]', err.message));
       }
     } catch {
@@ -501,7 +502,7 @@ router.post('/', auth, adminOnly, validateBody(problemSchema), async (req, res) 
     }
     const p = await Problem.create({ ...payload, visibility: 'global', contestId: null }, req.user.id);
     const users = await query('SELECT id FROM users WHERE banned_at IS NULL');
-    await Notification.broadcast(users.map((user) => user.id), `🆕 New problem "${p.title}" added!`, 'problems');
+    await Notification.broadcast(users.map((user) => user.id), `🆕 New problem "${p.title}" added!`, 'problems', { type: 'system' });
     // 캐시 무효화
     await redis.clearPrefix('problems:list:');
     res.status(201).json(p);
@@ -709,7 +710,7 @@ router.post('/:id/troubleshooting/submit', auth, requireVerified, async (req, re
       await Promise.all([
         Problem.incrementSolved(problemId),
         User.onSolve(req.user.id, problem),
-        Notification.create(req.user.id, `🛠 Troubleshooting "${problem.title}" solved successfully!`, 'submissions'),
+        Notification.create(req.user.id, `🛠 Troubleshooting "${problem.title}" solved successfully!`, 'submissions', { type: 'reward' }),
         redis.clearPrefix('ranking:'),
       ]);
     }

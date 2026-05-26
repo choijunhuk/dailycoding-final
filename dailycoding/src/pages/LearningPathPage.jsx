@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import api from '../api.js';
 import { useApp } from '../context/AppContext';
 import { useLang } from '../context/LangContext.jsx';
 import { pickLangText } from '../utils/languageMode.js';
@@ -749,10 +750,18 @@ function localizeTuple(lang, tuple, fallback) {
   return tuple ? pickLangText(lang, tuple[0], tuple[1]) : fallback;
 }
 
+function formatMessage(template, values = {}) {
+  return Object.entries(values).reduce(
+    (message, [key, value]) => message.replaceAll(`{${key}}`, String(value)),
+    template
+  );
+}
+
 export default function LearningPathPage() {
   const navigate = useNavigate();
+  const { id: routePathId } = useParams();
   const { solved } = useApp();
-  const { lang } = useLang();
+  const { lang, t } = useLang();
   const txt = (ko, en) => pickLangText(lang, ko, en);
   const getTrackLabel = (item) => localizeTuple(lang, TRACK_COPY[item.id]?.label, item.label);
   const getTrackDesc = (item) => localizeTuple(lang, TRACK_COPY[item.id]?.desc, item.desc);
@@ -760,13 +769,71 @@ export default function LearningPathPage() {
   const getLevelSubtitle = (item) => localizeTuple(lang, LEVEL_SUBTITLES[item.subtitle], item.subtitle);
   const [selectedTrackId, setSelectedTrackId] = useState(LANGUAGE_TRACKS[0].id);
   const [selectedLevelIdx, setSelectedLevelIdx] = useState(0);
+  const [platformPaths, setPlatformPaths] = useState([]);
+  const [platformPathError, setPlatformPathError] = useState(false);
+  const [selectedPlatformPathDetail, setSelectedPlatformPathDetail] = useState(null);
+  const [selectedPlatformPathId, setSelectedPlatformPathId] = useState(
+    Number.isFinite(Number(routePathId)) ? Number(routePathId) : null
+  );
 
   const track = ALL_TRACKS.find(t => t.id === selectedTrackId) || ALL_TRACKS[0];
   const level = track.levels[selectedLevelIdx] || track.levels[0];
+  const selectedPlatformPath = useMemo(
+    () => platformPaths.find((item) => Number(item.id) === Number(selectedPlatformPathId)) || null,
+    [platformPaths, selectedPlatformPathId]
+  );
+  const selectedPlatformPathData = selectedPlatformPathDetail || selectedPlatformPath;
+
+  useEffect(() => {
+    let ignore = false;
+    api.get('/learning-paths')
+      .then((res) => {
+        if (ignore) return;
+        setPlatformPaths(Array.isArray(res.data) ? res.data : []);
+        setPlatformPathError(false);
+      })
+      .catch(() => {
+        if (ignore) return;
+        setPlatformPathError(true);
+      });
+    return () => { ignore = true; };
+  }, []);
+
+  useEffect(() => {
+    const numericId = Number(routePathId);
+    if (Number.isFinite(numericId) && routePathId) {
+      setSelectedPlatformPathId(numericId);
+    }
+  }, [routePathId]);
+
+  useEffect(() => {
+    if (!selectedPlatformPathId) {
+      setSelectedPlatformPathDetail(null);
+      return;
+    }
+    let ignore = false;
+    api.get(`/learning-paths/${selectedPlatformPathId}`)
+      .then((res) => {
+        if (ignore) return;
+        setSelectedPlatformPathDetail(res.data || null);
+      })
+      .catch(() => {
+        if (ignore) return;
+        setSelectedPlatformPathDetail(null);
+      });
+    return () => { ignore = true; };
+  }, [selectedPlatformPathId]);
 
   const handleTrackSelect = (id) => {
+    setSelectedPlatformPathId(null);
     setSelectedTrackId(id);
     setSelectedLevelIdx(0);
+    if (routePathId) navigate('/learning', { replace: true });
+  };
+
+  const handlePlatformPathSelect = (path) => {
+    setSelectedPlatformPathId(path.id);
+    navigate(`/learning/${path.id}`);
   };
 
   const totalProblems = track.levels.reduce((acc, lv) => acc + lv.problems.length, 0);
@@ -775,6 +842,11 @@ export default function LearningPathPage() {
     0
   );
   const solvedInLevel = level.problems.filter(p => Boolean(solved[p.id])).length;
+  const selectedPlatformProblemIds = selectedPlatformPathData?.problemIds || [];
+  const selectedPlatformProblemMap = new Map(
+    (selectedPlatformPathData?.problems || []).map((problem) => [Number(problem.id), problem])
+  );
+  const selectedPlatformSolved = selectedPlatformProblemIds.filter((problemId) => Boolean(solved[problemId])).length;
 
   return (
     <div style={{ padding: '24px 20px 60px', maxWidth: 860, margin: '0 auto' }}>
@@ -785,6 +857,118 @@ export default function LearningPathPage() {
           {txt('언어별 · 주제별 단계적 알고리즘 학습', 'Step-by-step algorithm learning by language and topic')}
         </div>
       </div>
+
+      {(platformPaths.length > 0 || platformPathError) && (
+        <section style={{ marginBottom: 18 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text3)', letterSpacing: 1, marginBottom: 8 }}>
+            {t('learningPathOfficial')}
+          </div>
+          {platformPathError ? (
+            <div style={{ border: '1px solid var(--border)', borderRadius: 12, padding: '12px 14px', color: 'var(--text3)', background: 'var(--bg2)', fontSize: 13 }}>
+              {t('learningPathUnavailable')}
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10 }}>
+              {platformPaths.map((path) => {
+                const problemIds = path.problemIds || [];
+                const pathSolved = problemIds.filter((problemId) => Boolean(solved[problemId])).length;
+                const isActive = Number(selectedPlatformPathId) === Number(path.id);
+                return (
+                  <button
+                    key={path.id}
+                    type="button"
+                    onClick={() => handlePlatformPathSelect(path)}
+                    style={{
+                      border: `1px solid ${isActive ? 'var(--blue)' : 'var(--border)'}`,
+                      borderRadius: 12,
+                      background: isActive ? 'rgba(88,166,255,.12)' : 'var(--bg2)',
+                      color: 'var(--text)',
+                      padding: '12px 14px',
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      fontFamily: 'inherit',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                      <span style={{ fontSize: 20 }}>{path.icon || '📚'}</span>
+                      <strong style={{ fontSize: 13 }}>{path.title}</strong>
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--text3)', lineHeight: 1.4, marginBottom: 8 }}>
+                      {path.description}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 11, color: 'var(--text3)' }}>
+                        {formatMessage(t('learningPathCompletedCount'), { solved: pathSolved, total: problemIds.length })}
+                      </span>
+                      <div style={{ flex: 1, height: 4, background: 'var(--bg3)', borderRadius: 2 }}>
+                        <div style={{
+                          height: '100%',
+                          width: `${problemIds.length > 0 ? Math.round(pathSolved / problemIds.length * 100) : 0}%`,
+                          borderRadius: 2,
+                          background: 'var(--blue)',
+                        }} />
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      )}
+
+      {selectedPlatformPathData && (
+        <section style={{ border: '1px solid rgba(88,166,255,.32)', borderRadius: 14, background: 'rgba(88,166,255,.08)', padding: 16, marginBottom: 18 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 10 }}>
+            <div>
+              <div style={{ fontSize: 12, color: 'var(--blue)', fontWeight: 800, marginBottom: 4 }}>{selectedPlatformPathData.tag}</div>
+              <h2 style={{ margin: 0, fontSize: 17 }}>{selectedPlatformPathData.icon || '📚'} {selectedPlatformPathData.title}</h2>
+            </div>
+            <span style={{ fontSize: 12, color: 'var(--text3)', flexShrink: 0 }}>
+              {formatMessage(t('learningPathCompletedCount'), { solved: selectedPlatformSolved, total: selectedPlatformProblemIds.length })}
+            </span>
+          </div>
+          <div style={{ display: 'grid', gap: 6 }}>
+            {selectedPlatformProblemIds.map((problemId, index) => {
+              const isSolved = Boolean(solved[problemId]);
+              const problem = selectedPlatformProblemMap.get(Number(problemId));
+              return (
+                <button
+                  key={problemId}
+                  type="button"
+                  onClick={() => navigate(`/problems/${problemId}`)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    border: `1px solid ${isSolved ? 'rgba(86,211,100,.25)' : 'var(--border)'}`,
+                    borderRadius: 8,
+                    background: isSolved ? 'rgba(86,211,100,.06)' : 'var(--bg2)',
+                    color: 'var(--text)',
+                    padding: '9px 12px',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  <span style={{ width: 24, height: 24, borderRadius: '50%', background: isSolved ? 'var(--green)' : 'var(--bg3)', color: isSolved ? '#0d1117' : 'var(--text3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800 }}>
+                    {isSolved ? '✓' : index + 1}
+                  </span>
+                  <span style={{ fontSize: 13, fontWeight: 600 }}>
+                    {problem?.title || `#${problemId}`}
+                  </span>
+                  {problem?.tier && (
+                    <span style={{ color: TIER_COLOR[problem.tier] || 'var(--text3)', fontSize: 11, fontWeight: 800, textTransform: 'capitalize' }}>
+                      {problem.tier}
+                    </span>
+                  )}
+                  <span style={{ marginLeft: 'auto', color: 'var(--blue)', fontSize: 12, fontWeight: 800 }}>{t('learningPathStart')}</span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* 트랙 탭 바 */}
       <div style={{ marginBottom: 16 }}>

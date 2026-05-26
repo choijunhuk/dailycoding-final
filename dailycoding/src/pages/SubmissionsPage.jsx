@@ -4,6 +4,7 @@ import api from '../api.js';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext.jsx';
 import { useLang } from '../context/LangContext.jsx';
+import { copyText } from '../utils/clipboard.js';
 
 const DiffEditor = lazy(async () => {
   const mod = await import('@monaco-editor/react');
@@ -101,6 +102,16 @@ export default function SubmissionsPage() {
     }
     setExp(row.id);
     await ensureCodeLoaded(row);
+  };
+
+  const copySubmissionCode = async (row) => {
+    const code = cache[row.id] || await ensureCodeLoaded(row);
+    if (!code || code === t('submissionsNoCode') || code === t('submissionsCodeLoadFailed')) {
+      toast?.show(t('submissionsCodeCopyEmpty'), 'info');
+      return;
+    }
+    const copied = await copyText(code);
+    toast?.show(copied ? t('submissionsCodeCopied') : t('submissionsCodeCopyFailed'), copied ? 'success' : 'error');
   };
 
   const toggleCompare = async (row) => {
@@ -340,7 +351,7 @@ export default function SubmissionsPage() {
                       <>
                         <div style={{ padding:'9px 18px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
                           <span style={{ fontSize:11, color:'var(--text2)', fontFamily:'Space Mono,monospace' }}>{t('submissionsMyCode')}</span>
-                          <button onClick={() => navigator.clipboard?.writeText(cache[row.id] || '')} style={{
+                          <button onClick={() => copySubmissionCode(row)} style={{
                             padding:'4px 10px', borderRadius:6, border:'1px solid var(--border)',
                             background:'var(--bg2)', color:'var(--text2)', cursor:'pointer',
                             fontSize:11, fontFamily:'inherit',

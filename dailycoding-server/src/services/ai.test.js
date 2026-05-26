@@ -73,6 +73,21 @@ test('askAIWithMeta retries the next model after a quota failure', async () => {
   assert.deepEqual(calls, ['quota-model', 'working-model']);
 });
 
+test('askAIWithMeta reports invalid JSON responses as fallback', async () => {
+  process.env.GEMINI_MODEL = 'invalid-json-model';
+  __setGenAIForTests(mockGenAI(async () => {
+    return { response: { text: () => 'not json' } };
+  }));
+
+  const fallback = { ok: false };
+  const result = await askAIWithMeta('test-user', 'prompt', fallback, 20);
+
+  assert.equal(result.source, 'fallback');
+  assert.equal(result.reason, 'invalid_ai_response');
+  assert.equal(result.model, 'invalid-json-model');
+  assert.deepEqual(result.data, fallback);
+});
+
 test('askAIWithMeta returns fallback and opens cooldown after all models hit quota', async () => {
   process.env.GEMINI_MODEL = 'quota-a';
   process.env.GEMINI_FALLBACK_MODELS = 'quota-b';

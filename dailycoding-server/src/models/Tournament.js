@@ -242,7 +242,7 @@ export const Tournament = {
 
     try {
       const participantIds = tournament.participants.map((p) => p.userId);
-      await Notification.broadcast(participantIds, `The "${tournament.name}" tournament has started! Check the bracket.`, '/tournaments');
+      await Notification.broadcast(participantIds, `The "${tournament.name}" tournament has started! Check the bracket.`, '/tournaments', { type: 'contest' });
     } catch { /* non-critical */ }
 
     return this.getById(id);
@@ -274,7 +274,7 @@ export const Tournament = {
         const allIds = participants.map((p) => p.userId);
         if (t && allIds.length > 0) {
           const winner = participants.find((p) => p.userId === winnerId);
-          await Notification.broadcast(allIds, `The "${t.name}" tournament has ended! Winner: ${winner?.user?.username || winnerId}`, '/tournaments');
+          await Notification.broadcast(allIds, `The "${t.name}" tournament has ended! Winner: ${winner?.user?.username || winnerId}`, '/tournaments', { type: 'contest' });
         }
       } catch { /* non-critical */ }
       return this.getById(tournamentId);
@@ -287,8 +287,8 @@ export const Tournament = {
         if (nextMatch?.player1_id && nextMatch?.player2_id) {
           const opponentId = nextMatch.player1_id === winnerId ? nextMatch.player2_id : nextMatch.player1_id;
           const tName = await queryOne('SELECT name FROM tournaments WHERE id=?', [tournamentId]);
-          await Notification.create(winnerId, `You have been assigned a next round match! "${tName?.name}" Round ${nextRound}`, '/tournaments');
-          await Notification.create(opponentId, `You have been assigned a next round match! "${tName?.name}" Round ${nextRound}`, '/tournaments');
+          await Notification.create(winnerId, `You have been assigned a next round match! "${tName?.name}" Round ${nextRound}`, '/tournaments', { type: 'contest' });
+          await Notification.create(opponentId, `You have been assigned a next round match! "${tName?.name}" Round ${nextRound}`, '/tournaments', { type: 'contest' });
         }
       }
     } catch { /* non-critical */ }

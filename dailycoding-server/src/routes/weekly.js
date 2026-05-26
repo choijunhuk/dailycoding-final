@@ -95,6 +95,10 @@ router.post('/weekly', auth, adminOnly, async (req, res) => {
     if (!problem) {
       return errorResponse(res, 404, 'NOT_FOUND', 'Problem not found.');
     }
+    const reward = await queryOne('SELECT code FROM reward_items WHERE code = ?', [rewardCode]);
+    if (!reward) {
+      return errorResponse(res, 400, 'VALIDATION_ERROR', 'Reward code does not exist.');
+    }
 
     const weekStart = getWeekStartDate();
     await run(

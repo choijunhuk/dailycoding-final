@@ -209,7 +209,8 @@ router.post('/:id/replies', auth, replyLimiter, async (req, res) => {
       Notification.create(
         post.user_id,
         `💬 Someone replied to your post in the Dump board.`,
-        'dump'
+        'dump',
+        { type: 'community_reply' }
       ).catch(() => {});
     }
 

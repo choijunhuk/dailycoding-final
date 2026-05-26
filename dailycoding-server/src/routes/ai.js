@@ -5,7 +5,7 @@ import { User }                 from '../models/User.js';
 import { Problem }              from '../models/Problem.js';
 import { AiHintCache }          from '../models/AiHintCache.js';
 import { Submission }           from '../models/Submission.js';
-import { askAI, askAIWithMeta } from '../services/ai.js';
+import { askAIWithMeta } from '../services/ai.js';
 import redis                    from '../config/redis.js';
 import { queryOne }             from '../config/mysql.js';
 import { AI_DAILY_QUOTA } from '../shared/constants.js';
@@ -132,7 +132,7 @@ Required fields: {
   if (aiResult.source === 'ai') {
     await redis.setJSON(req.analyzeCacheKey, result, 3600);
   }
-  res.json(result);
+  res.json({ ...result, source: aiResult.source, reason: aiResult.reason || null });
 });
 
 // ── AI 채팅 ──────────────────────────────────────────────────────────────
@@ -348,7 +348,7 @@ Required fields:
     if (aiResult.source === 'ai') {
       await redis.setJSON(cacheKey, result, 86400);
     }
-    res.json(result);
+    res.json({ ...result, source: aiResult.source, reason: aiResult.reason || null });
   } catch (err) {
     console.error('[ai/daily-quiz]', err.message);
     res.status(500).json({ message: 'Failed to generate quiz.' });
@@ -506,8 +506,15 @@ router.post('/generate-problem', auth, adminOnly, async (req, res) => {
   const { prompt, fallback } = PROMPTS[problemType] || PROMPTS.coding;
 
   try {
-    const result = await askAI(req.user.id, prompt, fallback, 1000);
-    res.json({ ...result, problemType });
+    const aiResult = await askAIWithMeta(req.user.id, prompt, fallback, 1000);
+    if (aiResult.source !== 'ai') {
+      return res.status(503).json({
+        message: 'AI provider did not return a generated problem. Please try again later.',
+        source: aiResult.source,
+        reason: aiResult.reason || 'provider_unavailable',
+      });
+    }
+    res.json({ ...aiResult.data, problemType, source: aiResult.source, model: aiResult.model || null });
   } catch (err) {
     console.error('[ai/generate-problem]', err.message);
     res.status(500).json({ message: 'Failed to generate problem.' });

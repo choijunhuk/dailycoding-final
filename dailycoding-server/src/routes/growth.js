@@ -29,12 +29,12 @@ const ROLE_SETS = [
 ];
 
 const AI_INTERVIEW = {
-  title: 'AI Mock Interview',
+  title: 'AI Interview Prep',
   flow: [
     'Solve one problem within the time limit.',
     'Explain your approach in 3 sentences.',
-    'AI asks follow-up questions on time complexity, edge cases, and alternative solutions.',
-    'Receive a report graded on accuracy, explanation quality, and time management.',
+    'Use AI chat to practice follow-up questions on time complexity, edge cases, and alternatives.',
+    'Review your answer with the checklist before moving to the next problem.',
   ],
   rubric: ['Accuracy', 'Complexity Explanation', 'Debugging Attitude', 'Communication'],
 };
@@ -208,7 +208,7 @@ router.get('/', async (req, res) => {
         checks: ['Time limit exceeded problems', 'Wrong answer problems', 'Unattempted problems', 'Weak tags'],
         recommendation: recoveryQueue.length > 0
           ? 'Clear the wrong answer recovery queue before the exam, then retake the exam with the same tags.'
-          : 'Your recovery queue is empty. Take a mock test to find new weak spots.',
+          : 'Your recovery queue is empty. Take a practice exam to find new weak spots.',
         cta: '/exams',
       },
       excludedRewardMission: {

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
-import { PROBLEMS as DEFAULT_PROBLEMS, TIERS, TIER_COLORS } from '../data/problems';
+import { TIERS, TIER_COLORS } from '../data/problems';
 import api from '../api.js';
 import { getPushStatus, subscribePush, unsubscribePush } from '../utils/pushSubscribe.js';
 import { useToast } from '../context/ToastContext.jsx';
@@ -66,7 +66,7 @@ export default function ProfilePage() {
     invalidateSubscriptionStatus,
   } = useSubscriptionStatus(user?.id);
   const { loadingPlan, startCheckout } = useSubscriptionCheckout();
-  const PROBLEMS = appProblems.length > 0 ? appProblems : DEFAULT_PROBLEMS;
+  const PROBLEMS = appProblems;
 
   const [mainTab,       setMainTab]       = useState('solved');
   const [top100,        setTop100]        = useState([]);
@@ -111,6 +111,11 @@ export default function ProfilePage() {
   });
   const [learningActivity, setLearningActivity] = useState(null);
   const [weaknessStats, setWeaknessStats] = useState([]);
+  const [top100LoadFailed, setTop100LoadFailed] = useState(false);
+  const [weaknessStatsLoadFailed, setWeaknessStatsLoadFailed] = useState(false);
+  const [learningActivityLoadFailed, setLearningActivityLoadFailed] = useState(false);
+  const [grassLoadFailed, setGrassLoadFailed] = useState(false);
+  const [yearCorrectSubsLoadFailed, setYearCorrectSubsLoadFailed] = useState(false);
   const loadErrorToastShownRef = useRef(false);
 
   useEffect(() => {
@@ -138,7 +143,12 @@ export default function ProfilePage() {
     }).catch((err) => {
       if (err?.response?.status !== 401) showLoadErrorToast(err?.response?.data?.message || txt('보상 정보를 불러오지 못했습니다.', 'Failed to load reward info.'));
     });
-    api.get('/auth/top100').then(r => setTop100(r.data || [])).catch((err) => {
+    api.get('/auth/top100').then(r => {
+      setTop100(r.data || []);
+      setTop100LoadFailed(false);
+    }).catch((err) => {
+      setTop100([]);
+      setTop100LoadFailed(true);
       if (err?.response?.status !== 401) showLoadErrorToast(err?.response?.data?.message || txt('랭킹 통계를 불러오지 못했습니다.', 'Failed to load ranking stats.'));
     });
     if (user?.id) {
@@ -148,11 +158,19 @@ export default function ProfilePage() {
       api.get('/auth/me/stats').then(r => setSolveStats(r.data)).catch((err) => {
         if (err?.response?.status !== 401) showLoadErrorToast(err?.response?.data?.message || txt('풀이 통계를 불러오지 못했습니다.', 'Failed to load solve stats.'));
       });
-      api.get('/submissions/stats').then(r => setWeaknessStats(r.data?.weaknessStats || [])).catch(() => {
+      api.get('/submissions/stats').then(r => {
+        setWeaknessStats(r.data?.weaknessStats || []);
+        setWeaknessStatsLoadFailed(false);
+      }).catch(() => {
         setWeaknessStats([]);
+        setWeaknessStatsLoadFailed(true);
       });
-      api.get(`/auth/profile/${user.id}`).then(r => setLearningActivity(r.data?.learningActivity || null)).catch(() => {
+      api.get(`/auth/profile/${user.id}`).then(r => {
+        setLearningActivity(r.data?.learningActivity || null);
+        setLearningActivityLoadFailed(false);
+      }).catch(() => {
         setLearningActivity(null);
+        setLearningActivityLoadFailed(true);
       });
     }
     const params = new URLSearchParams(location.search);
@@ -187,13 +205,17 @@ export default function ProfilePage() {
     if (!user?.id) return;
     api.get(`/auth/grass/${user.id}`).then((res) => {
       setFullGrass(Array.isArray(res.data) ? res.data : []);
+      setGrassLoadFailed(false);
     }).catch(() => {
       setFullGrass([]);
+      setGrassLoadFailed(true);
     });
     api.get('/submissions?result=correct&limit=500').then((res) => {
       setYearCorrectSubs(Array.isArray(res.data) ? res.data : []);
+      setYearCorrectSubsLoadFailed(false);
     }).catch(() => {
       setYearCorrectSubs([]);
+      setYearCorrectSubsLoadFailed(true);
     }).finally(() => {
       setYearSubsLoaded(true);
     });
@@ -619,6 +641,11 @@ export default function ProfilePage() {
             <span>{item.label}</span>
           </div>
         ))}
+        {learningActivityLoadFailed && (
+          <div className="profile-inline-error">
+            {txt('학습 활동 요약을 불러오지 못했습니다.', 'Failed to load learning activity summary.')}
+          </div>
+        )}
       </div>
 
       {/* ── 탭 네비게이션 ── */}
@@ -708,32 +735,36 @@ export default function ProfilePage() {
             <div className="profile-top100-header">
               <div className="profile-top100-rating">
                 <div className="profile-top100-label">{txt('상위 100 문제 난이도 합계', 'Difficulty sum of top 100 problems')}</div>
-                <div className="profile-top100-value">
-                  +{top100RatingSum}
-                </div>
+                <div className="profile-top100-value">{top100LoadFailed ? '−' : `+${top100RatingSum}`}</div>
               </div>
               <div className="profile-top100-count">
                 <div className="profile-top100-label">{txt('반영된 문제 수', 'Problems counted')}</div>
                 <div className="profile-top100-value-small">
-                  {top100.length}<span className="profile-top100-total">/100</span>
+                  {top100LoadFailed ? '−' : top100.length}<span className="profile-top100-total">/100</span>
                 </div>
               </div>
             </div>
 
             {/* 티어 배지 격자 */}
-            <div className="profile-top100-grid">
-              {top100.map(p=>(
-                <div key={p.id} title={`#${p.id} ${p.title}\n+${TIER_POINTS[p.tier]||20}pts (${p.tier})`} onClick={() => navigate(`/problems/${p.id}`)} style={{ cursor: 'pointer' }}>
-                  <TierBadge tier={p.tier} size={34} />
+            {top100LoadFailed ? (
+              <div className="profile-section-error">{txt('상위 100 문제를 불러오지 못했습니다.', 'Failed to load top 100 problems.')}</div>
+            ) : (
+              <>
+                <div className="profile-top100-grid">
+                  {top100.map(p=>(
+                    <div key={p.id} title={`#${p.id} ${p.title}\n+${TIER_POINTS[p.tier]||20}pts (${p.tier})`} onClick={() => navigate(`/problems/${p.id}`)} style={{ cursor: 'pointer' }}>
+                      <TierBadge tier={p.tier} size={34} />
+                    </div>
+                  ))}
+                  {Array.from({ length: Math.max(0, 100-top100.length) }, (_,i)=>(
+                    <div key={`e${i}`} className="profile-top100-empty-slot"/>
+                  ))}
                 </div>
-              ))}
-              {Array.from({ length: Math.max(0, 100-top100.length) }, (_,i)=>(
-                <div key={`e${i}`} className="profile-top100-empty-slot"/>
-              ))}
-            </div>
-            <div className="profile-top100-note">
-              {txt('배지 클릭 시 해당 문제로 이동합니다', 'Click a badge to go to that problem')}
-            </div>
+                <div className="profile-top100-note">
+                  {txt('배지 클릭 시 해당 문제로 이동합니다', 'Click a badge to go to that problem')}
+                </div>
+              </>
+            )}
           </div>
 
           {/* 문제 목록 */}
@@ -741,7 +772,9 @@ export default function ProfilePage() {
             <div className="profile-panel-header">
               {txt(`레이팅 문제 (${top100.length})`, `Problems in Rating (${top100.length})`)}
             </div>
-            {top100.length === 0
+            {top100LoadFailed
+              ? <div className="profile-section-error">{txt('레이팅 문제 목록을 불러오지 못했습니다.', 'Failed to load rating problem list.')}</div>
+              : top100.length === 0
               ? <div className="profile-empty-msg">{txt('아직 풀이한 문제가 없습니다.', 'No problems solved yet.')}</div>
               : (
                 <div className="profile-top100-list">
@@ -862,7 +895,9 @@ export default function ProfilePage() {
               <div className="section-header-title">{txt('취약 태그 분석', 'Weak Tag Analysis')}</div>
               <span style={{ fontSize:11, color:'var(--text3)' }}>{txt('태그별 오답률 기준', 'Based on wrong-answer rate by tag')}</span>
             </div>
-            {weaknessStats.length === 0 ? (
+            {weaknessStatsLoadFailed ? (
+              <div className="profile-section-error">{txt('취약 태그 분석을 불러오지 못했습니다.', 'Failed to load weak tag analysis.')}</div>
+            ) : weaknessStats.length === 0 ? (
               <div className="empty-state" style={{ padding:'24px 0' }}>
                 <div className="empty-state-icon">📊</div>
                 <div style={{ fontSize:13, color:'var(--text3)', lineHeight:1.7 }}>
@@ -959,6 +994,9 @@ export default function ProfilePage() {
               </div>
             </div>
             <YearHeatmap cells={heatmapCells} onCellHover={(cell) => setHeatmapHover(cell)} />
+            {grassLoadFailed && (
+              <div className="profile-section-error">{txt('스트릭 잔디를 불러오지 못했습니다.', 'Failed to load streak heatmap.')}</div>
+            )}
             <div style={{ display:'flex', gap:6, alignItems:'center', marginTop:12, fontSize:11, color:'var(--text3)' }}>
               <span>{txt('없음', 'None')}</span>
               {[0,1,2,3,4].map(l=>(
@@ -976,6 +1014,10 @@ export default function ProfilePage() {
                 <div style={{ fontSize:12, color:'var(--text3)', display:'flex', alignItems:'center', gap:6 }}>
                   <span className="spinner" style={{ width:12, height:12, borderWidth:2 }} />
                   Loading...
+                </div>
+              ) : yearCorrectSubsLoadFailed ? (
+                <div className="profile-section-error" style={{ padding:0 }}>
+                  {txt('해당 날짜의 문제 상세를 불러오지 못했습니다.', 'Failed to load problem details for this date.')}
                 </div>
               ) : (solvedByDate[heatmapHover?.date] || []).length > 0 ? (
                 <div style={{ display:'flex', flexDirection:'column', gap:4 }}>

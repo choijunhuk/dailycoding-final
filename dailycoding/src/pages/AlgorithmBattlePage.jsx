@@ -11,6 +11,7 @@ import { pickLangText, withVars } from '../utils/languageMode.js';
 import { getTierLabel } from '../utils/labelMaps.js';
 import { getTagLabelLang } from './problemsPageUtils.js';
 import { getSocketUrl } from '../utils/socket.js';
+import { copyText } from '../utils/clipboard.js';
 import './AlgorithmBattlePage.css';
 
 const Editor = lazy(() => import('@monaco-editor/react'));
@@ -484,6 +485,7 @@ export default function AlgorithmBattlePage() {
   const { lang: uiLang, t } = useLang();
   const txt = useCallback((ko, en) => pickLangText(uiLang, ko, en), [uiLang]);
   const errTxt = useCallback((err, ko, en) => (uiLang === 'ko' ? ko : (err?.response?.data?.message || en)), [uiLang]);
+  const editorSettings = user?.settings?.editor || {};
   const workshopEventLabels = useMemo(() => ({
     ON_CORRECT_ANSWER: t('abEvt_ON_CORRECT_ANSWER'),
     ON_WRONG_ANSWER: t('abEvt_ON_WRONG_ANSWER'),
@@ -1016,12 +1018,14 @@ export default function AlgorithmBattlePage() {
           bannedTags: roomProblemFilters.bannedTags,
           problemFilters: roomProblemFilters,
         });
-      if (data.room?.inviteCode && navigator?.clipboard?.writeText) {
-        navigator.clipboard.writeText(data.room.inviteCode).then(() => {
-          toast?.show(txt(`초대 코드 ${data.room.inviteCode} 복사 완료.`, `Invite code ${data.room.inviteCode} copied.`), 'success');
-        }).catch(() => {
-          toast?.show(txt(`초대 코드: ${data.room.inviteCode}`, `Invite code: ${data.room.inviteCode}`), 'info');
-        });
+      if (data.room?.inviteCode) {
+        const copied = await copyText(data.room.inviteCode);
+        toast?.show(
+          copied
+            ? txt(`초대 코드 ${data.room.inviteCode} 복사 완료.`, `Invite code ${data.room.inviteCode} copied.`)
+            : txt(`초대 코드: ${data.room.inviteCode}`, `Invite code: ${data.room.inviteCode}`),
+          copied ? 'success' : 'info',
+        );
       }
       navigate(`/battle/${data.room.id}`);
     } catch (err) {
@@ -1184,14 +1188,14 @@ export default function AlgorithmBattlePage() {
     navigate('/battle');
   };
 
-  const copyInviteCode = () => {
+  const copyInviteCode = async () => {
     const code = currentRoom?.inviteCode;
     if (!code) return;
-    navigator.clipboard?.writeText(code).then(() => {
-      toast?.show(txt('초대 코드를 복사했습니다.', 'Invite code copied.'), 'success');
-    }).catch(() => {
-      toast?.show(txt(`초대 코드: ${code}`, `Invite code: ${code}`), 'info');
-    });
+    const copied = await copyText(code);
+    toast?.show(
+      copied ? txt('초대 코드를 복사했습니다.', 'Invite code copied.') : txt(`초대 코드: ${code}`, `Invite code: ${code}`),
+      copied ? 'success' : 'info',
+    );
   };
 
   const createAgain = async () => {
@@ -1833,15 +1837,17 @@ export default function AlgorithmBattlePage() {
                     <Editor
                       height="100%"
                       language={JUDGE_LANGUAGE_OPTIONS.find((o) => o.value === language)?.monaco || 'python'}
-                      theme="vs-dark"
+                      theme={editorSettings.theme || 'vs-dark'}
                       value={code}
                       onChange={(v) => { setCode(v || ''); emitActivity('typing'); }}
                       options={{
-                        fontSize: 14,
-                        minimap: { enabled: false },
+                        fontSize: editorSettings.font_size || editorSettings.fontSize || 14,
+                        minimap: { enabled: !!editorSettings.minimap },
                         scrollBeyondLastLine: false,
-                        tabSize: 2,
-                        fontFamily: "'Space Mono', 'Fira Code', Consolas, monospace",
+                        tabSize: editorSettings.tab_size || editorSettings.tabSize || 2,
+                        fontFamily: editorSettings.font_family || "'Space Mono', 'Fira Code', Consolas, monospace",
+                        lineNumbers: editorSettings.line_numbers !== false ? 'on' : 'off',
+                        autoClosingBrackets: editorSettings.auto_close_brackets === false ? 'never' : 'always',
                       }}
                     />
                   </Suspense>

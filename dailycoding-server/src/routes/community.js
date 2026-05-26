@@ -52,7 +52,8 @@ async function notifyMentions(content, authorId, postTitle, board) {
         Notification.create(
           mentioned.id,
           `📢 You were mentioned by @${uname} in "${postTitle.slice(0, 30)}". [${boardLabel}]`,
-          'community'
+          'community',
+          { type: 'mention' }
         ).catch((err) => console.warn('[notification] create failed:', err.message));
       }
     } catch { /* 멘션 알림 실패 시 무시 */ }
@@ -449,7 +450,8 @@ router.post('/:board/:id/replies', auth, requireVerified, communityReplyLimiter,
       Notification.create(
         post.user_id,
         `💬 A new comment was posted on "${post.title.slice(0, 30)}". [${board_label}]`,
-        'community'
+        'community',
+        { type: 'community_reply' }
       ).catch((err) => console.warn('[notification] create failed:', err.message));
     }
 
@@ -517,7 +519,8 @@ router.post('/qna/:id/replies/:replyId/accept', auth, async (req, res) => {
       Notification.create(
         reply.user_id,
         `✅ Your answer was accepted in Q&A "${post.title.slice(0, 30)}"!`,
-        'community'
+        'community',
+        { type: 'answer_accepted' }
       ).catch((err) => console.warn('[notification] create failed:', err.message));
     }
 

@@ -86,6 +86,10 @@
   color: var(--text2); font-size: 14px;
 }
 
+.contest-empty.contest-error {
+  color: var(--red);
+}
+
 .admin-cc-btns {
   display: flex; gap: 8px; margin-top: 4px;
 }

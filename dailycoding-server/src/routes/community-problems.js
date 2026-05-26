@@ -151,7 +151,8 @@ router.post('/admin/:id/approve', auth, adminOnly, async (req, res) => {
     await Notification.create(
       submission.user_id,
       `✅ Your submitted problem "${submission.title}" has been approved and published!`,
-      newProblemId ? `/problems/${newProblemId}` : '/problems'
+      newProblemId ? `/problems/${newProblemId}` : '/problems',
+      { type: 'system' }
     );
 
     // 캐시 무효화
@@ -179,7 +180,8 @@ router.post('/admin/:id/reject', auth, adminOnly, async (req, res) => {
     await Notification.create(
       submission.user_id,
       `❌ Your problem submission "${submission.title}" has been rejected.${note ? ` Reason: ${note}` : ''}`,
-      '/submit-problem'
+      '/submit-problem',
+      { type: 'system' }
     );
 
     res.json({ message: 'Rejected.' });

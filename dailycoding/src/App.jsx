@@ -11,14 +11,15 @@ import TermsPage          from './pages/TermsPage';
 import PrivacyPage        from './pages/PrivacyPage';
 import TopNav             from './components/TopNav';
 import VerificationBanner from './components/VerificationBanner';
-import MockAd             from './components/MockAd';
+import ProBenefitsSlot    from './components/ProBenefitsSlot';
 import NotFoundPage    from './pages/NotFoundPage';
 import { ToastProvider } from './context/ToastContext.jsx';
-import { ThemeProvider } from './context/ThemeContext.jsx';
+import { ThemeProvider, useTheme } from './context/ThemeContext.jsx';
 import { LangProvider, useLang } from './context/LangContext.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 import api from './api.js';
 import { applyAppTypographyPreference } from './utils/fontPreferences.js';
+import { applyUiPreferenceFlags } from './utils/uiPreferences.js';
 import { resolvePostLoginRedirect } from './utils/redirects.js';
 import { MAIN_TECH_STACK, TechIcon } from './components/icons/BrandIcon.jsx';
 import './index.css';
@@ -79,7 +80,8 @@ function AppInner() {
   const { loadAll, loading } = useApp();
   const location = useLocation();
   const navigate = useNavigate();
-  const { t } = useLang();
+  const { lang, setLang, t } = useLang();
+  const { theme, setTheme } = useTheme();
 
   useEffect(() => {
     applyAppTypographyPreference({
@@ -100,6 +102,13 @@ function AppInner() {
             fontSize: ui.fontSize || ui.code_font_size || 14,
             uiZoom: ui.uiZoom || 100,
           });
+          applyUiPreferenceFlags(ui);
+          if (['dark', 'light', 'system'].includes(ui.theme) && ui.theme !== theme) {
+            setTheme(ui.theme);
+          }
+          if (['ko', 'en'].includes(ui.language) && ui.language !== lang) {
+            setLang(ui.language);
+          }
         }
       })
       .catch(() => {});
@@ -215,7 +224,7 @@ function AppInner() {
             </Suspense>
           </div>
         )}
-        {!isJudge && <MockAd position="bottom" />}
+        {!isJudge && <ProBenefitsSlot position="bottom" />}
         {/* 푸터 */}
         {!isJudge && (
           <footer className="site-footer">

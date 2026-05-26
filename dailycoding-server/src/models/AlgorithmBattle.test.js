@@ -263,6 +263,31 @@ test('draft-ban defers problem conditions until both players submit draft choice
   assert.ok(started.config.problemFilters.requiredTags.includes('그래프'));
 });
 
+test('algorithm battle does not synthesize missing battle problems', async () => {
+  await waitForDB();
+  const userA = await insert('INSERT INTO users (email, username, role, tier, rating) VALUES (?,?,?,?,?)', ['battle-empty-a@test.com', 'BattleEmptyA', 'user', 'bronze', 500]);
+  const userB = await insert('INSERT INTO users (email, username, role, tier, rating) VALUES (?,?,?,?,?)', ['battle-empty-b@test.com', 'BattleEmptyB', 'user', 'bronze', 520]);
+
+  const created = await AlgorithmBattle.createRoom({
+    creatorId: userA,
+    mode: 'sort-speed',
+    maxPlayers: 2,
+    problemFilters: {
+      requiredTags: ['__no_such_battle_tag__'],
+    },
+  });
+  await AlgorithmBattle.joinRoom(created.room.id, userB);
+
+  await assert.rejects(
+    () => AlgorithmBattle.startRoom(created.room.id),
+    /Not enough eligible battle problems/i
+  );
+
+  const room = await AlgorithmBattle.getRoom(created.room.id);
+  assert.equal(room.status, 'waiting');
+  assert.equal(room.problemId, null);
+});
+
 test('algorithm battle does not award wins for abandoned single-player rooms', async () => {
   await waitForDB();
   const userA = await insert('INSERT INTO users (email, username, role) VALUES (?,?,?)', ['battle-solo-a@test.com', 'BattleSoloA', 'user']);

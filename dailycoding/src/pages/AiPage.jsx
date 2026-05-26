@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
 import { useLang } from '../context/LangContext';
-import { PROBLEMS, TIERS } from '../data/problems';
+import { TIERS } from '../data/problems';
 import { getTierLabel } from '../utils/labelMaps.js';
 import api from '../api.js';
 import EmailVerifyGate from '../components/EmailVerifyGate.jsx';
@@ -44,7 +44,7 @@ export default function AiPage() {
   const [recommendLoading, setRecommendLoading] = useState(true);
 
   // 문제 데이터: AppContext에서 가져오되 없으면 problems.js 기본값
-  const allProblems = appProblems.length > 0 ? appProblems : PROBLEMS;
+  const allProblems = appProblems;
 
   const loadQuota = useCallback(() => {
     api.get('/ai/quota').then(r => setQuota(r.data)).catch(() => {});
@@ -67,32 +67,23 @@ export default function AiPage() {
     try {
       const res = await api.post('/ai/analyze');
       setAnalysis(res.data);
+      if (res.data?.source && res.data.source !== 'ai') {
+        setQuotaNotice(t('aiFallbackNotice'));
+      }
     } catch (err) {
       if (err.response?.data?.code === 'QUOTA_EXCEEDED') {
         setQuotaNotice(t('quotaExceeded'));
       } else {
-      // 서버 없을 때 로컬 fallback
-        setAnalysis({
-          level: t('aiLocalLevel').replace('{username}', user?.username || '').replace('{tier}', user?.tier || ''),
-          strengths:  [t('aiStrength1'), t('aiStrength2')],
-          weaknesses: [t('aiWeakness1'), t('aiWeakness2')],
-          recommend: [
-            t('aiRecommend1'),
-            'BFS',
-            t('aiRecommend2'),
-          ],
-          motivationMsg: t('aiMotivation'),
-          nextMilestone: t('aiNextMilestone').replace('{rating}', String((user?.rating||0)+200)),
-        });
+        setQuotaNotice(err.response?.data?.message || t('aiAnalysisFailed'));
       }
     }
     loadQuota();
     setAnalyzing(false);
   }, [loadQuota, t, user?.rating, user?.tier, user?.username]);
 
-  const sendChat = async () => {
-    if (!input.trim() || chatBusy) return;
-    const msg = input.trim();
+  const sendChat = async (overrideMessage = '') => {
+    const msg = String(overrideMessage || input).trim();
+    if (!msg || chatBusy) return;
     setInput('');
     const newHistory = [...chat, { role:'user', parts:[{text: msg}] }];
     setChat(newHistory);
@@ -127,6 +118,7 @@ export default function AiPage() {
     try {
       const res = await api.post('/ai/hint', { problemId: Number(hintProbId) });
       setAiHint(res.data);
+      if (res.data?.source === 'fallback') setQuotaNotice(t('aiFallbackNotice'));
       if (typeof res.data?.remaining === 'number') setHintRemaining(res.data.remaining);
     } catch (err) {
       if (err.response?.data?.code === 'QUOTA_EXCEEDED') {
@@ -136,13 +128,7 @@ export default function AiPage() {
         setHintLimitMsg(err.response.data.message);
         setHintRemaining(0);
       } else {
-        setAiHint({
-          hint1: t('aiHintFallback1'),
-          hint2: t('aiHintFallback2'),
-          hint3: t('aiHintFallback3'),
-          commonMistake: t('aiHintFallbackMistake'),
-          relatedConcept: t('aiHintFallbackConcept'),
-        });
+        setQuotaNotice(err.response?.data?.message || t('aiHintFailed'));
       }
     }
     loadQuota();
@@ -170,8 +156,11 @@ export default function AiPage() {
               try {
                 const r = await api.post('/ai/daily-quiz');
                 setQuiz(r.data);
+                if (r.data?.source && r.data.source !== 'ai') {
+                  setQuotaNotice(t('aiFallbackNotice'));
+                }
               } catch(e) {
-                console.error('Quiz error:', e.message);
+                setQuotaNotice(e.response?.data?.message || t('aiQuizFailed'));
               }
               loadQuota();
               setQuizLoading(false);
@@ -388,7 +377,7 @@ export default function AiPage() {
         <div className="ai-card fade-up" style={{marginTop:16,background:'linear-gradient(135deg,rgba(188,140,255,.08),rgba(13,17,23,.9))',borderColor:'rgba(188,140,255,.25)'}}>
           <div className="ai-card-title" style={{color:'var(--purple)'}}>🎙️ {txt('AI 모의 면접 가이드', 'AI Interview Prep Guide')}</div>
           <p style={{fontSize:13,color:'var(--text2)',lineHeight:1.7,marginBottom:12}}>
-            {txt('아래 프롬프트를 AI 채팅에 입력하면 모의 면접을 진행할 수 있습니다.', 'Type any of the prompts below into the AI chat to run a mock interview.')}
+            {txt('아래 질문을 선택하면 AI 채팅에서 면접 대비 답변 연습을 시작합니다.', 'Select a question below to practice interview-style answers in AI chat.')}
           </p>
           <div style={{display:'flex',flexDirection:'column',gap:6}}>
             {[
@@ -396,9 +385,9 @@ export default function AiPage() {
               txt('O(n log n) 시간 복잡도를 설명하는 면접 답변 예시를 알려줘', 'Give me an example interview answer explaining O(n log n) time complexity'),
               txt('해시맵을 활용하는 알고리즘 문제의 면접 답변 전략을 설명해줘', 'Explain interview answer strategies for algorithm problems using hash maps'),
             ].map((q) => (
-              <button key={q} onClick={() => setInput(q)} style={{
+              <button key={q} onClick={() => sendChat(q)} disabled={chatBusy} style={{
                 padding:'8px 12px',borderRadius:8,border:'1px solid rgba(188,140,255,.25)',
-                background:'var(--bg3)',color:'var(--text2)',fontSize:12,
+                background:'var(--bg3)',color:'var(--text2)',fontSize:12,opacity:chatBusy ? 0.6 : 1,
                 textAlign:'left',cursor:'pointer',fontFamily:'inherit',lineHeight:1.5,
               }}
                 onMouseEnter={e=>{e.currentTarget.style.borderColor='var(--purple)';e.currentTarget.style.color='var(--text)';}}

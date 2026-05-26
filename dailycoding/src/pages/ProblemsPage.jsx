@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { PROBLEMS as DEFAULT_PROBLEMS, TIERS } from '../data/problems'
+import { TIERS } from '../data/problems'
 import './ProblemsPage.css'
 import { useApp } from '../context/AppContext'
 import { useAuth } from '../context/AuthContext'
@@ -10,6 +10,7 @@ import api from '../api.js'
 import { pickLangText } from '../utils/languageMode.js'
 import { getProblemTypeLabel, getTierLabel } from '../utils/labelMaps.js'
 import { Bookmark, Bug, CheckCircle2, ClipboardList, Code2, FilePenLine, Filter, Gauge, Grid, List, Recycle, Search, Share2, Star, Target, Wrench, X } from 'lucide-react'
+import { copyText } from '../utils/clipboard.js'
 import {
   FALLBACK_TAGS,
   getAcceptanceRate,
@@ -47,7 +48,7 @@ export default function ProblemsPage() {
   const { t, lang } = useLang()
   const txt = useCallback((ko, en) => pickLangText(lang, ko, en), [lang])
   const tierLbl = (tier) => getTierLabel(tier, lang || 'ko') || tier
-  const PROBLEMS = appProblems.length > 0 ? appProblems : DEFAULT_PROBLEMS
+  const catalogProblems = appProblems
 
   const normalizeProblemTypeFilter = (type) => type === 'algorithm' ? 'coding' : type
   const getTypeLabel = (type) => {
@@ -236,7 +237,7 @@ export default function ProblemsPage() {
   }, [recommended, search, apiProblemType, tier, tag, status])
 
   const fallbackList = useMemo(() => {
-    let list = [...PROBLEMS]
+    let list = [...catalogProblems]
     if (search) {
       const lowered = search.toLowerCase()
       list = list.filter(problem => (problem.title || '').toLowerCase().includes(lowered) || String(problem.id) === search)
@@ -263,7 +264,7 @@ export default function ProblemsPage() {
       hasPrev: safePage > 1,
       hasNext: safePage < totalPages,
     }
-  }, [PROBLEMS, bookmarks, page, perPage, search, solved, sort, status, tag, tier, apiProblemType])
+  }, [catalogProblems, bookmarks, page, perPage, search, solved, sort, status, tag, tier, apiProblemType])
 
   const effectiveList = requestError ? fallbackList : serverList
 
@@ -292,11 +293,12 @@ export default function ProblemsPage() {
 
   const totalPages = Math.max(1, effectiveList.totalPages || 1)
   const safePage = Math.min(effectiveList.page || page, totalPages)
+  const catalogTotal = catalogProblems.length || effectiveList.total || 0
   const solvedCount = Object.keys(solved).length
-  const unsolvedCount = Math.max(0, PROBLEMS.length - solvedCount)
+  const unsolvedCount = catalogProblems.length ? Math.max(0, catalogProblems.length - solvedCount) : 0
   const bookmarkedCount = Object.keys(bookmarks).filter(id => bookmarks[id]).length
-  const completionPct = PROBLEMS.length ? Math.round(solvedCount / PROBLEMS.length * 100) : 0
-  const nextProblem = recommendedProblems[0] || sortProblems(PROBLEMS.filter(problem => !solved[problem.id]), sort)[0] || null
+  const completionPct = catalogProblems.length ? Math.round(solvedCount / catalogProblems.length * 100) : 0
+  const nextProblem = recommendedProblems[0] || sortProblems(catalogProblems.filter(problem => !solved[problem.id]), sort)[0] || null
   const activeFilterCount = [search, problemType !== 'all', tier !== 'all', tag !== 'all', status !== 'all', sort !== 'id'].filter(Boolean).length
   const activeChips = [
     search ? { key: 'search', label: `${t('chipSearch')}${search}` } : null,
@@ -345,12 +347,12 @@ export default function ProblemsPage() {
   }, [bookmarks, toggleBookmark, toast])
 
   const copyShareLink = useCallback(async () => {
-    try {
-      await navigator.clipboard.writeText(window.location.href)
+    const copied = await copyText(window.location.href)
+    if (copied) {
       toast?.show(t('filterLinkCopied'), 'success')
-    } catch {
-      toast?.show(t('filterLinkFailed'), 'error')
+      return
     }
+    toast?.show(t('filterLinkFailed'), 'error')
   }, [toast])
 
   const handleRandomPick = useCallback(async () => {
@@ -425,7 +427,7 @@ export default function ProblemsPage() {
           <div>
             <h1 style={{ fontSize: 20, fontWeight: 800, marginBottom: 4 }}>{t('problemListTitle')}</h1>
             <div style={{ display: 'flex', gap: 16, fontSize: 13, color: 'var(--text2)', flexWrap: 'wrap' }}>
-              <span>{t('totalLabel')} <strong style={{ color: 'var(--text)' }}>{PROBLEMS.length}</strong></span>
+              <span>{t('totalLabel')} <strong style={{ color: 'var(--text)' }}>{catalogTotal}</strong></span>
               <span style={{ color: 'var(--green)' }}>{t('solvedLabel')} <strong>{solvedCount}</strong></span>
               <span style={{ color: 'var(--orange)' }}>{t('unsolvedLabel')} <strong>{unsolvedCount}</strong></span>
               <span style={{ color: 'var(--blue)' }}>{t('currentResults')} <strong>{effectiveList.total || 0}</strong></span>
@@ -537,7 +539,7 @@ export default function ProblemsPage() {
             { key: 'refactor-fix', label: getTypeLabel('refactor-fix'), Icon: Recycle },
           ].map(({ key, label, Icon, type }) => {
             const countType = type || key;
-            const count = key === 'all' ? PROBLEMS.length : PROBLEMS.filter(p => (p.problemType || 'coding') === countType).length;
+            const count = key === 'all' ? catalogTotal : catalogProblems.filter(p => (p.problemType || 'coding') === countType).length;
             const isActive = problemType === key;
             return (
               <button key={key} onClick={() => updateFilter('problemType', key)} style={{
@@ -831,7 +833,7 @@ export default function ProblemsPage() {
               color: 'var(--text2)',
               fontSize: 12,
               border: '1px solid var(--border)',
-            }}>{t('showingOf').replace('{total}', PROBLEMS.length).replace('{showing}', effectiveList.total || 0)}</span>
+            }}>{t('showingOf').replace('{total}', catalogTotal).replace('{showing}', effectiveList.total || 0)}</span>
           </div>
 
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>

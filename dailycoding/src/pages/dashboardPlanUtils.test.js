@@ -18,7 +18,7 @@ test('buildDailyFocusPlan starts with the current recommended problem', () => {
 
   assert.equal(plan[0].key, 'today-problem');
   assert.equal(plan[0].path, '/problems/1001');
-  assert.equal(plan[0].stat, 'bronze · 구현 · 수학');
+  assert.equal(plan[0].stat, 'Bronze · 구현 · 수학');
 });
 
 test('buildDailyFocusPlan prioritizes unresolved recovery work over weekly challenge', () => {
@@ -48,7 +48,7 @@ test('buildDailyFocusPlan uses weekly challenge when there is no recovery item',
 
   assert.equal(plan[1].key, 'weekly-challenge');
   assert.equal(plan[1].path, '/problems/3001');
-  assert.equal(plan[1].stat, 'silver · 난이도 2');
+  assert.equal(plan[1].stat, '실버 · 난이도 2');
 });
 
 test('buildDailyFocusPlan defaults chrome labels to English mode', () => {

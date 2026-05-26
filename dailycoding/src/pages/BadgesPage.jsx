@@ -44,6 +44,7 @@ function ItemCard({ item, isEquipped, isShowcased, onEquip, onToggleShowcase, st
   const rarity = RARITY_META[item.rarity] || RARITY_META.common;
   const earned = Boolean(item.earned);
   const isTitle = item.type === 'title';
+  const showStatusRibbon = (isTitle && isEquipped) || (!isTitle && isShowcased);
   const ownerRatio = item.ownerStats?.ownerRatio ?? stats?.ownerRatio ?? stats?.pct ?? null;
   const ownerRatioText = formatPercent(ownerRatio);
   const progressPercent = item.progress?.percentage ?? (earned ? 100 : null);
@@ -78,7 +79,7 @@ function ItemCard({ item, isEquipped, isShowcased, onEquip, onToggleShowcase, st
         transition: 'transform 0.15s, box-shadow 0.15s',
       }}
     >
-      {isEquipped && (
+      {showStatusRibbon && (
         <div style={{
           position: 'absolute', top: 8, left: 8,
           fontSize: 10, fontWeight: 800, padding: '2px 7px', borderRadius: 20,
@@ -293,7 +294,10 @@ export default function BadgesPage() {
       if (type === 'badge') setEquippedBadge(newCode);
       else setEquippedTitle(newCode);
       if (data?.user) applyUser(data.user);
-      toast?.show(newCode ? t('rewards.titleEquippedToast') : t('rewards.titleUnequippedToast'), 'success');
+      const successKey = type === 'badge'
+        ? (newCode ? 'rewards.badgeEquippedToast' : 'rewards.badgeUnequippedToast')
+        : (newCode ? 'rewards.titleEquippedToast' : 'rewards.titleUnequippedToast');
+      toast?.show(t(successKey), 'success');
     } catch (err) {
       toast?.show(err.response?.data?.message || t('rewards.equipFailed'), 'error');
     }

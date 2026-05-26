@@ -32,19 +32,19 @@ function getModelCandidates() {
 
 function parseJsonPayload(text, fallback) {
   try {
-    return JSON.parse(text);
+    return { data: JSON.parse(text), usedFallback: false };
   } catch {
     const clean = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
     const jsonMatch = clean.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       try {
-        return JSON.parse(jsonMatch[0]);
+        return { data: JSON.parse(jsonMatch[0]), usedFallback: false };
       } catch {
         console.warn('[AI] Extracted JSON parsing failed, using fallback');
       }
     }
     console.warn('[AI] JSON parsing failed, using fallback');
-    return fallback;
+    return { data: fallback, usedFallback: true };
   }
 }
 
@@ -138,9 +138,25 @@ export async function askAIWithMeta(userId, prompt, fallback, maxTokens = 400) {
       providerCallStarted = true;
       const result = await model.generateContent(prompt);
       const text = result.response.text();
+      const parsed = parseJsonPayload(text, fallback);
+      if (parsed.usedFallback) {
+        await recordAIEvent({
+          source: 'fallback',
+          reason: 'invalid_ai_response',
+          model: modelName,
+          providerCallStarted,
+        });
+        return {
+          data: parsed.data,
+          source: 'fallback',
+          reason: 'invalid_ai_response',
+          model: modelName,
+          providerCallStarted,
+        };
+      }
       await recordAIEvent({ source: 'ai', model: modelName, providerCallStarted });
       return {
-        data: parseJsonPayload(text, fallback),
+        data: parsed.data,
         source: 'ai',
         model: modelName,
         providerCallStarted,

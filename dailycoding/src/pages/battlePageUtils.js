@@ -17,35 +17,35 @@ export const BATTLE_MODES = [
 ];
 export const TYPE_LABEL = { coding: 'Coding', 'fill-blank': 'Fill in the Blank', 'bug-fix': 'Bug Fix' };
 export const TYPE_COLOR = { coding: 'var(--blue)', 'fill-blank': 'var(--green)', 'bug-fix': 'var(--yellow)' };
-export const JUDGE_AD_SLOT = Object.freeze({
+export const JUDGE_PRO_BENEFITS_SLOT = Object.freeze({
   id: 'judge-result-banner',
-  title: 'Sponsor Banner Slot',
-  description: 'Connect an image ad here.',
+  titleKey: 'proBenefitsJudgeTitle',
+  descriptionKey: 'proBenefitsJudgeDesc',
   type: 'image',
   imageUrl: '',
-  ctaText: 'Ad Link',
-  ctaUrl: '#',
+  ctaKey: 'proBenefitsCta',
+  ctaUrl: '/pricing',
 });
 
-export const BATTLE_AD_SLOTS = Object.freeze({
+export const BATTLE_PRO_BENEFITS_SLOTS = Object.freeze({
   lobby: {
     id: 'battle-lobby-top',
-    title: 'Sponsor Banner Slot',
-    description: 'Connect an image ad here.',
+    titleKey: 'proBenefitsBattleLobbyTitle',
+    descriptionKey: 'proBenefitsBattleLobbyDesc',
     type: 'image',
     imageUrl: '',
-    ctaText: 'Ad Link',
-    ctaUrl: '#',
+    ctaKey: 'proBenefitsCta',
+    ctaUrl: '/pricing',
   },
   battle: {
     id: 'battle-inplay-bottom',
-    title: 'Video Ad Slot',
-    description: 'Replace with a video ad by setting videoUrl.',
+    titleKey: 'proBenefitsBattleLiveTitle',
+    descriptionKey: 'proBenefitsBattleLiveDesc',
     type: 'video',
     videoUrl: '',
     posterUrl: '',
-    ctaText: 'Video Ad Link',
-    ctaUrl: '#',
+    ctaKey: 'proBenefitsCta',
+    ctaUrl: '/pricing',
   },
 });
 

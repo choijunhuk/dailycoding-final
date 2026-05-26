@@ -201,42 +201,50 @@ router.get('/profile/:id', auth, async (req, res) => {
     if (!user) return errorResponse(res, 404, 'NOT_FOUND', 'User not found.');
 
     const isSelf = req.user.id === id;
+    const viewerFollow = isSelf ? null : await queryOne(
+      'SELECT 1 FROM follows WHERE follower_id = ? AND following_id = ?',
+      [req.user.id, id]
+    );
     if (!isSelf && user.profile_visibility === 'private') {
       return errorResponse(res, 403, 'FORBIDDEN', 'This profile is private.');
     }
+    if (!isSelf && user.profile_visibility === 'followers' && !viewerFollow) {
+      return errorResponse(res, 403, 'FORBIDDEN', 'Only followers can view this profile.');
+    }
 
     const anonClause = isSelf ? '' : ' AND is_anonymous = 0';
+    const submissionsPublic = isSelf || user.submissions_public === undefined || Boolean(user.submissions_public);
+    const canViewPosts = isSelf
+      || user.post_visibility === 'public'
+      || (user.post_visibility === 'followers' && Boolean(viewerFollow));
     const [statsRow, followStats, isFollowing, replyStatsRow, solvedTierRows, solvedProblemRows, progressionRow, battleRows, collaborationRow] = await Promise.all([
-      queryOne(
+      canViewPosts ? queryOne(
         `SELECT COUNT(*) AS post_count, COALESCE(SUM(like_count),0) AS total_likes
          FROM posts WHERE user_id = ?${anonClause}`,
         [id]
-      ),
+      ) : Promise.resolve({ post_count: 0, total_likes: 0 }),
       queryOne(
         `SELECT
            (SELECT COUNT(*) FROM follows WHERE following_id = ?) AS followers,
            (SELECT COUNT(*) FROM follows WHERE follower_id = ?) AS following`,
         [id, id]
       ),
-      isSelf ? Promise.resolve(null) : queryOne(
-        'SELECT 1 FROM follows WHERE follower_id = ? AND following_id = ?',
-        [req.user.id, id]
-      ),
+      Promise.resolve(viewerFollow),
       queryOne(
         `SELECT COUNT(*) AS reply_count,
                 COALESCE(SUM(is_accepted), 0) AS accepted_answers
          FROM post_replies WHERE user_id = ?`,
         [id]
       ),
-      query(
+      submissionsPublic ? query(
         `SELECT p.tier, COUNT(DISTINCT s.problem_id) AS cnt
          FROM submissions s
          JOIN problems p ON p.id = s.problem_id
          WHERE s.user_id = ? AND s.result = 'correct'
          GROUP BY p.tier`,
         [id]
-      ),
-      query(
+      ) : Promise.resolve([]),
+      submissionsPublic ? query(
         `SELECT p.id, p.title, p.tier, p.difficulty,
                 MAX(s.submitted_at) AS solved_at,
                 COUNT(*) AS correct_count
@@ -247,7 +255,7 @@ router.get('/profile/:id', auth, async (req, res) => {
          ORDER BY solved_at DESC
          LIMIT 120`,
         [id]
-      ).catch(() => []),
+      ).catch(() => []) : Promise.resolve([]),
       queryOne('SELECT level, xp FROM user_progression WHERE user_id = ?', [id]).catch(() => null),
       query('SELECT * FROM battle_results WHERE user_id = ? ORDER BY created_at DESC LIMIT 500', [id]).catch(() => []),
       optionalQueryOne(
@@ -298,7 +306,7 @@ router.get('/profile/:id', auth, async (req, res) => {
       tier: user.tier,
       rating: user.rating,
       streak: user.streak,
-      solvedCount: user.solved_count ?? 0,
+      solvedCount: submissionsPublic ? (user.solved_count ?? 0) : null,
       bio: user.bio,
       avatar_url: user.avatar_url,
       avatar_url_custom: user.avatar_url_custom,
@@ -316,7 +324,7 @@ router.get('/profile/:id', auth, async (req, res) => {
       joinDate: user.join_date ? new Date(user.join_date).toISOString().slice(0, 10) : null,
       socialLinks: parsedSocialLinks,
       techStack: parsedTechStack,
-      submissionsPublic: user.submissions_public === undefined ? true : Boolean(user.submissions_public),
+      submissionsPublic,
       postCount: statsRow?.post_count ?? 0,
       totalLikes: statsRow?.total_likes ?? 0,
       replyCount: replyStatsRow?.reply_count ?? 0,
@@ -327,7 +335,7 @@ router.get('/profile/:id', auth, async (req, res) => {
       solvedTierCounts,
       solvedProblems,
       learningActivity: {
-        solvedProblems: user.solved_count ?? 0,
+        solvedProblems: submissionsPublic ? (user.solved_count ?? 0) : null,
         xpLevel: progressionRow?.level ?? 1,
         battleCount,
         battleWins,
@@ -349,11 +357,11 @@ router.get('/profile/:id', auth, async (req, res) => {
       return res.json({ ...base, posts, postVisibility: user.post_visibility || 'public' });
     }
 
-    const posts = user.post_visibility === 'private' ? [] : await query(
+    const posts = canViewPosts ? await query(
       `SELECT id, board_type, title, like_count, answer_count, created_at
        FROM posts WHERE user_id = ? AND is_anonymous = 0 ORDER BY created_at DESC LIMIT 50`,
       [id]
-    );
+    ) : [];
     res.json({ ...base, posts });
   } catch (err) {
     console.error('[profile/:id]', err);
@@ -375,15 +383,19 @@ router.get('/profile/:id/activity', auth, async (req, res) => {
   try {
     const user = await User.findById(id);
     if (!user) return errorResponse(res, 404, 'NOT_FOUND', 'User not found.');
-    if (user.profile_visibility === 'private') {
+    const isSelf = req.user.id === id;
+    if (!isSelf && user.profile_visibility === 'private') {
       return errorResponse(res, 403, 'FORBIDDEN', 'This profile is private.');
     }
-    if (user.profile_visibility === 'followers' && req.user.id !== id) {
+    if (!isSelf && user.profile_visibility === 'followers') {
       const isFollowing = await queryOne(
         'SELECT 1 FROM follows WHERE follower_id = ? AND following_id = ?',
         [req.user.id, id]
       );
       if (!isFollowing) return errorResponse(res, 403, 'FORBIDDEN', 'Only followers can view this profile.');
+    }
+    if (!isSelf && user.submissions_public !== undefined && !user.submissions_public) {
+      return res.json({ year, data: [] });
     }
 
     const rows = await query(
@@ -549,6 +561,22 @@ router.get('/grass/:id', auth, async (req, res) => {
   const id = Number(req.params.id);
   if (!id || Number.isNaN(id)) return errorResponse(res, 400, 'VALIDATION_ERROR', 'Invalid ID.');
   try {
+    const user = await User.findById(id);
+    if (!user) return errorResponse(res, 404, 'NOT_FOUND', 'User not found.');
+    const isSelf = req.user.id === id;
+    if (!isSelf && user.profile_visibility === 'private') {
+      return errorResponse(res, 403, 'FORBIDDEN', 'This profile is private.');
+    }
+    if (!isSelf && user.profile_visibility === 'followers') {
+      const isFollowing = await queryOne(
+        'SELECT 1 FROM follows WHERE follower_id = ? AND following_id = ?',
+        [req.user.id, id]
+      );
+      if (!isFollowing) return errorResponse(res, 403, 'FORBIDDEN', 'Only followers can view this profile.');
+    }
+    if (!isSelf && user.submissions_public !== undefined && !user.submissions_public) {
+      return res.json([]);
+    }
     const rows = await User.getGrass(id);
     res.json(rows);
   } catch (err) {

@@ -1,12 +1,12 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { BATTLE_AD_SLOTS, BATTLE_SEC, fmtTime, getSocketUrl, POLL_MS, TYPE_LABEL } from './battlePageUtils.js';
+import { BATTLE_PRO_BENEFITS_SLOTS, BATTLE_SEC, fmtTime, getSocketUrl, POLL_MS, TYPE_LABEL } from './battlePageUtils.js';
 
 test('battle constants and labels remain stable', () => {
   assert.equal(POLL_MS, 2500);
   assert.equal(BATTLE_SEC, 1800);
   assert.equal(TYPE_LABEL['bug-fix'], 'Bug Fix');
-  assert.equal(BATTLE_AD_SLOTS.lobby.id, 'battle-lobby-top');
+  assert.equal(BATTLE_PRO_BENEFITS_SLOTS.lobby.id, 'battle-lobby-top');
 });
 
 test('getSocketUrl derives local dev and apiUrl-based origins', () => {

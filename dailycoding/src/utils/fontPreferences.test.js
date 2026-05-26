@@ -6,9 +6,10 @@ import {
 } from './fontPreferences.js';
 
 test('normalizeAppFontSize clamps global app font size', () => {
-  assert.equal(normalizeAppFontSize(10), 12);
+  assert.equal(normalizeAppFontSize(10), 10);
   assert.equal(normalizeAppFontSize(16.4), 16);
-  assert.equal(normalizeAppFontSize(22), 18);
+  assert.equal(normalizeAppFontSize(22), 22);
+  assert.equal(normalizeAppFontSize(28), 24);
   assert.equal(normalizeAppFontSize('bad'), 14);
 });
 

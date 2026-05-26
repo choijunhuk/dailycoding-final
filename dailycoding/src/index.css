@@ -248,6 +248,24 @@ nav {
 .animate-delay-1 { animation-delay: .1s; }
 .animate-delay-2 { animation-delay: .2s; }
 .animate-delay-3 { animation-delay: .3s; }
+[data-animations='false'] *,
+[data-animations='false'] *::before,
+[data-animations='false'] *::after {
+  animation: none !important;
+  transition: none !important;
+  scroll-behavior: auto !important;
+}
+[data-compact='true'] .problem-card-grid {
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)) !important;
+  gap: 8px !important;
+}
+[data-compact='true'] .problem-card {
+  padding: 12px !important;
+}
+[data-compact='true'] .problems-table-row {
+  padding-top: 8px !important;
+  padding-bottom: 8px !important;
+}
 .glow-blue { box-shadow: 0 0 20px rgba(121,192,255,.25); }
 .glow-gold { box-shadow: 0 0 20px rgba(255,215,0,.25); }
 .glow-diamond { box-shadow: 0 0 20px rgba(185,242,255,.25); }
@@ -386,6 +404,22 @@ nav {
 
 /* ── Settings Page Layout ── */
 .settings-layout { grid-template-columns: 220px 1fr; }
+[data-sidebar-collapsed='true'] .settings-layout {
+  grid-template-columns: 78px 1fr !important;
+}
+[data-sidebar-collapsed='true'] .settings-layout aside > div {
+  padding: 14px 10px !important;
+}
+[data-sidebar-collapsed='true'] .settings-layout aside > div > div:not(:first-child) {
+  display: none !important;
+}
+[data-sidebar-collapsed='true'] .settings-layout aside nav button {
+  justify-content: center !important;
+  font-size: 0 !important;
+}
+[data-sidebar-collapsed='true'] .settings-layout aside nav button span:first-child {
+  font-size: 13px !important;
+}
 @media (max-width: 860px) {
   .settings-layout { grid-template-columns: 1fr !important; }
   .settings-layout aside { position: static !important; }

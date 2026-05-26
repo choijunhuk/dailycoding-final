@@ -442,6 +442,10 @@ export const User = {
         mention:           true,  // @멘션
         follow:            true,  // 새 팔로워
         answer_accepted:   true,  // 내 답변 채택
+        battle:            true,  // 배틀 초대/결과
+        contest:           true,  // 대회 안내
+        review:            true,  // 코드 리뷰
+        reward:            true,  // 보상 지급
         system:            true,  // 시스템 공지
         email_digest:      false, // 주간 이메일 요약
       },

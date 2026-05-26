@@ -94,11 +94,18 @@ function buildExamReport({ problems, breakdown, score, timeUsedSec, durationMin 
 
   const emptyCount = breakdown.filter((item) => item.result === 'empty').length;
   const wrongCount = breakdown.filter((item) => item.result !== 'correct' && item.result !== 'empty').length;
-  const nextPractice = weakTags.length > 0
-    ? `Solve 2 easy problems tagged "${weakTags[0].label}" and retake this mock test under the same conditions.`
+  const nextPracticeEn = weakTags.length > 0
+    ? `Solve 2 easy problems tagged "${weakTags[0].label}" and retake this practice exam under the same conditions.`
     : accuracy >= 80
-      ? 'Your accuracy is solid. Try reducing the time limit by 10–15% and solve again.'
+      ? 'Your accuracy is solid. Try reducing the time limit by 10-15% and solve again.'
       : 'Review your incorrect answers first, then retry with a set of the same difficulty.';
+  const nextPracticeKo = weakTags.length > 0
+    ? `"${weakTags[0].label}" 태그의 쉬운 문제 2개를 풀고 같은 조건으로 다시 연습하세요.`
+    : accuracy >= 80
+      ? '정확도가 안정적입니다. 제한 시간을 10-15% 줄여 다시 풀어보세요.'
+      : '틀린 답안을 먼저 복습한 뒤 같은 난이도의 세트로 다시 도전하세요.';
+  const summaryEn = `Accuracy ${accuracy}%, used ${paceRate}% of the time limit.`;
+  const summaryKo = `정확도 ${accuracy}%, 제한 시간의 ${paceRate}% 사용.`;
 
   return {
     accuracy,
@@ -108,8 +115,12 @@ function buildExamReport({ problems, breakdown, score, timeUsedSec, durationMin 
     wrongCount,
     weakTags,
     weakTypes,
-    summary: `Accuracy ${accuracy}%, used ${paceRate}% of the time limit.`,
-    nextPractice,
+    summary: summaryEn,
+    summaryEn,
+    summaryKo,
+    nextPractice: nextPracticeEn,
+    nextPracticeEn,
+    nextPracticeKo,
   };
 }
 
@@ -141,7 +152,7 @@ router.get('/', async (req, res) => {
       return {
         id: row.id,
         title: row.title,
-        description: unlocked ? row.description : 'This mock coding test is exclusive to the Pro plan.',
+        description: unlocked ? row.description : 'This practice exam is exclusive to the Pro plan.',
         durationMin: row.duration_min,
         problemCount: ids.length,
         difficultyAvg: row.difficulty_avg,

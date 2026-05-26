@@ -156,31 +156,7 @@ async function buildGhostChallenges(userId, limit = 12) {
     .filter((challenge) => challenge.problemId)
     .slice(0, safeLimit);
 
-  if (challenges.length > 0) return challenges;
-
-  const fallbackProblems = await getPublicCodingProblems(safeLimit);
-  const solvedIds = await getSolvedIds(userId, fallbackProblems.map((problem) => problem.id));
-  return fallbackProblems
-    .filter((problem) => !solvedIds.has(problem.id))
-    .slice(0, safeLimit)
-    .map((problem, index) => {
-      const targetTimeSec = 240 + index * 35 + toInt(problem.difficulty, 1) * 20;
-      return {
-        problemId: problem.id,
-        title: problem.title,
-        tier: problem.tier,
-        difficulty: problem.difficulty,
-        rewardXp: Math.max(60, Math.round(tierDamage(problem.tier) / 2)),
-        mode: 'ghost-race',
-        ghost: {
-          userId: null,
-          username: 'System Ghost',
-          lang: 'python',
-          targetTimeSec,
-          submittedAt: null,
-        },
-      };
-    });
+  return challenges;
 }
 
 async function buildDailyDungeon(userId) {

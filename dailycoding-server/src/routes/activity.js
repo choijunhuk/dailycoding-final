@@ -14,14 +14,31 @@ router.get('/users/:id/activity', auth, async (req, res) => {
   }
 
   try {
-    const user = await queryOne('SELECT id, profile_visibility FROM users WHERE id = ?', [userId]);
+    const user = await queryOne('SELECT id, profile_visibility, post_visibility, submissions_public FROM users WHERE id = ?', [userId]);
     if (!user) return res.status(404).json({ message: 'User not found.' });
-    if (user.profile_visibility === 'private' && req.user.id !== userId) {
+    const isSelf = req.user.id === userId;
+    if (user.profile_visibility === 'private' && !isSelf) {
       return res.status(403).json({ message: 'This profile is private.' });
     }
+    let followsTarget = false;
+    if (!isSelf && (user.profile_visibility === 'followers' || user.post_visibility === 'followers')) {
+      const isFollowing = await queryOne(
+        'SELECT 1 FROM follows WHERE follower_id = ? AND following_id = ?',
+        [req.user.id, userId]
+      );
+      if (user.profile_visibility === 'followers' && !isFollowing) {
+        return res.status(403).json({ message: 'Only followers can view this profile.' });
+      }
+      followsTarget = Boolean(isFollowing);
+    }
+
+    const canViewSubmissions = isSelf || user.submissions_public === undefined || Boolean(user.submissions_public);
+    const canViewPosts = isSelf
+      || user.post_visibility === 'public'
+      || (user.post_visibility === 'followers' && followsTarget);
 
     const [solveRows, postRows, battleRows] = await Promise.all([
-      query(
+      canViewSubmissions ? query(
         `SELECT 'solve' AS type, s.submitted_at AS created_at, s.id AS submission_id,
                 s.problem_id, p.title AS problem_title, s.lang
          FROM submissions s
@@ -30,15 +47,15 @@ router.get('/users/:id/activity', auth, async (req, res) => {
          ORDER BY s.submitted_at DESC
          LIMIT 100`,
         [userId]
-      ),
-      query(
+      ) : Promise.resolve([]),
+      canViewPosts ? query(
         `SELECT 'post' AS type, id AS post_id, created_at, board_type AS board, title
          FROM posts
          WHERE user_id = ? AND is_anonymous = 0
          ORDER BY created_at DESC
          LIMIT 100`,
         [userId]
-      ),
+      ) : Promise.resolve([]),
       query(
         `SELECT 'battle' AS type, room_id, created_at, result
          FROM battle_history

@@ -45,7 +45,7 @@ function canViewDetail(review, user) {
 
 async function notifyBestEffort(userId, message, link) {
   try {
-    await Notification.create(userId, message, link);
+    await Notification.create(userId, message, link, { type: 'review' });
   } catch (err) {
     console.warn('[reviews:notification]', err.message);
   }

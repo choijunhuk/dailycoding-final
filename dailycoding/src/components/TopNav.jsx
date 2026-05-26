@@ -117,10 +117,10 @@ export default function TopNav() {
       .then((res) => {
         const titleCode = res.data?.equippedTitle;
         const title = (res.data?.rewards || []).find((item) => item.code === titleCode);
-        setEquippedTitleName(title?.name || '');
+        setEquippedTitleName(lang === 'ko' ? (title?.name_ko || title?.name || '') : (title?.name || ''));
       })
       .catch(() => setEquippedTitleName(''));
-  }, [user?.id, user?.equippedTitle]);
+  }, [user?.id, user?.equippedTitle, lang]);
   const { effectiveTheme, toggleTheme } = useTheme();
   const notifRef = useRef(null);
   const userRef  = useRef(null);

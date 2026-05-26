@@ -7,7 +7,7 @@ WHERE code NOT IN (
   'badge_streak_7','badge_streak_30','badge_streak100','badge_streak365',
   'badge_xp_rookie','badge_xp_climber','badge_xp_veteran','badge_xp_master',
   'badge_battle_win','badge_battle_5wins','badge_battle_10wins','badge_battle_20wins',
-  'badge_speedrun','badge_nightowl','badge_gold_killer','badge_multilang',
+  'badge_speedrun','badge_nightowl','badge_gold_killer','badge_multilang','weekly_solver',
   'title_bronze','title_silver','title_gold','title_platinum','title_diamond',
   'title_routine_builder','title_debug_maker'
 )
@@ -46,6 +46,7 @@ UPDATE reward_items SET description_ko = CASE code
   WHEN 'badge_nightowl'      THEN '자정~새벽 4시 사이에 문제를 풀었습니다.'
   WHEN 'badge_gold_killer'   THEN '골드 이상 문제를 처음으로 풀었습니다.'
   WHEN 'badge_multilang'     THEN '3개 이상의 언어로 정답을 제출했습니다.'
+  WHEN 'weekly_solver'       THEN '이번 주 챌린지 문제를 해결했습니다.'
   WHEN 'title_bronze'        THEN '브론즈 달성'
   WHEN 'title_silver'        THEN '실버 달성'
   WHEN 'title_gold'          THEN '골드 달성'

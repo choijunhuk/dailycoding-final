@@ -40,6 +40,7 @@ export default function ExamPage() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [answers, setAnswers] = useState({});
   const [result, setResult] = useState(null);
+  const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
     let ignore = false;
@@ -50,13 +51,17 @@ export default function ExamPage() {
           api.post(`/exams/${id}/start`),
         ]);
         if (ignore) return;
+        setLoadError('');
         setExam({ ...detail, problems: started.problems });
         setAttemptId(started.attemptId);
         const startedAt = new Date(started.startedAt).getTime();
         const durationSec = (started.durationMin || 120) * 60;
         setTimeLeft(Math.max(0, durationSec - Math.floor((Date.now() - startedAt) / 1000)));
-      } catch {
-        if (!ignore) setExam(null);
+      } catch (err) {
+        if (!ignore) {
+          setExam(null);
+          setLoadError(err?.response?.data?.code === 'PRO_REQUIRED' ? 'pro' : 'notFound');
+        }
       }
     })();
     return () => { ignore = true; };
@@ -81,6 +86,8 @@ export default function ExamPage() {
   const currentAnswer = answers[activeProblem?.id] || {};
   const currentLang = currentAnswer.lang || 'python';
   const monacoLang = LANG_OPTIONS.find(o => o.value === currentLang)?.monaco || 'python';
+  const reportSummary = lang === 'ko' ? result?.report?.summaryKo || result?.report?.summary : result?.report?.summaryEn || result?.report?.summary;
+  const reportNextPractice = lang === 'ko' ? result?.report?.nextPracticeKo || result?.report?.nextPractice : result?.report?.nextPracticeEn || result?.report?.nextPractice;
 
   const setLang = (lang) => setAnswers(prev => ({
     ...prev,
@@ -111,6 +118,32 @@ export default function ExamPage() {
     const { data } = await api.post(`/exams/${id}/submit`, { attemptId, answers });
     setResult(data);
   };
+
+  if (!exam && loadError) {
+    const isProError = loadError === 'pro';
+    return (
+      <div style={{ padding: '48px 24px', maxWidth: 720, margin: '0 auto' }}>
+        <div style={{ background:'var(--bg2)', border:'1px solid var(--border)', borderRadius:12, padding:24 }}>
+          <h1 style={{ fontSize:22, fontWeight:800, marginBottom:8 }}>
+            {isProError ? t('examProRequiredTitle') : t('examLoadFailedTitle')}
+          </h1>
+          <p style={{ color:'var(--text2)', lineHeight:1.7, marginBottom:18 }}>
+            {isProError ? t('examProRequiredDesc') : t('examLoadFailedDesc')}
+          </p>
+          <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
+            {isProError && (
+              <button className="btn btn-primary" onClick={() => navigate('/pricing')}>
+                {t('examViewPricing')}
+              </button>
+            )}
+            <button className="btn btn-ghost" onClick={() => navigate('/exams')}>
+              {t('backToExams')}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!exam) return <div style={{ padding: 40 }}>{t('examLoading')}</div>;
 
@@ -150,20 +183,20 @@ export default function ExamPage() {
                 ))}
               </div>
               <div style={{ padding:'14px 16px', border:'1px solid var(--border)', borderRadius:10, background:'var(--bg3)', fontSize:13, lineHeight:1.7 }}>
-                <div style={{ fontWeight:800, color:'var(--text)', marginBottom:4 }}>Mock Exam Report</div>
-                <div style={{ color:'var(--text2)' }}>{result.report.summary}</div>
-                <div style={{ color:'var(--blue)', marginTop:6 }}>{result.report.nextPractice}</div>
+                <div style={{ fontWeight:800, color:'var(--text)', marginBottom:4 }}>{t('examReportTitle')}</div>
+                <div style={{ color:'var(--text2)' }}>{reportSummary}</div>
+                <div style={{ color:'var(--blue)', marginTop:6 }}>{reportNextPractice}</div>
               </div>
               {(result.report.weakTags?.length > 0 || result.report.weakTypes?.length > 0) && (
                 <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(220px, 1fr))', gap:10 }}>
                   <div style={{ padding:'12px 14px', border:'1px solid var(--border)', borderRadius:10, background:'var(--bg3)' }}>
-                    <div style={{ fontSize:12, fontWeight:800, marginBottom:8 }}>Weak Tags</div>
+                    <div style={{ fontSize:12, fontWeight:800, marginBottom:8 }}>{t('examWeakTagsTitle')}</div>
                     {(result.report.weakTags || []).length === 0
-                      ? <div style={{ fontSize:12, color:'var(--text3)' }}>No notable weak tags.</div>
+                      ? <div style={{ fontSize:12, color:'var(--text3)' }}>{t('examWeakTagsEmpty')}</div>
                       : result.report.weakTags.map((tag) => (
                         <div key={tag.label} style={{ display:'flex', justifyContent:'space-between', gap:10, fontSize:12, color:'var(--text2)', marginBottom:6 }}>
                           <span>{tag.label}</span>
-                          <span>{tag.misses}/{tag.total} miss</span>
+                          <span>{t('examWeakTagMissCount').replace('{misses}', String(tag.misses)).replace('{total}', String(tag.total))}</span>
                         </div>
                       ))}
                   </div>

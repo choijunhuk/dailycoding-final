@@ -40,6 +40,7 @@ export default function GameHubPage() {
   const dungeonProgress = summary.dungeon?.progress || emptySummary.dungeon.progress
   const boss = summary.dungeon?.boss
   const ghostChallenges = summary.ghost?.challenges || []
+  const dungeonRooms = summary.dungeon?.rooms || []
   const territories = summary.season?.territories || []
   const controlledCount = useMemo(() => territories.filter((item) => item.controlled).length, [territories])
 
@@ -75,7 +76,7 @@ export default function GameHubPage() {
           <p>
             {txt('실시간 배틀을 넘어 고스트 레이스, 데일리 던전, 시즌 정복을 한곳에서 시작하세요.', 'Beyond real-time battles, start Ghost Race, Daily Dungeon, and Season Conquest all in one place.')}
             {' '}
-            {txt('랭킹 점수에는 영향 없이 동기와 반복 플레이 가치를 높입니다.', 'Boosts your motivation and replay value without affecting your ranking score.')}
+            {txt('기존 문제 풀이 기록을 바탕으로 목표와 반복 플레이 가치를 더합니다.', 'Adds goals and replay value on top of your existing problem-solving records.')}
           </p>
           <div className="game-hero-actions">
             <button className="btn btn-primary" onClick={() => navigate('/battle')}>{txt('실시간 배틀 입장', 'Enter Live Battle')} <ArrowRight size={16} /></button>
@@ -86,7 +87,7 @@ export default function GameHubPage() {
           <div className="game-boss-orb">{boss?.emoji || '🎮'}</div>
           <div>
             <div className="game-panel-label">{txt('오늘의 보스', "Today's Boss")}</div>
-            <strong>{(lang === 'ko' ? boss?.nameKo || boss?.name : boss?.name) || txt('보스 준비 중', 'Boss coming soon')}</strong>
+            <strong>{(lang === 'ko' ? boss?.nameKo || boss?.name : boss?.name) || txt('던전 정보 없음', 'Dungeon unavailable')}</strong>
             <small>{dungeonProgress.cleared}/{dungeonProgress.total} {txt('방 클리어', 'rooms cleared')} · {dungeonProgress.percent}% {txt('진행', 'progress')}</small>
           </div>
         </div>
@@ -113,7 +114,7 @@ export default function GameHubPage() {
         <div className="game-stat card card-hover">
           <Crown size={18} />
           <span>{txt('점령 지역', 'Territories Held')}</span>
-          <strong>{loading ? '-' : `${controlledCount}/${territories.length || 5}`}</strong>
+          <strong>{loading ? '-' : territories.length ? `${controlledCount}/${territories.length}` : '0/0'}</strong>
         </div>
       </section>
 
@@ -161,7 +162,10 @@ export default function GameHubPage() {
             <span style={{ width: `${Math.max(0, 100 - (dungeonProgress.percent || 0))}%` }} />
           </div>
           <div className="game-list">
-            {(summary.dungeon?.rooms || []).map((room) => (
+            {dungeonRooms.length === 0 && !loading && (
+              <div className="game-empty">{txt('오늘 배정된 던전 방이 없습니다. 문제 데이터가 준비되면 자동으로 표시됩니다.', 'No dungeon rooms are assigned today. They will appear when problem data is available.')}</div>
+            )}
+            {dungeonRooms.map((room) => (
               <button
                 key={room.problemId}
                 type="button"
@@ -189,6 +193,9 @@ export default function GameHubPage() {
           </div>
           <p className="game-section-desc">{txt('태그별 지역 소유권은 최근 7일 정답 제출로 계산됩니다. 실시간 배틀을 자연스럽게 확장하는 메타 목표입니다.', 'Territory ownership per tag is calculated from correct submissions in the last 7 days. A meta-goal that naturally extends live battles.')}</p>
           <div className="territory-list">
+            {territories.length === 0 && !loading && (
+              <div className="game-empty">{txt('아직 계산할 시즌 지역 데이터가 없습니다. 최근 정답 제출이 생기면 표시됩니다.', 'No season territory data is available yet. Recent accepted submissions will populate it.')}</div>
+            )}
             {territories.map((territory) => (
               <div key={territory.id} className="territory-row">
                 <div className="territory-title">

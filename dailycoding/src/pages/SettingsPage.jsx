@@ -5,6 +5,7 @@ import api from '../api';
 import { useTheme } from '../context/ThemeContext.jsx';
 import { useLang } from '../context/LangContext.jsx';
 import { FONT_OPTIONS, applyAppTypographyPreference, normalizeAppFontSize } from '../utils/fontPreferences.js';
+import { applyUiPreferenceFlags } from '../utils/uiPreferences.js';
 import ProfileAvatar from '../components/ProfileAvatar.jsx';
 import { Bell, Code2, Lock, Monitor, Shield, User } from 'lucide-react';
 
@@ -327,11 +328,11 @@ function NotifSettings({ data, onSave, saving }) {
   const [s, setS] = useState(data || {});
   return (
     <div style={{ display:'flex', flexDirection:'column' }}>
-      <ToggleRow label={t('commentNotif')} desc={t('commentNotifDesc')} checked={s.onComment ?? true} onChange={v => setS(p => ({ ...p, onComment: v }))} />
-      <ToggleRow label={t('likeNotif')} desc={t('likeNotifDesc')} checked={s.onLike ?? true} onChange={v => setS(p => ({ ...p, onLike: v }))} />
-      <ToggleRow label={t('followNotif')} desc={t('followNotifDesc')} checked={s.onFollow ?? true} onChange={v => setS(p => ({ ...p, onFollow: v }))} />
-      <ToggleRow label={t('mentionNotif')} desc={t('mentionNotifDesc')} checked={s.onMention ?? true} onChange={v => setS(p => ({ ...p, onMention: v }))} />
-      <ToggleRow label={t('battleNotif')} desc={t('battleNotifDesc')} checked={s.onBattle ?? true} onChange={v => setS(p => ({ ...p, onBattle: v }))} />
+      <ToggleRow label={t('commentNotif')} desc={t('commentNotifDesc')} checked={s.community_reply ?? s.onComment ?? true} onChange={v => setS(p => ({ ...p, community_reply: v }))} />
+      <ToggleRow label={t('likeNotif')} desc={t('likeNotifDesc')} checked={s.community_like ?? s.onLike ?? true} onChange={v => setS(p => ({ ...p, community_like: v }))} />
+      <ToggleRow label={t('followNotif')} desc={t('followNotifDesc')} checked={s.follow ?? s.onFollow ?? true} onChange={v => setS(p => ({ ...p, follow: v }))} />
+      <ToggleRow label={t('mentionNotif')} desc={t('mentionNotifDesc')} checked={s.mention ?? s.onMention ?? true} onChange={v => setS(p => ({ ...p, mention: v }))} />
+      <ToggleRow label={t('battleNotif')} desc={t('battleNotifDesc')} checked={s.battle ?? s.onBattle ?? true} onChange={v => setS(p => ({ ...p, battle: v }))} />
       <div style={{ marginTop:20 }}><SaveBtn onClick={() => onSave(s)} saving={saving} /></div>
     </div>
   );
@@ -341,6 +342,8 @@ function UiSettings({ data, onSave, saving, theme, setTheme, lang, setLang, t })
   const [s, setS] = useState(data || {});
   const selectedFont = s.fontFamily || 'noto';
   const selectedFontSize = normalizeAppFontSize(s.fontSize || s.code_font_size || 14);
+  const selectedTheme = s.theme || theme;
+  const selectedLanguage = s.language || lang;
 
   function updateFont(fontId) {
     applyAppTypographyPreference({ fontFamily: fontId, fontSize: selectedFontSize });
@@ -355,7 +358,14 @@ function UiSettings({ data, onSave, saving, theme, setTheme, lang, setLang, t })
 
   function saveUiSettings() {
     applyAppTypographyPreference({ fontFamily: selectedFont, fontSize: selectedFontSize });
-    onSave({ ...s, fontSize: selectedFontSize, code_font_size: selectedFontSize });
+    applyUiPreferenceFlags(s);
+    onSave({
+      ...s,
+      theme: selectedTheme,
+      language: selectedLanguage,
+      fontSize: selectedFontSize,
+      code_font_size: selectedFontSize,
+    });
   }
 
   return (
@@ -367,10 +377,13 @@ function UiSettings({ data, onSave, saving, theme, setTheme, lang, setLang, t })
             { id:'light', label:`☀️ ${t('lightMode')}` },
             { id:'system', label:`💻 ${t('systemMode')}` },
           ].map(item => (
-            <button key={item.id} onClick={() => setTheme(item.id)} style={{
+            <button key={item.id} onClick={() => {
+              setTheme(item.id);
+              setS(p => ({ ...p, theme: item.id }));
+            }} style={{
               padding:'12px 14px', borderRadius:10,
-              border:`2px solid ${theme === item.id ? 'var(--blue)' : 'var(--border)'}`,
-              background: theme === item.id ? 'rgba(88,166,255,.08)' : 'var(--bg2)',
+              border:`2px solid ${selectedTheme === item.id ? 'var(--blue)' : 'var(--border)'}`,
+              background: selectedTheme === item.id ? 'rgba(88,166,255,.08)' : 'var(--bg2)',
               color:'var(--text)', cursor:'pointer', fontWeight:600,
             }}>{item.label}</button>
           ))}
@@ -380,10 +393,13 @@ function UiSettings({ data, onSave, saving, theme, setTheme, lang, setLang, t })
             { id:'ko', label:t('korean') },
             { id:'en', label:'English' },
           ].map(item => (
-            <button key={item.id} onClick={() => setLang(item.id)} style={{
+            <button key={item.id} onClick={() => {
+              setLang(item.id);
+              setS(p => ({ ...p, language: item.id }));
+            }} style={{
               padding:'12px 14px', borderRadius:10,
-              border:`2px solid ${lang === item.id ? 'var(--blue)' : 'var(--border)'}`,
-              background: lang === item.id ? 'rgba(88,166,255,.08)' : 'var(--bg2)',
+              border:`2px solid ${selectedLanguage === item.id ? 'var(--blue)' : 'var(--border)'}`,
+              background: selectedLanguage === item.id ? 'rgba(88,166,255,.08)' : 'var(--bg2)',
               color:'var(--text)', cursor:'pointer', fontWeight:600,
             }}>{item.label}</button>
           ))}
@@ -431,9 +447,21 @@ function UiSettings({ data, onSave, saving, theme, setTheme, lang, setLang, t })
           <div style={{ fontSize:12, color:'var(--text3)' }}>{t('appFontSizeDesc')}</div>
         </div>
       </Field>
-      <ToggleRow label={t('animations')} desc={t('animationsDesc')} checked={s.animations ?? true} onChange={v => setS(p => ({ ...p, animations: v }))} />
-      <ToggleRow label={t('compactMode')} desc={t('compactModeDesc')} checked={s.compactMode ?? false} onChange={v => setS(p => ({ ...p, compactMode: v }))} />
-      <ToggleRow label={t('autoCollapseSidebar')} checked={s.autoCollapseSidebar ?? false} onChange={v => setS(p => ({ ...p, autoCollapseSidebar: v }))} />
+      <ToggleRow label={t('animations')} desc={t('animationsDesc')} checked={s.animations ?? true} onChange={v => setS(p => {
+        const next = { ...p, animations: v };
+        applyUiPreferenceFlags(next);
+        return next;
+      })} />
+      <ToggleRow label={t('compactMode')} desc={t('compactModeDesc')} checked={s.compactMode ?? false} onChange={v => setS(p => {
+        const next = { ...p, compactMode: v };
+        applyUiPreferenceFlags(next);
+        return next;
+      })} />
+      <ToggleRow label={t('autoCollapseSidebar')} checked={s.autoCollapseSidebar ?? false} onChange={v => setS(p => {
+        const next = { ...p, autoCollapseSidebar: v };
+        applyUiPreferenceFlags(next);
+        return next;
+      })} />
       <div style={{ marginTop:20 }}><SaveBtn onClick={saveUiSettings} saving={saving} /></div>
     </div>
   );
