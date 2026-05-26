@@ -12,8 +12,7 @@ if (referralCode) {
 // Apply saved font preferences before first render to avoid flash
 const savedFont = localStorage.getItem('dc_app_font') || 'noto';
 const savedFontSize = Number(localStorage.getItem('dc_app_font_size')) || 14;
-const savedZoom = Number(localStorage.getItem('dc_app_zoom')) || 100;
-applyAppTypographyPreference({ fontFamily: savedFont, fontSize: savedFontSize, uiZoom: savedZoom });
+applyAppTypographyPreference({ fontFamily: savedFont, fontSize: savedFontSize });
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

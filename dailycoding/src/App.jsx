@@ -100,7 +100,6 @@ function AppInner() {
           applyAppTypographyPreference({
             fontFamily: ui.fontFamily || 'noto',
             fontSize: ui.fontSize || ui.code_font_size || 14,
-            uiZoom: ui.uiZoom || 100,
           });
           applyUiPreferenceFlags(ui);
           if (['dark', 'light', 'system'].includes(ui.theme) && ui.theme !== theme) {
