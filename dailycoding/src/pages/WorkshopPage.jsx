@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { Eye, Play, Plus, Save, Trash2 } from 'lucide-react';
+import { Copy, Eye, Play, Plus, Save, Trash2 } from 'lucide-react';
 import api from '../api.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
@@ -82,6 +82,7 @@ export default function WorkshopPage() {
   const [loading, setLoading] = useState(Boolean(id));
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [cloning, setCloning] = useState(false);
   const [authorId, setAuthorId] = useState(null);
   const [name, setName] = useState(template ? (lang === 'en' ? template.nameEn : template.nameKo) : '');
   const [description, setDescription] = useState(template ? (lang === 'en' ? template.descEn : template.descKo) : '');
@@ -232,6 +233,20 @@ export default function WorkshopPage() {
     }
   }, [id, navigate, toast, t]);
 
+  const cloneMode = useCallback(async () => {
+    setCloning(true);
+    try {
+      const cloneName = `${name.trim()} (${lang === 'ko' ? '복제본' : 'Copy'})`;
+      const { data } = await api.post('/battle-modes', { name: cloneName, description, isPublic: false, config });
+      toast?.show(t('workshopCloneSuccess'), 'success');
+      navigate(`/workshop/${data.mode.id}`, { replace: true });
+    } catch (err) {
+      toast?.show(err.response?.data?.message || t('workshopCloneFailed'), 'error');
+    } finally {
+      setCloning(false);
+    }
+  }, [name, description, config, lang, navigate, toast, t]);
+
   useEffect(() => {
     const handler = (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 's') {
@@ -263,14 +278,21 @@ export default function WorkshopPage() {
               <Play size={16} /> {t('wgPlayBtn')}
             </button>
           )}
+          {id && user && Number(user.id) !== authorId && authorId !== null && (
+            <button type="button" className="btn btn-ghost" onClick={cloneMode} disabled={cloning}>
+              <Copy size={16} /> {t('workshopClone')}
+            </button>
+          )}
           {id && user && Number(user.id) === authorId && (
             <button type="button" className="btn btn-danger" onClick={deleteMode} disabled={deleting}>
               <Trash2 size={16} /> {t('workshopDeleteMode')}
             </button>
           )}
-          <button type="button" className="btn btn-primary" onClick={save} disabled={saving}>
-            {saving ? <span className="spinner" /> : <Save size={16} />} {t('save')}
-          </button>
+          {(!id || !authorId || !user || Number(user.id) === authorId) && (
+            <button type="button" className="btn btn-primary" onClick={save} disabled={saving}>
+              {saving ? <span className="spinner" /> : <Save size={16} />} {t('save')}
+            </button>
+          )}
         </div>
       </header>
 
@@ -316,11 +338,8 @@ export default function WorkshopPage() {
           <div className="workshop-rules-head">
             <div>
               <div className="workshop-section-title">{t('workshopRulesBuilder')}</div>
-              <p>
+              <p style={{ color: rules.length >= 20 ? 'var(--red)' : undefined }}>
                 {withVars(t('workshopRulesCount'), { n: rules.length })}
-                <span style={{ marginLeft: 8, fontSize: 11, color: rules.length >= 20 ? 'var(--red)' : 'var(--text3)' }}>
-                  ({rules.length}/20)
-                </span>
               </p>
             </div>
             <button type="button" className="btn btn-ghost" onClick={addRule}>
