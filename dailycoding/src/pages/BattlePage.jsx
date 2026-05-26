@@ -797,7 +797,7 @@ export default function BattlePage() {
       } catch (err) {
         if (cancelled) return;
         if (err?.response?.status === 404) {
-          toast?.show('Battle room not found.', 'error');
+          toast?.show(txt('배틀 방을 찾을 수 없습니다.', 'Battle room not found.'), 'error');
         } else {
           spectateBattle(params.roomId);
         }

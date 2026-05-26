@@ -1223,7 +1223,7 @@ export default function ProfilePage() {
                     onChange={async (e) => {
                       const file = e.target.files?.[0]
                       if (!file) return
-                      if (file.size > 2 * 1024 * 1024) { toast?.show('Image must be under 2MB', 'error'); return }
+                      if (file.size > 2 * 1024 * 1024) { toast?.show(txt('이미지는 2MB 미만이어야 합니다.', 'Image must be under 2MB'), 'error'); return }
                       const formData = new FormData()
                       formData.append('avatar', file)
                       try {
@@ -1233,7 +1233,7 @@ export default function ProfilePage() {
                         setAvatarUrlCustom(data.avatarUrl)
                         setAvatarSource(data.user?.avatarSource || data.user?.avatar_source || 'site')
                         applyUser(data.user)
-                        toast?.show('Avatar uploaded.', 'success')
+                        toast?.show(txt('아바타가 업로드되었습니다.', 'Avatar uploaded.'), 'success')
                       } catch (err) {
                         toast?.show(err.response?.data?.message || 'Avatar upload failed', 'error')
                       }
@@ -1289,11 +1289,11 @@ export default function ProfilePage() {
                     if (pushStatus.subscribed) {
                       await unsubscribePush();
                       setPushStatus((prev) => ({...prev, subscribed:false}));
-                      toast?.show('Push notifications disabled.', 'info');
+                      toast?.show(txt('푸시 알림이 비활성화되었습니다.', 'Push notifications disabled.'), 'info');
                     } else {
                       await subscribePush();
                       setPushStatus((prev) => ({...prev, subscribed:true, configured:true}));
-                      toast?.show('Push notifications enabled.', 'success');
+                      toast?.show(txt('푸시 알림이 활성화되었습니다.', 'Push notifications enabled.'), 'success');
                     }
                   } catch (err) {
                     toast?.show(err.message || 'Failed to update push notification settings', 'error');
@@ -1314,7 +1314,7 @@ export default function ProfilePage() {
                           const { data } = await api.patch('/auth/profile/background', { backgroundSlug: bg.slug })
                           setEquippedBackground(bg.slug)
                           applyUser(data)
-                          toast?.show('Background applied.', 'success')
+                          toast?.show(txt('배경이 적용되었습니다.', 'Background applied.'), 'success')
                         } catch (err) {
                           toast?.show(err.response?.data?.message || 'Failed to apply background', 'error')
                         }
@@ -1343,7 +1343,7 @@ export default function ProfilePage() {
                       setAvatarColor(updated?.avatarColor || null);
                       setAvatarSource(updated?.avatarSource || updated?.avatar_source || 'site');
                     } catch {
-                      toast?.show('Failed to save avatar color', 'error');
+                      toast?.show(txt('아바타 색상 저장에 실패했습니다.', 'Failed to save avatar color'), 'error');
                     }
                   }} style={{
                     width:28, height:28, borderRadius:'50%', background:c,
@@ -1357,7 +1357,7 @@ export default function ProfilePage() {
                     setAvatarColor(updated?.avatarColor || null);
                     setAvatarSource(updated?.avatarSource || updated?.avatar_source || 'site');
                   } catch {
-                    toast?.show('Failed to reset avatar color', 'error');
+                    toast?.show(txt('아바타 색상 초기화에 실패했습니다.', 'Failed to reset avatar color'), 'error');
                   }
                 }} style={{
                   width:28, height:28, borderRadius:'50%', border:'2px dashed var(--border)', background:'transparent',
@@ -1375,7 +1375,7 @@ export default function ProfilePage() {
                       setAvatarEmoji(updated?.avatarEmoji || null);
                       setAvatarSource(updated?.avatarSource || updated?.avatar_source || 'site');
                     } catch {
-                      toast?.show('Failed to save avatar emoji', 'error');
+                      toast?.show(txt('아바타 이모지 저장에 실패했습니다.', 'Failed to save avatar emoji'), 'error');
                     }
                   }} style={{
                     width:36, height:36, borderRadius:8, fontSize:18,
@@ -1389,7 +1389,7 @@ export default function ProfilePage() {
                     setAvatarEmoji(updated?.avatarEmoji || null);
                     setAvatarSource(updated?.avatarSource || updated?.avatar_source || 'site');
                   } catch {
-                    toast?.show('Failed to reset avatar emoji', 'error');
+                    toast?.show(txt('아바타 이모지 초기화에 실패했습니다.', 'Failed to reset avatar emoji'), 'error');
                   }
                 }} style={{
                   width:36, height:36, borderRadius:8, border:'1px dashed var(--border)',

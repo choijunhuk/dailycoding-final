@@ -69,9 +69,10 @@ api.interceptors.response.use(
 
       if (code !== 'QUOTA_EXCEEDED') {
         const sec = retryAfter ? parseInt(retryAfter, 10) : null;
+        const isKo = (localStorage.getItem('dc_lang') || 'ko') === 'ko';
         const message = sec
-          ? `Too many requests. Please try again in ${sec}s.`
-          : 'Too many requests. Please try again later.';
+          ? (isKo ? `요청이 너무 많습니다. ${sec}초 후 다시 시도해주세요.` : `Too many requests. Please try again in ${sec}s.`)
+          : (isKo ? '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' : 'Too many requests. Please try again later.');
         window.dispatchEvent(new CustomEvent('dc:toast', {
           detail: { message, type: 'error' },
         }));

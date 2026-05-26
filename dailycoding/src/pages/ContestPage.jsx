@@ -251,7 +251,7 @@ export default function ContestPage() {
     try {
       const res = await api.post(`/contests/${c.id}/virtual/start`);
       setVirtualContest(res.data);
-      toast?.show('Virtual contest started.', 'success');
+      toast?.show(txt('가상 대회가 시작되었습니다.', 'Virtual contest started.'), 'success');
     } catch (err) {
       toast?.show(err.response?.data?.message || 'Failed to start virtual contest.', 'error');
     }
@@ -296,7 +296,7 @@ export default function ContestPage() {
     setSubmittingRequest(true);
     try {
       await api.post('/contests/creation-requests', requestForm);
-      toast?.show('Contest creation request submitted. An admin will review it shortly.', 'success');
+      toast?.show(txt('대회 개최 요청이 제출되었습니다. 관리자가 검토 후 답변 드립니다.', 'Contest creation request submitted. An admin will review it shortly.'), 'success');
       setShowRequestForm(false);
       setRequestForm({ name: '', description: '', desiredDate: '', reason: '' });
     } catch (err) { toast?.show(err.response?.data?.message || 'Failed to submit request', 'error'); }
@@ -308,8 +308,8 @@ export default function ContestPage() {
     try {
       await api.patch(`/contests/creation-requests/${reqId}`, { status });
       setCreationRequests(p => p.map(r => r.id === reqId ? { ...r, status } : r));
-      toast?.show(status === 'approved' ? 'Request approved.' : 'Request rejected.', 'success');
-    } catch { toast?.show('Processing failed', 'error'); }
+      toast?.show(status === 'approved' ? txt('요청이 승인되었습니다.', 'Request approved.') : txt('요청이 거절되었습니다.', 'Request rejected.'), 'success');
+    } catch { toast?.show(txt('처리에 실패했습니다.', 'Processing failed.'), 'error'); }
     setCreationReqBusy(p => ({ ...p, [reqId]: false }));
   };
 
