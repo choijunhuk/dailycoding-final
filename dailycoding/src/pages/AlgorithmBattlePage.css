@@ -1426,3 +1426,95 @@
     flex-wrap: wrap;
   }
 }
+
+/* ── Inline Workshop Rule Builder ───────────────────────────────────────── */
+.ab-inline-workshop {
+  margin: 12px 0 14px;
+  padding: 14px;
+  border: 1px solid rgba(121, 192, 255, .28);
+  border-radius: 8px;
+  background: var(--bg2);
+}
+
+.ab-inline-ws-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.ab-inline-workshop label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--text2);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.ab-inline-workshop input,
+.ab-inline-workshop select {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 13px;
+}
+
+.ab-inline-workshop .workshop-rule-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ab-inline-workshop .workshop-rule-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+
+.ab-inline-workshop .workshop-rule-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ab-inline-workshop .workshop-rule-title strong {
+  font-size: 13px;
+}
+
+.ab-inline-workshop .workshop-rule-title button {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg2);
+  color: var(--text2);
+  cursor: pointer;
+}
+
+.ab-inline-workshop .workshop-form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.ab-inline-workshop .workshop-form-row .wide {
+  grid-column: 1 / -1;
+}
+
+.ab-inline-workshop input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  padding: 0;
+}

@@ -1,7 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { io } from 'socket.io-client';
-import { Copy, MessageCircle, Play, Plus, Shield, Smile, Swords, Trophy, Zap, Lock, Unlock, Clock, Wrench } from 'lucide-react';
+import { Copy, MessageCircle, Play, Plus, Shield, Sliders, Smile, Swords, Trophy, Zap, Lock, Unlock, Clock, Trash2, Wrench } from 'lucide-react';
 import api from '../api.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
@@ -62,6 +62,22 @@ const BATTLE_MODE_KO = {
   'draft-ban': { title: '🚫 드래프트 밴', description: '전략적 1v1 — 두 플레이어가 티어와 태그를 밴/픽한 후 문제가 확정됩니다.', rules: ['방 생성 시 문제 조건 없음', '두 플레이어 준비 후 드래프트 시작', '드래프트 후 문제 확정', '정답 → 상대 HP 손실 + 이펙트'] },
 };
 
+
+function createInlineRule() {
+  return { id: `rule_${Date.now()}_${Math.random().toString(36).slice(2)}`, event: 'ON_CORRECT_ANSWER', condition: { type: 'always' }, action: { type: 'MODIFY_HP', target: 'self', value: 15 } };
+}
+function defaultInlineCond(type) {
+  return type === 'always' ? { type } : { type, value: 30 };
+}
+function defaultInlineAction(type) {
+  if (type === 'MODIFY_HP') return { type, target: 'self', value: 15 };
+  if (type === 'SET_HP') return { type, target: 'self', value: 100 };
+  if (type === 'ADD_TIME') return { type, value: 30 };
+  if (type === 'GRANT_ITEM') return { type, item: 'shield' };
+  if (type === 'DOUBLE_DAMAGE') return { type, duration: 10 };
+  if (type === 'FREEZE_OPPONENT') return { type, duration: 5 };
+  return { type, text: '' };
+}
 
 function getBattleModeTitle(modeKey, config, lang) {
   if (lang === 'ko') return BATTLE_MODE_KO[modeKey]?.title || config?.titleKo || config?.title || modeKey;
@@ -574,6 +590,8 @@ export default function AlgorithmBattlePage() {
   const [workshopModes, setWorkshopModes] = useState([]);
   const [selectedMode, setSelectedMode] = useState('duel-effects');
   const [selectedWorkshopModeId, setSelectedWorkshopModeId] = useState(searchParams.get('workshopModeId') || '');
+  const [showInlineWorkshop, setShowInlineWorkshop] = useState(false);
+  const [inlineWorkshopConfig, setInlineWorkshopConfig] = useState({ rules: [], baseHp: 100, allowItems: false });
   const [selectedDuration, setSelectedDuration] = useState(300);
   const [preferredLanguage, setPreferredLanguage] = useState(user?.defaultLanguage || 'python');
   const [isPrivate, setIsPrivate] = useState(false);
@@ -1074,12 +1092,24 @@ export default function AlgorithmBattlePage() {
   };
 
   // ── 방 만들기
+  const updateInlineConfig = (patch) => setInlineWorkshopConfig((prev) => ({ ...prev, ...patch }));
+  const addInlineRule = () => {
+    if (inlineWorkshopConfig.rules.length >= 20) return;
+    updateInlineConfig({ rules: [...inlineWorkshopConfig.rules, createInlineRule()] });
+  };
+  const removeInlineRule = (ruleId) => updateInlineConfig({ rules: inlineWorkshopConfig.rules.filter((r) => r.id !== ruleId) });
+  const patchInlineRule = (ruleId, patch) => updateInlineConfig({ rules: inlineWorkshopConfig.rules.map((r) => r.id === ruleId ? { ...r, ...patch } : r) });
+  const patchInlineRuleCond = (ruleId, patch) => updateInlineConfig({ rules: inlineWorkshopConfig.rules.map((r) => r.id === ruleId ? { ...r, condition: { ...r.condition, ...patch } } : r) });
+  const patchInlineRuleAction = (ruleId, patch) => updateInlineConfig({ rules: inlineWorkshopConfig.rules.map((r) => r.id === ruleId ? { ...r, action: { ...r.action, ...patch } } : r) });
+
     const createRoom = async () => {
       setCreating(true);
       try {
         const modeConfig = battleModes.find((m) => m.key === selectedMode);
         const safeFilters = sanitizeProblemFilters(normalizedProblemFilters, problemTiers);
         const roomProblemFilters = selectedMode === 'draft-ban' ? DEFAULT_PROBLEM_FILTERS : safeFilters;
+        const effectiveInlineConfig = (showInlineWorkshop && !selectedWorkshopModeId && inlineWorkshopConfig.rules.length > 0)
+          ? inlineWorkshopConfig : null;
         const { data } = await api.post('/battles/rooms', {
           mode: selectedMode,
           maxPlayers: 2,
@@ -1087,6 +1117,7 @@ export default function AlgorithmBattlePage() {
           isPrivate,
           preferredLanguage,
           workshopModeId: selectedWorkshopModeId || null,
+          inlineConfig: effectiveInlineConfig,
           bannedTags: roomProblemFilters.bannedTags,
           problemFilters: roomProblemFilters,
           title: roomTitle.trim() || null,
@@ -1405,7 +1436,7 @@ export default function AlgorithmBattlePage() {
               <label>{txt('워크샵 모드', 'Workshop Mode')}</label>
               <select
                 value={selectedWorkshopModeId}
-                onChange={(e) => setSelectedWorkshopModeId(e.target.value)}
+                onChange={(e) => { setSelectedWorkshopModeId(e.target.value); if (e.target.value) setShowInlineWorkshop(false); }}
                 className="ab-lang-select"
               >
                 <option value="">{txt('사용 안 함', 'None')}</option>
@@ -1416,6 +1447,15 @@ export default function AlgorithmBattlePage() {
               <button type="button" className="btn btn-ghost btn-sm" onClick={() => navigate('/workshop-gallery')}>
                 <Wrench size={13} /> {txt('갤러리', 'Gallery')}
               </button>
+              {!selectedWorkshopModeId && (
+                <button
+                  type="button"
+                  className={`btn btn-ghost btn-sm${showInlineWorkshop ? ' active' : ''}`}
+                  onClick={() => setShowInlineWorkshop((v) => !v)}
+                >
+                  <Sliders size={13} /> {txt('직접 입력', 'Custom Rules')}
+                </button>
+              )}
             </div>
 
             <div className="ab-option-group">
@@ -1430,6 +1470,65 @@ export default function AlgorithmBattlePage() {
               {isPrivate && <p className="ab-private-hint">{txt('방 생성 후 초대 코드를 공유하세요.', 'Share invite code after creating room.')}</p>}
             </div>
           </div>
+
+          {showInlineWorkshop && !selectedWorkshopModeId && (() => {
+            const evtLabels = { ON_CORRECT_ANSWER: t('workshopEvt_ON_CORRECT_ANSWER'), ON_WRONG_ANSWER: t('workshopEvt_ON_WRONG_ANSWER'), ON_COMPILE_ERROR: t('workshopEvt_ON_COMPILE_ERROR'), ON_OPPONENT_CORRECT: t('workshopEvt_ON_OPPONENT_CORRECT'), ON_OPPONENT_WRONG: t('workshopEvt_ON_OPPONENT_WRONG'), ON_TIMER_HALF: t('workshopEvt_ON_TIMER_HALF'), ON_TIMER_LOW: t('workshopEvt_ON_TIMER_LOW'), ON_BATTLE_START: t('workshopEvt_ON_BATTLE_START'), ON_HP_BELOW_50: t('workshopEvt_ON_HP_BELOW_50'), ON_HP_BELOW_25: t('workshopEvt_ON_HP_BELOW_25') };
+            const condLabels = { always: t('workshopCond_always'), hp_below: t('workshopCond_hp_below'), hp_above: t('workshopCond_hp_above'), opponent_hp_below: t('workshopCond_opponent_hp_below'), time_remaining_below: t('workshopCond_time_remaining_below'), solved_count_above: t('workshopCond_solved_count_above'), wrong_streak_above: t('workshopCond_wrong_streak_above') };
+            const actLabels = { MODIFY_HP: t('workshopAct_MODIFY_HP'), SET_HP: t('workshopAct_SET_HP'), ADD_TIME: t('workshopAct_ADD_TIME'), GRANT_ITEM: t('workshopAct_GRANT_ITEM'), DOUBLE_DAMAGE: t('workshopAct_DOUBLE_DAMAGE'), FREEZE_OPPONENT: t('workshopAct_FREEZE_OPPONENT'), SHOW_MESSAGE: t('workshopAct_SHOW_MESSAGE') };
+            const tgtLabels = { self: t('workshopTgt_self'), opponent: t('workshopTgt_opponent'), both: t('workshopTgt_both') };
+            const itemLabels = { shield: t('workshopItem_shield'), bomb: t('workshopItem_bomb'), heal: t('workshopItem_heal'), freeze: t('workshopItem_freeze') };
+            return (
+              <div className="ab-inline-workshop">
+                <div className="ab-inline-ws-header">
+                  <Sliders size={15} />
+                  <strong>{txt('커스텀 룰 빌더', 'Custom Rule Builder')}</strong>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--fg-muted)' }}>{txt('저장 없이 이 방에만 적용됩니다', 'Applied only to this room, not saved')}</span>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginLeft: 'auto' }}>
+                    <label style={{ fontSize: '0.8rem', display: 'flex', gap: 6, alignItems: 'center' }}>
+                      {txt('기본 HP', 'Base HP')}
+                      <input type="number" min={1} max={999} value={inlineWorkshopConfig.baseHp} onChange={(e) => updateInlineConfig({ baseHp: Number(e.target.value) })} style={{ width: 60 }} />
+                    </label>
+                    <label style={{ fontSize: '0.8rem', display: 'flex', gap: 6, alignItems: 'center' }}>
+                      <input type="checkbox" checked={inlineWorkshopConfig.allowItems} onChange={(e) => updateInlineConfig({ allowItems: e.target.checked })} />
+                      {t('workshopAllowItems')}
+                    </label>
+                  </div>
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={addInlineRule} disabled={inlineWorkshopConfig.rules.length >= 20}>
+                    <Plus size={13} /> {t('workshopAddRule')}
+                  </button>
+                </div>
+                {inlineWorkshopConfig.rules.length === 0 && (
+                  <p style={{ fontSize: '0.82rem', color: 'var(--fg-muted)', padding: '8px 0' }}>{t('workshopEmptyRules')}</p>
+                )}
+                <div className="workshop-rule-list">
+                  {inlineWorkshopConfig.rules.map((rule, idx) => (
+                    <article className="workshop-rule-card" key={rule.id}>
+                      <div className="workshop-rule-title">
+                        <strong>{withVars(t('workshopRuleNum'), { n: idx + 1 })}</strong>
+                        <button type="button" onClick={() => removeInlineRule(rule.id)}><Trash2 size={14} /></button>
+                      </div>
+                      <div className="workshop-form-row">
+                        <label>{t('workshopEventLabel')}<select value={rule.event} onChange={(e) => patchInlineRule(rule.id, { event: e.target.value })}>{Object.entries(evtLabels).map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></label>
+                        <label>{t('workshopConditionLabel')}<select value={rule.condition?.type || 'always'} onChange={(e) => patchInlineRule(rule.id, { condition: defaultInlineCond(e.target.value) })}>{Object.entries(condLabels).map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></label>
+                        {rule.condition?.type !== 'always' && <label>{t('workshopCondValueLabel')}<input type="number" value={rule.condition?.value ?? 0} onChange={(e) => patchInlineRuleCond(rule.id, { value: Number(e.target.value) })} /></label>}
+                      </div>
+                      <div className="workshop-form-row">
+                        <label>{t('workshopActionLabel')}<select value={rule.action?.type || 'MODIFY_HP'} onChange={(e) => patchInlineRule(rule.id, { action: defaultInlineAction(e.target.value) })}>{Object.entries(actLabels).map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></label>
+                        {['MODIFY_HP', 'SET_HP'].includes(rule.action?.type) && (<>
+                          <label>{t('workshopTargetLabel')}<select value={rule.action.target || 'self'} onChange={(e) => patchInlineRuleAction(rule.id, { target: e.target.value })}>{Object.entries(tgtLabels).filter(([v]) => rule.action.type === 'MODIFY_HP' || v !== 'both').map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></label>
+                          <label>{t('workshopHpValueLabel')}<input type="number" value={rule.action.value ?? 0} onChange={(e) => patchInlineRuleAction(rule.id, { value: Number(e.target.value) })} /></label>
+                        </>)}
+                        {rule.action?.type === 'ADD_TIME' && <label>{t('workshopTimeSecLabel')}<input type="number" value={rule.action.value ?? 0} onChange={(e) => patchInlineRuleAction(rule.id, { value: Number(e.target.value) })} /></label>}
+                        {rule.action?.type === 'GRANT_ITEM' && <label>{t('workshopItemLabel')}<select value={rule.action.item || 'shield'} onChange={(e) => patchInlineRuleAction(rule.id, { item: e.target.value })}>{Object.entries(itemLabels).map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></label>}
+                        {['DOUBLE_DAMAGE', 'FREEZE_OPPONENT'].includes(rule.action?.type) && <label>{t('workshopDurationLabel')}<input type="number" min={1} max={600} value={rule.action.duration ?? 1} onChange={(e) => patchInlineRuleAction(rule.id, { duration: Number(e.target.value) })} /></label>}
+                        {rule.action?.type === 'SHOW_MESSAGE' && <label className="wide">{t('workshopMessageLabel')}<input value={rule.action.text || ''} maxLength={120} onChange={(e) => patchInlineRuleAction(rule.id, { text: e.target.value })} /></label>}
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
 
           {selectedWorkshopMode && (
             <div className="ab-draft-lobby-note">

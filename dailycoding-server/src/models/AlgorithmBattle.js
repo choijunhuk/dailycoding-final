@@ -746,9 +746,12 @@ export const AlgorithmBattle = {
     bannedTags = [],
     problemFilters = null,
     workshopModeId = null,
+    inlineConfig = null,
     title = null,
+    skipActiveCheck = false,
   } = {}) {
-    if (creatorId) {
+    await this.expireStaleWaitingRooms();
+    if (creatorId && !skipActiveCheck) {
       const existingActive = await queryOne(
         "SELECT id FROM battle_rooms WHERE created_by = ? AND status IN ('waiting', 'playing') LIMIT 1",
         [creatorId]
@@ -772,7 +775,11 @@ export const AlgorithmBattle = {
       err.status = 403;
       throw err;
     }
-    const modeConfig = getBattleModeConfig(normalizedMode, getWorkshopOverrides(workshopMode));
+    const syntheticWorkshopMode = (!workshopMode && inlineConfig && Array.isArray(inlineConfig.rules) && inlineConfig.rules.length > 0)
+      ? { id: null, name: '커스텀', description: '', authorId: creatorId, config: { rules: inlineConfig.rules.slice(0, 20), baseHp: Number(inlineConfig.baseHp) || 100, timeLimit: inlineConfig.timeLimit || undefined, allowItems: Boolean(inlineConfig.allowItems) } }
+      : null;
+    const effectiveWorkshopMode = workshopMode || syntheticWorkshopMode;
+    const modeConfig = getBattleModeConfig(normalizedMode, getWorkshopOverrides(effectiveWorkshopMode));
     const normalizedProblemFilters = normalizedMode === 'draft-ban'
       ? sanitizeProblemFilters({})
       : sanitizeProblemFilters({
@@ -814,7 +821,7 @@ export const AlgorithmBattle = {
       mode: normalizedMode,
       bannedTags: normalizedProblemFilters.bannedTags,
       problemFilters: normalizedProblemFilters,
-      workshopMode,
+      workshopMode: effectiveWorkshopMode,
       deferredProblemSelection: !problemId,
     });
     return this.getRoomState(id);
@@ -1420,11 +1427,13 @@ export const AlgorithmBattle = {
     if (room.status === 'waiting') {
       await run('DELETE FROM battle_participants WHERE room_id = ? AND user_id = ?', [roomId, userId]);
       await this.recordEvent(roomId, userId, 'player.left', {});
+      const remaining = await this.getParticipants(roomId);
+      if (remaining.length === 0) {
+        await run("UPDATE battle_rooms SET status = 'finished', ended_at = ? WHERE id = ?", [nowMySQL(), roomId]);
+        return null;
+      }
       if (Number(room.createdBy) === Number(userId)) {
-        const remaining = await this.getParticipants(roomId);
-        if (remaining.length > 0) {
-          await run('UPDATE battle_rooms SET created_by = ? WHERE id = ?', [remaining[0].userId, roomId]);
-        }
+        await run('UPDATE battle_rooms SET created_by = ? WHERE id = ?', [remaining[0].userId, roomId]);
       }
       return this.getRoomState(roomId);
     }

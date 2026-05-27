@@ -1,6 +1,7 @@
 import { nowMySQL } from '../config/dateutil.js';
 import { insert, query, queryOne, run } from '../config/mysql.js';
 import { Battle } from './Battle.js';
+import { AlgorithmBattle } from './AlgorithmBattle.js';
 import { User } from './User.js';
 import { Notification } from './Notification.js';
 
@@ -11,6 +12,8 @@ function clampSize(size) {
   const parsed = Number(size) || 8;
   return VALID_SIZES.has(parsed) ? parsed : 8;
 }
+
+const VALID_BATTLE_MODES = new Set(['sort-speed', 'survival', 'duel-effects', 'chaos-items', 'territory', 'code-golf', 'draft-ban']);
 
 function normalize(row) {
   if (!row) return null;
@@ -28,6 +31,7 @@ function normalize(row) {
     minTier: row.min_tier ?? null,
     maxTier: row.max_tier ?? null,
     bannedTags: row.banned_tags ? String(row.banned_tags).split(',').filter(Boolean) : [],
+    battleMode: (row.battle_mode && VALID_BATTLE_MODES.has(row.battle_mode)) ? row.battle_mode : null,
   };
 }
 
@@ -69,16 +73,17 @@ export const Tournament = {
     return (rows || []).map(normalize);
   },
 
-  async create({ name, size, createdBy, startsAt = null, isPrivate = false, joinPassword = null, minTier = null, maxTier = null, bannedTags = [] }) {
+  async create({ name, size, createdBy, startsAt = null, isPrivate = false, joinPassword = null, minTier = null, maxTier = null, bannedTags = [], battleMode = null }) {
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 19).replace('T', ' ');
     const bannedTagsStr = Array.isArray(bannedTags) && bannedTags.length > 0 ? bannedTags.join(',') : null;
     const safeMinTier = minTier && TIER_ORDER.includes(minTier) ? minTier : null;
     const safeMaxTier = maxTier && TIER_ORDER.includes(maxTier) ? maxTier : null;
+    const safeBattleMode = battleMode && VALID_BATTLE_MODES.has(battleMode) ? battleMode : null;
     const id = await insert(
-      'INSERT INTO tournaments (name, size, status, created_by, starts_at, expires_at, is_private, join_password, min_tier, max_tier, banned_tags) VALUES (?,?,?,?,?,?,?,?,?,?,?)',
+      'INSERT INTO tournaments (name, size, status, created_by, starts_at, expires_at, is_private, join_password, min_tier, max_tier, banned_tags, battle_mode) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',
       [String(name || '').trim().slice(0, 120), clampSize(size), 'open', createdBy, startsAt || null, expiresAt,
        isPrivate ? 1 : 0, isPrivate && joinPassword ? String(joinPassword).slice(0, 100) : null,
-       safeMinTier, safeMaxTier, bannedTagsStr]
+       safeMinTier, safeMaxTier, bannedTagsStr, safeBattleMode]
     );
     return this.getById(id);
   },
@@ -344,17 +349,58 @@ export const Tournament = {
       throw err;
     }
 
-    const room = await Battle.createRoom(
-      { id: inviter.id, username: inviter.username },
-      { id: invited.id, username: invited.username },
-      {
-        minTier: tournament?.minTier || null,
-        maxTier: tournament?.maxTier || null,
+    let roomId;
+    if (tournament?.battleMode) {
+      const algoState = await AlgorithmBattle.createRoom({
+        creatorId: inviter.id,
+        mode: tournament.battleMode,
         bannedTags: tournament?.bannedTags || [],
-      }
-    );
-    await run('UPDATE tournament_matches SET battle_id=? WHERE id=?', [room.id, matchId]);
-    return { tournament: await this.getById(tournamentId), roomId: room.id, invitedId: invited.id };
+        isPrivate: false,
+        skipActiveCheck: true,
+      });
+      roomId = algoState.room.id;
+      await AlgorithmBattle.joinRoom(roomId, invited.id);
+    } else {
+      const room = await Battle.createRoom(
+        { id: inviter.id, username: inviter.username },
+        { id: invited.id, username: invited.username },
+        {
+          minTier: tournament?.minTier || null,
+          maxTier: tournament?.maxTier || null,
+          bannedTags: tournament?.bannedTags || [],
+        }
+      );
+      roomId = room.id;
+    }
+    await run('UPDATE tournament_matches SET battle_id=? WHERE id=?', [roomId, matchId]);
+    return { tournament: await this.getById(tournamentId), roomId, invitedId: invited.id };
+  },
+
+  async leave(id, userId) {
+    const tournament = await this.getById(id);
+    if (!tournament) {
+      const err = new Error('Tournament not found.');
+      err.status = 404;
+      throw err;
+    }
+    if (tournament.status !== 'open') {
+      const err = new Error('You can only leave tournaments that have not started yet.');
+      err.status = 400;
+      throw err;
+    }
+    if (tournament.createdBy === userId) {
+      const err = new Error('As the creator, delete the tournament instead of leaving.');
+      err.status = 400;
+      throw err;
+    }
+    const isParticipant = tournament.participants.some((p) => p.userId === userId);
+    if (!isParticipant) {
+      const err = new Error('You are not a participant in this tournament.');
+      err.status = 400;
+      throw err;
+    }
+    await run('DELETE FROM tournament_participants WHERE tournament_id = ? AND user_id = ?', [id, userId]);
+    return this.getById(id);
   },
 
   async advanceWinnerByBattleId(battleId, winnerId) {

@@ -40,6 +40,25 @@ router.get('/:id/replay', async (req, res) => {
   }
 });
 
+// GET /api/battles/rooms — DB-backed realtime algorithm battle rooms (public)
+router.get('/rooms', async (req, res) => {
+  try {
+    const rooms = await AlgorithmBattle.listRoomSummaries({
+      status: req.query.status || null,
+      limit: req.query.limit || 20,
+    });
+    res.json({ rooms });
+  } catch (err) {
+    console.error('[algorithm-battles/list]', err);
+    return internalError(res);
+  }
+});
+
+// GET /api/battles/modes — realtime algorithm battle mode metadata (public)
+router.get('/modes', async (req, res) => {
+  res.json(AlgorithmBattle.getBattleModes());
+});
+
 router.use(auth);
 router.use(requireVerified);
 
@@ -189,25 +208,6 @@ router.get('/summary', async (req, res) => {
   }
 });
 
-// GET /api/battles/rooms — DB-backed realtime algorithm battle rooms
-router.get('/rooms', async (req, res) => {
-  try {
-    const rooms = await AlgorithmBattle.listRoomSummaries({
-      status: req.query.status || null,
-      limit: req.query.limit || 20,
-    });
-    res.json({ rooms });
-  } catch (err) {
-    console.error('[algorithm-battles/list]', err);
-    return internalError(res);
-  }
-});
-
-// GET /api/battles/modes — realtime algorithm battle mode metadata
-router.get('/modes', async (req, res) => {
-  res.json(AlgorithmBattle.getBattleModes());
-});
-
 // POST /api/battles/rooms — create realtime algorithm battle room
 router.post('/rooms', async (req, res) => {
   try {
@@ -220,6 +220,11 @@ router.post('/rooms', async (req, res) => {
       isPrivate: Boolean(req.body?.isPrivate),
       preferredLanguage: req.body?.preferredLanguage || null,
       workshopModeId: req.body?.workshopModeId || null,
+      inlineConfig: (() => {
+        const ic = req.body?.inlineConfig;
+        if (req.body?.workshopModeId || !ic || !Array.isArray(ic.rules) || ic.rules.length === 0 || ic.rules.length > 20) return null;
+        return { rules: ic.rules, baseHp: Number(ic.baseHp) || 100, timeLimit: Number(ic.timeLimit) || null, allowItems: Boolean(ic.allowItems) };
+      })(),
       bannedTags: Array.isArray(req.body?.bannedTags) ? req.body.bannedTags : [],
       problemFilters: req.body?.problemFilters || null,
       title: req.body?.title || null,
@@ -466,9 +471,14 @@ router.post('/rooms/:roomId/submit', async (req, res) => {
 
 router.post('/rooms/:roomId/leave', async (req, res) => {
   try {
-    const state = await AlgorithmBattle.leaveRoom(req.params.roomId, req.user.id);
-    if (!state) return errorResponse(res, 404, 'NOT_FOUND', 'Room not found.');
-    emitBattleRoomUpdate(req.app.get('io'), state);
+    const { roomId } = req.params;
+    const state = await AlgorithmBattle.leaveRoom(roomId, req.user.id);
+    const io = req.app.get('io');
+    if (!state) {
+      if (io) io.to(`battle:${roomId}`).emit('battle:room:deleted', { roomId });
+      return res.json({ deleted: true });
+    }
+    emitBattleRoomUpdate(io, state);
     res.json(state);
   } catch (err) {
     console.error('[algorithm-battles/leave]', err);

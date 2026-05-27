@@ -9,6 +9,15 @@ import { getTagLabel, getTierLabel } from '../utils/labelMaps.js';
 import './TournamentPage.css';
 
 const SIZE_OPTIONS = [8, 16, 32];
+const BATTLE_MODE_OPTIONS = [
+  { key: '', label: { ko: '기본 (레거시)', en: 'Default (Legacy)' } },
+  { key: 'sort-speed', label: { ko: '⚡ 스피드 레이스', en: '⚡ Speed Race' } },
+  { key: 'survival', label: { ko: '💀 서바이벌', en: '💀 Survival' } },
+  { key: 'duel-effects', label: { ko: '✨ 이펙트 듀얼', en: '✨ Effects Duel' } },
+  { key: 'chaos-items', label: { ko: '🎒 아이템 카오스', en: '🎒 Item Chaos' } },
+  { key: 'code-golf', label: { ko: '📏 코드 골프', en: '📏 Code Golf' } },
+  { key: 'draft-ban', label: { ko: '🚫 드래프트 밴', en: '🚫 Draft Ban' } },
+];
 
 const TIER_OPTIONS = ['iron', 'bronze', 'silver', 'gold', 'platinum', 'emerald', 'diamond', 'master', 'grandmaster', 'challenger'];
 const STATUS_COLOR = { open: 'var(--green)', in_progress: 'var(--blue)', complete: 'var(--text3)', expired: 'var(--text3)' };
@@ -36,7 +45,7 @@ export default function TournamentPage() {
   ];
   const [items, setItems] = useState([]);
   const [selected, setSelected] = useState(null);
-  const [form, setForm] = useState({ name: '', size: 8, isPrivate: false, joinPassword: '', minTier: '', maxTier: '', bannedTags: [], showAdvanced: false });
+  const [form, setForm] = useState({ name: '', size: 8, isPrivate: false, joinPassword: '', minTier: '', maxTier: '', bannedTags: [], battleMode: '', showAdvanced: false });
   const [busy, setBusy] = useState(false);
   const [listLoading, setListLoading] = useState(true);
   const [listLoadError, setListLoadError] = useState('');
@@ -103,10 +112,11 @@ export default function TournamentPage() {
         minTier: form.minTier || null,
         maxTier: form.maxTier || null,
         bannedTags: form.bannedTags,
+        battleMode: form.battleMode || null,
       });
       setItems((prev) => [data, ...prev]);
       setSelected(data);
-      setForm({ name: '', size: 8, isPrivate: false, joinPassword: '', minTier: '', maxTier: '', bannedTags: [], showAdvanced: false });
+      setForm({ name: '', size: 8, isPrivate: false, joinPassword: '', minTier: '', maxTier: '', bannedTags: [], battleMode: '', showAdvanced: false });
       toast?.show(txt('토너먼트를 만들었습니다. 참가자가 모이면 대진표를 시작하세요.', 'Tournament created. Gather participants and start the bracket.'), 'success');
     } catch (err) {
       toast?.show(err.response?.data?.message || txt('토너먼트 생성에 실패했습니다.', 'Failed to create tournament.'), 'error');
@@ -126,6 +136,20 @@ export default function TournamentPage() {
       toast?.show(txt('참가했습니다. 대진표가 시작되면 알림을 확인하세요.', 'Joined. Watch for notifications when the bracket starts.'), 'success');
     } catch (err) {
       toast?.show(err.response?.data?.message || txt('참가에 실패했습니다.', 'Failed to join.'), 'error');
+    }
+    setBusy(false);
+  };
+
+  const leave = async (id) => {
+    if (!window.confirm(txt('토너먼트 참가를 취소할까요?', 'Leave this tournament?'))) return;
+    setBusy(true);
+    try {
+      const { data } = await api.delete(`/tournaments/${id}/leave`);
+      setSelected(data);
+      await load();
+      toast?.show(txt('참가를 취소했습니다.', 'Left tournament.'), 'info');
+    } catch (err) {
+      toast?.show(err.response?.data?.message || txt('참가 취소에 실패했습니다.', 'Failed to leave.'), 'error');
     }
     setBusy(false);
   };
@@ -175,7 +199,7 @@ export default function TournamentPage() {
       const { data } = await api.post(`/tournaments/${selected.id}/matches/${match.id}/battle`);
       setSelected(data.tournament);
       toast?.show(txt('배틀 방을 만들었습니다. 상대가 입장하면 시작됩니다.', 'Battle room created. Starts when the opponent joins.'), 'success');
-      if (data.roomId) navigate(`/battle/watch/${data.roomId}`);
+      if (data.roomId) navigate(selected.battleMode ? `/battle/${data.roomId}` : `/battle/watch/${data.roomId}`);
     } catch (err) {
       toast?.show(err.response?.data?.message || txt('매치 배틀 생성에 실패했습니다.', 'Failed to create match battle.'), 'error');
     }
@@ -287,6 +311,15 @@ export default function TournamentPage() {
                     <select value={form.maxTier} onChange={(e) => setForm((p) => ({ ...p, maxTier: e.target.value }))} style={{ fontSize: 12 }}>
                       <option value="">{t('tournamentMaxNone')}</option>
                       {TIER_OPTIONS.map((tier) => <option key={tier} value={tier}>{withVars(t('tournamentBelow'), { tier: getTierLabel(tier, lang) })}</option>)}
+                    </select>
+                  </div>
+
+                  <div className="tournament-tier-row" style={{ marginTop: 8 }}>
+                    <span>{txt('배틀 모드', 'Battle Mode')}</span>
+                    <select value={form.battleMode} onChange={(e) => setForm((p) => ({ ...p, battleMode: e.target.value }))} style={{ fontSize: 12 }}>
+                      {BATTLE_MODE_OPTIONS.map((m) => (
+                        <option key={m.key} value={m.key}>{lang === 'ko' ? m.label.ko : m.label.en}</option>
+                      ))}
                     </select>
                   </div>
 
@@ -431,6 +464,11 @@ export default function TournamentPage() {
                         🚫 {selected.bannedTags.join(', ')}
                       </span>
                     )}
+                    {selected.battleMode && (
+                      <span style={{ fontSize: 11, background: 'rgba(147,112,219,.15)', color: 'var(--purple)', borderRadius: 4, padding: '2px 6px' }}>
+                        ⚔️ {BATTLE_MODE_OPTIONS.find((m) => m.key === selected.battleMode)?.label?.[lang] || selected.battleMode}
+                      </span>
+                    )}
                   </p>
                 </div>
                 <div className="tournament-actions">
@@ -462,7 +500,12 @@ export default function TournamentPage() {
                     </div>
                   )}
                   {selected.status === 'open' && isJoined && !isCreator && (
-                    <span style={{ fontSize: 12, color: 'var(--green)', fontWeight: 700 }}>{t('tournamentJoined')}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 12, color: 'var(--green)', fontWeight: 700 }}>{t('tournamentJoined')}</span>
+                      <button className="btn btn-ghost btn-sm" onClick={() => leave(selected.id)} disabled={busy} style={{ fontSize: 11, color: 'var(--text3)' }}>
+                        {txt('참가 취소', 'Leave')}
+                      </button>
+                    </div>
                   )}
                   {(isAdmin || isCreator) && selected.status === 'open' && (
                     <button
@@ -521,7 +564,7 @@ export default function TournamentPage() {
                   {myOngoingMatches.map((match) => (
                     <div key={match.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span style={{ fontSize: 13 }}>Round {match.round}</span>
-                      <button className="btn btn-ghost btn-sm" onClick={() => navigate(`/battle/watch/${match.battleId}`)}>
+                      <button className="btn btn-ghost btn-sm" onClick={() => navigate(selected.battleMode ? `/battle/${match.battleId}` : `/battle/watch/${match.battleId}`)}>
                         Enter Battle
                       </button>
                     </div>

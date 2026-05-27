@@ -29,6 +29,7 @@ router.post('/', auth, requireVerified, async (req, res) => {
       minTier: req.body?.minTier ? String(req.body.minTier) : null,
       maxTier: req.body?.maxTier ? String(req.body.maxTier) : null,
       bannedTags,
+      battleMode: req.body?.battleMode ? String(req.body.battleMode) : null,
     });
     res.status(201).json(tournament);
   } catch (err) {
@@ -79,6 +80,18 @@ router.delete('/:id', auth, requireVerified, async (req, res) => {
     const status = err.status || 500;
     if (status < 500) return errorResponse(res, status, 'VALIDATION_ERROR', err.message);
     console.error('[tournaments/delete]', err.message);
+    return internalError(res);
+  }
+});
+
+router.delete('/:id/leave', auth, async (req, res) => {
+  try {
+    const tournament = await Tournament.leave(Number(req.params.id), req.user.id);
+    res.json(tournament);
+  } catch (err) {
+    const status = err.status || 500;
+    if (status < 500) return errorResponse(res, status, 'VALIDATION_ERROR', err.message);
+    console.error('[tournaments/leave]', err.message);
     return internalError(res);
   }
 });
