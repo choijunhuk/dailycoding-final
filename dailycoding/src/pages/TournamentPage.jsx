@@ -15,6 +15,7 @@ const BATTLE_MODE_OPTIONS = [
   { key: 'survival', label: { ko: '💀 서바이벌', en: '💀 Survival' } },
   { key: 'duel-effects', label: { ko: '✨ 이펙트 듀얼', en: '✨ Effects Duel' } },
   { key: 'chaos-items', label: { ko: '🎒 아이템 카오스', en: '🎒 Item Chaos' } },
+  { key: 'territory', label: { ko: '🏴 영토 정복', en: '🏴 Territory' } },
   { key: 'code-golf', label: { ko: '📏 코드 골프', en: '📏 Code Golf' } },
   { key: 'draft-ban', label: { ko: '🚫 드래프트 밴', en: '🚫 Draft Ban' } },
 ];
