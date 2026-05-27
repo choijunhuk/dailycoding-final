@@ -35,7 +35,7 @@ const COMBAT_EVENT_TYPES = new Set([
 const SOCIAL_EVENT_TYPES = new Set([
   'player.joined', 'player.left', 'player.ready', 'room.started',
   'room.problem_selected', 'draft.started', 'draft.selection', 'draft.completed',
-  'player.chat', 'player.emote',
+  'player.chat', 'player.emote', 'player.forfeit',
 ]);
 const DURATION_PRESETS = [
   { label: '⚡ Blitz 5m', labelKo: '⚡ 블리츠 5분', sec: 300 },
@@ -45,10 +45,11 @@ const DURATION_PRESETS = [
 const FALLBACK_MODES = [
   { key: 'sort-speed', title: '⚡ Speed Race', description: 'Pure speed — first to submit the correct answer wins instantly.', winCondition: 'first-correct', rules: ['First correct submission wins immediately', 'Tie broken by score if time runs out'], itemsEnabled: false, effectsEnabled: false, problemCount: 1 },
   { key: 'survival', title: '💀 Survival', description: 'Reduce your opponent\'s HP to 0! Attack power grows with each correct submission.', winCondition: 'hp-knockout', rules: ['Correct answer → opponent HP decreases', 'Opponent HP 0 = instant win'], itemsEnabled: false, effectsEnabled: false, problemCount: 1 },
-  { key: 'duel-effects', title: '✨ Effects Duel', description: 'Tag-based buffs/debuffs trigger on correct submissions! HP combat with random effects for comebacks.', winCondition: 'hp-knockout', rules: ['Correct answer → opponent HP loss + problem effect', 'Item cooldown 20s', 'HP 0 = defeat'], itemsEnabled: true, effectsEnabled: true, problemCount: 1 },
+  { key: 'duel-effects', title: '✨ Effects Duel', description: 'Tag-based buffs/debuffs trigger on correct submissions! HP combat with random effects for comebacks.', winCondition: 'hp-knockout', rules: ['Correct answer → opponent HP loss + problem effect', 'HP 0 = defeat'], itemsEnabled: false, effectsEnabled: true, problemCount: 1 },
   { key: 'chaos-items', title: '🎒 Item Chaos', description: 'Fast-cooldown items to destabilize your opponent! Item strategy decides the match.', winCondition: 'hp-knockout', rules: ['Item cooldown 12s (fast)', 'Correct answer → opponent HP loss', 'HP 0 = defeat'], itemsEnabled: true, effectsEnabled: true, problemCount: 1 },
   { key: 'territory', title: '🏴 Territory', description: '5 problems revealed at once! Solve first to claim territory. Most territory wins.', winCondition: 'territory', rules: ['5 problems revealed simultaneously', 'Correct answer → claim that problem', 'Player with most territory wins'], itemsEnabled: false, effectsEnabled: false, problemCount: 5 },
-  { key: 'draft-ban', title: '🚫 Draft Ban', description: 'Strategic 1v1 — both players ban/pick tiers and tags before the problem is locked in.', winCondition: 'hp-knockout', rules: ['No problem conditions at room creation', 'Draft starts after both players ready', 'Problem locked after draft', 'Correct answer → opponent HP loss + effect'], itemsEnabled: true, effectsEnabled: true, problemCount: 1, draftEnabled: true },
+  { key: 'code-golf', title: '📏 Code Golf', description: 'Solve with the shortest code! Best code length wins.', winCondition: 'code-golf', rules: ['Shortest correct code wins', 'Each correct submission updates your best', 'Most efficient code when time ends wins'], itemsEnabled: false, effectsEnabled: false, problemCount: 1 },
+  { key: 'draft-ban', title: '🚫 Draft Ban', description: 'Strategic 1v1 — both players ban/pick tiers and tags before the problem is locked in.', winCondition: 'hp-knockout', rules: ['No problem conditions at room creation', 'Draft starts after both players ready', 'Problem locked after draft', 'Correct answer → opponent HP loss + effect'], itemsEnabled: false, effectsEnabled: true, problemCount: 1, draftEnabled: true },
 ];
 
 const BATTLE_MODE_KO = {
@@ -57,6 +58,7 @@ const BATTLE_MODE_KO = {
   'duel-effects': { title: '✨ 이펙트 듀얼', description: '정답 제출 시 태그 기반 버프/디버프 발동! 랜덤 이펙트로 역전 가능한 HP 전투.', rules: ['정답 → 상대 HP 손실 + 문제 이펙트', '아이템 쿨다운 20초', 'HP 0 = 패배'] },
   'chaos-items': { title: '🎒 아이템 카오스', description: '빠른 쿨다운 아이템으로 상대를 흔들어라! 아이템 전략이 승부를 결정합니다.', rules: ['아이템 쿨다운 12초(빠름)', '정답 → 상대 HP 손실', 'HP 0 = 패배'] },
   'territory': { title: '🏴 영토 정복', description: '5개 문제가 동시 공개! 먼저 풀어 영토를 차지하고, 가장 많은 영토를 가진 플레이어가 승리.', rules: ['5개 문제 동시 공개', '정답 → 해당 문제 영토 획득', '가장 많은 영토를 가진 플레이어 승리'] },
+  'code-golf': { title: '📏 코드 골프', description: '가장 짧은 코드로 문제를 해결하세요! 더 짧은 코드가 높은 점수를 얻습니다.', rules: ['가장 짧은 정답 코드가 승리', '매 정답 제출마다 최고 기록 갱신', '시간 종료 시 가장 짧은 정답 코드를 가진 플레이어 승리'] },
   'draft-ban': { title: '🚫 드래프트 밴', description: '전략적 1v1 — 두 플레이어가 티어와 태그를 밴/픽한 후 문제가 확정됩니다.', rules: ['방 생성 시 문제 조건 없음', '두 플레이어 준비 후 드래프트 시작', '드래프트 후 문제 확정', '정답 → 상대 HP 손실 + 이펙트'] },
 };
 
@@ -196,6 +198,7 @@ function lobbyTimeLeft(room) {
 
 function getBattleObjectiveText(config, isTerritoryMode, txt) {
   if (isTerritoryMode) return txt('🏴 정답 제출로 영토를 점령하세요', '🏴 Claim territory by submitting correct answers');
+  if (config?.winCondition === 'code-golf') return txt('📏 가장 짧은 정답 코드가 승리', '📏 Shortest correct code wins');
   if (config?.winCondition === 'first-correct') return txt('⚡ 첫 번째 정답 제출이 승리', '⚡ First correct submission wins');
   if (config?.effectsEnabled) return txt('✨ 정답 → 공격 + 문제 효과', '✨ Correct answer → attack + problem effect');
   return txt('⚔️ 정답 → 공격', '⚔️ Correct answer → attack');
@@ -267,20 +270,36 @@ function formatSocialEvent(event, myId, participantById = {}, txt = (ko, en) => 
   }
 }
 
-function PlayerCard({ player, me, attacking, activity, showHp = true, txt = (ko, en) => en }) {
+function PlayerCard({ player, me, attacking, activity, showHp = true, isCodeGolf = false, txt = (ko, en) => en }) {
   const maxHp = Math.max(1, Number(player.maxHp || 100));
   const hpPct = Math.max(0, Math.min(100, ((player.characterHp || 0) / maxHp) * 100));
+  const bestCodeLen = isCodeGolf && player.score > 0 ? 2000 - player.score : null;
   return (
     <div className={`ab-player-card ${me ? 'me' : ''} ${attacking ? 'attacking' : ''}`}>
       <div className="ab-player-head">
         <div><strong>{player.username}</strong>{me && <span> {txt('(나)', '(me)')}</span>}</div>
-        <b>{player.score}</b>
+        {isCodeGolf
+          ? <b style={{ color: bestCodeLen ? 'var(--green)' : 'var(--fg-muted)', fontSize: 13 }}>
+              {bestCodeLen ? `${bestCodeLen}자` : '—'}
+            </b>
+          : <b>{player.score}</b>
+        }
       </div>
-      {showHp && <div className="ab-hp"><div style={{ width: `${hpPct}%` }} /></div>}
+      {isCodeGolf
+        ? <div className="ab-hp" title={bestCodeLen ? `${bestCodeLen} chars` : 'No correct submission yet'}>
+            <div style={{ width: bestCodeLen ? `${Math.max(5, 100 - Math.min(99, (bestCodeLen / 500) * 100))}%` : '0%', background: 'var(--green)' }} />
+          </div>
+        : showHp && <div className="ab-hp"><div style={{ width: `${hpPct}%` }} /></div>
+      }
       <div className="ab-stats">
-        {showHp && <span>HP {player.characterHp}</span>}
-        {showHp && <span>ATK {player.attackPower}</span>}
-        <span>SPD {player.speed}</span>
+        {isCodeGolf
+          ? <span>{bestCodeLen ? txt(`최적 ${bestCodeLen}자`, `Best ${bestCodeLen} chars`) : txt('아직 없음', 'None yet')}</span>
+          : <>
+              {showHp && <span>HP {player.characterHp}</span>}
+              {showHp && <span>ATK {player.attackPower}</span>}
+              <span>SPD {player.speed}</span>
+            </>
+        }
       </div>
       {activity && (
         <div className="ab-activity-pill">
@@ -476,6 +495,44 @@ function DraftBanPanel({
   );
 }
 
+function InviteUserPanel({ roomId, txt, toast }) {
+  const [inviteUsername, setInviteUsername] = useState('');
+  const [inviting, setInviting] = useState(false);
+
+  const sendInvite = async () => {
+    const name = inviteUsername.trim();
+    if (!name) return;
+    setInviting(true);
+    try {
+      await api.post(`/battles/rooms/${roomId}/invite-user`, { username: name });
+      toast?.show(txt(`${name}님에게 초대를 보냈습니다.`, `Invitation sent to ${name}.`), 'success');
+      setInviteUsername('');
+    } catch (err) {
+      toast?.show(err.response?.data?.message || txt('초대에 실패했습니다.', 'Failed to send invite.'), 'error');
+    } finally {
+      setInviting(false);
+    }
+  };
+
+  return (
+    <div style={{ display: 'flex', gap: 6, marginTop: 6, alignItems: 'center' }}>
+      <input
+        className="ab-input"
+        type="text"
+        placeholder={txt('유저명으로 초대', 'Invite by username')}
+        value={inviteUsername}
+        onChange={(e) => setInviteUsername(e.target.value)}
+        onKeyDown={(e) => e.key === 'Enter' && sendInvite()}
+        style={{ flex: 1, fontSize: 12 }}
+        maxLength={40}
+      />
+      <button className="btn btn-primary btn-sm" onClick={sendInvite} disabled={inviting || !inviteUsername.trim()}>
+        {inviting ? '...' : txt('초대', 'Invite')}
+      </button>
+    </div>
+  );
+}
+
 export default function AlgorithmBattlePage() {
   const { roomId } = useParams();
   const navigate = useNavigate();
@@ -529,6 +586,7 @@ export default function AlgorithmBattlePage() {
   // ── 방 상태
   const [state, setState] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [roomTitle, setRoomTitle] = useState('');
 
   // ── 배틀 상태
   const [code, setCode] = useState('');
@@ -578,6 +636,7 @@ export default function AlgorithmBattlePage() {
   const events = state?.events || [];
   const activityByUserId = state?.activityByUserId || {};
   const isTerritoryMode = currentRoom?.mode === 'territory';
+  const isCodeGolfMode = currentRoom?.mode === 'code-golf';
   const isDraftBanRoom = currentRoom?.mode === 'draft-ban';
   const draftState = state?.draft || null;
   const isDrafting = isDraftBanRoom && currentRoom?.status === 'waiting' && draftState?.phase === 'active';
@@ -848,12 +907,24 @@ export default function AlgorithmBattlePage() {
         return;
       }
       setState(next);
-      toast?.show(txt('배틀이 종료되었습니다.', 'Battle ended.'), 'info');
+      const msg = next?.reason === 'forfeit'
+        ? txt('상대방이 나가서 배틀이 종료되었습니다.', 'Opponent forfeited — battle over.')
+        : txt('배틀이 종료되었습니다.', 'Battle ended.');
+      toast?.show(msg, 'info');
     });
     socket.on('battle:effect', (event) => { toast?.show(getBattleEffectLabel(event?.payload, txt), 'info'); });
     socket.on('battle:item:used', (event) => { toast?.show(getBattleItemLabel(event?.payload, workshopItemLabels) || txt('아이템 사용됨', 'Item used'), 'info'); });
     socket.on('battle:spectator_chat', (msg) => {
       setSpectatorMessages((prev) => [...prev.slice(-39), { ...msg, isSpectator: true }]);
+    });
+    socket.on('battle:room_invite', ({ inviterName, mode }) => {
+      const modeTitle = FALLBACK_MODES.find(m => m.key === mode)?.title || mode;
+      toast?.show(
+        txt(`${inviterName}님이 ${modeTitle} 배틀에 초대했습니다! 수락하려면 방에 참여하세요.`,
+            `${inviterName} invited you to a ${modeTitle} battle!`),
+        'info',
+        8000
+      );
     });
     return () => { socket.disconnect(); if (socketRef.current === socket) socketRef.current = null; };
   }, [navigate, roomId, searchParams, toast, user?.id, txt, workshopItemLabels]);
@@ -1018,6 +1089,7 @@ export default function AlgorithmBattlePage() {
           workshopModeId: selectedWorkshopModeId || null,
           bannedTags: roomProblemFilters.bannedTags,
           problemFilters: roomProblemFilters,
+          title: roomTitle.trim() || null,
         });
       if (data.room?.inviteCode) {
         const copied = await copyText(data.room.inviteCode);
@@ -1279,6 +1351,22 @@ export default function AlgorithmBattlePage() {
               </ul>
             </div>
           )}
+
+          {/* 방 제목 입력 */}
+          <div style={{ marginTop: 12 }}>
+            <div style={{ fontSize: 12, color: 'var(--fg-muted)', marginBottom: 4 }}>
+              {txt('방 제목 (선택)', 'Room Title (optional)')}
+            </div>
+            <input
+              className="ab-input"
+              type="text"
+              maxLength={60}
+              placeholder={txt('배틀 방 제목을 입력하세요', 'Enter a room title...')}
+              value={roomTitle}
+              onChange={(e) => setRoomTitle(e.target.value)}
+              style={{ width: '100%' }}
+            />
+          </div>
 
           {/* 시간 + 언어 + 비밀방 설정 */}
           <div className="ab-create-options">
@@ -1553,7 +1641,7 @@ export default function AlgorithmBattlePage() {
               <div key={item.room.id} className={`ab-room-row ${isPlaying ? 'playing' : 'waiting'}`}>
                 <div>
                   <strong>
-                    {item.problem?.title || (isPlaying ? txt('진행 중', 'In Progress') : modeLabel)}
+                    {item.room?.title || item.problem?.title || (isPlaying ? txt('진행 중', 'In Progress') : modeLabel)}
                   </strong>
                   <span>
                     {modeLabel} · {participantCount}/{item.room.maxPlayers} · {isPlaying ? `⏱ ${fmtSec(timeLeft(item.room))} ${txt('남음', 'left')}` : (() => { const ll = lobbyTimeLeft(item.room); return ll != null ? `⏳ ${fmtSec(ll)} ${txt('대기', 'wait')}` : txt('대기 중', 'Waiting'); })()}
@@ -1633,7 +1721,7 @@ export default function AlgorithmBattlePage() {
         <div className="ab-room-top">
           <button className="btn btn-ghost btn-sm" onClick={leave}>← {txt('나가기', 'Leave')}</button>
           <div className="ab-room-title">
-            <strong>{isDrafting ? txt('드래프트 진행 중', 'Draft in progress') : activeProblem?.title || txt('배틀', 'Battle')}</strong>
+            <strong>{isDrafting ? txt('드래프트 진행 중', 'Draft in progress') : currentRoom?.title || activeProblem?.title || txt('배틀', 'Battle')}</strong>
             <span>
               {getBattleModeTitle(currentRoom?.mode, config, uiLang)} ·{' '}
               {currentRoom?.status === 'waiting'
@@ -1653,6 +1741,9 @@ export default function AlgorithmBattlePage() {
             <button className="btn btn-ghost btn-sm ab-invite-code" onClick={copyInviteCode} title={txt('초대 코드 복사', 'Copy invite code')}>
               <Copy size={13} /> {currentRoom.inviteCode}
             </button>
+          )}
+          {currentRoom?.status === 'waiting' && Number(currentRoom?.createdBy) === Number(user?.id) && (
+            <InviteUserPanel roomId={currentRoom.id} txt={txt} toast={toast} />
           )}
           {currentRoom?.status === 'waiting' && Number(currentRoom?.createdBy) === Number(user?.id) && (
             <button className="btn btn-danger btn-sm" onClick={deleteRoom}>{txt('방 삭제', 'Delete Room')}</button>
@@ -1739,6 +1830,7 @@ export default function AlgorithmBattlePage() {
                 attacking={attackUserId === player.userId}
                 activity={activityByUserId[String(player.userId)]}
                 showHp={config?.winCondition === 'hp-knockout'}
+                isCodeGolf={isCodeGolfMode}
               />
             ))}
           </div>

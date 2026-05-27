@@ -53,12 +53,12 @@ const BATTLE_MODES = {
     rules: ['Same HP battle basic rules apply', 'Correct answer triggers problem effect (buff/debuff)', 'Items available (cooldown 20s)', 'Effects can reverse the outcome via HP recovery and attack boost'],
     maxPlayers: 2,
     durationSec: 300,
-    itemsEnabled: true,
+    itemsEnabled: false,
     effectsEnabled: true,
     chatEnabled: true,
     emotesEnabled: true,
     activityEnabled: true,
-    itemCooldownSec: 20,
+    itemCooldownSec: 0,
     problemCount: 1,
   },
   'chaos-items': {
@@ -93,6 +93,22 @@ const BATTLE_MODES = {
     itemCooldownSec: 0,
     problemCount: 5,
   },
+  'code-golf': {
+    key: 'code-golf',
+    title: '📏 Code Golf',
+    description: 'Solve the problem with the shortest possible code! Shorter code = higher score.',
+    winCondition: 'code-golf',
+    rules: ['Submit correct answer — shortest code across all submissions wins', 'Each correct submission updates your best code length', 'Player with shortest correct code when time runs out wins', 'If only one player submits correctly, they win'],
+    maxPlayers: 2,
+    durationSec: 600,
+    itemsEnabled: false,
+    effectsEnabled: false,
+    chatEnabled: true,
+    emotesEnabled: true,
+    activityEnabled: true,
+    itemCooldownSec: 0,
+    problemCount: 1,
+  },
   'draft-ban': {
     key: 'draft-ban',
     title: '🚫 Draft Ban',
@@ -101,12 +117,12 @@ const BATTLE_MODES = {
     rules: ['No problem conditions set at room creation', 'Draft phase begins after both players are ready', 'Each player submits tier/tag bans and preferred tag picks', 'Problem is finalized from draft result; correct answer → opponent HP decreases + problem effect triggers'],
     maxPlayers: 2,
     durationSec: 600,
-    itemsEnabled: true,
+    itemsEnabled: false,
     effectsEnabled: true,
     chatEnabled: true,
     emotesEnabled: true,
     activityEnabled: true,
-    itemCooldownSec: 18,
+    itemCooldownSec: 0,
     problemCount: 1,
     draftEnabled: true,
   },
@@ -177,6 +193,7 @@ function normalizeRoom(row) {
     inviteCode: row.invite_code || null,
     preferredLanguage: row.preferred_language || null,
     lobbyExpiresAt: toIsoLike(row.lobby_expires_at),
+    title: row.title || null,
   };
 }
 
@@ -729,6 +746,7 @@ export const AlgorithmBattle = {
     bannedTags = [],
     problemFilters = null,
     workshopModeId = null,
+    title = null,
   } = {}) {
     if (creatorId) {
       const existingActive = await queryOne(
@@ -776,18 +794,19 @@ export const AlgorithmBattle = {
     const now = nowMySQL();
     const inviteCodeVal = isPrivate ? crypto.randomBytes(3).toString('hex').toUpperCase() : null;
     const lobbyExpiresAt = toMySQL(new Date(Date.now() + LOBBY_TIMEOUT_MS));
+    const sanitizedTitle = title ? String(title).trim().slice(0, 60) : null;
 
     await insert(
       `INSERT INTO battle_rooms
          (id, mode, problem_id, problem_ids, territory_claims, status, max_players, duration_sec,
-          created_by, created_at, is_private, invite_code, preferred_language, lobby_expires_at)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+          created_by, created_at, is_private, invite_code, preferred_language, lobby_expires_at, title)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
         id, normalizedMode, resolvedProblemId, problemIdsJson, '{}', 'waiting',
         clampInt(maxPlayers ?? modeConfig.maxPlayers, modeConfig.maxPlayers, 2, MAX_PLAYERS),
         clampInt(durationSec ?? modeConfig.durationSec, modeConfig.durationSec, 60, 7200),
         creatorId || null, now, isPrivate ? 1 : 0, inviteCodeVal,
-        preferredLanguage || null, lobbyExpiresAt,
+        preferredLanguage || null, lobbyExpiresAt, sanitizedTitle,
       ]
     );
     if (creatorId) await this.joinRoom(id, creatorId);
@@ -1202,6 +1221,29 @@ export const AlgorithmBattle = {
       return this.getRoomState(roomId);
     }
 
+    // Code golf mode: score = 2000 - code.length (shorter = higher score, best score kept)
+    if (room.mode === 'code-golf') {
+      if (isCorrect) {
+        const codeLen = (code || '').length;
+        const golfScore = Math.max(0, 2000 - codeLen);
+        const currentScore = Number(participant.score || 0);
+        if (golfScore > currentScore) {
+          await run(
+            'UPDATE battle_participants SET score = ?, last_seen_at = ? WHERE room_id = ? AND user_id = ?',
+            [golfScore, nowMySQL(), roomId, userId]
+          );
+        }
+        await this.recordEvent(roomId, userId, 'player.attack', {
+          score: golfScore, codeLen, executionTimeMs, detail: judgeResult?.detail || '',
+        });
+      } else {
+        await this.recordEvent(roomId, userId, 'player.miss', {
+          executionTimeMs, detail: judgeResult?.detail || '',
+        });
+      }
+      return this.getRoomState(roomId);
+    }
+
     // Standard combat mode (survival, duel-effects, chaos-items)
     const nextScore = Math.max(0, Number(participant.score || 0) + scoring.score);
     const nextAttack = isCorrect ? scoring.attackPower : Number(participant.attack_power || 10);
@@ -1378,15 +1420,20 @@ export const AlgorithmBattle = {
     if (room.status === 'waiting') {
       await run('DELETE FROM battle_participants WHERE room_id = ? AND user_id = ?', [roomId, userId]);
       await this.recordEvent(roomId, userId, 'player.left', {});
-      // Don't auto-finish: let lobby_expires_at expiry handle empty rooms naturally.
-      // This prevents "나가기" from destroying a room that others could still join.
+      if (Number(room.createdBy) === Number(userId)) {
+        const remaining = await this.getParticipants(roomId);
+        if (remaining.length > 0) {
+          await run('UPDATE battle_rooms SET created_by = ? WHERE id = ?', [remaining[0].userId, roomId]);
+        }
+      }
       return this.getRoomState(roomId);
     }
-    await this.recordEvent(roomId, userId, 'player.disconnected', {});
-    return this.getRoomState(roomId);
+    // Playing: auto-forfeit — leaving player loses, opponent wins
+    await this.recordEvent(roomId, userId, 'player.forfeit', {});
+    return this.finishRoom(roomId, { reason: 'forfeit', forfeitUserId: userId });
   },
 
-  async finishRoom(roomId, { reason = 'timeout' } = {}) {
+  async finishRoom(roomId, { reason = 'timeout', forfeitUserId = null } = {}) {
     const room = await this.getRoom(roomId);
     if (!room) return null;
     const result = await run(
@@ -1408,7 +1455,14 @@ export const AlgorithmBattle = {
     const topCount = sorted.filter((p) => p.score === topScore).length;
     for (let i = 0; i < sorted.length; i += 1) {
       const player = sorted[i];
-      const result = topCount > 1 ? 'draw' : i === 0 ? 'win' : 'lose';
+      let result;
+      if (forfeitUserId && Number(player.userId) === Number(forfeitUserId)) {
+        result = 'lose';
+      } else if (forfeitUserId) {
+        result = 'win';
+      } else {
+        result = topCount > 1 ? 'draw' : i === 0 ? 'win' : 'lose';
+      }
       const delta = result === 'win' ? 25 : result === 'draw' ? 5 : -10;
       const existing = await queryOne('SELECT id FROM battle_results WHERE room_id = ? AND user_id = ?', [roomId, player.userId]);
       if (!existing) {

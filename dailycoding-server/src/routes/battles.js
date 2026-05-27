@@ -222,6 +222,7 @@ router.post('/rooms', async (req, res) => {
       workshopModeId: req.body?.workshopModeId || null,
       bannedTags: Array.isArray(req.body?.bannedTags) ? req.body.bannedTags : [],
       problemFilters: req.body?.problemFilters || null,
+      title: req.body?.title || null,
     });
     emitBattleRoomUpdate(req.app.get('io'), state);
     res.status(201).json(state);
@@ -854,6 +855,36 @@ router.post('/room/:roomId/end', async (req, res) => {
     res.json({ room: ended });
   } catch (err) {
     return internalError(res);
+  }
+});
+
+// POST /api/battles/rooms/:roomId/invite-user — invite a user by username to join a waiting room
+router.post('/rooms/:roomId/invite-user', auth, async (req, res) => {
+  try {
+    const { username } = req.body;
+    if (!username) return errorResponse(res, 400, 'VALIDATION_ERROR', 'username is required');
+    const room = await AlgorithmBattle.getRoom(req.params.roomId);
+    if (!room) return errorResponse(res, 404, 'NOT_FOUND', 'Room not found.');
+    if (room.status !== 'waiting') return errorResponse(res, 400, 'VALIDATION_ERROR', 'Room is not in waiting state.');
+    if (Number(room.createdBy) !== Number(req.user.id)) return errorResponse(res, 403, 'FORBIDDEN', 'Only the room creator can invite players.');
+    const invited = await User.findByUsername(username);
+    if (!invited) return errorResponse(res, 404, 'NOT_FOUND', 'User not found.');
+    if (Number(invited.id) === Number(req.user.id)) return errorResponse(res, 400, 'VALIDATION_ERROR', 'You cannot invite yourself.');
+    const inviter = await User.findById(req.user.id);
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`user:${invited.id}`).emit('battle:room_invite', {
+        roomId: room.id,
+        inviterId: inviter.id,
+        inviterName: inviter.username,
+        mode: room.mode,
+        inviteCode: room.inviteCode || null,
+      });
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[algorithm-battles/invite-user]', err);
+    return internalError(res, err?.message || 'Failed to send invitation');
   }
 });
 

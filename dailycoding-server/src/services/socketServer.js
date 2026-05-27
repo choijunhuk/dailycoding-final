@@ -101,6 +101,7 @@ export function initSocketServer(httpServer, allowedOrigins) {
           preferredLanguage: payload.preferredLanguage || null,
           bannedTags: payload.bannedTags || [],
           problemFilters: payload.problemFilters || null,
+          title: payload.title || null,
         });
         socket.join(`battle:${state.room.id}`);
         io.to(`battle:${state.room.id}`).emit('battle:room:update', state);
@@ -278,7 +279,12 @@ export function initSocketServer(httpServer, allowedOrigins) {
       try {
         const state = await AlgorithmBattle.leaveRoom(roomId, socket.data.userId);
         socket.leave(`battle:${roomId}`);
-        if (state?.room?.id) io.to(`battle:${roomId}`).emit('battle:room:update', state);
+        if (state?.room?.id) {
+          io.to(`battle:${roomId}`).emit('battle:room:update', state);
+          if (state.room.status === 'finished') {
+            io.to(`battle:${roomId}`).emit('battle:finished', { ...state, reason: 'forfeit' });
+          }
+        }
         if (typeof ack === 'function') ack({ ok: true, state });
       } catch (err) {
         if (typeof ack === 'function') ack({ ok: false, message: err.message });
