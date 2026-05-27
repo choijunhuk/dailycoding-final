@@ -584,6 +584,26 @@ router.get('/grass/:id', auth, async (req, res) => {
   }
 });
 
+router.delete('/me', auth, async (req, res) => {
+  const { password } = req.body;
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return errorResponse(res, 404, 'NOT_FOUND', 'User not found.');
+    if (user.password != null) {
+      if (!password) return errorResponse(res, 400, 'VALIDATION_ERROR', 'Password is required to delete your account.');
+      const valid = await User.checkPassword(user, password);
+      if (!valid) return errorResponse(res, 401, 'INVALID_PASSWORD', 'Incorrect password.');
+    }
+    await User.delete(req.user.id);
+    await clearAuthStatus(req.user.id);
+    clearAuthCookies(res);
+    res.json({ message: 'Account deleted.' });
+  } catch (err) {
+    console.error('[delete-account]', err.message);
+    return internalError(res);
+  }
+});
+
 router.post('/streak-freeze', auth, async (req, res) => {
   try {
     const user = await User.findById(req.user.id);

@@ -1232,6 +1232,13 @@ export default function AlgorithmBattlePage() {
             <h1>{txt('실시간 알고리즘 배틀', 'Real-Time Algorithm Battle')}</h1>
             <p>{txt('5가지 모드 — 스피드, HP 서바이벌, 이펙트, 아이템, 영토.', 'Compete across 5 modes — Speed, HP Survival, Effects, Items, Territory.')}</p>
           </div>
+          <button
+            className="btn btn-ghost btn-sm"
+            onClick={() => navigate('/battles/history')}
+            style={{ flexShrink:0 }}
+          >
+            {txt('내 배틀 기록', 'My Battle History')}
+          </button>
         </div>
 
         {/* 방 만들기 카드 */}

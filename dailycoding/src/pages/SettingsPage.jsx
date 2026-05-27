@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import api from '../api';
@@ -29,7 +30,8 @@ const TAB_ICONS = {
 
 
 export default function SettingsPage() {
-  const { user, refreshUser } = useAuth();
+  const { user, refreshUser, logout } = useAuth();
+  const navigate = useNavigate();
   const toast = useToast();
   const { theme, setTheme } = useTheme();
   const { lang, setLang, t } = useLang();
@@ -45,6 +47,8 @@ export default function SettingsPage() {
   const [profileVisibility, setProfileVisibility] = useState('public');
   const [postVisibility, setPostVisibility] = useState('public');
   const [pwForm, setPwForm] = useState({ current:'', next:'', confirm:'' });
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -133,6 +137,22 @@ export default function SettingsPage() {
       toast?.show(e.response?.data?.message || t('saveFailed'), 'error');
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function deleteAccount() {
+    const hasPassword = user?.hasPassword !== false;
+    if (hasPassword && !deletePassword) return;
+    setDeleting(true);
+    try {
+      await api.delete('/auth/me', { data: hasPassword ? { password: deletePassword } : {} });
+      toast?.show(t('deleteAccountSuccess'), 'success');
+      logout();
+      navigate('/');
+    } catch (e) {
+      toast?.show(e.response?.data?.message || t('deleteAccountError'), 'error');
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -248,22 +268,68 @@ export default function SettingsPage() {
 
         {tab === 'account' && (
           <div style={{ display:'flex', flexDirection:'column', gap:24 }}>
-            <div className="error-msg">
-              {t('passwordMinLength')}
+            {user?.hasPassword !== false ? (
+              <>
+                <div style={{ fontSize:13, color:'var(--text3)', padding:'10px 14px', borderRadius:8, background:'var(--bg2)', border:'1px solid var(--border)' }}>
+                  {t('passwordMinLength')}
+                </div>
+                <Field label={t('currentPassword')}>
+                  <input className="settings-input" type="password" value={pwForm.current} autoComplete="current-password"
+                    onChange={e => setPwForm(p => ({ ...p, current: e.target.value }))} />
+                </Field>
+                <Field label={t('newPassword')}>
+                  <input className="settings-input" type="password" value={pwForm.next} autoComplete="new-password"
+                    onChange={e => setPwForm(p => ({ ...p, next: e.target.value }))} />
+                </Field>
+                <Field label={t('confirmPassword')}>
+                  <input className="settings-input" type="password" value={pwForm.confirm} autoComplete="new-password"
+                    onChange={e => setPwForm(p => ({ ...p, confirm: e.target.value }))} />
+                </Field>
+                <SaveBtn onClick={changePassword} saving={saving} label={t('changePassword')} />
+              </>
+            ) : (
+              <div style={{ fontSize:13, color:'var(--text3)', padding:'10px 14px', borderRadius:8, background:'var(--bg2)', border:'1px solid var(--border)' }}>
+                {t('oauthNoPasswordNote')}
+              </div>
+            )}
+
+            <div style={{ borderTop:'1px solid var(--red)', paddingTop:24, marginTop:8 }}>
+              <div style={{ fontWeight:700, fontSize:14, color:'var(--red)', marginBottom:8 }}>
+                ⚠ {t('deleteAccountTitle')}
+              </div>
+              <p style={{ fontSize:13, color:'var(--text2)', margin:'0 0 16px' }}>
+                {t('deleteAccountDesc')}
+              </p>
+              {user?.hasPassword !== false && (
+                <Field label={t('deleteAccountConfirmLabel')}>
+                  <input
+                    className="settings-input"
+                    type="password"
+                    value={deletePassword}
+                    autoComplete="current-password"
+                    onChange={e => setDeletePassword(e.target.value)}
+                  />
+                </Field>
+              )}
+              <button
+                onClick={deleteAccount}
+                disabled={deleting || (user?.hasPassword !== false && !deletePassword)}
+                style={{
+                  marginTop: user?.hasPassword !== false ? 12 : 0,
+                  padding:'10px 20px',
+                  background: deleting || (user?.hasPassword !== false && !deletePassword) ? 'var(--bg3)' : 'var(--red)',
+                  color: deleting || (user?.hasPassword !== false && !deletePassword) ? 'var(--text3)' : '#fff',
+                  border:'none',
+                  borderRadius:8,
+                  fontWeight:700,
+                  fontSize:13,
+                  cursor: deleting || (user?.hasPassword !== false && !deletePassword) ? 'not-allowed' : 'pointer',
+                  transition:'background 0.2s',
+                }}
+              >
+                {deleting ? t('deleteAccountDeleting') : t('deleteAccountBtn')}
+              </button>
             </div>
-            <Field label={t('currentPassword')}>
-              <input className="settings-input" type="password" value={pwForm.current} autoComplete="current-password"
-                onChange={e => setPwForm(p => ({ ...p, current: e.target.value }))} />
-            </Field>
-            <Field label={t('newPassword')}>
-              <input className="settings-input" type="password" value={pwForm.next} autoComplete="new-password"
-                onChange={e => setPwForm(p => ({ ...p, next: e.target.value }))} />
-            </Field>
-            <Field label={t('confirmPassword')}>
-              <input className="settings-input" type="password" value={pwForm.confirm} autoComplete="new-password"
-                onChange={e => setPwForm(p => ({ ...p, confirm: e.target.value }))} />
-            </Field>
-            <SaveBtn onClick={changePassword} saving={saving} label={t('changePassword')} />
           </div>
         )}
       </div>

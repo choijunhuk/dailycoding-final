@@ -225,10 +225,11 @@ export async function executeSubmissionFlow({
 
   await incrementSubmit(Number(problemId));
 
+  let completedMissions = [];
   if (execution.result === 'correct') {
     if (!alreadySolved) {
       const earnedPts = getTierPoints(problem.tier || 'bronze');
-      await Promise.all([
+      const results = await Promise.all([
         incrementSolved(Number(problemId)),
         onSolve(userId, problem),
         createNotification(userId, `🎉 "${problem.title}" 정답! +${earnedPts}점`, 'submissions'),
@@ -237,6 +238,7 @@ export async function executeSubmissionFlow({
         updateRating(userId, earnedPts),
         claimReferral(userId),
       ]);
+      completedMissions = results[4] || [];
     }
 
     // CONTEST LEADERBOARD OPTIMIZATION (T3)
@@ -276,5 +278,6 @@ export async function executeSubmissionFlow({
     normalizedLang,
     displayLang,
     submission,
+    completedMissions,
   };
 }

@@ -505,7 +505,7 @@ export default function TopNav() {
                     ?<div style={{padding:'24px 16px',textAlign:'center',color:'var(--text3)',fontSize:13}}>
                        {t('noNotifications')}
                      </div>
-                    :notifications.slice(0,8).map(n=>(
+                    :notifications.map(n=>(
                       <div key={n.id} onClick={()=>{markRead(n.id);if(n.link)go(n.link);setShowNotif(false);}} style={{
                         padding:'11px 16px',cursor:'pointer',
                         background:n.read?'transparent':'rgba(121,192,255,.04)',
@@ -567,6 +567,11 @@ export default function TopNav() {
                     marginTop:6,fontSize:11,fontFamily:'Space Mono,monospace',
                     color:tc,fontWeight:700,
                   }}>● {getTierLabel(user?.tier || 'unranked', lang)} · {t('ratingPoints').replace('{n}', String(user?.rating || 0))}</div>
+                  {(user?.streak > 0) && (
+                    <div style={{marginTop:4,fontSize:11,color:'var(--orange)',fontWeight:700}}>
+                      🔥 {user.streak}{lang==='ko' ? '일 연속' : '-day streak'}
+                    </div>
+                  )}
                 </div>
                 {[
                   {labelKey:'myProfile', Icon: UserIcon, path:'/profile'},

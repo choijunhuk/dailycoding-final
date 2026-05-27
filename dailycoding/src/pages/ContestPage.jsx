@@ -11,6 +11,7 @@ import './ContestPage.css';
 
 const CONTEST_TIER_OPTIONS = ['bronze','silver','gold','platinum','diamond'];
 const CONTEST_TAG_OPTIONS = ['수학','다이나믹 프로그래밍','그래프 이론','문자열','구현','소수','BFS','DFS','입출력','탐욕','정렬','이분 탐색','트리','스택/큐'];
+const CONTEST_TAG_EN = { '수학':'Math','다이나믹 프로그래밍':'DP','그래프 이론':'Graph','문자열':'String','구현':'Implementation','소수':'Primes','입출력':'I/O','탐욕':'Greedy','정렬':'Sorting','이분 탐색':'Binary Search','트리':'Tree','스택/큐':'Stack/Queue' };
 const makeContestCases = (count = 10) => Array.from({ length: count }, () => ({ input:'', output:'' }));
 const DEFAULT_CONTEST_REWARD_RULES = [
   { rankFrom: 1, rankTo: 1, rewardCode: 'badge_contest1' },
@@ -791,7 +792,7 @@ export default function ContestPage() {
                           fontSize:12,
                         }}
                       >
-                        {tag}
+                        {lang === 'en' ? (CONTEST_TAG_EN[tag] || tag) : tag}
                       </button>
                     ))}
                   </div>
@@ -1108,7 +1109,8 @@ function LiveContestView({ contest, onExit, isAdmin }) {
 function VirtualContestView({ payload, onExit }) {
   const contest = payload?.contest || {};
   const toast = useToast();
-  const { t } = useLang();
+  const { t, lang } = useLang();
+  const txt = (ko, en) => lang === 'ko' ? ko : en;
   const [run, setRun] = useState(payload?.run || null);
   const [probs, setProbs] = useState(payload?.problems || []);
   const [remainingMs, setRemainingMs] = useState(payload?.run?.remainingMs || 0);

@@ -711,6 +711,7 @@ export const User = {
       equippedBackground: normalizeEquippedBackgroundSlug(user.equipped_background),
       avatarUrlCustom: user.avatar_url_custom ?? null,
       avatar_url_custom: user.avatar_url_custom ?? null,
+      hasPassword: user.password != null,
     };
   },
 };

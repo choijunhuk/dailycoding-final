@@ -16,7 +16,7 @@ export default function SubmissionsPage() {
   const location = useLocation();
   const { user } = useAuth();
   const toast = useToast();
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const R = {
     correct: { label:t('submissionsCorrect'), color:'#56d364', bg:'rgba(86,211,100,.1)',  icon:'✅' },
     wrong:   { label:t('submissionsWrong'), color:'#f85149', bg:'rgba(248,81,73,.1)',   icon:'❌' },
@@ -42,7 +42,11 @@ export default function SubmissionsPage() {
   const [compareIds, setCompareIds] = useState([]);
   const [compareOpen, setCompareOpen] = useState(false);
   const [handledHighlightId, setHandledHighlightId] = useState(null);
+  const [viewMode, setViewMode] = useState('submissions');
+  const [notes, setNotes] = useState([]);
+  const [notesLoading, setNotesLoading] = useState(false);
   const highlightId = location.state?.highlightId || null;
+  const autoCoach = location.state?.autoCoach || false;
 
   useEffect(() => {
     let active = true;
@@ -69,6 +73,16 @@ export default function SubmissionsPage() {
     });
     return () => { active = false; };
   }, [scope, query, resultF, langF, targetUserId]);
+
+  useEffect(() => {
+    if (viewMode !== 'notes' || notes.length > 0 || notesLoading) return;
+    let active = true;
+    setNotesLoading(true);
+    api.get('/notes').then((res) => {
+      if (active) setNotes(Array.isArray(res.data) ? res.data : []);
+    }).catch(() => {}).finally(() => { if (active) setNotesLoading(false); });
+    return () => { active = false; };
+  }, [viewMode, notes.length, notesLoading]);
 
   const langs = useMemo(() => ['all', ...new Set(rows.map((row) => row.lang).filter(Boolean))], [rows]);
   const total = rows.length;
@@ -139,7 +153,7 @@ export default function SubmissionsPage() {
     if (coachById[row.id] || coachLoading[row.id]) return;
     setCoachLoading((prev) => ({ ...prev, [row.id]: true }));
     try {
-      const { data } = await api.post('/ai/submission-coach', { submissionId: row.id });
+      const { data } = await api.post('/ai/submission-coach', { submissionId: row.id, uiLang: lang });
       setCoachById((prev) => ({ ...prev, [row.id]: data }));
     } catch (err) {
       toast?.show(err.response?.data?.message || t('submissionsCoachLoadFailed'), 'error');
@@ -154,8 +168,9 @@ export default function SubmissionsPage() {
     if (!target) return;
     setExp(target.id);
     ensureCodeLoaded(target);
+    if (autoCoach && target.result !== 'correct') loadCoach(target);
     setHandledHighlightId(highlightId);
-  }, [ensureCodeLoaded, handledHighlightId, highlightId, rows]);
+  }, [ensureCodeLoaded, handledHighlightId, highlightId, rows, autoCoach, loadCoach]);
 
   const compareRows = compareIds.map((id) => rows.find((row) => row.id === id)).filter(Boolean);
 
@@ -172,6 +187,18 @@ export default function SubmissionsPage() {
           <h1 style={{ fontSize:20, fontWeight:800, marginBottom:4 }}>📝 {t('submissions')}</h1>
           <div style={{ fontSize:13, color:'var(--text2)' }}>{t('submissionsSubtitle')}</div>
         </div>
+        <div style={{ display:'flex', gap:6, alignItems:'center' }}>
+          {['submissions', 'notes'].map((mode) => (
+            <button key={mode} onClick={() => setViewMode(mode)} style={{
+              padding:'6px 14px', borderRadius:8, border:'1px solid var(--border)',
+              cursor:'pointer', fontSize:12, fontWeight:700, fontFamily:'inherit',
+              background: viewMode === mode ? 'var(--blue)' : 'var(--bg2)',
+              color: viewMode === mode ? '#fff' : 'var(--text2)',
+            }}>
+              {mode === 'submissions' ? `📋 ${t('submissions')}` : `🗒️ ${t('myNotes')}`}
+            </button>
+          ))}
+        </div>
         <div style={{ display:'flex', gap:12 }}>
           {[
             {v:total, l:t('submissionsShowing'), c:'var(--blue)'},
@@ -186,7 +213,43 @@ export default function SubmissionsPage() {
         </div>
       </div>
 
-      <div style={{ display:'flex', gap:10, marginBottom:16, flexWrap:'wrap', background:'var(--bg2)', border:'1px solid var(--border)', borderRadius:10, padding:'12px 16px' }}>
+      {viewMode === 'notes' && (
+        <div>
+          {notesLoading ? (
+            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+              {Array(5).fill(0).map((_, i) => <div key={i} className="skeleton skeleton-row" />)}
+            </div>
+          ) : notes.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-state-icon">🗒️</div>
+              <div style={{ fontSize:15, fontWeight:600 }}>{t('notesEmpty')}</div>
+            </div>
+          ) : (
+            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+              {notes.map((note) => (
+                <div key={note.problem_id}
+                  onClick={() => navigate(`/problems/${note.problem_id}`)}
+                  style={{
+                    background:'var(--bg2)', border:'1px solid var(--border)',
+                    borderLeft:'3px solid var(--purple)', borderRadius:10,
+                    padding:'13px 18px', cursor:'pointer',
+                  }}
+                >
+                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, marginBottom:8 }}>
+                    <span style={{ fontWeight:700, fontSize:14 }}>{note.problem_title || `#${note.problem_id}`}</span>
+                    <span style={{ fontSize:11, color:'var(--text3)' }}>{new Date(note.updated_at).toLocaleDateString()}</span>
+                  </div>
+                  <div style={{ fontSize:12, color:'var(--text2)', whiteSpace:'pre-wrap', lineHeight:1.5, maxHeight:60, overflow:'hidden' }}>
+                    {note.content}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {viewMode === 'submissions' && <div style={{ display:'flex', gap:10, marginBottom:16, flexWrap:'wrap', background:'var(--bg2)', border:'1px solid var(--border)', borderRadius:10, padding:'12px 16px' }}>
         <div style={{ display:'flex', gap:6, alignItems:'center', flexWrap:'wrap' }}>
           <span style={{ fontSize:11, fontWeight:700, color:'var(--text3)', textTransform:'uppercase', letterSpacing:.5 }}>{t('submissionsScope')}</span>
           {[
@@ -260,9 +323,9 @@ export default function SubmissionsPage() {
             </button>
           </div>
         )}
-      </div>
+      </div>}
 
-      {loading ? (
+      {viewMode === 'submissions' && (loading ? (
         <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
           {Array(8).fill(0).map((_, i) => (
             <div key={i} className="skeleton skeleton-row" />
@@ -423,7 +486,7 @@ export default function SubmissionsPage() {
             );
           })}
         </div>
-      )}
+      ))}
 
       {compareOpen && compareRows.length === 2 && (
         <div

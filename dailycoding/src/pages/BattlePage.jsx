@@ -79,6 +79,7 @@ function BattleReplayViewer({ roomId }) {
   }, [roomId]);
 
   const timeline = replay?.timeline || [];
+  const userIdToName = Object.fromEntries((replay?.players || []).map((p) => [String(p.userId), p.username || String(p.userId)]));
   const visibleEvents = timeline.slice(0, cursor + 1);
   const progressByUser = visibleEvents.reduce((acc, event) => {
     const key = event.userId;
@@ -116,7 +117,7 @@ function BattleReplayViewer({ roomId }) {
             const progress = progressByUser[player.userId] || { pass: 0, fail: 0 };
             return (
               <div key={player.userId} className="bp-replay-player">
-                <strong>{t('battleReplayPlayer').replace('{id}', String(player.userId))}</strong>
+                <strong>{player.username || t('battleReplayPlayer').replace('{id}', String(player.userId))}</strong>
                 <span className="mono">{t('battleReplayPassFail').replace('{pass}', String(progress.pass)).replace('{fail}', String(progress.fail))}</span>
                 <small>{player.result?.toUpperCase?.()} · {player.scoreFor}:{player.scoreAgainst}</small>
               </div>
@@ -139,7 +140,7 @@ function BattleReplayViewer({ roomId }) {
           {visibleEvents.map((event, index) => (
             <div key={`${event.ts}-${index}`} className={`bp-replay-event ${event.type}`}>
               <span className="mono">{new Date(event.ts).toLocaleTimeString(dateLocale)}</span>
-              <strong>{txt('사용자', 'User')} {event.userId}</strong>
+              <strong>{userIdToName[String(event.userId)] || String(event.userId)}</strong>
               <span>P{event.problemId}</span>
               <span>{event.language || '-'}</span>
               <span>{event.type === 'pass' ? t('battleReplayPass') : t('battleReplayFail')}</span>

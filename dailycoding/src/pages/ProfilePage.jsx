@@ -115,6 +115,10 @@ export default function ProfilePage() {
   const [weaknessStatsLoadFailed, setWeaknessStatsLoadFailed] = useState(false);
   const [learningActivityLoadFailed, setLearningActivityLoadFailed] = useState(false);
   const [grassLoadFailed, setGrassLoadFailed] = useState(false);
+  const [freezing, setFreezing] = useState(false);
+  const [activityFeed, setActivityFeed] = useState([]);
+  const [activityFeedLoading, setActivityFeedLoading] = useState(false);
+  const [activityFeedFailed, setActivityFeedFailed] = useState(false);
   const [yearCorrectSubsLoadFailed, setYearCorrectSubsLoadFailed] = useState(false);
   const loadErrorToastShownRef = useRef(false);
 
@@ -361,6 +365,28 @@ export default function ProfilePage() {
   }, [yearCorrectSubs, submissions]);
   const upgradePlans = getProfileUpgradePlans(lang);
 
+  useEffect(() => {
+    if (mainTab !== 'activity' || !user?.id || activityFeed.length > 0 || activityFeedLoading) return;
+    setActivityFeedLoading(true);
+    setActivityFeedFailed(false);
+    api.get(`/users/${user.id}/activity`, { params: { limit: 30 } })
+      .then(r => setActivityFeed(r.data?.items || []))
+      .catch(() => setActivityFeedFailed(true))
+      .finally(() => setActivityFeedLoading(false));
+  }, [mainTab, user?.id, activityFeed.length, activityFeedLoading]);
+
+  const handleStreakFreeze = async () => {
+    setFreezing(true);
+    try {
+      const res = await api.post('/auth/streak-freeze');
+      toast?.show(res.data?.message || txt('스트릭이 보호됐습니다!', 'Streak preserved!'), 'success');
+    } catch (e) {
+      toast?.show(e.response?.data?.message || txt('스트릭 보호에 실패했습니다.', 'Failed to freeze streak.'), 'error');
+    } finally {
+      setFreezing(false);
+    }
+  };
+
   const handlePwChange = async () => {
     if (pwNext !== pwConfirm) { setPwMsg(txt('새 비밀번호가 서로 일치하지 않습니다.', 'New passwords do not match.')); return; }
     if (pwNext.length < 8)    { setPwMsg(txt('비밀번호는 최소 8자 이상이어야 합니다.', 'Password must be at least 8 characters.')); return; }
@@ -464,6 +490,7 @@ export default function ProfilePage() {
     ['top100',   'Top 100'],
     ['stats',    txt('통계', 'Stats')],
     ['streak',   txt('스트릭', 'Streak')],
+    ['activity', txt('활동', 'Activity')],
     ['settings', txt('설정', 'Settings')],
   ];
 
@@ -481,12 +508,22 @@ export default function ProfilePage() {
             <span className={`profile-mode-pill ${isSettingsTab ? 'editing' : ''}`}>
               {isSettingsTab ? txt('편집 미리보기', 'Edit Preview') : txt('공개 프로필', 'Public Profile')}
             </span>
-            <button
-              className="btn btn-ghost btn-sm"
-              onClick={() => setMainTab(isSettingsTab ? 'solved' : 'settings')}
-            >
-              {isSettingsTab ? txt('프로필 보기', 'View Profile') : txt('프로필 설정', 'Profile Settings')}
-            </button>
+            <div style={{ display:'flex', gap:8 }}>
+              {user?.id && (
+                <button
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => navigate(`/user/${user.id}`)}
+                >
+                  {txt('공개 페이지 보기', 'View Public Page')}
+                </button>
+              )}
+              <button
+                className="btn btn-ghost btn-sm"
+                onClick={() => setMainTab(isSettingsTab ? 'solved' : 'settings')}
+              >
+                {isSettingsTab ? txt('프로필 보기', 'View Profile') : txt('프로필 설정', 'Profile Settings')}
+              </button>
+            </div>
           </div>
 
           {/* 아바타 */}
@@ -997,12 +1034,26 @@ export default function ProfilePage() {
             {grassLoadFailed && (
               <div className="profile-section-error">{txt('스트릭 잔디를 불러오지 못했습니다.', 'Failed to load streak heatmap.')}</div>
             )}
-            <div style={{ display:'flex', gap:6, alignItems:'center', marginTop:12, fontSize:11, color:'var(--text3)' }}>
-              <span>{txt('없음', 'None')}</span>
-              {[0,1,2,3,4].map(l=>(
-                <div key={l} className={`gcell lv${l}`} style={{ width:12, height:12, borderRadius:3, flexShrink:0 }}/>
-              ))}
-              <span>{txt('많음', 'More')}</span>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginTop:12, flexWrap:'wrap', gap:8 }}>
+              <div style={{ display:'flex', gap:6, alignItems:'center', fontSize:11, color:'var(--text3)' }}>
+                <span>{txt('없음', 'None')}</span>
+                {[0,1,2,3,4].map(l=>(
+                  <div key={l} className={`gcell lv${l}`} style={{ width:12, height:12, borderRadius:3, flexShrink:0 }}/>
+                ))}
+                <span>{txt('많음', 'More')}</span>
+              </div>
+              <button
+                onClick={handleStreakFreeze}
+                disabled={freezing}
+                style={{
+                  padding:'6px 14px', borderRadius:8, fontSize:12, fontWeight:700, fontFamily:'inherit',
+                  background:'var(--bg3)', border:'1px solid var(--border)', color:'var(--text)',
+                  cursor: freezing ? 'not-allowed' : 'pointer', opacity: freezing ? 0.6 : 1,
+                  display:'flex', alignItems:'center', gap:6,
+                }}
+              >
+                🧊 {freezing ? txt('보호 중...', 'Freezing...') : txt('스트릭 보호', 'Freeze Streak')}
+              </button>
             </div>
           </div>
           {heatmapHover && heatmapHover.level > 0 && (
@@ -1041,7 +1092,67 @@ export default function ProfilePage() {
       )}
 
       {/* ══════════════════════════════════════
-          탭 5: 설정 (아바타 · 보상 · 구독 · 비밀번호)
+          탭 5: 활동 피드
+      ══════════════════════════════════════ */}
+      {mainTab==='activity' && (
+        <div className="fade-up" style={{ display:'flex', flexDirection:'column', gap:12 }}>
+          {activityFeedLoading && (
+            <div style={{ display:'flex', alignItems:'center', gap:8, padding:24, color:'var(--text3)', fontSize:13 }}>
+              <span className="spinner" style={{ width:14, height:14, borderWidth:2 }} />
+              {txt('활동 기록 불러오는 중...', 'Loading activity...')}
+            </div>
+          )}
+          {activityFeedFailed && (
+            <div className="card card-pad" style={{ color:'var(--text3)', fontSize:13 }}>
+              {txt('활동 기록을 불러오지 못했습니다.', 'Failed to load activity.')}
+            </div>
+          )}
+          {!activityFeedLoading && !activityFeedFailed && activityFeed.length === 0 && (
+            <div className="empty-state">
+              <div className="empty-state-icon">📋</div>
+              <div style={{ fontSize:13, color:'var(--text3)' }}>{txt('활동 기록이 없습니다.', 'No activity yet.')}</div>
+            </div>
+          )}
+          {activityFeed.map((item, idx) => {
+            let target = null;
+            if (item.type === 'solve' && item.problem_id) target = `/problems/${item.problem_id}`;
+            else if (item.type === 'post' && item.post_id && item.board) target = `/community/${item.board}/${item.post_id}`;
+            else if (item.type === 'battle' && item.room_id) target = `/battle/${item.room_id}/replay`;
+            else if (item.type === 'battle') target = '/battles/history';
+            const Wrapper = target ? 'button' : 'div';
+            const typeColor = item.type === 'solve' ? 'var(--green)' : item.type === 'post' ? 'var(--blue)' : 'var(--yellow)';
+            const typeLabel = item.type === 'solve' ? txt('정답', 'Solved') : item.type === 'post' ? txt('게시글', 'Post') : txt('배틀', 'Battle');
+            const bodyText = item.type === 'solve'
+              ? `${item.problem_title} · ${item.lang}`
+              : item.type === 'post'
+                ? `[${item.board}] ${item.title}`
+                : `${txt('배틀', 'Battle')} ${item.result || ''}`;
+            const dateStr = item.created_at
+              ? new Date(item.created_at).toLocaleString(lang === 'ko' ? 'ko-KR' : 'en-US', { year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' })
+              : '';
+            return (
+              <Wrapper
+                key={`${item.type}-${item.created_at}-${idx}`}
+                type={target ? 'button' : undefined}
+                onClick={target ? () => navigate(target) : undefined}
+                style={{
+                  border:'1px solid var(--border)', borderRadius:14, background:'var(--bg3)',
+                  padding:'12px 14px', color:'inherit', fontFamily:'inherit', textAlign:'left',
+                  cursor: target ? 'pointer' : 'default', width:'100%',
+                }}
+                className={target ? 'list-item-hover' : undefined}
+              >
+                <div style={{ fontSize:12, fontWeight:800, color:typeColor, marginBottom:6 }}>{typeLabel}</div>
+                <div style={{ fontSize:13, color:'var(--text)', lineHeight:1.6 }}>{bodyText}</div>
+                <div style={{ fontSize:11, color:'var(--text3)', marginTop:8 }}>{dateStr}</div>
+              </Wrapper>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════
+          탭 6: 설정 (아바타 · 보상 · 구독 · 비밀번호)
       ══════════════════════════════════════ */}
       {mainTab==='settings' && (
         <div className="fade-up profile-settings-layout">
@@ -1296,7 +1407,7 @@ export default function ProfilePage() {
                       toast?.show(txt('푸시 알림이 활성화되었습니다.', 'Push notifications enabled.'), 'success');
                     }
                   } catch (err) {
-                    toast?.show(err.message || 'Failed to update push notification settings', 'error');
+                    toast?.show(err.message || txt('푸시 알림 설정에 실패했습니다.', 'Failed to update push notification settings'), 'error');
                   }
                 }}>{pushStatus.subscribed ? txt('비활성화', 'Disable') : txt('활성화', 'Enable')}</button>
               </div>

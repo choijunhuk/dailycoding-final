@@ -353,7 +353,7 @@ export default function JudgePage() {
     setReviewLoading(true);
     setAiQuotaNotice('');
     try {
-      const res = await api.post('/ai/review', { problemId: problem.id, code, lang: getJudgeLanguageOption(lang)?.label || lang });
+      const res = await api.post('/ai/review', { problemId: problem.id, code, lang: getJudgeLanguageOption(lang)?.label || lang, uiLang });
       setAiReview(res.data);
       setBottomTab('review');
     } catch (err) {
@@ -371,7 +371,7 @@ export default function JudgePage() {
     if (!problem?.id) return;
     setWalkthroughLoading(true);
     try {
-      const { data } = await api.get(`/ai/walkthrough/${problem.id}`);
+      const { data } = await api.get(`/ai/walkthrough/${problem.id}`, { params: { uiLang } });
       setWalkthrough(data.walkthrough || '');
     } catch (err) {
       if (err.response?.data?.requiresPro) {
@@ -666,6 +666,21 @@ export default function JudgePage() {
     toast?.show(uiTxt('🎉 정답입니다!', '🎉 Correct!'), 'success');
   };
 
+  const showMissionToasts = (completedMissions) => {
+    if (!Array.isArray(completedMissions) || completedMissions.length === 0) return;
+    const LABEL_MAP = {
+      solve_1: uiTxt('오늘 문제 1개 풀기', 'Solve 1 problem today'),
+      solve_3: uiTxt('오늘 문제 3개 풀기', 'Solve 3 problems today'),
+      correct_streak_3: uiTxt('연속 정답 3번', '3 correct answers in a row'),
+      battle_win: uiTxt('배틀 1회 승리', 'Win 1 battle'),
+      review_ai: uiTxt('AI 코드 리뷰 1회 사용', 'Use AI code review once'),
+    };
+    completedMissions.forEach((m) => {
+      const label = LABEL_MAP[m.missionType] || m.missionType;
+      setTimeout(() => toast?.show(`⚡ ${uiTxt('미션 완료', 'Mission complete')}: ${label} (+${m.rewardValue} XP)`, 'success'), 800);
+    });
+  };
+
   const submitCode = async () => {
     if (isTroubleshootingProblem) {
       await runTroubleshooting({ submit: true })
@@ -690,6 +705,7 @@ export default function JudgePage() {
         if (sub.result === 'correct') {
           confetti({ particleCount: 120, spread: 80, origin: { y: 0.7 } });
           showCorrectToast(solveTimeSec);
+          showMissionToasts(sub.completedMissions);
         }
         else toast?.show(uiTxt('❌ 오답입니다.', '❌ Wrong answer.'), 'error');
       } catch (err) {
@@ -720,6 +736,7 @@ export default function JudgePage() {
       if (sub.result === 'correct') {
         confetti({ particleCount: 120, spread: 80, origin: { y: 0.7 } });
         showCorrectToast(solveTimeSec);
+        showMissionToasts(sub.completedMissions);
       }
       else if (sub.result === 'wrong') toast?.show(uiTxt('❌ 오답입니다.', '❌ Wrong Answer.'), 'error');
       else if (sub.result === 'timeout') toast?.show(uiTxt('⏱ 시간 초과.', '⏱ Time Limit Exceeded.'), 'warning');

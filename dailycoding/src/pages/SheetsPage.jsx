@@ -75,7 +75,7 @@ export default function SheetsPage() {
                   )}
                 </div>
                 <span style={{ fontSize:11, padding:'2px 8px', borderRadius:4, background:'var(--bg3)', color:'var(--text3)' }}>
-                  {sheet.category}
+                  {t(CATEGORIES.find(([v]) => v === sheet.category)?.[1] || 'sheetCategoryCustom')}
                 </span>
               </div>
               <div style={{ color:'var(--text2)', fontSize:13, marginTop:8 }}>{sheet.description}</div>

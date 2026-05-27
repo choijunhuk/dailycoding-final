@@ -368,11 +368,13 @@ export const Battle = {
 
   async getReplay(roomId) {
     const rows = await query(
-      `SELECT room_id, user_id, opponent_id, opponent_name, result, score_for, score_against, solved_for, solved_against,
-              problems_json, battle_timeline, created_at
-       FROM battle_history
-       WHERE room_id = ?
-       ORDER BY user_id ASC`,
+      `SELECT bh.room_id, bh.user_id, u.username, bh.opponent_id, bh.opponent_name, bh.result,
+              bh.score_for, bh.score_against, bh.solved_for, bh.solved_against,
+              bh.problems_json, bh.battle_timeline, bh.created_at
+       FROM battle_history bh
+       LEFT JOIN users u ON u.id = bh.user_id
+       WHERE bh.room_id = ?
+       ORDER BY bh.user_id ASC`,
       [roomId]
     );
     if (!rows?.length) return null;
@@ -386,6 +388,7 @@ export const Battle = {
       problems: typeof first.problems_json === 'string' ? JSON.parse(first.problems_json || '[]') : (first.problems_json || []),
       players: rows.map((row) => ({
         userId: row.user_id,
+        username: row.username || row.opponent_name || String(row.user_id),
         opponentId: row.opponent_id,
         opponentName: row.opponent_name,
         result: row.result,

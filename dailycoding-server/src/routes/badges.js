@@ -263,7 +263,7 @@ router.post('/sync', auth, async (req, res) => {
     for (const [code, targetTier] of TIER_TARGETS.entries()) {
       if (TIER_ORDER.indexOf(targetTier) <= currentTierIdx) tierCodes.push(code);
     }
-    for (const code of tierCodes) await Reward.grant(userId, code);
+    await Promise.all(tierCodes.map(code => Reward.grant(userId, code)));
 
     // Speedrun: any correct submission within 10 minutes
     const speedRow = await queryOne(
@@ -271,8 +271,10 @@ router.post('/sync', auth, async (req, res) => {
       [userId]
     );
     if (speedRow) {
-      await Reward.grant(userId, 'badge_speedrun');
-      await Reward.grant(userId, 'title_speedster');
+      await Promise.all([
+        Reward.grant(userId, 'badge_speedrun'),
+        Reward.grant(userId, 'title_speedster'),
+      ]);
     }
 
     // Gold killer: correct solve on gold+ tier problem

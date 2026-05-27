@@ -776,6 +776,7 @@ export default function LearningPathPage() {
   const [selectedPlatformPathId, setSelectedPlatformPathId] = useState(
     Number.isFinite(Number(routePathId)) ? Number(routePathId) : null
   );
+  const [weeklyPlan, setWeeklyPlan] = useState(null);
 
   const track = ALL_TRACKS.find(t => t.id === selectedTrackId) || ALL_TRACKS[0];
   const level = track.levels[selectedLevelIdx] || track.levels[0];
@@ -784,6 +785,14 @@ export default function LearningPathPage() {
     [platformPaths, selectedPlatformPathId]
   );
   const selectedPlatformPathData = selectedPlatformPathDetail || selectedPlatformPath;
+
+  useEffect(() => {
+    let ignore = false;
+    api.get('/growth', { headers: { 'x-language': lang } })
+      .then((res) => { if (!ignore) setWeeklyPlan(res.data?.weeklyPlan || null); })
+      .catch(() => {});
+    return () => { ignore = true; };
+  }, [lang]);
 
   useEffect(() => {
     let ignore = false;
@@ -858,6 +867,47 @@ export default function LearningPathPage() {
           {txt('언어별 · 주제별 단계적 알고리즘 학습', 'Step-by-step algorithm learning by language and topic')}
         </div>
       </div>
+
+      {weeklyPlan?.days?.length > 0 && (
+        <section style={{ marginBottom: 18, border: '1px solid rgba(88,166,255,.28)', borderRadius: 14, background: 'rgba(88,166,255,.06)', padding: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+            <span style={{ fontSize: 18 }}>📅</span>
+            <div>
+              <div style={{ fontWeight: 800, fontSize: 14 }}>{weeklyPlan.title}</div>
+              <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 2 }}>{weeklyPlan.summary}</div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {weeklyPlan.days.map((day) => {
+              const isSolved = Boolean(solved[day.id]);
+              const labelColor = day.label === 'Recovery' || day.label === '복습' ? 'var(--red)' : day.label === 'Challenge' || day.label === '도전' ? 'var(--purple)' : 'var(--blue)';
+              return (
+                <button
+                  key={day.day}
+                  type="button"
+                  onClick={() => navigate(`/problems/${day.id}`)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    border: `1px solid ${isSolved ? 'rgba(86,211,100,.25)' : 'var(--border)'}`,
+                    borderRadius: 8, background: isSolved ? 'rgba(86,211,100,.06)' : 'var(--bg2)',
+                    color: 'var(--text)', padding: '8px 12px', textAlign: 'left',
+                    cursor: 'pointer', fontFamily: 'inherit',
+                  }}
+                >
+                  <span style={{ width: 20, height: 20, borderRadius: '50%', background: isSolved ? 'var(--green)' : 'var(--bg3)', color: isSolved ? '#0d1117' : 'var(--text3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, flexShrink: 0 }}>
+                    {isSolved ? '✓' : day.day}
+                  </span>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: labelColor, minWidth: 40 }}>{day.label}</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, flex: 1 }}>{day.title}</span>
+                  {day.tier && (
+                    <span style={{ fontSize: 11, color: TIER_COLOR[day.tier] || 'var(--text3)', fontWeight: 700, flexShrink: 0 }}>{getTierLabel(day.tier, lang)}</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {(platformPaths.length > 0 || platformPathError) && (
         <section style={{ marginBottom: 18 }}>

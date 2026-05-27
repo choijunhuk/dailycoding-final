@@ -65,7 +65,7 @@ export default function AiPage() {
     setAnalysis(null);
     setQuotaNotice('');
     try {
-      const res = await api.post('/ai/analyze');
+      const res = await api.post('/ai/analyze', { uiLang: lang });
       setAnalysis(res.data);
       if (res.data?.source && res.data.source !== 'ai') {
         setQuotaNotice(t('aiFallbackNotice'));
@@ -90,7 +90,7 @@ export default function AiPage() {
     setChatBusy(true);
     setQuotaNotice('');
     try {
-      const res = await api.post('/ai/chat', { messages: newHistory });
+      const res = await api.post('/ai/chat', { messages: newHistory, uiLang: lang });
       setChat(p => [...p, { role:'model', parts:[{text: res.data.text}] }]);
     } catch (err) {
       if (err.response?.data?.code === 'QUOTA_EXCEEDED') {
@@ -116,7 +116,7 @@ export default function AiPage() {
     setHintLoading(true); setAiHint(null); setHintLevel(0); setHintLimitMsg(null);
     setQuotaNotice('');
     try {
-      const res = await api.post('/ai/hint', { problemId: Number(hintProbId) });
+      const res = await api.post('/ai/hint', { problemId: Number(hintProbId), uiLang: lang });
       setAiHint(res.data);
       if (res.data?.source === 'fallback') setQuotaNotice(t('aiFallbackNotice'));
       if (typeof res.data?.remaining === 'number') setHintRemaining(res.data.remaining);
@@ -154,7 +154,7 @@ export default function AiPage() {
               setQuiz(null);
               setQuizAnswer(null);
               try {
-                const r = await api.post('/ai/daily-quiz');
+                const r = await api.post('/ai/daily-quiz', { uiLang: lang });
                 setQuiz(r.data);
                 if (r.data?.source && r.data.source !== 'ai') {
                   setQuotaNotice(t('aiFallbackNotice'));
@@ -262,6 +262,12 @@ export default function AiPage() {
                   {quizAnswer===Number(quiz.answer)?t('quizCorrect'):t('quizWrong')}
                 </strong> {quiz.explanation}
                 <div style={{marginTop:4,fontSize:12,color:'var(--text3)'}}>{t('quizRelatedConcept')}{quiz.topic}</div>
+              </div>
+            )}
+            {(!user?.techStack || user.techStack.length === 0) && (
+              <div style={{marginTop:10,padding:'8px 12px',background:'rgba(121,192,255,.07)',border:'1px solid rgba(121,192,255,.15)',borderRadius:8,fontSize:12,color:'var(--text3)',display:'flex',gap:8,alignItems:'center'}}>
+                <span>💡 {t('quizNoStackHint')}</span>
+                <a href="/settings" style={{color:'var(--blue)',fontWeight:600,whiteSpace:'nowrap',textDecoration:'none'}}>{t('quizNoStackLink')}</a>
               </div>
             )}
           </div>

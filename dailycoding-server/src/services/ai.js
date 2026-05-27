@@ -97,7 +97,7 @@ export async function askAI(userId, prompt, fallback, maxTokens = 400) {
   return result.data;
 }
 
-export async function askAIWithMeta(userId, prompt, fallback, maxTokens = 400) {
+export async function askAIWithMeta(userId, prompt, fallback, maxTokens = 400, { systemInstruction } = {}) {
   if (!genAI) {
     await recordAIEvent({ source: 'fallback', reason: 'missing_api_key' });
     return { data: fallback, source: 'fallback', reason: 'missing_api_key' };
@@ -126,14 +126,15 @@ export async function askAIWithMeta(userId, prompt, fallback, maxTokens = 400) {
   for (const modelName of models) {
     let providerCallStarted = false;
     try {
-      const model = genAI.getGenerativeModel({
+      const modelConfig = {
         model: modelName,
         generationConfig: {
           maxOutputTokens: maxTokens,
           temperature: 0.7,
-          responseMimeType: 'application/json'
         },
-      });
+      };
+      if (systemInstruction) modelConfig.systemInstruction = systemInstruction;
+      const model = genAI.getGenerativeModel(modelConfig);
 
       providerCallStarted = true;
       const result = await model.generateContent(prompt);

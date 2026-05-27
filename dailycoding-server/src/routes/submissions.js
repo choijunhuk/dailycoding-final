@@ -265,7 +265,7 @@ router.post('/', auth, requireVerified, async (req, res) => {
         supportedLanguages: judgeRuntime.supportedLanguages || [],
       });
     }
-    const { execution, submission, displayLang } = await executeSubmissionFlow({
+    const { execution, submission, displayLang, completedMissions } = await executeSubmissionFlow({
       problem: prob,
       problemId: Number(problemId),
       userId: req.user.id,
@@ -302,16 +302,17 @@ router.post('/', auth, requireVerified, async (req, res) => {
 
     const timeMs = execution.time ? parseInt(execution.time, 10) : null;
     res.json({
-      id:           submission.id,
-      problemId:    submission.problem_id,
-      problemTitle: prob.title,
-      lang:         displayLang,
-      result:       submission.result,
-      time:         timeMs ? `${timeMs}ms` : '-',
-      mem:          '-',
-      codeLength:   Buffer.byteLength(code, 'utf8'),
-      detail:       submission.detail,
-      date:         new Date(submission.submitted_at).toLocaleString('ko-KR'),
+      id:               submission.id,
+      problemId:        submission.problem_id,
+      problemTitle:     prob.title,
+      lang:             displayLang,
+      result:           submission.result,
+      time:             timeMs ? `${timeMs}ms` : '-',
+      mem:              '-',
+      codeLength:       Buffer.byteLength(code, 'utf8'),
+      detail:           submission.detail,
+      date:             new Date(submission.submitted_at).toLocaleString('ko-KR'),
+      completedMissions,
     });
   } catch (err) {
     if (err.status && err.body) {

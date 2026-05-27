@@ -97,6 +97,7 @@ export default function Dashboard() {
   const tierLbl = (tier) => getTierLabel(tier, lang || 'ko') || tier;
   const CAUSE_KO = { 'Wrong Answer': '오답', 'Compile Error': '컴파일 오류', 'Time Limit Exceeded': '시간 초과', 'Runtime Error': '런타임 오류', 'Memory Limit Exceeded': '메모리 초과' };
   const [weeklyChallenge, setWeeklyChallenge] = useState(null);
+  const [missions, setMissions] = useState([]);
   const [followFeed, setFollowFeed] = useState([]);
   const [promotion, setPromotion] = useState({ active: null, recent: null });
   const [referral, setReferral] = useState(null);
@@ -145,7 +146,7 @@ export default function Dashboard() {
     if ((count || 0) <= 3 || level === 2) return 'rgba(86,211,100,.5)';
     return 'var(--green)';
   };
-  const showLoadErrorToast = useCallback((message = 'Failed to load dashboard data.') => {
+  const showLoadErrorToast = useCallback((message = 'Error loading dashboard.') => {
     if (loadErrorToastShownRef.current) return;
     loadErrorToastShownRef.current = true;
     toast?.show(message, 'error');
@@ -257,7 +258,7 @@ export default function Dashboard() {
       .catch((err) => {
         if (!cancelled) setPromotion({ active: null, recent: null });
         if (err?.response?.status !== 401) {
-          showLoadErrorToast(err?.response?.data?.message || 'Failed to load promotion info.');
+          showLoadErrorToast(err?.response?.data?.message || txt('승급전 정보를 불러오지 못했습니다.', 'Failed to load promotion info.'));
         }
       });
     return () => { cancelled = true; };
@@ -286,6 +287,18 @@ export default function Dashboard() {
       })
       .catch(() => {
         if (!cancelled) setReferral(null);
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    api.get('/missions/daily')
+      .then(({ data }) => {
+        if (!cancelled) setMissions(data.missions || []);
+      })
+      .catch(() => {
+        if (!cancelled) setMissions([]);
       });
     return () => { cancelled = true; };
   }, []);
@@ -620,6 +633,45 @@ export default function Dashboard() {
             </div>
           )}
 
+
+          {missions.length > 0 && (
+            <div className="card card-pad" style={{marginBottom:4}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
+                <h3 style={{margin:0}}>⚡ {t('dashboardDailyMissions')}</h3>
+                {missions.every(m => m.isCompleted) && (
+                  <span style={{fontSize:12,color:'var(--green)',fontWeight:700}}>{t('dashboardMissionAllDone')}</span>
+                )}
+              </div>
+              <div style={{display:'flex',flexDirection:'column',gap:8}}>
+                {missions.map(m => {
+                  const labelKey = {
+                    solve_1: 'missionSolve1',
+                    solve_3: 'missionSolve3',
+                    correct_streak_3: 'missionStreak3',
+                    battle_win: 'missionBattleWin',
+                    review_ai: 'missionReviewAi',
+                  }[m.type];
+                  return (
+                    <div key={m.type} style={{
+                      display:'flex',alignItems:'center',gap:10,
+                      padding:'8px 12px',borderRadius:8,
+                      background: m.isCompleted ? 'rgba(86,211,100,.08)' : 'var(--bg3)',
+                      border: `1px solid ${m.isCompleted ? 'rgba(86,211,100,.25)' : 'var(--border)'}`,
+                      opacity: m.isCompleted ? 0.8 : 1,
+                    }}>
+                      <span style={{fontSize:16}}>{m.isCompleted ? '✅' : '⭕'}</span>
+                      <span style={{flex:1,fontSize:13,color:m.isCompleted?'var(--text2)':'var(--text)',textDecoration:m.isCompleted?'line-through':'none'}}>
+                        {labelKey ? t(labelKey) : m.label}
+                      </span>
+                      <span style={{fontSize:11,fontWeight:700,color:'var(--yellow)',whiteSpace:'nowrap'}}>
+                        +{m.rewardValue} {t('dashboardMissionXp')}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {referral && (
             <div className="card card-pad" style={{marginBottom:4}}>
