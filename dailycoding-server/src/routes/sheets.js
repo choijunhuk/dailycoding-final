@@ -56,13 +56,24 @@ router.get('/sheets/:id', auth, async (req, res) => {
   }
 });
 
+function localizePathRow(row, lang) {
+  const useEn = lang === 'en';
+  return {
+    ...row,
+    title: (useEn && row.title_en) ? row.title_en : row.title,
+    description: (useEn && row.description_en) ? row.description_en : row.description,
+    problemIds: parseJsonList(row.problem_ids),
+  };
+}
+
 router.get('/learning-paths', async (req, res) => {
   try {
+    const lang = req.query.lang || 'ko';
     const rows = await query(
       'SELECT * FROM learning_paths WHERE is_active = 1 ORDER BY order_index ASC',
       []
     );
-    res.json(rows.map((row) => ({ ...row, problemIds: parseJsonList(row.problem_ids) })));
+    res.json(rows.map((row) => localizePathRow(row, lang)));
   } catch (err) {
     console.error('[learning-paths/list]', err);
     return internalError(res);
@@ -71,6 +82,7 @@ router.get('/learning-paths', async (req, res) => {
 
 router.get('/learning-paths/:id', async (req, res) => {
   try {
+    const lang = req.query.lang || 'ko';
     const row = await queryOne('SELECT * FROM learning_paths WHERE id = ?', [req.params.id]);
     if (!row) return errorResponse(res, 404, 'NOT_FOUND', 'Learning path not found.');
     const problemIds = parseJsonList(row.problem_ids);
@@ -80,7 +92,7 @@ router.get('/learning-paths/:id', async (req, res) => {
       if (problem) problems.push(problem);
     }
     res.json({
-      ...row,
+      ...localizePathRow(row, lang),
       problemIds,
       problems,
     });

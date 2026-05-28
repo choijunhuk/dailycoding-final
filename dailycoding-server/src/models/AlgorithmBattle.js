@@ -703,7 +703,7 @@ export const AlgorithmBattle = {
 
   async expireStaleWaitingRooms({ now = Date.now() } = {}) {
     if (isConnected()) {
-      const result = await run(
+      const waitingResult = await run(
         `UPDATE battle_rooms
          SET status = 'finished', ended_at = UTC_TIMESTAMP()
          WHERE status = 'waiting'
@@ -713,22 +713,38 @@ export const AlgorithmBattle = {
            )`,
         []
       );
-      return Number(result?.affectedRows || 0);
+      // Also expire playing rooms whose duration has long since elapsed (2-min grace)
+      const playingResult = await run(
+        `UPDATE battle_rooms
+         SET status = 'finished', ended_at = UTC_TIMESTAMP()
+         WHERE status = 'playing'
+           AND started_at IS NOT NULL
+           AND DATE_ADD(started_at, INTERVAL duration_sec + 120 SECOND) < UTC_TIMESTAMP()`,
+        []
+      );
+      return Number(waitingResult?.affectedRows || 0) + Number(playingResult?.affectedRows || 0);
     }
 
-    const rows = await query('SELECT * FROM battle_rooms WHERE status = ?', ['waiting']);
+    const rows = await query("SELECT * FROM battle_rooms WHERE status IN ('waiting', 'playing')", []);
     let expiredCount = 0;
 
     for (const row of rows || []) {
       const room = normalizeRoom(row);
-      const createdAtMs = toTimeMs(room.createdAt);
-      const explicitExpiryMs = toTimeMs(room.lobbyExpiresAt);
-      const fallbackExpiryMs = createdAtMs == null ? null : createdAtMs + LOBBY_TIMEOUT_MS;
-      const expiresAtMs = explicitExpiryMs ?? fallbackExpiryMs;
-
-      if (expiresAtMs != null && now > expiresAtMs) {
-        await run('UPDATE battle_rooms SET status = ?, ended_at = ? WHERE id = ?', ['finished', nowMySQL(), room.id]);
-        expiredCount += 1;
+      if (room.status === 'waiting') {
+        const createdAtMs = toTimeMs(room.createdAt);
+        const explicitExpiryMs = toTimeMs(room.lobbyExpiresAt);
+        const fallbackExpiryMs = createdAtMs == null ? null : createdAtMs + LOBBY_TIMEOUT_MS;
+        const expiresAtMs = explicitExpiryMs ?? fallbackExpiryMs;
+        if (expiresAtMs != null && now > expiresAtMs) {
+          await run('UPDATE battle_rooms SET status = ?, ended_at = ? WHERE id = ?', ['finished', nowMySQL(), room.id]);
+          expiredCount += 1;
+        }
+      } else if (room.status === 'playing' && room.startedAt) {
+        const startedAtMs = toTimeMs(room.startedAt);
+        if (startedAtMs != null && now > startedAtMs + (room.durationSec + 120) * 1000) {
+          await run('UPDATE battle_rooms SET status = ?, ended_at = ? WHERE id = ?', ['finished', nowMySQL(), room.id]);
+          expiredCount += 1;
+        }
       }
     }
 
@@ -759,6 +775,7 @@ export const AlgorithmBattle = {
       if (existingActive) {
         const err = new Error('You already have an active battle room. Please leave or finish the existing room first.');
         err.status = 409;
+        err.roomId = existingActive.id;
         throw err;
       }
     }

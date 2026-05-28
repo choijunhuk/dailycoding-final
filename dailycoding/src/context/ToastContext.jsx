@@ -13,9 +13,9 @@ const COLORS = {
 export function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([]);
 
-  const show = useCallback((msg, type = 'info', duration = 3000) => {
+  const show = useCallback((msg, type = 'info', duration = 3000, action = null) => {
     const id = Date.now() + Math.random();
-    setToasts(p => [...p, { id, msg, type }]);
+    setToasts(p => [...p, { id, msg, type, action }]);
     setTimeout(() => setToasts(p => p.filter(t => t.id !== id)), duration);
   }, []);
 
@@ -51,6 +51,13 @@ export function ToastProvider({ children }) {
             }}>
               <span style={{ fontSize: 16, color: c.text }}>{ICONS[t.type]}</span>
               <span style={{ flex: 1, lineHeight: 1.5 }}>{t.msg}</span>
+              {t.action && (
+                <button onClick={() => { t.action.onClick(); remove(t.id); }} style={{
+                  background: c.border, border: `1px solid ${c.border}`, color: c.text,
+                  cursor: 'pointer', fontSize: 12, padding: '3px 8px', borderRadius: 6,
+                  whiteSpace: 'nowrap', fontFamily: 'inherit',
+                }}>{t.action.label}</button>
+              )}
               <button onClick={() => remove(t.id)} style={{
                 background: 'none', border: 'none', color: 'var(--text3)',
                 cursor: 'pointer', fontSize: 14, padding: 0, lineHeight: 1,

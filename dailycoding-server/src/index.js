@@ -128,6 +128,7 @@ async function initDatabase() {
     await runSql(join(__dir, 'migrations', '046_badge_showcase.sql'));
     await runSql(join(__dir, 'migrations', '047_battle_title_invite.sql'));
     await runSql(join(__dir, 'migrations', '048_tournament_battle_mode.sql'));
+    await runSql(join(__dir, 'migrations', '049_learning_paths_i18n.sql'));
     logger.info('✅ DB 스키마 초기화 완료');
   } catch (err) {
     logger.warn('⚠️  DB 초기화 스킵:', { message: err.message });

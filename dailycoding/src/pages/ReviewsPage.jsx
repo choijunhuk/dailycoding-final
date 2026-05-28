@@ -357,6 +357,7 @@ export default function ReviewsPage() {
           <option value="all">{txt('전체 언어', 'All Languages')}</option>
           <option value="python">python</option>
           <option value="javascript">javascript</option>
+          <option value="c">c</option>
           <option value="cpp">cpp</option>
           <option value="java">java</option>
         </select>

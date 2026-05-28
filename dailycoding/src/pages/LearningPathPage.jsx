@@ -796,7 +796,7 @@ export default function LearningPathPage() {
 
   useEffect(() => {
     let ignore = false;
-    api.get('/learning-paths')
+    api.get('/learning-paths', { params: { lang } })
       .then((res) => {
         if (ignore) return;
         setPlatformPaths(Array.isArray(res.data) ? res.data : []);
@@ -807,7 +807,7 @@ export default function LearningPathPage() {
         setPlatformPathError(true);
       });
     return () => { ignore = true; };
-  }, []);
+  }, [lang]);
 
   useEffect(() => {
     const numericId = Number(routePathId);
@@ -822,7 +822,7 @@ export default function LearningPathPage() {
       return;
     }
     let ignore = false;
-    api.get(`/learning-paths/${selectedPlatformPathId}`)
+    api.get(`/learning-paths/${selectedPlatformPathId}`, { params: { lang } })
       .then((res) => {
         if (ignore) return;
         setSelectedPlatformPathDetail(res.data || null);
@@ -832,7 +832,7 @@ export default function LearningPathPage() {
         setSelectedPlatformPathDetail(null);
       });
     return () => { ignore = true; };
-  }, [selectedPlatformPathId]);
+  }, [selectedPlatformPathId, lang]);
 
   const handleTrackSelect = (id) => {
     setSelectedPlatformPathId(null);

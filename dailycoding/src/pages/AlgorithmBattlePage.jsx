@@ -935,13 +935,14 @@ export default function AlgorithmBattlePage() {
     socket.on('battle:spectator_chat', (msg) => {
       setSpectatorMessages((prev) => [...prev.slice(-39), { ...msg, isSpectator: true }]);
     });
-    socket.on('battle:room_invite', ({ inviterName, mode }) => {
+    socket.on('battle:room_invite', ({ roomId: inviteRoomId, inviterName, mode }) => {
       const modeTitle = FALLBACK_MODES.find(m => m.key === mode)?.title || mode;
       toast?.show(
-        txt(`${inviterName}님이 ${modeTitle} 배틀에 초대했습니다! 수락하려면 방에 참여하세요.`,
+        txt(`${inviterName}님이 ${modeTitle} 배틀에 초대했습니다!`,
             `${inviterName} invited you to a ${modeTitle} battle!`),
         'info',
-        8000
+        10000,
+        inviteRoomId ? { label: txt('입장', 'Join'), onClick: () => navigate(`/battle/${inviteRoomId}`) } : null,
       );
     });
     return () => { socket.disconnect(); if (socketRef.current === socket) socketRef.current = null; };
@@ -1134,12 +1135,13 @@ export default function AlgorithmBattlePage() {
       navigate(`/battle/${data.room.id}`);
     } catch (err) {
       if (err.response?.status === 409) {
-        toast?.show(errTxt(err, '이미 활성화된 방이 있습니다.', 'You already have an active room.'), 'error');
-        try {
-          const { data: listData } = await api.get('/battles/rooms', { params: { status: 'waiting' } });
-          const myRoom = (listData.rooms || []).find((r) => r.room?.createdBy === user?.id);
-          if (myRoom?.room?.id) navigate(`/battle/${myRoom.room.id}`);
-        } catch { /* 조회 실패 시 무시 */ }
+        const existingRoomId = err.response?.data?.roomId;
+        toast?.show(
+          errTxt(err, '이미 활성화된 방이 있습니다.', 'You already have an active room.'),
+          'error',
+          5000,
+          existingRoomId ? { label: txt('이동', 'Go'), onClick: () => navigate(`/battle/${existingRoomId}`) } : null,
+        );
       } else {
         toast?.show(errTxt(err, '방 생성에 실패했습니다.', 'Failed to create room'), 'error');
       }

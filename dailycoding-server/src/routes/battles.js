@@ -234,7 +234,7 @@ router.post('/rooms', async (req, res) => {
   } catch (err) {
     console.error('[algorithm-battles/create]', err);
     if (err?.status && err.status < 500) {
-      return errorResponse(res, err.status, 'VALIDATION_ERROR', err.message || 'Failed to create battle room');
+      return errorResponse(res, err.status, 'VALIDATION_ERROR', err.message || 'Failed to create battle room', err.roomId ? { roomId: err.roomId } : {});
     }
     return internalError(res, err?.message || 'Failed to create battle room');
   }
