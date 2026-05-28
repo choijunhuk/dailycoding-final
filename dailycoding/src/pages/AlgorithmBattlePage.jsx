@@ -637,6 +637,8 @@ export default function AlgorithmBattlePage() {
   const chatFeedRef = useRef(null);
   const autoLeaveRoomRef = useRef(null);
   const autoLeaveSpectatingRef = useRef(false);
+
+  const [activeDebuffs, setActiveDebuffs] = useState({ typeLock: 0, submitBlock: 0, blind: 0 });
   const processedWorkshopSubmissionsRef = useRef(new Set());
   const workshopTimerFlagsRef = useRef({ half: false, low: false });
   const workshopHpFlagsRef = useRef({});
@@ -670,6 +672,10 @@ export default function AlgorithmBattlePage() {
   const opponents = participants.filter((p) => p.userId !== user?.id);
   const hasOpponent = opponents.length > 0;
   const isSpectating = searchParams.get('spectate') === '1' || (currentRoom?.status === 'playing' && !me);
+  const nowMs = Date.now();
+  const isTypeLocked = !isSpectating && activeDebuffs.typeLock > nowMs;
+  const isSubmitBlocked = !isSpectating && activeDebuffs.submitBlock > nowMs;
+  const isBlinded = !isSpectating && activeDebuffs.blind > nowMs;
   const participantById = useMemo(
     () => Object.fromEntries(participants.map((player) => [String(player.userId), player])),
     [participants]
@@ -884,6 +890,7 @@ export default function AlgorithmBattlePage() {
   useEffect(() => {
     if (!roomId) { setState(null); return; }
     loadRoom(roomId);
+    setActiveDebuffs({ typeLock: 0, submitBlock: 0, blind: 0 });
   }, [loadRoom, roomId]);
 
   // ── 소켓
@@ -933,7 +940,27 @@ export default function AlgorithmBattlePage() {
       toast?.show(msg, 'info');
     });
     socket.on('battle:effect', (event) => { toast?.show(getBattleEffectLabel(event?.payload, txt), 'info'); });
-    socket.on('battle:item:used', (event) => { toast?.show(getBattleItemLabel(event?.payload, workshopItemLabels) || txt('아이템 사용됨', 'Item used'), 'info'); });
+    socket.on('battle:item:used', (event) => {
+      const payload = event?.payload || {};
+      const itemType = payload.itemType;
+      const targeted = (payload.targetUserIds || []).map(Number).includes(Number(user?.id));
+      const durationMs = payload.durationMs;
+      if (targeted && durationMs) {
+        const expiry = Date.now() + durationMs;
+        if (itemType === 'type-lock') {
+          setActiveDebuffs((prev) => ({ ...prev, typeLock: expiry }));
+          toast?.show(txt(`⌨️ 타이핑 잠금! ${Math.round(durationMs / 1000)}초간 에디터 비활성화`, `⌨️ Type Locked! Editor disabled for ${Math.round(durationMs / 1000)}s`), 'error', durationMs);
+        } else if (itemType === 'submit-block') {
+          setActiveDebuffs((prev) => ({ ...prev, submitBlock: expiry }));
+          toast?.show(txt(`🚫 제출 차단! ${Math.round(durationMs / 1000)}초간 제출 불가`, `🚫 Submit Blocked! Cannot submit for ${Math.round(durationMs / 1000)}s`), 'error', durationMs);
+        } else if (itemType === 'blind') {
+          setActiveDebuffs((prev) => ({ ...prev, blind: expiry }));
+          toast?.show(txt(`🌫️ 블라인드! ${Math.round(durationMs / 1000)}초간 화면 흐림`, `🌫️ Blinded! Screen blurred for ${Math.round(durationMs / 1000)}s`), 'error', durationMs);
+        }
+      } else {
+        toast?.show(getBattleItemLabel(payload, workshopItemLabels) || txt('아이템 사용됨', 'Item used'), 'info');
+      }
+    });
     socket.on('battle:spectator_chat', (msg) => {
       setSpectatorMessages((prev) => [...prev.slice(-39), { ...msg, isSpectator: true }]);
     });
@@ -1879,8 +1906,9 @@ export default function AlgorithmBattlePage() {
               </button>
             )}
           {currentRoom?.status === 'playing' && (
-            <button className="btn btn-primary btn-sm" onClick={submit} disabled={submitting || isSpectating}>
-              {isSpectating ? txt('관전 중', 'Spectating') : submitting ? <span className="spinner" /> : <><Play size={13} /> {txt('제출', 'Submit')}</>}
+            <button className="btn btn-primary btn-sm" onClick={submit} disabled={submitting || isSpectating || isSubmitBlocked}
+              title={isSubmitBlocked ? txt('제출이 차단되었습니다!', 'Submit blocked!') : undefined}>
+              {isSpectating ? txt('관전 중', 'Spectating') : isSubmitBlocked ? txt('🚫 제출 차단됨', '🚫 Blocked') : submitting ? <span className="spinner" /> : <><Play size={13} /> {txt('제출', 'Submit')}</>}
             </button>
           )}
         </div>
@@ -2016,7 +2044,13 @@ export default function AlgorithmBattlePage() {
             ) : (
               <>
                 {activeProblem ? (
-                  <div className="ab-problem">
+                  <div className="ab-problem" style={isBlinded ? { filter: 'blur(6px)', userSelect: 'none', pointerEvents: 'none' } : undefined}>
+                    {isBlinded && (
+                      <div style={{ position: 'absolute', inset: 0, zIndex: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 6 }}>
+                        <span style={{ fontSize: 28 }}>🌫️</span>
+                        <span style={{ fontWeight: 700, fontSize: 14 }}>{txt('블라인드 적용됨', 'Blinded')}</span>
+                      </div>
+                    )}
                     <h2>
                       {activeProblem.title}
                       <span className="ab-problem-tier" style={{ marginLeft: 8, fontSize: 12, opacity: 0.6 }}>
@@ -2052,14 +2086,27 @@ export default function AlgorithmBattlePage() {
                   </span>
                 </div>
 
-                <div className="ab-editor">
+                <div className="ab-editor" style={{ position: 'relative' }}>
+                  {isTypeLocked && (
+                    <div style={{
+                      position: 'absolute', inset: 0, zIndex: 10,
+                      background: 'rgba(220,38,38,0.18)', backdropFilter: 'blur(2px)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      flexDirection: 'column', gap: 8, pointerEvents: 'none',
+                    }}>
+                      <span style={{ fontSize: 32 }}>⌨️🔒</span>
+                      <span style={{ color: '#fff', fontWeight: 700, fontSize: 15, textShadow: '0 1px 4px #000' }}>
+                        {txt('타이핑 잠금', 'Type Locked')}
+                      </span>
+                    </div>
+                  )}
                   <Suspense fallback={<div className="ab-empty">{txt('에디터 로딩 중...', 'Loading editor...')}</div>}>
                     <Editor
                       height="100%"
                       language={JUDGE_LANGUAGE_OPTIONS.find((o) => o.value === language)?.monaco || 'python'}
                       theme={editorSettings.theme || 'vs-dark'}
                       value={code}
-                      onChange={(v) => { setCode(v || ''); emitActivity('typing'); }}
+                      onChange={(v) => { if (!isTypeLocked) { setCode(v || ''); emitActivity('typing'); } }}
                       options={{
                         fontSize: editorSettings.font_size || editorSettings.fontSize || 14,
                         minimap: { enabled: !!editorSettings.minimap },
@@ -2068,6 +2115,7 @@ export default function AlgorithmBattlePage() {
                         fontFamily: editorSettings.font_family || "'Space Mono', 'Fira Code', Consolas, monospace",
                         lineNumbers: editorSettings.line_numbers !== false ? 'on' : 'off',
                         autoClosingBrackets: editorSettings.auto_close_brackets === false ? 'never' : 'always',
+                        readOnly: isTypeLocked,
                       }}
                     />
                   </Suspense>
@@ -2090,10 +2138,9 @@ export default function AlgorithmBattlePage() {
                       key={item.key}
                       onClick={() => useItem(item.key)}
                       disabled={currentRoom?.status !== 'playing' || isSpectating || itemCooldownLeft > 0}
-                      title={uiLang === 'ko' ? getBattleItemLabel(item, workshopItemLabels) : item.description}
+                      title={item.description || (uiLang === 'ko' ? item.labelKo : item.label)}
                     >
-                      <Shield size={13} />
-                      <span>{getBattleItemLabel(item, workshopItemLabels)}</span>
+                      <span>{uiLang === 'ko' ? (item.labelKo || item.label) : item.label}</span>
                     </button>
                   ))}
                 </div>

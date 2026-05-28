@@ -342,11 +342,13 @@
 }
 
 .ab-problem {
+  position: relative;
   background: var(--bg2);
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: clamp(14px, 1.4vw, 20px);
   margin-bottom: 10px;
+  overflow: hidden;
 }
 
 .ab-problem h2 {

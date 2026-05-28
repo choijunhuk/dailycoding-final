@@ -129,10 +129,13 @@ const BATTLE_MODES = {
 };
 
 const BATTLE_ITEMS = {
-  'lag-spike': { key: 'lag-spike', label: 'Lag Spike', description: 'Temporarily reduces opponent\'s speed.' },
-  shield: { key: 'shield', label: 'Shield', description: 'Restores your HP.' },
-  'power-up': { key: 'power-up', label: 'Power Up', description: 'Increases your attack power.' },
-  breakpoint: { key: 'breakpoint', label: 'Breakpoint', description: 'Reduces opponent\'s attack power.' },
+  'type-lock':    { key: 'type-lock',    label: '⌨️ Type Lock',    labelKo: '⌨️ 타이핑 잠금',  description: '상대 에디터를 8초간 잠급니다.',     durationMs: 8000 },
+  'submit-block': { key: 'submit-block', label: '🚫 Submit Block', labelKo: '🚫 제출 차단',    description: '상대 제출을 10초간 차단합니다.',     durationMs: 10000 },
+  blind:          { key: 'blind',        label: '🌫️ Blind',         labelKo: '🌫️ 블라인드',     description: '상대 문제 화면을 6초간 흐립니다.',   durationMs: 6000 },
+  'lag-spike':    { key: 'lag-spike',    label: '⚡ Lag Spike',     labelKo: '⚡ 렉 스파이크',  description: '상대 공격력을 일시적으로 낮춥니다.' },
+  shield:         { key: 'shield',       label: '🛡️ Shield',        labelKo: '🛡️ 방어막',       description: 'HP를 14 회복합니다.' },
+  'power-up':     { key: 'power-up',     label: '⬆️ Power Up',      labelKo: '⬆️ 파워업',       description: '공격력을 6 증가시킵니다.' },
+  breakpoint:     { key: 'breakpoint',   label: '🔻 Breakpoint',    labelKo: '🔻 브레이크포인트', description: '상대 공격력을 5 감소시킵니다.' },
 };
 
 const BATTLE_EMOTES = ['gg', 'nice', 'oops', 'focus', 'taunt'];
@@ -1389,6 +1392,9 @@ export const AlgorithmBattle = {
       }
       payload.targetUserIds = opponents.map((t) => t.userId);
       payload.stat = { attackDelta: -5 };
+    } else if (item.key === 'type-lock' || item.key === 'submit-block' || item.key === 'blind') {
+      payload.targetUserIds = opponents.map((t) => t.userId);
+      payload.durationMs = item.durationMs;
     }
 
     const event = await this.recordEvent(roomId, userId, 'item.used', payload);
