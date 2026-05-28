@@ -886,6 +886,7 @@ export const AlgorithmBattle = {
       return {
         room: {
           id: room.id,
+          title: room.title || null,
           mode: room.mode,
           status: room.status,
           maxPlayers: room.maxPlayers,
@@ -894,6 +895,8 @@ export const AlgorithmBattle = {
           createdBy: room.createdBy,
           createdAt: room.createdAt,
           lobbyExpiresAt: room.lobbyExpiresAt,
+          inviteCode: room.inviteCode || null,
+          isPrivate: Boolean(room.isPrivate),
         },
         participantCount: Number(participantRow?.cnt || participantRow?.count || 0),
         problem: problem ? {

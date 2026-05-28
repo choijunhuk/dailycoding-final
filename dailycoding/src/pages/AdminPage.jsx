@@ -955,17 +955,17 @@ export default function AdminPage() {
                 </div>
                 {stripeOps.lastError && (
                   <div style={{fontSize:12,color:'var(--red)'}}>
-                    Last error: {stripeOps.lastError.message}
+                    {txt('마지막 오류:', 'Last error:')} {stripeOps.lastError.message}
                   </div>
                 )}
               </div>
             )}
           </div>
           <div className="card admin-stat-card" style={{gridColumn:'span 2', textAlign:'left'}}>
-            <div className="asc-label" style={{marginBottom:12}}>Weekly Challenge Settings</div>
+            <div className="asc-label" style={{marginBottom:12}}>{txt('주간 챌린지 설정', 'Weekly Challenge Settings')}</div>
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr auto',gap:10,alignItems:'end'}}>
               <div className="form-group">
-                <label>Problem ID</label>
+                <label>{txt('문제 ID', 'Problem ID')}</label>
                 <input
                   type="number"
                   value={weeklyForm.problemId}
@@ -974,7 +974,7 @@ export default function AdminPage() {
                 />
               </div>
               <div className="form-group">
-                <label>Reward Code</label>
+                <label>{txt('보상 코드', 'Reward Code')}</label>
                 <input
                   value={weeklyForm.rewardCode}
                   onChange={(e) => setWeeklyForm((prev) => ({ ...prev, rewardCode: e.target.value }))}
@@ -982,14 +982,14 @@ export default function AdminPage() {
                 />
               </div>
               <button className="btn btn-primary" onClick={handleSaveWeeklyChallenge} disabled={weeklySaving}>
-                {weeklySaving ? <span className="spinner"/> : 'Set'}
+                {weeklySaving ? <span className="spinner"/> : txt('설정', 'Set')}
               </button>
             </div>
             <div style={{marginTop:14,padding:14,borderRadius:12,background:'var(--bg3)',border:'1px solid var(--border)',fontSize:13}}>
               {weeklyChallenge ? (
                 <>
-                  <div style={{fontWeight:700,marginBottom:4}}>Current Weekly Challenge</div>
-                  <div>{weeklyChallenge.problemTitle} · {weeklyChallenge.tier} · Reward: {weeklyChallenge.rewardCode}</div>
+                  <div style={{fontWeight:700,marginBottom:4}}>{txt('현재 주간 챌린지', 'Current Weekly Challenge')}</div>
+                  <div>{weeklyChallenge.problemTitle} · {weeklyChallenge.tier} · {txt('보상', 'Reward')}: {weeklyChallenge.rewardCode}</div>
                   <div style={{fontSize:11,color:'var(--text3)',marginTop:6}}>
                     {weeklyChallenge.weekStart} ~ {weeklyChallenge.weekEnd}
                   </div>
@@ -1006,7 +1006,7 @@ export default function AdminPage() {
       {activeTab==='flagged' && (
         <div className="fade-up">
           <div className="card" style={{padding:24}}>
-            <h3 style={{marginBottom:8}}>🛡️ Flagged Submissions</h3>
+            <h3 style={{marginBottom:8}}>🛡️ {txt('의심 제출', 'Flagged Submissions')}</h3>
             <p style={{fontSize:13,color:'var(--text2)',marginBottom:18}}>
               {txt('공유된 풀이와 유사도가 높은 정답 제출을 관리자 검토 대상으로 표시합니다.', 'List of correct submissions with high similarity to shared solutions, flagged for admin review.')}
             </p>

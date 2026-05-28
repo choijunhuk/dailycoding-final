@@ -118,6 +118,7 @@ export function initSocketServer(httpServer, allowedOrigins) {
         try {
           const state = await AlgorithmBattle.joinRoom(roomId, socket.data.userId);
           socket.join(`battle:${roomId}`);
+          socket.data.battleRoomId = roomId;
           io.to(`battle:${roomId}`).emit('battle:room:update', state);
           if (typeof ack === 'function') ack({ ok: true, state });
         } catch (err) {
@@ -356,9 +357,19 @@ export function initSocketServer(httpServer, allowedOrigins) {
     });
 
     // ── Disconnect ──────────────────────────────────────────────
-    socket.on('disconnect', () => {
+    socket.on('disconnect', async () => {
       logger.info('Socket disconnected', { userId: socket.data.userId });
       submitRateLimits.delete(socket.data.userId);
+      const roomId = socket.data.battleRoomId;
+      if (roomId && socket.data.userId) {
+        try {
+          const room = await AlgorithmBattle.getRoom(roomId);
+          if (room?.status === 'waiting') {
+            const state = await AlgorithmBattle.leaveRoom(roomId, socket.data.userId);
+            if (state) io.to(`battle:${roomId}`).emit('battle:room:update', state);
+          }
+        } catch { /* room may already be gone */ }
+      }
     });
   });
 

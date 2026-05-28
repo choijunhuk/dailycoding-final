@@ -635,6 +635,8 @@ export default function AlgorithmBattlePage() {
   const lobbyExpiredRef = useRef(false);
   const finishedRef = useRef(false);
   const chatFeedRef = useRef(null);
+  const autoLeaveRoomRef = useRef(null);
+  const autoLeaveSpectatingRef = useRef(false);
   const processedWorkshopSubmissionsRef = useRef(new Set());
   const workshopTimerFlagsRef = useRef({ half: false, low: false });
   const workshopHpFlagsRef = useRef({});
@@ -947,6 +949,23 @@ export default function AlgorithmBattlePage() {
     });
     return () => { socket.disconnect(); if (socketRef.current === socket) socketRef.current = null; };
   }, [navigate, roomId, searchParams, toast, user?.id, txt, workshopItemLabels]);
+
+  // ── 자동 떠나기 ref 동기화 (대기 중인 방에서 나갔을 때 처리)
+  useEffect(() => {
+    autoLeaveRoomRef.current = currentRoom;
+    autoLeaveSpectatingRef.current = isSpectating;
+  });
+
+  // ── 컴포넌트 언마운트 시 대기 중인 방 자동 퇴장 (SPA 이동)
+  // 브라우저 탭 닫기는 소켓 disconnect 이벤트가 서버에서 처리
+  useEffect(() => {
+    return () => {
+      const room = autoLeaveRoomRef.current;
+      if (room?.status === 'waiting' && !autoLeaveSpectatingRef.current) {
+        api.post(`/battles/rooms/${room.id}/leave`).catch(() => {});
+      }
+    };
+  }, []);
 
   // ── 틱 (타이머/쿨다운용)
   useEffect(() => {
