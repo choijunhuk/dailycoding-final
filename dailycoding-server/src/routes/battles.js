@@ -704,6 +704,19 @@ router.post('/room/:roomId/typing', async (req, res) => {
   }
 });
 
+// POST /api/battles/room/:roomId/chat — 실시간 1:1 배틀 채팅
+router.post('/room/:roomId/chat', async (req, res) => {
+  try {
+    const result = await Battle.addChatMessage(req.params.roomId, req.user, req.body?.message || '');
+    if (!result) return errorResponse(res, 400, 'VALIDATION_ERROR', 'Message cannot be empty.');
+    const io = req.app.get('io');
+    if (io) io.to(`battle:${req.params.roomId}`).emit('battle:chat', result.message);
+    res.json(result);
+  } catch (err) {
+    return internalError(res);
+  }
+});
+
 // POST /api/battles/room/:roomId/submit — fill-blank / bug-fix 정답 제출
 router.post('/room/:roomId/submit', async (req, res) => {
   try {

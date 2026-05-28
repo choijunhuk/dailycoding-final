@@ -2,6 +2,7 @@ import { Server } from 'socket.io';
 import jwt from 'jsonwebtoken';
 import { SECRET } from '../middleware/auth.js';
 import { AlgorithmBattle } from '../models/AlgorithmBattle.js';
+import { Battle } from '../models/Battle.js';
 import { User } from '../models/User.js';
 import { Problem } from '../models/Problem.js';
 import { getCachedJudgeRuntime } from './judgeRuntimeCache.js';
@@ -52,8 +53,8 @@ export function initSocketServer(httpServer, allowedOrigins) {
       const dbUser = await User.findById(decoded.id);
       if (!dbUser || dbUser.banned_at) return next(new Error('Unauthorized'));
       socket.data.userId = decoded.id;
-      socket.data.username = decoded.username;
-      socket.user = decoded;
+      socket.data.username = dbUser.username || decoded.username;
+      socket.user = { ...decoded, username: socket.data.username };
       next();
     } catch (err) {
       next(new Error('Unauthorized'));
@@ -68,16 +69,29 @@ export function initSocketServer(httpServer, allowedOrigins) {
       socket.join(`user:${socket.data.userId}`);
     });
 
-    socket.on('battle:spectator_chat', ({ roomId, message } = {}) => {
+    async function emitRedisBattleChat(roomId, message, ack) {
       const safeRoomId = String(roomId || '').slice(0, 80);
-      if (!safeRoomId) return;
-      const safeMessage = String(message || '').slice(0, 100).replace(/[<>]/g, '').trim();
-      if (!safeMessage) return;
-      io.to(`battle:${safeRoomId}`).emit('battle:spectator_chat', {
-        username: socket.data.username || socket.user?.username || 'Anonymous',
-        message: safeMessage,
-        at: Date.now(),
-      });
+      if (!safeRoomId) return null;
+      const result = await Battle.addChatMessage(safeRoomId, {
+        id: socket.data.userId,
+        username: socket.data.username || socket.user?.username,
+      }, message);
+      if (!result) return null;
+      socket.join(`battle:${safeRoomId}`);
+      io.to(`battle:${safeRoomId}`).emit('battle:chat', result.message);
+      if (result.message.role === 'spectator') {
+        io.to(`battle:${safeRoomId}`).emit('battle:spectator_chat', result.message);
+      }
+      if (typeof ack === 'function') ack({ ok: true, message: result.message, room: result.room });
+      return result;
+    }
+
+    socket.on('battle:spectator_chat', async ({ roomId, message } = {}, ack) => {
+      try {
+        await emitRedisBattleChat(roomId, message, ack);
+      } catch (err) {
+        if (typeof ack === 'function') ack({ ok: false, message: err.message });
+      }
     });
 
     socket.on('battle:spectator_react', ({ roomId, emoji } = {}) => {
@@ -242,6 +256,8 @@ export function initSocketServer(httpServer, allowedOrigins) {
 
     socket.on('battle:chat', async ({ roomId, message } = {}, ack) => {
       try {
+        const redisChat = await emitRedisBattleChat(roomId, message, ack);
+        if (redisChat) return;
         const { event, state } = await AlgorithmBattle.recordChat(roomId, socket.data.userId, { message });
         socket.join(`battle:${roomId}`);
         io.to(`battle:${roomId}`).emit('battle:chat', event);

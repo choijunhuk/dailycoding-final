@@ -447,6 +447,40 @@ export const Battle = {
     return room;
   },
 
+  async addChatMessage(roomId, user, message) {
+    const room = await this.getRoom(roomId);
+    if (!room) return null;
+
+    const text = String(message || '').replace(/[<>]/g, '').trim().slice(0, 220);
+    if (!text) return null;
+
+    const userId = Number(user?.id);
+    const player = room.players?.[userId] || room.players?.[String(userId)] || null;
+    if (!player && room.status !== 'active' && room.status !== 'ended') return null;
+    const role = player ? 'player' : 'spectator';
+    const username = String(user?.username || player?.username || 'Anonymous').trim().slice(0, 40) || 'Anonymous';
+
+    if (!player) {
+      if (!Array.isArray(room.spectators)) room.spectators = [];
+      if (userId && !room.spectators.some((item) => Number(item.id) === userId)) {
+        room.spectators.push({ id: userId, username });
+      }
+    }
+
+    const chatMessage = {
+      id: `${Date.now()}-${userId || 'guest'}-${crypto.randomBytes(3).toString('hex')}`,
+      userId: userId || null,
+      username,
+      role,
+      teamId: player?.teamId || null,
+      message: text,
+      at: Date.now(),
+    };
+    room.chat = [...(Array.isArray(room.chat) ? room.chat : []), chatMessage].slice(-100);
+    await redis.setJSON(`battle:room:${roomId}`, room, ROOM_TTL);
+    return { room, message: chatMessage };
+  },
+
   async addPlayerToTeam(roomId, user, teamId) {
     const room = await this.getRoom(roomId);
     if (!room || room.status !== 'waiting') return null;

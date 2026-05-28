@@ -50,6 +50,21 @@ function useTypingSound() {
   }, []);
 }
 
+function normalizeBattleChatMessage(message, fallbackRole = 'spectator') {
+  if (!message || !message.message) return null;
+  const at = Number(message.at || Date.now());
+  const userId = message.userId == null ? null : Number(message.userId);
+  return {
+    id: message.id || `${at}-${userId || 'guest'}-${message.message}`,
+    userId,
+    username: String(message.username || 'Anonymous'),
+    role: message.role || fallbackRole,
+    teamId: message.teamId || null,
+    message: String(message.message),
+    at,
+  };
+}
+
 function BattleReplayViewer({ roomId }) {
   const navigate = useNavigate();
   const { lang, t } = useLang();
@@ -207,8 +222,8 @@ export default function BattlePage() {
   const [selectedBattleLanguage, setSelectedBattleLanguage] = useState(user?.defaultLanguage || 'python');
   const [selectedDuration, setSelectedDuration] = useState(BATTLE_SEC);
   const [selectedBattleMode, setSelectedBattleMode] = useState('time');
-  const [spectatorMessages, setSpectatorMessages] = useState([]);
-  const [spectatorMessage, setSpectatorMessage] = useState('');
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatDraft, setChatDraft] = useState('');
   const [reactionBursts, setReactionBursts] = useState([]);
 
   const timerRef       = useRef(null);
@@ -229,6 +244,22 @@ export default function BattlePage() {
     loadErrorToastShownRef.current = true;
     toast?.show(message, 'error');
   }, [toast]);
+
+  const appendChatMessage = useCallback((message, fallbackRole = 'spectator') => {
+    const normalized = normalizeBattleChatMessage(message, fallbackRole);
+    if (!normalized) return;
+    setChatMessages((prev) => {
+      if (prev.some((item) => item.id === normalized.id)) return prev;
+      return [...prev.slice(-99), normalized];
+    });
+  }, []);
+
+  const syncChatFromRoom = useCallback((updatedRoom) => {
+    const messages = Array.isArray(updatedRoom?.chat)
+      ? updatedRoom.chat.map((item) => normalizeBattleChatMessage(item)).filter(Boolean)
+      : [];
+    setChatMessages(messages.slice(-100));
+  }, []);
 
   useEffect(() => {
     setLobbyTab(location.pathname === '/battles/history' ? 'history' : 'active');
@@ -322,6 +353,7 @@ export default function BattlePage() {
   // ── 배틀 종료 처리
   const handleRoomUpdate = useCallback((updatedRoom) => {
     setRoom(updatedRoom);
+    syncChatFromRoom(updatedRoom);
     if (updatedRoom.status === 'ended' || updatedRoom.status === 'declined') {
       setPhase('ended');
     }
@@ -339,7 +371,7 @@ export default function BattlePage() {
         typingTimerRef.current = setTimeout(() => setOpponentTyping(false), 2000);
       }
     });
-  }, [user?.id, playTyping]);
+  }, [user?.id, playTyping, syncChatFromRoom]);
 
   // ── 타이머
   const startTimer = useCallback((startTime, roomDuration) => {
@@ -424,7 +456,7 @@ export default function BattlePage() {
     socket.on('disconnect', () => setSocketConnected(false));
     socket.on('battle:started', ({ room: startedRoom }) => {
       if (!startedRoom) return;
-      setRoom(startedRoom);
+      handleRoomUpdate(startedRoom);
       pendingRoomRef.current = startedRoom;
       setCountdown(5);
       setPhase('countdown');
@@ -443,8 +475,11 @@ export default function BattlePage() {
       clearTimeout(typingTimerRef.current);
       typingTimerRef.current = setTimeout(() => setOpponentTyping(false), 2000);
     });
+    socket.on('battle:chat', (message) => {
+      appendChatMessage(message, message?.role || 'player');
+    });
     socket.on('battle:spectator_chat', (message) => {
-      setSpectatorMessages((prev) => [...prev.slice(-19), message]);
+      appendChatMessage(message, 'spectator');
     });
     socket.on('battle:spectator_react', ({ emoji, at }) => {
       const id = `${emoji}-${at || Date.now()}-${Math.random()}`;
@@ -459,13 +494,23 @@ export default function BattlePage() {
       if (socketRef.current === socket) socketRef.current = null;
       setSocketConnected(false);
     };
-  }, [fetchRoomSnapshot, isSpectator, lobbyPhase, myTeamId, phase, room?.players, roomId, startTimer, user?.id]);
+  }, [appendChatMessage, fetchRoomSnapshot, handleRoomUpdate, isSpectator, lobbyPhase, myTeamId, phase, room?.players, roomId, startTimer, user?.id]);
 
-  const sendSpectatorMessage = () => {
-    const text = spectatorMessage.trim();
+  const sendBattleChatMessage = () => {
+    const text = chatDraft.trim();
     if (!text || !roomId) return;
-    socketRef.current?.emit('battle:spectator_chat', { roomId, message: text });
-    setSpectatorMessage('');
+    const eventName = isSpectator ? 'battle:spectator_chat' : 'battle:chat';
+    const socket = socketRef.current;
+    if (socket?.connected) {
+      socket.emit(eventName, { roomId, message: text }, (ack) => {
+        if (ack?.ok === false) toast?.show(ack.message || txt('채팅 전송에 실패했습니다.', 'Failed to send chat.'), 'error');
+      });
+    } else {
+      api.post(`/battles/room/${roomId}/chat`, { message: text })
+        .then(({ data }) => appendChatMessage(data?.message, isSpectator ? 'spectator' : 'player'))
+        .catch((err) => toast?.show(err?.response?.data?.message || txt('채팅 전송에 실패했습니다.', 'Failed to send chat.'), 'error'));
+    }
+    setChatDraft('');
   };
 
   const sendSpectatorReaction = (emoji) => {
@@ -539,7 +584,7 @@ export default function BattlePage() {
         const { data } = await api.get(`/battles/room/${roomId}`);
         const r = data.room;
         if (r.status === 'active') {
-          setRoom(r);
+          handleRoomUpdate(r);
           pendingRoomRef.current = r;
           setCountdown(5);
           setPhase('countdown');
@@ -554,14 +599,14 @@ export default function BattlePage() {
       }
     }, POLL_MS);
     return () => clearInterval(t);
-  }, [lobbyPhase, roomId, startTimer]);
+  }, [handleRoomUpdate, lobbyPhase, roomId, startTimer]);
 
   // ── 초대 수락
   const acceptInvite = async () => {
     if (!pendingInvite) return;
     try {
       const { data } = await api.post(`/battles/accept/${pendingInvite.roomId}`);
-      setRoom(data.room);
+      handleRoomUpdate(data.room);
       setRoomId(data.room.id);
       roomIdRef.current = data.room.id;
       pendingRoomRef.current = data.room;
@@ -655,7 +700,7 @@ export default function BattlePage() {
   const spectateBattle = async (targetRoomId) => {
     try {
       const { data } = await api.get(`/battles/room/${targetRoomId}`);
-      setRoom(data.room);
+      handleRoomUpdate(data.room);
       setRoomId(targetRoomId);
       setIsSpectator(true);
       setPhase('battle');
@@ -727,6 +772,8 @@ export default function BattlePage() {
     setAnswers({});
     setCodeMap({});
     setSubmitResults({});
+    setChatMessages([]);
+    setChatDraft('');
     setInviteInput('');
     setInviteError('');
     setTimeLeft(BATTLE_SEC);
@@ -749,6 +796,8 @@ export default function BattlePage() {
       setAnswers({});
       setCodeMap({});
       setSubmitResults({});
+      setChatMessages([]);
+      setChatDraft('');
       setInviteError('');
       setTimeLeft(BATTLE_SEC);
       navigate('/battle', { replace: true });
@@ -770,7 +819,7 @@ export default function BattlePage() {
         const room = data?.room;
         if (!room) { spectateBattle(params.roomId); return; }
         if (room.playerIds?.includes(Number(user.id))) {
-          setRoom(room);
+          handleRoomUpdate(room);
           setRoomId(params.roomId);
           setIsSpectator(false);
           if (room.status === 'active' || room.status === 'ended') {
@@ -1258,40 +1307,43 @@ export default function BattlePage() {
           )}
         </div>
 
-        {isSpectator && (
-          <div className="bp-spectator-panel">
-            <div className="bp-spectator-reactions">
-              {['🔥','👏','😮','💡','⚡'].map((emoji) => (
-                <button key={emoji} type="button" onClick={() => sendSpectatorReaction(emoji)}>{emoji}</button>
-              ))}
-            </div>
-            <div className="bp-reaction-stage" aria-hidden="true">
-              {reactionBursts.map((item) => <span key={item.id}>{item.emoji}</span>)}
-            </div>
-            <div className="bp-spectator-chat">
-              <div className="bp-spectator-chat-log">
-                {spectatorMessages.length === 0 ? (
-                  <div className="bp-spectator-empty">{txt('아직 관전자 메시지가 없습니다.', 'No spectator messages yet.')}</div>
-                ) : spectatorMessages.map((item, index) => (
-                  <div key={`${item.at}-${index}`} className="bp-spectator-message">
-                    <strong>{item.username || 'Anonymous'}</strong>
-                    <span>{item.message}</span>
-                  </div>
+        <div className="bp-spectator-panel">
+          {isSpectator && (
+            <>
+              <div className="bp-spectator-reactions">
+                {['🔥','👏','😮','💡','⚡'].map((emoji) => (
+                  <button key={emoji} type="button" onClick={() => sendSpectatorReaction(emoji)}>{emoji}</button>
                 ))}
               </div>
-              <div className="bp-spectator-chat-input">
-                <input
-                  value={spectatorMessage}
-                  onChange={(e) => setSpectatorMessage(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') sendSpectatorMessage(); }}
-                  maxLength={100}
-                  placeholder={txt('관전자 응원 메시지', 'Spectator cheer message')}
-                />
-                <button type="button" onClick={sendSpectatorMessage}>{txt('전송', 'Send')}</button>
+              <div className="bp-reaction-stage" aria-hidden="true">
+                {reactionBursts.map((item) => <span key={item.id}>{item.emoji}</span>)}
               </div>
+            </>
+          )}
+          <div className="bp-spectator-chat">
+            <div className="bp-spectator-chat-log">
+              {chatMessages.length === 0 ? (
+                <div className="bp-spectator-empty">{txt('아직 채팅 메시지가 없습니다.', 'No chat messages yet.')}</div>
+              ) : chatMessages.map((item) => (
+                <div key={item.id} className={`bp-spectator-message ${item.role === 'player' ? 'player' : 'spectator'}`}>
+                  <strong>{item.username || 'Anonymous'}</strong>
+                  <em>{item.role === 'player' ? txt('참가자', 'Player') : txt('관전자', 'Spectator')}</em>
+                  <span>{item.message}</span>
+                </div>
+              ))}
+            </div>
+            <div className="bp-spectator-chat-input">
+              <input
+                value={chatDraft}
+                onChange={(e) => setChatDraft(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') sendBattleChatMessage(); }}
+                maxLength={220}
+                placeholder={isSpectator ? txt('관전자 채팅 메시지', 'Spectator chat message') : txt('배틀 채팅 메시지', 'Battle chat message')}
+              />
+              <button type="button" onClick={sendBattleChatMessage}>{txt('전송', 'Send')}</button>
             </div>
           </div>
-        )}
+        </div>
       </div>
     );
   }

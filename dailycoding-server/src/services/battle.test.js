@@ -72,3 +72,25 @@ test('Battle: Typing indicator updates correctly', async () => {
   assert.equal(updated.players[inviter.id].typing, true);
   assert.ok(updated.players[inviter.id].typingAt > 0);
 });
+
+test('Battle: Chat stores participant and spectator identity', async () => {
+  const inviter = { id: 11, username: 'alpha' };
+  const invited = { id: 22, username: 'beta' };
+  const room = await Battle.createRoom(inviter, invited);
+  await Battle.acceptInvite(invited.id, room.id, [{ id: 201, title: 'Chat Problem', type: 'coding' }]);
+
+  const playerChat = await Battle.addChatMessage(room.id, inviter, '<b>ready</b>');
+  assert.equal(playerChat.message.username, 'alpha');
+  assert.equal(playerChat.message.role, 'player');
+  assert.equal(playerChat.message.teamId, 'team_1');
+  assert.equal(playerChat.message.message, 'bready/b');
+
+  const spectatorChat = await Battle.addChatMessage(room.id, { id: 33, username: 'viewer' }, 'nice move');
+  assert.equal(spectatorChat.message.username, 'viewer');
+  assert.equal(spectatorChat.message.role, 'spectator');
+  assert.equal(spectatorChat.message.teamId, null);
+
+  const updated = await Battle.getRoom(room.id);
+  assert.equal(updated.chat.length, 2);
+  assert.deepEqual(updated.spectators[0], { id: 33, username: 'viewer' });
+});
