@@ -1535,4 +1535,45 @@ export const AlgorithmBattle = {
     }
     return state;
   },
+
+  async getHistory(userId, limit = 20) {
+    const cap = Math.min(Math.max(1, Number(limit) || 20), 100);
+    // Rooms where user participated and battle is finished
+    const rooms = await query(
+      `SELECT r.id, r.mode, r.ended_at,
+              p_me.score AS my_score,
+              p_opp.user_id AS opp_id, u_opp.username AS opp_name,
+              p_opp.score AS opp_score,
+              (SELECT COUNT(*) FROM battle_submissions WHERE room_id = r.id AND user_id = ? AND is_correct = 1) AS my_solved,
+              (SELECT COUNT(*) FROM battle_submissions WHERE room_id = r.id AND user_id = p_opp.user_id AND is_correct = 1) AS opp_solved
+       FROM battle_rooms r
+       JOIN battle_participants p_me ON p_me.room_id = r.id AND p_me.user_id = ?
+       LEFT JOIN battle_participants p_opp ON p_opp.room_id = r.id AND p_opp.user_id != ?
+       LEFT JOIN users u_opp ON u_opp.id = p_opp.user_id
+       WHERE r.status = 'finished' AND r.ended_at IS NOT NULL
+       ORDER BY r.ended_at DESC
+       LIMIT ${cap}`,
+      [userId, userId, userId]
+    );
+    return (rooms || []).map((row) => {
+      const myScore = Number(row.my_score ?? 0);
+      const oppScore = Number(row.opp_score ?? 0);
+      const result = myScore > oppScore ? 'win' : myScore < oppScore ? 'lose' : 'draw';
+      return {
+        id: `algo-${row.id}`,
+        roomId: row.id,
+        opponentId: row.opp_id || null,
+        opponentName: row.opp_name || '???',
+        result,
+        scoreFor: myScore,
+        scoreAgainst: oppScore,
+        solvedFor: Number(row.my_solved ?? 0),
+        solvedAgainst: Number(row.opp_solved ?? 0),
+        problems: [],
+        createdAt: row.ended_at,
+        source: 'algo',
+        mode: row.mode,
+      };
+    });
+  },
 };

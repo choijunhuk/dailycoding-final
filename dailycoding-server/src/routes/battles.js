@@ -157,11 +157,18 @@ router.get('/active', async (req, res) => {
   }
 });
 
-// GET /api/battles/history — 내 배틀 히스토리
+// GET /api/battles/history — 내 배틀 히스토리 (legacy + algo merged)
 router.get('/history', async (req, res) => {
   try {
-    const history = await Battle.getHistory(req.user.id, req.query.limit || 20);
-    res.json({ history });
+    const limit = Math.min(100, Number(req.query.limit) || 20);
+    const [legacy, algo] = await Promise.all([
+      Battle.getHistory(req.user.id, limit),
+      AlgorithmBattle.getHistory(req.user.id, limit),
+    ]);
+    const merged = [...legacy, ...algo]
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, limit);
+    res.json({ history: merged });
   } catch (err) {
     console.error('[battles/history]', err);
     return internalError(res);

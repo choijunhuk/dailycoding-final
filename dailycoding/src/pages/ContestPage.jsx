@@ -579,7 +579,7 @@ export default function ContestPage() {
       {showCreate && isAdmin && (
         <div className="modal-overlay" onClick={e => e.target===e.currentTarget&&setShowCreate(false)}>
           <div className="modal-box card fade-up">
-            <h2>🎯 Create Contest</h2>
+            <h2>🎯 {txt('대회 만들기', 'Create Contest')}</h2>
             <div className="modal-form">
               <div className="form-group">
                 <label>{txt('콘테스트 이름 *', 'Contest Name *')}</label>
@@ -678,7 +678,7 @@ export default function ContestPage() {
                         rewardRules: [...(prev.rewardRules || []), { rankFrom: 1, rankTo: 1, rewardCode: '' }],
                       }))}
                     >
-                      + Add Reward Rule
+                      + {txt('보상 규칙 추가', 'Add Reward Rule')}
                     </button>
                   </div>
                 </div>
@@ -687,7 +687,7 @@ export default function ContestPage() {
             <div className="modal-actions">
               <button className="btn btn-ghost" onClick={()=>setShowCreate(false)}>{t('cancel')}</button>
               <button className="btn btn-primary" onClick={handleCreate} disabled={creating||!form.name.trim()}>
-                {creating?<span className="spinner"/>:'Create Contest →'}
+                {creating?<span className="spinner"/>:txt('대회 만들기 →', 'Create Contest →')}
               </button>
             </div>
           </div>

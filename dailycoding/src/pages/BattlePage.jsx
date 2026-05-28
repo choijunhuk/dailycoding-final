@@ -992,6 +992,7 @@ export default function BattlePage() {
                             <div style={{ display:'flex', width:'100%', justifyContent:'space-between', gap:12, flexWrap:'wrap' }}>
                               <div className="bp-battle-info">
                                 <span className={`bp-battle-tag ${row.result}`}>{row.result === 'win' ? txt('승리', 'WIN') : row.result === 'lose' ? txt('패배', 'LOSE') : txt('무승부', 'DRAW')}</span>
+                                {row.mode && <span style={{ fontSize:10, padding:'1px 6px', borderRadius:4, background:'var(--glass-bg)', color:'var(--text3)' }}>{row.mode}</span>}
                                 <span>{row.opponentName}</span>
                               </div>
                               <span style={{ fontSize:11, color:'var(--text3)' }}>{new Date(row.createdAt).toLocaleString(dateLocale)}</span>
@@ -1005,17 +1006,19 @@ export default function BattlePage() {
                             <div style={{ display:'flex', justifyContent:'flex-end', width:'100%', gap:8, flexWrap:'wrap' }}>
                               <button
                                 className="bp-btn-small"
-                                onClick={() => navigate(`/battle/${row.roomId}/replay`)}
+                                onClick={() => row.source === 'algo' ? navigate(`/battle/${row.roomId}`) : navigate(`/battle/${row.roomId}/replay`)}
                               >
                                 {t('battleReplayView')}
                               </button>
-                              <button
-                                className="bp-btn-small"
-                                onClick={() => requestRematch(row.roomId, row.opponentName)}
-                                disabled={rematchPending}
-                              >
-                                {t('rematchBtn')}
-                              </button>
+                              {!row.source && (
+                                <button
+                                  className="bp-btn-small"
+                                  onClick={() => requestRematch(row.roomId, row.opponentName)}
+                                  disabled={rematchPending}
+                                >
+                                  {t('rematchBtn')}
+                                </button>
+                              )}
                             </div>
                           </div>
                         ))}

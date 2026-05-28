@@ -1,7 +1,7 @@
 import logger from '../config/logger.js';
 import { query as dbQuery, isConnected as mysqlConnected, getPool } from '../config/mysql.js';
 import { redis } from '../config/redis.js';
-import { authLimiter, aiLimiter, submitLimiter, generalLimiter } from '../middleware/rateLimit.js';
+import { authLimiter, aiLimiter, submitLimiter, generalLimiter, battleLimiter } from '../middleware/rateLimit.js';
 import authRouter from './auth.js';
 import problemsRouter from './problems.js';
 import submissionsRouter from './submissions.js';
@@ -50,7 +50,7 @@ export function registerRoutes(app) {
   app.use('/api/ranking', generalLimiter, rankingRouter);
   app.use('/api/ai', aiLimiter, aiRouter);
   app.use('/api/rewards', generalLimiter, rewardsRouter);
-  app.use('/api/battles', submitLimiter, battlesRouter);
+  app.use('/api/battles', battleLimiter, battlesRouter);
   app.use('/api/battle-modes', generalLimiter, battleModesRouter);
   app.use('/api/tournaments', generalLimiter, tournamentsRouter);
   app.use('/api/follows', generalLimiter, followsRouter);

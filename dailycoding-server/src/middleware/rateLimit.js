@@ -115,3 +115,5 @@ export const forgotPasswordLimiter = rateLimit(5, 60 * 60);
 // Community post/reply limiters
 export const communityPostLimiter = rateLimit(10, 60);
 export const communityReplyLimiter = rateLimit(20, 60);
+// Battle router limiter — high limit because the lobby polls 2 endpoints every 4s
+export const battleLimiter = rateLimit(300, 60);
