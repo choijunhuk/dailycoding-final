@@ -13,7 +13,7 @@ services:
     ports:
       - "127.0.0.1:3306:3306"
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD}"]
+      test: ["CMD-SHELL", "MYSQL_PWD=\"$$MYSQL_ROOT_PASSWORD\" mysqladmin ping -h localhost -uroot --silent"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -47,7 +47,15 @@ services:
       DB_HOST: mysql
       DB_PORT: 3306
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
-      JUDGE_MODE: native
+      # JUDGE_MODE=docker: untrusted submissions run in throwaway containers,
+      # isolated from this backend's filesystem, env, and dailycoding-net.
+      # Never set JUDGE_MODE=native here — it would execute submissions in the
+      # same process tree that holds DB credentials and Redis access.
+      JUDGE_MODE: docker
+    volumes:
+      # Required for JUDGE_MODE=docker. Treated as root-equivalent on host;
+      # do not expose this container to untrusted network input beyond /api.
+      - /var/run/docker.sock:/var/run/docker.sock
     ports:
       - "127.0.0.1:4000:4000"
     depends_on:

@@ -1,6 +1,15 @@
 import { Component } from 'react';
 import { STRINGS_EB } from '../context/LangContext.jsx';
 
+async function reportToSentry(error, info) {
+  try {
+    const mod = await import('@sentry/react');
+    mod.captureException(error, { extra: { componentStack: info?.componentStack } });
+  } catch {
+    // Sentry not installed / not initialized; ignore silently
+  }
+}
+
 export default class ErrorBoundary extends Component {
   constructor(props) {
     super(props);
@@ -13,6 +22,7 @@ export default class ErrorBoundary extends Component {
 
   componentDidCatch(error, info) {
     console.error('[ErrorBoundary]', error, info);
+    reportToSentry(error, info);
   }
 
   render() {

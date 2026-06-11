@@ -66,7 +66,7 @@ async function initDatabase() {
     const { readFileSync, readdirSync } = await import('fs');
     const __dir = dirname(fileURLToPath(import.meta.url));
     const dbPool = getPool();
-    const runSqlFile = async (filePath, { silent = false } = {}) => {
+    const runSqlFile = async (filePath, { tolerateErrors = false } = {}) => {
       const sql = readFileSync(filePath, 'utf8');
       const stmts = sql
         .split('\n')
@@ -75,18 +75,20 @@ async function initDatabase() {
         .split(';')
         .map((statement) => statement.trim())
         .filter((statement) => statement.length > 0);
+      let failed = false;
       for (const stmt of stmts) {
         try {
           await dbPool.query(stmt);
         } catch (error) {
-          if (!silent) {
-            logger.warn(`SQL 실패 [${error.code || '?'}]: ${error.message.slice(0, 120)} | stmt: ${stmt.slice(0, 60)}`);
-          }
+          failed = true;
+          logger.warn(`SQL 실패 [${error.code || '?'}]: ${error.message.slice(0, 120)} | stmt: ${stmt.slice(0, 60)}`);
+          if (!tolerateErrors) throw error;
         }
       }
+      return { failed };
     };
 
-    await runSqlFile(join(__dir, '..', 'init.sql'));
+    await runSqlFile(join(__dir, '..', 'init.sql'), { tolerateErrors: true });
 
     await dbPool.query(`
       CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -104,16 +106,26 @@ async function initDatabase() {
 
     let ran = 0;
     let skipped = 0;
+    let failed = 0;
     for (const file of files) {
       if (applied.has(file)) {
         skipped += 1;
         continue;
       }
-      await runSqlFile(join(migrationsDir, file), { silent: true });
-      await dbPool.query('INSERT IGNORE INTO schema_migrations (name) VALUES (?)', [file]);
-      ran += 1;
+      try {
+        await runSqlFile(join(migrationsDir, file));
+        await dbPool.query('INSERT IGNORE INTO schema_migrations (name) VALUES (?)', [file]);
+        ran += 1;
+      } catch (err) {
+        failed += 1;
+        logger.error(`❌ migration 실패 (재시도됨): ${file} — ${err.message}`);
+      }
     }
-    logger.info(`✅ DB migration 완료 (실행:${ran} 스킵:${skipped} 총:${files.length})`);
+    if (failed > 0) {
+      logger.warn(`⚠️  DB migration 부분 실패 (실행:${ran} 스킵:${skipped} 실패:${failed} 총:${files.length})`);
+    } else {
+      logger.info(`✅ DB migration 완료 (실행:${ran} 스킵:${skipped} 총:${files.length})`);
+    }
   } catch (err) {
     logger.warn('⚠️  DB 초기화 스킵:', { message: err.message });
   }
