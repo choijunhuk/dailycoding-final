@@ -49,6 +49,17 @@ export default function SettingsPage() {
   const [pwForm, setPwForm] = useState({ current:'', next:'', confirm:'' });
   const [deletePassword, setDeletePassword] = useState('');
   const [deleting, setDeleting] = useState(false);
+  const [oauthLinked, setOauthLinked] = useState({ github: false, google: false });
+  const [oauthBusy, setOauthBusy] = useState(false);
+
+  async function refreshOAuthIdentities() {
+    try {
+      const res = await api.get('/auth/me/identities');
+      setOauthLinked(res.data?.linked || { github: false, google: false });
+    } catch {
+      // ignore — section just shows defaults
+    }
+  }
 
   useEffect(() => {
     (async () => {
@@ -64,7 +75,37 @@ export default function SettingsPage() {
         setLoading(false);
       }
     })();
+    refreshOAuthIdentities();
+    const hash = typeof window !== 'undefined' ? window.location.hash : '';
+    if (hash.includes('oauth_linked=')) {
+      const provider = decodeURIComponent(hash.split('oauth_linked=')[1].split('&')[0]);
+      toast?.show(`${provider} 계정이 연결되었습니다.`, 'success');
+      window.location.hash = '';
+    } else if (hash.includes('oauth_link_error=')) {
+      const msg = decodeURIComponent(hash.split('oauth_link_error=')[1].split('&')[0]);
+      toast?.show(msg, 'error');
+      window.location.hash = '';
+    }
   }, []);
+
+  function linkProvider(provider) {
+    const apiBase = import.meta.env.VITE_API_URL || '';
+    window.location.href = `${apiBase}/api/auth/link/${provider}`;
+  }
+
+  async function unlinkProvider(provider) {
+    if (!confirm(`${provider} 연결을 해제하시겠습니까?`)) return;
+    setOauthBusy(true);
+    try {
+      await api.delete(`/auth/unlink/${provider}`);
+      toast?.show(`${provider} 연결이 해제되었습니다.`, 'success');
+      await refreshOAuthIdentities();
+    } catch (e) {
+      toast?.show(e.response?.data?.message || '해제 실패', 'error');
+    } finally {
+      setOauthBusy(false);
+    }
+  }
 
   function onNicknameChange(v) {
     setNickname(v);
@@ -292,6 +333,71 @@ export default function SettingsPage() {
                 {t('oauthNoPasswordNote')}
               </div>
             )}
+
+            <div style={{ borderTop:'1px solid var(--border)', paddingTop:24, marginTop:8 }}>
+              <div style={{ fontWeight:700, fontSize:14, color:'var(--text)', marginBottom:12 }}>
+                소셜 계정 연결
+              </div>
+              <p style={{ fontSize:13, color:'var(--text2)', margin:'0 0 16px' }}>
+                GitHub 또는 Google 계정을 연결하면 해당 계정으로도 로그인할 수 있습니다.
+              </p>
+              {['github', 'google'].map((provider) => (
+                <div
+                  key={provider}
+                  style={{
+                    display:'flex',
+                    alignItems:'center',
+                    justifyContent:'space-between',
+                    padding:'12px 14px',
+                    background:'var(--bg2)',
+                    border:'1px solid var(--border)',
+                    borderRadius:8,
+                    marginBottom:8,
+                  }}
+                >
+                  <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                    <span style={{ fontWeight:600, textTransform:'capitalize' }}>{provider}</span>
+                    {oauthLinked[provider] && (
+                      <span style={{ fontSize:12, color:'var(--green)', fontWeight:600 }}>● 연결됨</span>
+                    )}
+                  </div>
+                  {oauthLinked[provider] ? (
+                    <button
+                      onClick={() => unlinkProvider(provider)}
+                      disabled={oauthBusy}
+                      style={{
+                        padding:'6px 14px',
+                        background:'transparent',
+                        color:'var(--text2)',
+                        border:'1px solid var(--border)',
+                        borderRadius:6,
+                        fontSize:13,
+                        cursor: oauthBusy ? 'not-allowed' : 'pointer',
+                      }}
+                    >
+                      해제
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => linkProvider(provider)}
+                      disabled={oauthBusy}
+                      style={{
+                        padding:'6px 14px',
+                        background:'var(--accent)',
+                        color:'#fff',
+                        border:'none',
+                        borderRadius:6,
+                        fontSize:13,
+                        fontWeight:600,
+                        cursor: oauthBusy ? 'not-allowed' : 'pointer',
+                      }}
+                    >
+                      연결하기
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
 
             <div style={{ borderTop:'1px solid var(--red)', paddingTop:24, marginTop:8 }}>
               <div style={{ fontWeight:700, fontSize:14, color:'var(--red)', marginBottom:8 }}>

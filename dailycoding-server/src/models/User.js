@@ -139,7 +139,43 @@ export const User = {
   },
 
   async findByOAuth(provider, oauthId) {
-    return queryOne('SELECT * FROM users WHERE oauth_provider = ? AND oauth_id = ?', [provider, oauthId]);
+    const row = await queryOne(
+      `SELECT u.* FROM users u
+       JOIN user_oauth_identities i ON i.user_id = u.id
+       WHERE i.provider = ? AND i.oauth_id = ?`,
+      [provider, oauthId],
+    );
+    if (row) return row;
+    return queryOne(
+      'SELECT * FROM users WHERE oauth_provider = ? AND oauth_id = ?',
+      [provider, oauthId],
+    );
+  },
+
+  async listOAuthIdentities(userId) {
+    return query(
+      'SELECT provider, oauth_id, linked_at FROM user_oauth_identities WHERE user_id = ? ORDER BY linked_at ASC',
+      [userId],
+    );
+  },
+
+  async linkOAuthIdentity(userId, provider, oauthId) {
+    await insert(
+      'INSERT INTO user_oauth_identities (user_id, provider, oauth_id) VALUES (?, ?, ?)',
+      [userId, provider, oauthId],
+    );
+  },
+
+  async unlinkOAuthIdentity(userId, provider) {
+    const result = await run(
+      'DELETE FROM user_oauth_identities WHERE user_id = ? AND provider = ?',
+      [userId, provider],
+    );
+    await run(
+      'UPDATE users SET oauth_provider = NULL, oauth_id = NULL WHERE id = ? AND oauth_provider = ?',
+      [userId, provider],
+    );
+    return result;
   },
 
   async create({ email, password, username, role='user', tier='unranked', rating=0 }) {

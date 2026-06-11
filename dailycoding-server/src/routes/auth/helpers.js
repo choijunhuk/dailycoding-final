@@ -118,5 +118,27 @@ export async function findOrCreateOAuthUser({ provider, oauthId, email, username
     'INSERT INTO users (email, password, username, role, tier, rating, join_date, oauth_provider, oauth_id, avatar_url, email_verified) VALUES (?,NULL,?,?,?,?,?,?,?,?,1)',
     [email, finalUsername, 'user', 'unranked', 0, today, provider, oauthId, avatarUrl || null]
   );
+  try {
+    await User.linkOAuthIdentity(userId, provider, oauthId);
+  } catch {
+    // identity row already exists (race during signup); safe to ignore
+  }
+  return User.findById(userId);
+}
+
+export async function linkOAuthToExistingUser({ userId, provider, oauthId }) {
+  const existingOwner = await User.findByOAuth(provider, oauthId);
+  if (existingOwner && existingOwner.id !== userId) {
+    const error = new Error('This social account is already linked to a different user.');
+    error.code = 'OAUTH_ALREADY_LINKED';
+    throw error;
+  }
+  const identities = await User.listOAuthIdentities(userId);
+  if (identities.some((id) => id.provider === provider)) {
+    const error = new Error('You already have this provider linked.');
+    error.code = 'OAUTH_PROVIDER_ALREADY_LINKED';
+    throw error;
+  }
+  await User.linkOAuthIdentity(userId, provider, oauthId);
   return User.findById(userId);
 }
