@@ -109,6 +109,7 @@ export default function Dashboard() {
   const [tagStats, setTagStats] = useState([]);
   const [smartRecommendations, setSmartRecommendations] = useState([]);
   const [reviewQueueLoadFailed, setReviewQueueLoadFailed] = useState(false);
+  const [streakFreeze, setStreakFreeze] = useState(null);
   const [tagStatsLoadFailed, setTagStatsLoadFailed] = useState(false);
   const [gameSummaryLoadFailed, setGameSummaryLoadFailed] = useState(false);
   const [battleSummaryLoadFailed, setBattleSummaryLoadFailed] = useState(false);
@@ -288,6 +289,14 @@ export default function Dashboard() {
       .catch(() => {
         if (!cancelled) setReferral(null);
       });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    api.get('/auth/me/streak-freeze')
+      .then(({ data }) => { if (!cancelled) setStreakFreeze(data); })
+      .catch(() => { if (!cancelled) setStreakFreeze(null); });
     return () => { cancelled = true; };
   }, []);
 
@@ -477,9 +486,24 @@ export default function Dashboard() {
             {v:solvedList.length,                                                   l:t('solved'),           color:'rgba(86,211,100,', icon:'✓'},
             {v:`${accuracy}%`,                                                      l:t('dashboardAccuracy'),color:'rgba(121,192,255,', icon:'◎'},
           ].map(s=>(
-            <div key={s.l} className="stat-mini" style={{background:`${s.color}.08)`, border:`1px solid ${s.color}.2)`}}>
+            <div key={s.l} className="stat-mini" style={{background:`${s.color}.08)`, border:`1px solid ${s.color}.2)`, position:'relative'}}>
               <div className="stat-mini-value" style={{color:`${s.color}1)`}}>{s.v}</div>
               <div className="stat-mini-label">{s.l}</div>
+              {s.l === t('streak') && streakFreeze?.isPro && streakFreeze?.monthlyAllowance > 0 && (
+                <div title={`이번 달 streak freeze ${streakFreeze.remaining}/${streakFreeze.monthlyAllowance}개 남음`}
+                     style={{
+                       position:'absolute', top:6, right:8,
+                       fontSize:11, fontWeight:700,
+                       color: streakFreeze.remaining > 0 ? 'var(--blue)' : 'var(--text3)',
+                       background:'var(--bg2)',
+                       border:'1px solid var(--border)',
+                       borderRadius:999,
+                       padding:'2px 6px',
+                       lineHeight:1,
+                     }}>
+                  ❄ {streakFreeze.remaining}/{streakFreeze.monthlyAllowance}
+                </div>
+              )}
             </div>
           ))}
         </div>

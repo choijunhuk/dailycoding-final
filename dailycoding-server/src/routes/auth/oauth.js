@@ -13,6 +13,7 @@ import { User } from '../../models/User.js';
 const router = Router();
 
 const LINK_COOKIE = 'oauth_link_user_id';
+const SUPPORTED_PROVIDERS = new Set(['github', 'google', 'discord', 'kakao']);
 
 function setOauthStateCookie(res, state) {
   res.cookie('oauth_state', state, {
@@ -183,9 +184,152 @@ router.get('/google/callback', async (req, res) => {
   }
 });
 
+router.get('/discord', (req, res) => {
+  if (!process.env.DISCORD_CLIENT_ID) {
+    return res.status(503).json({ message: 'Discord OAuth is not configured on this server.' });
+  }
+  const state = crypto.randomBytes(16).toString('hex');
+  setOauthStateCookie(res, state);
+  const params = new URLSearchParams({
+    client_id: process.env.DISCORD_CLIENT_ID,
+    redirect_uri: process.env.DISCORD_CALLBACK_URL || 'http://localhost:4000/api/auth/discord/callback',
+    response_type: 'code',
+    scope: 'identify email',
+    state,
+    prompt: 'consent',
+  });
+  res.redirect(`https://discord.com/oauth2/authorize?${params}`);
+});
+
+router.get('/discord/callback', async (req, res) => {
+  const { code, state } = req.query;
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  const storedState = req.cookies?.oauth_state;
+  res.clearCookie('oauth_state', getCookieBaseOptions());
+  if (!storedState || storedState !== state) return res.redirect(`${frontendUrl}#oauth_error=invalid_state`);
+  if (!code) return res.redirect(`${frontendUrl}#oauth_error=code_missing`);
+
+  try {
+    const redirectUri = process.env.DISCORD_CALLBACK_URL || 'http://localhost:4000/api/auth/discord/callback';
+    const tokenRes = await fetch('https://discord.com/api/oauth2/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: process.env.DISCORD_CLIENT_ID,
+        client_secret: process.env.DISCORD_CLIENT_SECRET,
+        grant_type: 'authorization_code',
+        code,
+        redirect_uri: redirectUri,
+      }),
+    });
+    const tokenData = await tokenRes.json();
+    if (tokenData.error) throw new Error(tokenData.error_description || 'Discord token error');
+
+    const userRes = await fetch('https://discord.com/api/users/@me', {
+      headers: { Authorization: `Bearer ${tokenData.access_token}` },
+    });
+    const dUser = await userRes.json();
+    if (!dUser.email || dUser.verified === false) {
+      throw new Error('A Discord account with a verified email is required.');
+    }
+
+    const avatarUrl = dUser.avatar
+      ? `https://cdn.discordapp.com/avatars/${dUser.id}/${dUser.avatar}.png`
+      : null;
+
+    await handleOAuthResult({
+      res,
+      req,
+      provider: 'discord',
+      oauthData: {
+        provider: 'discord',
+        oauthId: String(dUser.id),
+        email: dUser.email,
+        username: dUser.global_name || dUser.username,
+        avatarUrl,
+      },
+      frontendUrl,
+    });
+  } catch (err) {
+    console.error('[discord/callback]', err.message);
+    res.redirect(`${frontendUrl}#oauth_error=${encodeURIComponent(err.message)}`);
+  }
+});
+
+router.get('/kakao', (req, res) => {
+  if (!process.env.KAKAO_CLIENT_ID) {
+    return res.status(503).json({ message: 'Kakao OAuth is not configured on this server.' });
+  }
+  const state = crypto.randomBytes(16).toString('hex');
+  setOauthStateCookie(res, state);
+  const params = new URLSearchParams({
+    client_id: process.env.KAKAO_CLIENT_ID,
+    redirect_uri: process.env.KAKAO_CALLBACK_URL || 'http://localhost:4000/api/auth/kakao/callback',
+    response_type: 'code',
+    scope: 'account_email profile_nickname profile_image',
+    state,
+  });
+  res.redirect(`https://kauth.kakao.com/oauth/authorize?${params}`);
+});
+
+router.get('/kakao/callback', async (req, res) => {
+  const { code, state } = req.query;
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  const storedState = req.cookies?.oauth_state;
+  res.clearCookie('oauth_state', getCookieBaseOptions());
+  if (!storedState || storedState !== state) return res.redirect(`${frontendUrl}#oauth_error=invalid_state`);
+  if (!code) return res.redirect(`${frontendUrl}#oauth_error=code_missing`);
+
+  try {
+    const redirectUri = process.env.KAKAO_CALLBACK_URL || 'http://localhost:4000/api/auth/kakao/callback';
+    const tokenBody = new URLSearchParams({
+      grant_type: 'authorization_code',
+      client_id: process.env.KAKAO_CLIENT_ID,
+      redirect_uri: redirectUri,
+      code,
+    });
+    if (process.env.KAKAO_CLIENT_SECRET) tokenBody.set('client_secret', process.env.KAKAO_CLIENT_SECRET);
+
+    const tokenRes = await fetch('https://kauth.kakao.com/oauth/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: tokenBody,
+    });
+    const tokenData = await tokenRes.json();
+    if (tokenData.error) throw new Error(tokenData.error_description || 'Kakao token error');
+
+    const userRes = await fetch('https://kapi.kakao.com/v2/user/me', {
+      headers: { Authorization: `Bearer ${tokenData.access_token}` },
+    });
+    const kUser = await userRes.json();
+    const account = kUser.kakao_account || {};
+    if (!account.email || account.is_email_verified === false) {
+      throw new Error('A Kakao account with a verified email is required (consent to email scope).');
+    }
+    const profile = account.profile || {};
+
+    await handleOAuthResult({
+      res,
+      req,
+      provider: 'kakao',
+      oauthData: {
+        provider: 'kakao',
+        oauthId: String(kUser.id),
+        email: account.email,
+        username: profile.nickname || account.email.split('@')[0],
+        avatarUrl: profile.profile_image_url || null,
+      },
+      frontendUrl,
+    });
+  } catch (err) {
+    console.error('[kakao/callback]', err.message);
+    res.redirect(`${frontendUrl}#oauth_error=${encodeURIComponent(err.message)}`);
+  }
+});
+
 router.get('/link/:provider', auth, (req, res) => {
   const provider = req.params.provider;
-  if (provider !== 'github' && provider !== 'google') {
+  if (!SUPPORTED_PROVIDERS.has(provider)) {
     return res.status(400).json({ message: 'Unsupported provider' });
   }
   setLinkCookie(res, req.user.id);
@@ -194,17 +338,16 @@ router.get('/link/:provider', auth, (req, res) => {
 
 router.get('/me/identities', auth, async (req, res) => {
   const identities = await User.listOAuthIdentities(req.user.id);
-  const linked = { github: false, google: false };
+  const linked = { github: false, google: false, discord: false, kakao: false };
   for (const row of identities) {
-    if (row.provider === 'github') linked.github = true;
-    if (row.provider === 'google') linked.google = true;
+    if (linked[row.provider] !== undefined) linked[row.provider] = true;
   }
   res.json({ identities, linked });
 });
 
 router.delete('/unlink/:provider', auth, async (req, res) => {
   const provider = req.params.provider;
-  if (provider !== 'github' && provider !== 'google') {
+  if (!SUPPORTED_PROVIDERS.has(provider)) {
     return res.status(400).json({ message: 'Unsupported provider' });
   }
   const fullUser = await User.findById(req.user.id);

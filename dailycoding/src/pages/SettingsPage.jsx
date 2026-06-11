@@ -49,13 +49,13 @@ export default function SettingsPage() {
   const [pwForm, setPwForm] = useState({ current:'', next:'', confirm:'' });
   const [deletePassword, setDeletePassword] = useState('');
   const [deleting, setDeleting] = useState(false);
-  const [oauthLinked, setOauthLinked] = useState({ github: false, google: false });
+  const [oauthLinked, setOauthLinked] = useState({ github: false, google: false, discord: false, kakao: false });
   const [oauthBusy, setOauthBusy] = useState(false);
 
   async function refreshOAuthIdentities() {
     try {
       const res = await api.get('/auth/me/identities');
-      setOauthLinked(res.data?.linked || { github: false, google: false });
+      setOauthLinked(res.data?.linked || { github: false, google: false, discord: false, kakao: false });
     } catch {
       // ignore — section just shows defaults
     }
@@ -341,7 +341,7 @@ export default function SettingsPage() {
               <p style={{ fontSize:13, color:'var(--text2)', margin:'0 0 16px' }}>
                 GitHub 또는 Google 계정을 연결하면 해당 계정으로도 로그인할 수 있습니다.
               </p>
-              {['github', 'google'].map((provider) => (
+              {['github', 'google', 'discord', 'kakao'].map((provider) => (
                 <div
                   key={provider}
                   style={{

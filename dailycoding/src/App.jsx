@@ -43,6 +43,7 @@ const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const CommunityPage = lazy(() => import('./pages/CommunityPage'));
 const PublicProfilePage = lazy(() => import('./pages/PublicProfilePage'));
 const SharedSubmissionPage = lazy(() => import('./pages/SharedSubmissionPage'));
+const SharedBattleReplayPage = lazy(() => import('./pages/SharedBattleReplayPage'));
 const ExamListPage = lazy(() => import('./pages/ExamListPage'));
 const ExamPage = lazy(() => import('./pages/ExamPage'));
 const SheetsPage = lazy(() => import('./pages/SheetsPage'));
@@ -139,6 +140,7 @@ function AppInner() {
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password"  element={<ResetPasswordPage />} />
         <Route path="/share/:slug"     element={<SharedSubmissionPage />} />
+        <Route path="/share/battle/:slug" element={<SharedBattleReplayPage />} />
         <Route path="/terms"           element={<TermsPage />} />
         <Route path="/privacy"         element={<PrivacyPage />} />
         <Route path="/pricing"         element={<PricingPage />} />
