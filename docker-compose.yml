@@ -1,6 +1,7 @@
 services:
   mysql:
     image: mysql:8.0
+    container_name: dailycoding-mysql
     restart: always
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD}
@@ -9,12 +10,19 @@ services:
       MYSQL_PASSWORD: ${DB_PASS:?Set DB_PASS}
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./dailycoding-server/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     ports:
       - "127.0.0.1:3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - dailycoding-net
 
   redis:
     image: redis:7-alpine
+    container_name: dailycoding-redis
     restart: always
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD}
@@ -23,7 +31,37 @@ services:
       - redis_data:/data
     ports:
       - "127.0.0.1:6379:6379"
+    networks:
+      - dailycoding-net
+
+  backend:
+    build:
+      context: ./dailycoding-server
+      dockerfile: Dockerfile
+    container_name: dailycoding-backend
+    restart: always
+    env_file:
+      - ./dailycoding-server/.env
+    environment:
+      NODE_ENV: production
+      DB_HOST: mysql
+      DB_PORT: 3306
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      JUDGE_MODE: native
+    ports:
+      - "127.0.0.1:4000:4000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - dailycoding-net
 
 volumes:
   mysql_data:
   redis_data:
+
+networks:
+  dailycoding-net:
+    driver: bridge
