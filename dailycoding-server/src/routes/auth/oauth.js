@@ -229,7 +229,8 @@ router.get('/discord/callback', async (req, res) => {
       headers: { Authorization: `Bearer ${tokenData.access_token}` },
     });
     const dUser = await userRes.json();
-    if (!dUser.email || dUser.verified === false) {
+    // Fail-closed: a missing `verified` claim is treated as unverified.
+    if (!dUser.email || dUser.verified !== true) {
       throw new Error('A Discord account with a verified email is required.');
     }
 
@@ -303,7 +304,8 @@ router.get('/kakao/callback', async (req, res) => {
     });
     const kUser = await userRes.json();
     const account = kUser.kakao_account || {};
-    if (!account.email || account.is_email_verified === false) {
+    // Fail-closed: a missing `is_email_verified` claim is treated as unverified.
+    if (!account.email || account.is_email_verified !== true) {
       throw new Error('A Kakao account with a verified email is required (consent to email scope).');
     }
     const profile = account.profile || {};
