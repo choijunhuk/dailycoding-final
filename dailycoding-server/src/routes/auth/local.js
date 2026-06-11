@@ -181,6 +181,16 @@ router.get('/me', auth, async (req, res) => {
   }
 });
 
+router.get('/me/streak-freeze', auth, async (req, res) => {
+  try {
+    const status = await User.getStreakFreezeStatus(req.user.id);
+    return res.json(status);
+  } catch (err) {
+    console.error('[me/streak-freeze]', err);
+    return internalError(res);
+  }
+});
+
 router.get('/me/stats', auth, async (req, res) => {
   try {
     const stats = await Submission.getSolveTimeStats(req.user.id);

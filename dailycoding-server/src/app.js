@@ -3,6 +3,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { configureMiddleware } from './middleware/setup.js';
 import { registerRoutes } from './routes/registry.js';
+import { installSentryExpress } from './config/sentry.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -15,5 +16,7 @@ export function createApp() {
     next();
   }, express.static(join(__dirname, '..', 'uploads')));
   registerRoutes(app);
+  // Sentry's Express error handler must come AFTER routes so it sees thrown errors.
+  installSentryExpress(app);
   return app;
 }

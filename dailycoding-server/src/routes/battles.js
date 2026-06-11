@@ -40,6 +40,24 @@ router.get('/:id/replay', async (req, res) => {
   }
 });
 
+// POST /api/battles/:id/share — participant creates a public replay slug for an ended room
+router.post('/:id/share', auth, async (req, res) => {
+  try {
+    const roomId = parseInt(req.params.id, 10);
+    if (!Number.isFinite(roomId)) {
+      return errorResponse(res, 400, 'VALIDATION_ERROR', 'Invalid room id.');
+    }
+    const { slug, reused } = await AlgorithmBattle.shareReplay(roomId, req.user.id);
+    res.json({ slug, reused, url: `/share/battle/${slug}` });
+  } catch (err) {
+    if (err.code === 'NOT_FOUND') return errorResponse(res, 404, 'NOT_FOUND', err.message);
+    if (err.code === 'FORBIDDEN') return errorResponse(res, 403, 'FORBIDDEN', err.message);
+    if (err.code === 'NOT_ENDED') return errorResponse(res, 409, 'NOT_ENDED', err.message);
+    console.error('[battles/share]', err.message);
+    return internalError(res);
+  }
+});
+
 // GET /api/battles/rooms — DB-backed realtime algorithm battle rooms (public)
 router.get('/rooms', async (req, res) => {
   try {

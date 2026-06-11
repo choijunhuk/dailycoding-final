@@ -1614,4 +1614,73 @@ export const AlgorithmBattle = {
       };
     });
   },
+
+  async shareReplay(roomId, userId) {
+    const room = await this.getRoom(roomId);
+    if (!room) {
+      const err = new Error('Room not found');
+      err.code = 'NOT_FOUND';
+      throw err;
+    }
+    if (room.status !== 'ended' && room.status !== 'finished') {
+      const err = new Error('Replay is only available after the battle ends.');
+      err.code = 'NOT_ENDED';
+      throw err;
+    }
+    const participants = await this.getParticipants(roomId);
+    if (!participants.some((p) => p.userId === Number(userId))) {
+      const err = new Error('Only participants can share this replay.');
+      err.code = 'FORBIDDEN';
+      throw err;
+    }
+    const existing = await queryOne(
+      'SELECT slug FROM battle_replay_shares WHERE room_id = ?',
+      [roomId],
+    );
+    if (existing) return { slug: existing.slug, reused: true };
+    const slug = crypto.randomBytes(8).toString('hex');
+    await insert(
+      'INSERT INTO battle_replay_shares (room_id, slug, created_by) VALUES (?, ?, ?)',
+      [roomId, slug, userId],
+    );
+    return { slug, reused: false };
+  },
+
+  async getReplayBySlug(slug) {
+    const row = await queryOne(
+      'SELECT room_id FROM battle_replay_shares WHERE slug = ?',
+      [slug],
+    );
+    if (!row) return null;
+    const roomId = row.room_id;
+    const [room, participants, events] = await Promise.all([
+      this.getRoom(roomId),
+      this.getParticipants(roomId),
+      this.getEvents(roomId, { limit: 200 }),
+    ]);
+    if (!room) return null;
+    return {
+      slug,
+      room: {
+        id: room.id,
+        title: room.title,
+        mode: room.mode,
+        status: room.status,
+        startedAt: room.startedAt,
+        endedAt: room.endedAt,
+      },
+      participants: participants.map((p) => ({
+        userId: p.userId,
+        username: p.username,
+        score: p.score,
+        characterHp: p.characterHp,
+      })),
+      events: events.map((e) => ({
+        type: e.eventType ?? e.event_type,
+        userId: e.userId ?? e.user_id,
+        payload: e.payload ?? e.payload_json,
+        createdAt: e.createdAt ?? e.created_at,
+      })),
+    };
+  },
 };

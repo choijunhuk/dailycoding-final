@@ -316,6 +316,53 @@ export const User = {
     }, 0);
   },
 
+  // Number of streak freezes a paid user receives at the start of each month.
+  // Free tier always gets 0 — call sites must check subscription_tier before granting.
+  PRO_STREAK_FREEZES_PER_MONTH: 2,
+
+  async ensureStreakFreezeMonthlyTopup(userId) {
+    const row = await queryOne(
+      'SELECT subscription_tier, streak_freezes_remaining, streak_freezes_reset_at FROM users WHERE id = ?',
+      [userId],
+    );
+    if (!row) return { remaining: 0, isPro: false };
+    const isPro = row.subscription_tier && row.subscription_tier !== 'free';
+    const now = new Date();
+    const firstOfMonth = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-01`;
+    const stored = row.streak_freezes_reset_at
+      ? new Date(row.streak_freezes_reset_at).toISOString().slice(0, 10)
+      : null;
+    if (stored !== firstOfMonth) {
+      const newTotal = isPro ? this.PRO_STREAK_FREEZES_PER_MONTH : 0;
+      await run(
+        'UPDATE users SET streak_freezes_remaining = ?, streak_freezes_reset_at = ? WHERE id = ?',
+        [newTotal, firstOfMonth, userId],
+      );
+      return { remaining: newTotal, isPro };
+    }
+    return { remaining: Number(row.streak_freezes_remaining || 0), isPro };
+  },
+
+  async getStreakFreezeStatus(userId) {
+    const { remaining, isPro } = await this.ensureStreakFreezeMonthlyTopup(userId);
+    return {
+      remaining,
+      monthlyAllowance: isPro ? this.PRO_STREAK_FREEZES_PER_MONTH : 0,
+      isPro,
+    };
+  },
+
+  async maybeConsumeStreakFreeze(userId) {
+    const { remaining, isPro } = await this.ensureStreakFreezeMonthlyTopup(userId);
+    if (!isPro || remaining <= 0) return false;
+    // Atomic decrement guarded by remaining>0 to handle concurrent solves.
+    const result = await run(
+      'UPDATE users SET streak_freezes_remaining = streak_freezes_remaining - 1 WHERE id = ? AND streak_freezes_remaining > 0',
+      [userId],
+    );
+    return Number(result?.affectedRows ?? result ?? 0) > 0;
+  },
+
   async onSolve(userId, problem) {
     // compatibility for old calls passing just tier string
     const probObj = typeof problem === 'object' ? problem : { tier: problem, problemType: 'coding' };
@@ -350,12 +397,21 @@ export const User = {
         WHERE id = ?
       `, [nowMySQL(), userId]);
     } else {
-      // 연속이 끊겼으면 streak 리셋
-      await run(`
-        UPDATE users
-        SET solved_count = solved_count + 1, streak = 1, last_login = ?
-        WHERE id = ?
-      `, [nowMySQL(), userId]);
+      // 연속이 끊겼음. Pro + 남은 freeze가 있으면 차감하고 streak 유지, 아니면 리셋.
+      const consumed = await this.maybeConsumeStreakFreeze(userId);
+      if (consumed) {
+        await run(`
+          UPDATE users
+          SET solved_count = solved_count + 1, streak = streak + 1, last_login = ?
+          WHERE id = ?
+        `, [nowMySQL(), userId]);
+      } else {
+        await run(`
+          UPDATE users
+          SET solved_count = solved_count + 1, streak = 1, last_login = ?
+          WHERE id = ?
+        `, [nowMySQL(), userId]);
+      }
     }
     // 잔디 로그
     const today2 = nowMySQL().slice(0,10);

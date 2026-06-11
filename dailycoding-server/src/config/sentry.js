@@ -60,3 +60,24 @@ export function expressErrorHandler() {
     next(err);
   });
 }
+
+// Attach Sentry's Express integration to the app.
+// @sentry/node v8+ exposes setupExpressErrorHandler; v7 had Handlers.requestHandler.
+// We try both so this works regardless of which version resolves.
+export function installSentryExpress(app) {
+  if (!SentryRef) return;
+  try {
+    if (typeof SentryRef.setupExpressErrorHandler === 'function') {
+      SentryRef.setupExpressErrorHandler(app);
+      return;
+    }
+    if (SentryRef.Handlers?.requestHandler) {
+      app.use(SentryRef.Handlers.requestHandler());
+    }
+    if (SentryRef.Handlers?.tracingHandler) {
+      app.use(SentryRef.Handlers.tracingHandler());
+    }
+  } catch {
+    // Sentry integration failed; ignore — observability must not break startup.
+  }
+}
