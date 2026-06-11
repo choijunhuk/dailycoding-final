@@ -104,6 +104,14 @@ async function initDatabase() {
     const [appliedRows] = await dbPool.query('SELECT name FROM schema_migrations');
     const applied = new Set(appliedRows.map((r) => r.name));
 
+    const dryRun = process.env.MIGRATIONS_DRY_RUN === '1' || process.env.MIGRATIONS_DRY_RUN === 'true';
+    if (dryRun) {
+      const pending = files.filter((f) => !applied.has(f));
+      logger.info(`🧪 MIGRATIONS_DRY_RUN — would run ${pending.length} migration(s):`);
+      for (const file of pending) logger.info(`  • ${file}`);
+      return;
+    }
+
     let ran = 0;
     let skipped = 0;
     let failed = 0;

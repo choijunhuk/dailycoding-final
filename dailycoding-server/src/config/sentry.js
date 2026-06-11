@@ -1,5 +1,22 @@
+import { execFileSync } from 'node:child_process';
+
 let initialized = false;
 let SentryRef = null;
+
+function resolveRelease() {
+  if (process.env.SENTRY_RELEASE) return process.env.SENTRY_RELEASE;
+  try {
+    const sha = execFileSync('git', ['rev-parse', '--short', 'HEAD'], {
+      stdio: ['ignore', 'pipe', 'ignore'],
+    })
+      .toString()
+      .trim();
+    if (sha) return `dailycoding-server@${sha}`;
+  } catch {
+    // not a git checkout (e.g. Docker copy without .git); skip
+  }
+  return undefined;
+}
 
 export async function initSentry() {
   if (initialized) return SentryRef;
@@ -11,7 +28,7 @@ export async function initSentry() {
     Sentry.init({
       dsn,
       environment: process.env.NODE_ENV || 'development',
-      release: process.env.SENTRY_RELEASE || undefined,
+      release: resolveRelease(),
       tracesSampleRate: Number(process.env.SENTRY_TRACES_RATE || 0.1),
       profilesSampleRate: Number(process.env.SENTRY_PROFILES_RATE || 0),
     });

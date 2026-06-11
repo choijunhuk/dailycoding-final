@@ -4,6 +4,30 @@ import redis from '../config/redis.js';
 
 const CACHE_TTL = 300; // 5분
 
+async function bulkInsertProblemChildren(problemId, { tags, examples, testcases }) {
+  if (tags?.length) {
+    const placeholders = tags.map(() => '(?,?)').join(',');
+    const params = tags.flatMap((t) => [problemId, t]);
+    await run(`INSERT IGNORE INTO problem_tags VALUES ${placeholders}`, params);
+  }
+  if (examples?.length) {
+    const placeholders = examples.map(() => '(?,?,?,?)').join(',');
+    const params = examples.flatMap((ex, i) => [problemId, ex.input, ex.output, i]);
+    await run(
+      `INSERT INTO problem_examples (problem_id,input_data,output_data,ord) VALUES ${placeholders}`,
+      params,
+    );
+  }
+  if (testcases?.length) {
+    const placeholders = testcases.map(() => '(?,?,?,?)').join(',');
+    const params = testcases.flatMap((tc, i) => [problemId, tc.input, tc.output, i]);
+    await run(
+      `INSERT INTO problem_testcases (problem_id,input_data,output_data,ord) VALUES ${placeholders}`,
+      params,
+    );
+  }
+}
+
 function normalizeProblem(p) {
   if (!p) return null;
   const problemType = p.problem_type ?? p.problemType ?? 'coding';
@@ -379,22 +403,7 @@ export const Problem = {
         tier||'bronze', difficulty||3, timeLimit||2, memLimit||256, desc, inputDesc||'', outputDesc||'', hint||'', solution||'', authorId, createdAt, visibility || 'global', isPremium ? 1 : 0, contestId || null
       ]
     );
-    if (tags?.length) {
-      for (const tag of tags) await run('INSERT IGNORE INTO problem_tags VALUES (?,?)', [id, tag]);
-    }
-    if (examples?.length) {
-      for (let i = 0; i < examples.length; i++) {
-        const ex = examples[i];
-        await run('INSERT INTO problem_examples (problem_id,input_data,output_data,ord) VALUES (?,?,?,?)', [id, ex.input, ex.output, i]);
-      }
-    }
-    // ★ 히든 테스트케이스 저장
-    if (testcases?.length) {
-      for (let i = 0; i < testcases.length; i++) {
-        const tc = testcases[i];
-        await run('INSERT INTO problem_testcases (problem_id,input_data,output_data,ord) VALUES (?,?,?,?)', [id, tc.input, tc.output, i]);
-      }
-    }
+    await bulkInsertProblemChildren(id, { tags, examples, testcases });
     await redis.clearPrefix('problems:list:');
     return this.findById(id);
   },
@@ -412,25 +421,14 @@ export const Problem = {
         tier, difficulty, timeLimit, memLimit, desc, inputDesc, outputDesc, hint, solution||'', visibility || 'global', isPremium ? 1 : 0, contestId || null, id
       ]
     );
-    if (tags) {
-      await run('DELETE FROM problem_tags WHERE problem_id=?', [id]);
-      for (const tag of tags) await run('INSERT IGNORE INTO problem_tags VALUES (?,?)', [id, tag]);
-    }
-    if (examples) {
-      await run('DELETE FROM problem_examples WHERE problem_id=?', [id]);
-      for (let i = 0; i < examples.length; i++) {
-        const ex = examples[i];
-        await run('INSERT INTO problem_examples (problem_id,input_data,output_data,ord) VALUES (?,?,?,?)', [id, ex.input, ex.output, i]);
-      }
-    }
-    // ★ 히든 테스트케이스 업데이트
-    if (testcases) {
-      await run('DELETE FROM problem_testcases WHERE problem_id=?', [id]);
-      for (let i = 0; i < testcases.length; i++) {
-        const tc = testcases[i];
-        await run('INSERT INTO problem_testcases (problem_id,input_data,output_data,ord) VALUES (?,?,?,?)', [id, tc.input, tc.output, i]);
-      }
-    }
+    if (tags) await run('DELETE FROM problem_tags WHERE problem_id=?', [id]);
+    if (examples) await run('DELETE FROM problem_examples WHERE problem_id=?', [id]);
+    if (testcases) await run('DELETE FROM problem_testcases WHERE problem_id=?', [id]);
+    await bulkInsertProblemChildren(id, {
+      tags: tags ?? undefined,
+      examples: examples ?? undefined,
+      testcases: testcases ?? undefined,
+    });
     await redis.del(`problems:${id}`);
     return this.findById(id);
   },
