@@ -304,11 +304,18 @@ router.get('/kakao/callback', async (req, res) => {
     });
     const kUser = await userRes.json();
     const account = kUser.kakao_account || {};
-    // Fail-closed: a missing `is_email_verified` claim is treated as unverified.
-    if (!account.email || account.is_email_verified !== true) {
-      throw new Error('A Kakao account with a verified email is required (consent to email scope).');
-    }
     const profile = account.profile || {};
+    // Kakao restricts the `account_email` scope behind business verification.
+    // Personal-tier apps cannot get a real email, so when the user has not
+    // consented to (or the app cannot request) the email scope, fall back to a
+    // synthetic email derived from the Kakao user id. Synthetic-email users
+    // cannot reset their password — they must keep the linked Kakao identity.
+    // Identification still relies on (provider, oauthId), so this is safe.
+    const hasVerifiedEmail = account.email && account.is_email_verified === true;
+    const email = hasVerifiedEmail ? account.email : `kakao_${kUser.id}@kakao.local`;
+    const fallbackUsername = hasVerifiedEmail
+      ? account.email.split('@')[0]
+      : `kakao_${kUser.id}`;
 
     await handleOAuthResult({
       res,
@@ -317,8 +324,8 @@ router.get('/kakao/callback', async (req, res) => {
       oauthData: {
         provider: 'kakao',
         oauthId: String(kUser.id),
-        email: account.email,
-        username: profile.nickname || account.email.split('@')[0],
+        email,
+        username: profile.nickname || fallbackUsername,
         avatarUrl: profile.profile_image_url || null,
       },
       frontendUrl,
