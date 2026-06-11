@@ -202,13 +202,21 @@ function normalizeRoom(row) {
 
 function normalizeParticipant(row, user = null) {
   if (!row) return null;
+  const baseAttack = Number(row.attack_power ?? 10);
+  const baseSpeed = Number(row.speed ?? 10);
+  const effectAttackBonus = Number(row.effect_attack_bonus ?? 0);
+  const effectSpeedBonus = Number(row.effect_speed_bonus ?? 0);
   return {
     roomId: row.room_id,
     userId: Number(row.user_id),
     username: user?.username || row.username || `user-${row.user_id}`,
     characterHp: Number(row.character_hp ?? 100),
-    attackPower: Number(row.attack_power ?? 10),
-    speed: Number(row.speed ?? 10),
+    attackPower: baseAttack,
+    speed: baseSpeed,
+    effectAttackBonus,
+    effectSpeedBonus,
+    effectiveAttack: Math.max(0, baseAttack + effectAttackBonus),
+    effectiveSpeed: Math.max(0, baseSpeed + effectSpeedBonus),
     score: Number(row.score ?? 0),
     isReady: Boolean(row.is_ready),
     joinedAt: toIsoLike(row.joined_at),
@@ -1285,7 +1293,9 @@ export const AlgorithmBattle = {
 
     const participants = await this.getParticipants(roomId);
     const targets = participants.filter((p) => p.userId !== Number(userId));
-    const damage = isCorrect ? Math.max(5, Math.min(45, scoring.attackPower)) : 0;
+    const attacker = participants.find((p) => p.userId === Number(userId));
+    const attackBonus = Number(attacker?.effectAttackBonus ?? 0);
+    const damage = isCorrect ? Math.max(5, Math.min(60, scoring.attackPower + attackBonus)) : 0;
     for (const target of targets) {
       await run(
         'UPDATE battle_participants SET character_hp = ? WHERE room_id = ? AND user_id = ?',
@@ -1409,30 +1419,49 @@ export const AlgorithmBattle = {
     const opponents = state.participants.filter((p) => p.userId !== Number(userId));
     if (!self) return null;
 
-    const payload = { effect: effect.key, effectLabel: effect.label, target: effect.target, targetUserIds: [], description: effect.description };
+    const payload = {
+      effect: effect.key,
+      effectLabel: effect.label,
+      target: effect.target,
+      targetUserIds: [],
+      description: effect.description,
+    };
+    const EFFECT_BOUND = 60;
 
     if (effect.key === 'snare') {
       for (const target of opponents) {
-        await run('UPDATE battle_participants SET speed = ? WHERE room_id = ? AND user_id = ?',
-          [Math.max(4, Number(target.speed || 10) - 4), roomId, target.userId]);
+        const nextSpeedBonus = Math.max(-EFFECT_BOUND, Number(target.effectSpeedBonus ?? 0) - 5);
+        await run(
+          'UPDATE battle_participants SET effect_speed_bonus = ? WHERE room_id = ? AND user_id = ?',
+          [nextSpeedBonus, roomId, target.userId],
+        );
       }
       payload.targetUserIds = opponents.map((t) => t.userId);
-      payload.stat = { speedDelta: -4 };
+      payload.stat = { speedDelta: -5 };
     } else if (effect.key === 'shield') {
-      await run('UPDATE battle_participants SET character_hp = ? WHERE room_id = ? AND user_id = ?',
-        [Math.min(120, Number(self.characterHp || 100) + 12), roomId, userId]);
+      await run(
+        'UPDATE battle_participants SET character_hp = ? WHERE room_id = ? AND user_id = ?',
+        [Math.min(120, Number(self.characterHp || 100) + 14), roomId, userId],
+      );
       payload.targetUserIds = [Number(userId)];
-      payload.stat = { hpDelta: 12 };
+      payload.stat = { hpDelta: 14 };
     } else if (effect.key === 'haste') {
-      await run('UPDATE battle_participants SET speed = ?, attack_power = ? WHERE room_id = ? AND user_id = ?',
-        [Math.min(80, Number(self.speed || 10) + 5), Math.min(80, Number(self.attackPower || 10) + 2), roomId, userId]);
+      const nextSpeed = Math.min(EFFECT_BOUND, Number(self.effectSpeedBonus ?? 0) + 6);
+      const nextAttack = Math.min(EFFECT_BOUND, Number(self.effectAttackBonus ?? 0) + 3);
+      await run(
+        'UPDATE battle_participants SET effect_speed_bonus = ?, effect_attack_bonus = ? WHERE room_id = ? AND user_id = ?',
+        [nextSpeed, nextAttack, roomId, userId],
+      );
       payload.targetUserIds = [Number(userId)];
-      payload.stat = { speedDelta: 5, attackDelta: 2 };
+      payload.stat = { speedDelta: 6, attackDelta: 3 };
     } else {
-      await run('UPDATE battle_participants SET attack_power = ? WHERE room_id = ? AND user_id = ?',
-        [Math.min(80, Number(self.attackPower || 10) + 6), roomId, userId]);
+      const nextAttack = Math.min(EFFECT_BOUND, Number(self.effectAttackBonus ?? 0) + 7);
+      await run(
+        'UPDATE battle_participants SET effect_attack_bonus = ? WHERE room_id = ? AND user_id = ?',
+        [nextAttack, roomId, userId],
+      );
       payload.targetUserIds = [Number(userId)];
-      payload.stat = { attackDelta: 6 };
+      payload.stat = { attackDelta: 7 };
     }
 
     return this.recordEvent(roomId, userId, 'problem.effect', payload);

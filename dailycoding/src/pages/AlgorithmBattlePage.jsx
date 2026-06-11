@@ -310,11 +310,29 @@ function PlayerCard({ player, me, attacking, activity, showHp = true, isCodeGolf
       <div className="ab-stats">
         {isCodeGolf
           ? <span>{bestCodeLen ? txt(`최적 ${bestCodeLen}자`, `Best ${bestCodeLen} chars`) : txt('아직 없음', 'None yet')}</span>
-          : <>
-              {showHp && <span>HP {player.characterHp}</span>}
-              {showHp && <span>ATK {player.attackPower}</span>}
-              <span>SPD {player.speed}</span>
-            </>
+          : (() => {
+              const atkBonus = Number(player.effectAttackBonus || 0);
+              const spdBonus = Number(player.effectSpeedBonus || 0);
+              const effAtk = Number(player.effectiveAttack ?? (player.attackPower + atkBonus));
+              const effSpd = Number(player.effectiveSpeed ?? (player.speed + spdBonus));
+              const bonusBadge = (delta) => delta === 0 ? null : (
+                <span style={{
+                  marginLeft: 4,
+                  fontSize: 11,
+                  color: delta > 0 ? 'var(--green)' : 'var(--red)',
+                  fontWeight: 700,
+                }}>
+                  {delta > 0 ? `+${delta}` : delta}
+                </span>
+              );
+              return (
+                <>
+                  {showHp && <span>HP {player.characterHp}</span>}
+                  {showHp && <span>ATK {effAtk}{bonusBadge(atkBonus)}</span>}
+                  <span>SPD {effSpd}{bonusBadge(spdBonus)}</span>
+                </>
+              );
+            })()
         }
       </div>
       {activity && (
@@ -797,6 +815,24 @@ export default function AlgorithmBattlePage() {
           for (const targetId of resolveTargets('opponent')) {
             next.effects[`freeze:${targetId}`] = Date.now() + Number(action.duration || 0) * 1000;
           }
+        } else if (action.type === 'HP_PERCENT') {
+          const pct = Math.max(-100, Math.min(100, Number(action.value || 0)));
+          for (const targetId of resolveTargets(action.target || 'self')) {
+            const key = String(targetId);
+            const delta = Math.round((Number(workshopBaseHp || 100) * pct) / 100);
+            next.hpByUserId[key] = Math.max(0, Math.min(999, currentHp(targetId) + delta));
+          }
+        } else if (action.type === 'STEAL_HP') {
+          const v = Math.max(1, Math.min(50, Number(action.value || 10)));
+          const selfId = Number(perspectiveUserId);
+          for (const oppId of resolveTargets('opponent')) {
+            const oppKey = String(oppId);
+            const stolen = Math.min(v, currentHp(oppId));
+            next.hpByUserId[oppKey] = Math.max(0, currentHp(oppId) - stolen);
+            next.hpByUserId[String(selfId)] = Math.max(0, Math.min(999, currentHp(selfId) + stolen));
+          }
+        } else if (action.type === 'SHIELD_NEXT') {
+          next.effects[`shield:${perspectiveUserId}`] = Date.now() + Number(action.duration || 8) * 1000;
         }
         next.messages.push({
           id: `${Date.now()}_${rule.id}_${next.messages.length}`,
@@ -939,7 +975,24 @@ export default function AlgorithmBattlePage() {
         : txt('배틀이 종료되었습니다.', 'Battle ended.');
       toast?.show(msg, 'info');
     });
-    socket.on('battle:effect', (event) => { toast?.show(getBattleEffectLabel(event?.payload, txt), 'info'); });
+    socket.on('battle:effect', (event) => {
+      const payload = event?.payload || {};
+      const label = getBattleEffectLabel(payload, txt);
+      const stat = payload.stat || {};
+      const targetsMe = (payload.targetUserIds || []).map(Number).includes(Number(user?.id));
+      const fmt = (val, suffix) => val == null || val === 0 ? '' : ` ${val > 0 ? '+' : ''}${val}${suffix}`;
+      const deltaText = [
+        fmt(stat.hpDelta, ' HP'),
+        fmt(stat.attackDelta, ' ATK'),
+        fmt(stat.speedDelta, ' SPD'),
+      ].filter(Boolean).join(',');
+      const sign = targetsMe && (stat.attackDelta < 0 || stat.speedDelta < 0)
+        ? txt('내게 디버프', 'Debuff on me')
+        : targetsMe
+        ? txt('내게 버프', 'Buff on me')
+        : txt('상대에게 영향', 'Effect on opponent');
+      toast?.show(`✨ ${label}${deltaText ? ` (${deltaText.trim()})` : ''} — ${sign}`, targetsMe && (stat.attackDelta < 0 || stat.speedDelta < 0) ? 'error' : 'success');
+    });
     socket.on('battle:item:used', (event) => {
       const payload = event?.payload || {};
       const itemType = payload.itemType;

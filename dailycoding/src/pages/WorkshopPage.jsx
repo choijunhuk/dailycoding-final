@@ -36,6 +36,9 @@ function defaultAction(type) {
   if (type === 'GRANT_ITEM') return { type, item: 'shield' };
   if (type === 'DOUBLE_DAMAGE') return { type, duration: 10 };
   if (type === 'FREEZE_OPPONENT') return { type, duration: 5 };
+  if (type === 'HP_PERCENT') return { type, target: 'self', value: 20 };
+  if (type === 'STEAL_HP') return { type, value: 10 };
+  if (type === 'SHIELD_NEXT') return { type, duration: 8 };
   return { type, text: '' };
 }
 
@@ -67,6 +70,16 @@ function actionSentence(action, t, tgtLabels, itemLabels) {
   }
   if (action.type === 'FREEZE_OPPONENT') {
     return withVars(t('workshopFreezeFmt'), { duration: action.duration });
+  }
+  if (action.type === 'HP_PERCENT') {
+    const sign = Number(action.value) >= 0 ? '+' : '';
+    return `${tgtLabels[action.target] || action.target} HP ${sign}${action.value}%`;
+  }
+  if (action.type === 'STEAL_HP') {
+    return `상대 HP ${action.value} 흡수`;
+  }
+  if (action.type === 'SHIELD_NEXT') {
+    return `${action.duration}초간 다음 데미지 차단`;
   }
   return withVars(t('workshopShowMsgFmt'), { text: action.text || '' });
 }
@@ -117,6 +130,9 @@ export default function WorkshopPage() {
   const actionLabels = {
     MODIFY_HP: t('workshopAct_MODIFY_HP'),
     SET_HP: t('workshopAct_SET_HP'),
+    HP_PERCENT: 'HP 비율 조정 (%)',
+    STEAL_HP: '상대 HP 흡수',
+    SHIELD_NEXT: '다음 데미지 차단',
     ADD_TIME: t('workshopAct_ADD_TIME'),
     GRANT_ITEM: t('workshopAct_GRANT_ITEM'),
     DOUBLE_DAMAGE: t('workshopAct_DOUBLE_DAMAGE'),
@@ -425,10 +441,32 @@ export default function WorkshopPage() {
                     </label>
                   )}
 
-                  {['DOUBLE_DAMAGE', 'FREEZE_OPPONENT'].includes(rule.action?.type) && (
+                  {['DOUBLE_DAMAGE', 'FREEZE_OPPONENT', 'SHIELD_NEXT'].includes(rule.action?.type) && (
                     <label>
                       {t('workshopDurationLabel')}
                       <input type="number" min="1" max="600" value={rule.action.duration ?? 1} onChange={(e) => updateRuleAction(rule.id, { duration: Number(e.target.value) })} />
+                    </label>
+                  )}
+
+                  {rule.action?.type === 'HP_PERCENT' && (
+                    <>
+                      <label>
+                        {t('workshopTargetLabel')}
+                        <select value={rule.action.target || 'self'} onChange={(e) => updateRuleAction(rule.id, { target: e.target.value })}>
+                          {Object.entries(targetLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                        </select>
+                      </label>
+                      <label>
+                        % (±100)
+                        <input type="number" min="-100" max="100" value={rule.action.value ?? 0} onChange={(e) => updateRuleAction(rule.id, { value: Number(e.target.value) })} />
+                      </label>
+                    </>
+                  )}
+
+                  {rule.action?.type === 'STEAL_HP' && (
+                    <label>
+                      흡수 HP (1~50)
+                      <input type="number" min="1" max="50" value={rule.action.value ?? 10} onChange={(e) => updateRuleAction(rule.id, { value: Number(e.target.value) })} />
                     </label>
                   )}
 
