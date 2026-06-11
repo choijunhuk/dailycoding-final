@@ -43,8 +43,9 @@ router.get('/:id/replay', async (req, res) => {
 // POST /api/battles/:id/share — participant creates a public replay slug for an ended room
 router.post('/:id/share', auth, async (req, res) => {
   try {
-    const roomId = parseInt(req.params.id, 10);
-    if (!Number.isFinite(roomId)) {
+    // battle_rooms.id is VARCHAR(40), not numeric — keep as string.
+    const roomId = String(req.params.id || '').trim();
+    if (!roomId || roomId.length > 40) {
       return errorResponse(res, 400, 'VALIDATION_ERROR', 'Invalid room id.');
     }
     const { slug, reused } = await AlgorithmBattle.shareReplay(roomId, req.user.id);

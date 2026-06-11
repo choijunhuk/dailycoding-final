@@ -2,10 +2,11 @@
 -- Each completed AlgorithmBattle room can be exposed via a public slug. The
 -- replay itself is still served from battle_events; this table just maps slug
 -- to room_id so the share URL stays opaque.
+-- NOTE: battle_rooms.id is VARCHAR(40), not INT.
 
 CREATE TABLE IF NOT EXISTS battle_replay_shares (
   id         INT AUTO_INCREMENT PRIMARY KEY,
-  room_id    INT          NOT NULL,
+  room_id    VARCHAR(40)  NOT NULL,
   slug       VARCHAR(40)  NOT NULL,
   created_by INT          NULL,
   created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
