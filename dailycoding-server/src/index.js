@@ -1,9 +1,12 @@
 import 'dotenv/config';
+import { initSentry, captureException } from './config/sentry.js';
 import { createServer } from 'http';
 import { createHash } from 'crypto';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import logger from './config/logger.js';
+
+await initSentry();
 import { waitForDB, isConnected as mysqlConnected, getPool, run as dbRun } from './config/mysql.js';
 import { resolveBootstrapConfig } from './config/bootstrap.js';
 import { DEFAULT_PROFILE_BACKGROUND_SLUG, LEGACY_PROFILE_BACKGROUND_SLUGS, PROFILE_BACKGROUND_SEEDS } from './config/profileBackgroundSeeds.js';
@@ -27,10 +30,12 @@ global.io = io;
 
 process.on('unhandledRejection', (reason) => {
   logger.error('UnhandledRejection:', { reason: String(reason) });
+  captureException(reason instanceof Error ? reason : new Error(String(reason)), { kind: 'unhandledRejection' });
 });
 
 process.on('uncaughtException', (err) => {
   logger.error('UncaughtException:', { message: err.message, stack: err.stack });
+  captureException(err, { kind: 'uncaughtException' });
   process.exit(1);
 });
 
@@ -58,10 +63,10 @@ httpServer.listen(PORT, async () => {
 async function initDatabase() {
   if (!mysqlConnected()) return;
   try {
-    const { readFileSync } = await import('fs');
+    const { readFileSync, readdirSync } = await import('fs');
     const __dir = dirname(fileURLToPath(import.meta.url));
     const dbPool = getPool();
-    const runSql = async (filePath) => {
+    const runSqlFile = async (filePath, { silent = false } = {}) => {
       const sql = readFileSync(filePath, 'utf8');
       const stmts = sql
         .split('\n')
@@ -74,62 +79,41 @@ async function initDatabase() {
         try {
           await dbPool.query(stmt);
         } catch (error) {
-          logger.warn(`SQL 실패 [${error.code || '?'}]: ${error.message.slice(0, 120)} | stmt: ${stmt.slice(0, 60)}`);
+          if (!silent) {
+            logger.warn(`SQL 실패 [${error.code || '?'}]: ${error.message.slice(0, 120)} | stmt: ${stmt.slice(0, 60)}`);
+          }
         }
       }
     };
 
-    await runSql(join(__dir, '..', 'init.sql'));
-    await runSql(join(__dir, 'migrations', '001_commercial.sql'));
-    await runSql(join(__dir, 'migrations', '002_tier_redesign.sql'));
-    await runSql(join(__dir, 'migrations', '003_submission_preferences.sql'));
-    await runSql(join(__dir, 'migrations', '004_premium_problems.sql'));
-    await runSql(join(__dir, 'migrations', '005_contest_improvements.sql'));
-    await runSql(join(__dir, 'migrations', '006_contest_rewards.sql'));
-    await runSql(join(__dir, 'migrations', '007_problem_types.sql'));
-    await runSql(join(__dir, 'migrations', '008_community.sql'));
-    await runSql(join(__dir, 'migrations', '009_dump_anonymous.sql'));
-    await runSql(join(__dir, 'migrations', '010_community_v2.sql'));
-    await runSql(join(__dir, 'migrations', '011_profile_settings_v2.sql'));
-    await runSql(join(__dir, 'migrations', '012_battle_history.sql'));
-    await runSql(join(__dir, 'migrations', '013_platform_improvements.sql'));
-    await runSql(join(__dir, 'migrations', '014_sharing_and_solve_time.sql'));
-    await runSql(join(__dir, 'migrations', '015_v3_engagement.sql'));
-    await runSql(join(__dir, 'migrations', '016_v4_audit_gaps.sql'));
-    await runSql(join(__dir, 'migrations', '017_v5_v6_growth_ux.sql'));
-    await runSql(join(__dir, 'migrations', '018_remaining_growth_platform.sql'));
-    await runSql(join(__dir, 'migrations', '019_prompt_security_perf.sql'));
-    await runSql(join(__dir, 'migrations', '020_xp_progression.sql'));
-    await runSql(join(__dir, 'migrations', '021_troubleshooting_problems.sql'));
-    await runSql(join(__dir, 'migrations', '022_algorithm_battles.sql'));
-    await runSql(join(__dir, 'migrations', '023_collaboration_reviews.sql'));
-    await runSql(join(__dir, 'migrations', '024_battle_improvements.sql'));
-    await runSql(join(__dir, 'migrations', '025_community_problems.sql'));
-    await runSql(join(__dir, 'migrations', '026_problem_sets.sql'));
-    await runSql(join(__dir, 'migrations', '027_ai_hint_cache.sql'));
-    await runSql(join(__dir, 'migrations', '029_review_cancel_status.sql'));
-    await runSql(join(__dir, 'migrations', '028_contest_creation_requests.sql'));
-    await runSql(join(__dir, 'migrations', '030_battle_submissions_problem_id.sql'));
-    await runSql(join(__dir, 'migrations', '031_user_avatar_source.sql'));
-    await runSql(join(__dir, 'migrations', '032_deduplicate_seed_problem_titles.sql'));
-    await runSql(join(__dir, 'migrations', '033_virtual_contests.sql'));
-    await runSql(join(__dir, 'migrations', '034_battle_replay_timeline.sql'));
-    await runSql(join(__dir, 'migrations', '035_tournaments.sql'));
-    await runSql(join(__dir, 'migrations', '036_platform_security_features.sql'));
-    await runSql(join(__dir, 'migrations', '037_user_onboarding_completed.sql'));
-    await runSql(join(__dir, 'migrations', '038_achievement_badges.sql'));
-    await runSql(join(__dir, 'migrations', '039_tournament_expiry_delete.sql'));
-    await runSql(join(__dir, 'migrations', '040_tournament_settings.sql'));
-    await runSql(join(__dir, 'migrations', '041_backfill_unranked_tiers.sql'));
-    await runSql(join(__dir, 'migrations', '042_battle_modes.sql'));
-    await runSql(join(__dir, 'migrations', '043_reward_items_name_ko.sql'));
-    await runSql(join(__dir, 'migrations', '044_reward_items_description_ko.sql'));
-    await runSql(join(__dir, 'migrations', '045_cleanup_orphan_reward_items.sql'));
-    await runSql(join(__dir, 'migrations', '046_badge_showcase.sql'));
-    await runSql(join(__dir, 'migrations', '047_battle_title_invite.sql'));
-    await runSql(join(__dir, 'migrations', '048_tournament_battle_mode.sql'));
-    await runSql(join(__dir, 'migrations', '049_learning_paths_i18n.sql'));
-    logger.info('✅ DB 스키마 초기화 완료');
+    await runSqlFile(join(__dir, '..', 'init.sql'));
+
+    await dbPool.query(`
+      CREATE TABLE IF NOT EXISTS schema_migrations (
+        name VARCHAR(255) PRIMARY KEY,
+        applied_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    const migrationsDir = join(__dir, 'migrations');
+    const files = readdirSync(migrationsDir)
+      .filter((f) => f.endsWith('.sql'))
+      .sort();
+    const [appliedRows] = await dbPool.query('SELECT name FROM schema_migrations');
+    const applied = new Set(appliedRows.map((r) => r.name));
+
+    let ran = 0;
+    let skipped = 0;
+    for (const file of files) {
+      if (applied.has(file)) {
+        skipped += 1;
+        continue;
+      }
+      await runSqlFile(join(migrationsDir, file), { silent: true });
+      await dbPool.query('INSERT IGNORE INTO schema_migrations (name) VALUES (?)', [file]);
+      ran += 1;
+    }
+    logger.info(`✅ DB migration 완료 (실행:${ran} 스킵:${skipped} 총:${files.length})`);
   } catch (err) {
     logger.warn('⚠️  DB 초기화 스킵:', { message: err.message });
   }

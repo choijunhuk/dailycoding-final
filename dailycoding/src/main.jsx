@@ -3,6 +3,9 @@ import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import App from './App.jsx'
 import { applyAppTypographyPreference } from './utils/fontPreferences.js'
+import { initSentry } from './utils/sentry.js'
+
+initSentry();
 
 const referralCode = new URLSearchParams(window.location.search).get('ref');
 if (referralCode) {
