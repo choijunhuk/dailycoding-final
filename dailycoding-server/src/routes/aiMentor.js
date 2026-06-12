@@ -25,24 +25,44 @@ router.post('/check', auth, requireVerified, async (req, res) => {
     const mentorKey = `quota:ai:mentor:${user.id}:${today}`;
     const cooldownKey = `cooldown:ai:mentor:${user.id}`;
 
-    // Cooldown — applies to everyone, including Pro, to avoid runaway costs.
-    const onCooldown = await redis.get(cooldownKey);
-    if (onCooldown) {
-      const ttl = await redis.ttl(cooldownKey);
-      return errorResponse(res, 429, 'COOLDOWN', `Please wait ${ttl}s before asking the mentor again.`);
-    }
-
-    if (!isPro) {
-      const used = parseInt(await redis.get(mentorKey) || '0', 10);
-      if (used >= FREE_MENTOR_DAILY) {
-        return errorResponse(res, 429, 'QUOTA_EXCEEDED', `Free 등급은 하루 ${FREE_MENTOR_DAILY}회만 멘토에게 물을 수 있습니다.`);
-      }
-    }
-
+    // Validate input BEFORE consuming any quota / cooldown slot so bad requests
+    // can't burn a user's daily allowance.
     const { problemId, code = '', language = 'python', uiLang = 'ko' } = req.body || {};
     if (!problemId) return errorResponse(res, 400, 'VALIDATION_ERROR', 'problemId is required.');
     const problem = await Problem.findById(Number(problemId));
     if (!problem) return errorResponse(res, 404, 'NOT_FOUND', 'Problem not found.');
+
+    // Premium gating: Free users can't have the mentor reveal premium problem
+    // text/hints. Admins always pass; in the future, class assignments could
+    // also grant access.
+    if ((problem.isPremium || problem.is_premium) && !isPro) {
+      return errorResponse(res, 403, 'PREMIUM_REQUIRED', 'This problem requires a paid plan.');
+    }
+    // Community-private problems must not be exposed via the global mentor
+    // endpoint either.
+    if (problem.visibility && problem.visibility !== 'global' && user.role !== 'admin') {
+      return errorResponse(res, 403, 'FORBIDDEN', 'Mentor is not available for this problem.');
+    }
+
+    // Reserve cooldown atomically — setNX returns false if another in-flight
+    // request already holds the slot, eliminating the read-then-check race.
+    const cooldownAcquired = await redis.setNX(cooldownKey, '1', COOLDOWN_SECONDS);
+    if (!cooldownAcquired) {
+      const ttl = await redis.ttl(cooldownKey);
+      return errorResponse(res, 429, 'COOLDOWN', `Please wait ${ttl}s before asking the mentor again.`);
+    }
+
+    // Reserve quota atomically: INCR first, refund on over-limit. This closes
+    // the TOCTOU window where two concurrent calls would both read "used=2"
+    // and both proceed even though only 1 slot remained.
+    if (!isPro) {
+      const used = await redis.incr(mentorKey, 86400);
+      if (used > FREE_MENTOR_DAILY) {
+        await redis.decr(mentorKey);
+        await redis.del(cooldownKey);
+        return errorResponse(res, 429, 'QUOTA_EXCEEDED', `Free 등급은 하루 ${FREE_MENTOR_DAILY}회만 멘토에게 물을 수 있습니다.`);
+      }
+    }
 
     const userCode = String(code || '').slice(0, 8000); // hard cap input
     const promptLang = uiLang === 'en' ? 'English' : 'Korean';
@@ -87,12 +107,7 @@ Give me a gentle hint, not the answer.`;
     const model = aiResult?.source || null;
     const elapsedMs = Date.now() - startedAt;
 
-    // Set cooldown + quota.
-    await redis.set(cooldownKey, '1', COOLDOWN_SECONDS);
-    if (!isPro) {
-      await redis.incr(mentorKey, 86400);
-    }
-
+    // Quota + cooldown were reserved atomically before the AI call.
     return res.json({
       hint: text || '',
       model,

@@ -42,21 +42,37 @@ router.post('/practice-bot/start', auth, requireVerified, async (req, res) => {
   try {
     const me = await User.findById(req.user.id);
     if (!me) return errorResponse(res, 401, 'AUTH', 'User not found.');
+    const isPro = (me.subscription_tier || 'free') !== 'free' || me.role === 'admin';
 
     const requestedTier = req.body?.tier;
-    const tier = requestedTier && TIER_ORDER.includes(requestedTier)
-      ? requestedTier
-      : (me.tier || 'bronze');
+    const userTierIdx = Math.max(0, TIER_ORDER.indexOf(me.tier || 'bronze'));
+    // Cap tier choice at +1 above the user's own tier — prevents Free users
+    // from grinding diamond/master problem text via this endpoint.
+    const maxTierIdx = Math.min(TIER_ORDER.length - 1, userTierIdx + 1);
+    let chosenTierIdx = userTierIdx;
+    if (requestedTier && TIER_ORDER.includes(requestedTier)) {
+      const idx = TIER_ORDER.indexOf(requestedTier);
+      chosenTierIdx = Math.min(maxTierIdx, idx);
+    }
+    const tier = TIER_ORDER[chosenTierIdx];
 
-    const candidates = await Problem.findAllByTier?.(tier) || await Problem.findAll?.({ tier });
+    const raw = await Problem.findAllByTier?.(tier) || await Problem.findAll?.({ tier });
+    let candidates = Array.isArray(raw) ? raw : (raw?.problems || []);
+    // Premium gating: Free users never see is_premium problems via this endpoint.
+    if (!isPro) {
+      candidates = candidates.filter((p) => !p.isPremium && !p.is_premium);
+    }
+    // Global-visibility only — never serve community-private problems.
+    candidates = candidates.filter((p) => (p.visibility || 'global') === 'global');
+
     let chosen = null;
-    if (Array.isArray(candidates) && candidates.length > 0) {
+    if (candidates.length > 0) {
       chosen = candidates[Math.floor(Math.random() * candidates.length)];
     } else {
-      // Fallback: query directly via Problem.findById range — practice can still
-      // run if catalog API shape changes.
       const fallback = await Problem.search?.({ tier, limit: 20 });
-      const list = fallback?.problems || fallback || [];
+      const list = (fallback?.problems || fallback || [])
+        .filter((p) => isPro || (!p.isPremium && !p.is_premium))
+        .filter((p) => (p.visibility || 'global') === 'global');
       chosen = list[Math.floor(Math.random() * Math.max(1, list.length))];
     }
     if (!chosen) return errorResponse(res, 404, 'NO_PROBLEMS', 'No problems available for this tier.');

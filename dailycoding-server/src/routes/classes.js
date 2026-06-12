@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { auth, requireVerified } from '../middleware/auth.js';
 import { query, queryOne, insert, run } from '../config/mysql.js';
 import { errorResponse, internalError } from '../middleware/errorHandler.js';
+import redis from '../config/redis.js';
 import logger from '../config/logger.js';
 
 const router = Router();
@@ -37,7 +38,10 @@ router.post('/', auth, requireVerified, async (req, res) => {
     const name = String(req.body?.name || '').trim().slice(0, 120);
     if (!name) return errorResponse(res, 400, 'VALIDATION_ERROR', 'name is required.');
     const description = String(req.body?.description || '').slice(0, 1000);
-    const inviteCode = crypto.randomBytes(4).toString('hex');
+    // 16 bytes = 128 bits of entropy in a URL-safe base64 string.
+    // The old 4-byte (8 hex) code was brute-forceable inside the per-IP join
+    // rate limit window.
+    const inviteCode = crypto.randomBytes(16).toString('base64url');
     const classId = await insert(
       'INSERT INTO classes (owner_id, name, description, invite_code) VALUES (?, ?, ?, ?)',
       [req.user.id, name, description, inviteCode],
@@ -57,7 +61,7 @@ router.post('/', auth, requireVerified, async (req, res) => {
 router.get('/', auth, async (req, res) => {
   try {
     const rows = await query(
-      `SELECT c.id, c.name, c.description, c.invite_code, c.created_at,
+      `SELECT c.id, c.owner_id, c.name, c.description, c.invite_code, c.created_at,
               cm.role AS my_role,
               (SELECT COUNT(*) FROM class_members WHERE class_id = c.id AND role = 'student') AS student_count
        FROM classes c
@@ -66,7 +70,12 @@ router.get('/', auth, async (req, res) => {
        ORDER BY c.created_at DESC`,
       [req.user.id],
     );
-    return res.json({ classes: rows || [] });
+    // Match GET /:id behavior: only the class owner sees the invite code.
+    const masked = (rows || []).map((row) => ({
+      ...row,
+      invite_code: Number(row.owner_id) === Number(req.user.id) ? row.invite_code : null,
+    }));
+    return res.json({ classes: masked });
   } catch (err) {
     logger.error('[classes/list]', { message: err.message });
     return internalError(res);
@@ -117,8 +126,22 @@ router.post('/join', auth, requireVerified, async (req, res) => {
   try {
     const code = String(req.body?.inviteCode || '').trim();
     if (!code) return errorResponse(res, 400, 'VALIDATION_ERROR', 'inviteCode is required.');
+
+    // Wrong-code backoff: 10 misses/hour per IP triggers 429. Defense in depth
+    // on top of the 128-bit invite code so a leaked/short code can't be brute
+    // forced if it's later re-introduced.
+    const failKey = `classes:join:fail:${req.ip || 'unknown'}`;
+    const fails = parseInt((await redis.get(failKey)) || '0', 10);
+    if (fails >= 10) {
+      return errorResponse(res, 429, 'RATE_LIMITED', 'Too many wrong invite codes. Try again later.');
+    }
+
     const cls = await queryOne('SELECT * FROM classes WHERE invite_code = ? AND archived_at IS NULL', [code]);
-    if (!cls) return errorResponse(res, 404, 'NOT_FOUND', 'Invite code not found.');
+    if (!cls) {
+      // Increment fail counter with 1h TTL.
+      await redis.incr(failKey, 3600);
+      return errorResponse(res, 404, 'NOT_FOUND', 'Invite code not found.');
+    }
     const existing = await queryOne(
       'SELECT id FROM class_members WHERE class_id = ? AND user_id = ?',
       [cls.id, req.user.id],
