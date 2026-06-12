@@ -110,6 +110,7 @@ export default function Dashboard() {
   const [smartRecommendations, setSmartRecommendations] = useState([]);
   const [reviewQueueLoadFailed, setReviewQueueLoadFailed] = useState(false);
   const [streakFreeze, setStreakFreeze] = useState(null);
+  const [onboardingPlan, setOnboardingPlan] = useState(null);
   const [tagStatsLoadFailed, setTagStatsLoadFailed] = useState(false);
   const [gameSummaryLoadFailed, setGameSummaryLoadFailed] = useState(false);
   const [battleSummaryLoadFailed, setBattleSummaryLoadFailed] = useState(false);
@@ -297,6 +298,14 @@ export default function Dashboard() {
     api.get('/auth/me/streak-freeze')
       .then(({ data }) => { if (!cancelled) setStreakFreeze(data); })
       .catch(() => { if (!cancelled) setStreakFreeze(null); });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    api.get('/onboarding-plan/today')
+      .then(({ data }) => { if (!cancelled && data?.active) setOnboardingPlan(data); })
+      .catch(() => { if (!cancelled) setOnboardingPlan(null); });
     return () => { cancelled = true; };
   }, []);
 
@@ -508,6 +517,65 @@ export default function Dashboard() {
           ))}
         </div>
       </div>
+
+      {onboardingPlan?.active && (
+        <div style={{
+          marginBottom: 20,
+          padding: '16px 20px',
+          background: 'linear-gradient(90deg, rgba(108,99,255,.12), rgba(34,211,238,.08))',
+          border: '1px solid rgba(108,99,255,.35)',
+          borderRadius: 14,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 16,
+          flexWrap: 'wrap',
+        }}>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={{ fontSize: 12, color: 'var(--text3)', letterSpacing: '.05em' }}>
+              온보딩 플랜
+            </div>
+            <div style={{ fontWeight: 800, fontSize: 17, marginTop: 4 }}>
+              Day {onboardingPlan.dayNumber} / {onboardingPlan.totalDays} · 오늘의 3문제
+            </div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+              {onboardingPlan.problems.slice(0, 3).map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => navigate(`/problems/${p.id}`)}
+                  style={{
+                    padding: '6px 12px',
+                    background: p.solvedToday ? 'rgba(86,211,100,.18)' : 'var(--bg2)',
+                    color: p.solvedToday ? 'var(--green)' : 'var(--text)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 8,
+                    fontSize: 13,
+                    cursor: 'pointer',
+                    textDecoration: p.solvedToday ? 'line-through' : 'none',
+                  }}
+                >
+                  {p.solvedToday ? '✓ ' : ''}{p.title}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div style={{
+            width: 64, height: 64, borderRadius: 32,
+            background: 'conic-gradient(var(--accent, #6c63ff) ' +
+              `${Math.round((onboardingPlan.dayNumber / onboardingPlan.totalDays) * 360)}deg, var(--bg3) 0)`,
+            display: 'grid', placeItems: 'center',
+            flexShrink: 0,
+          }}>
+            <div style={{
+              width: 50, height: 50, borderRadius: 25,
+              background: 'var(--bg)', display: 'grid', placeItems: 'center',
+              fontSize: 14, fontWeight: 800,
+            }}>
+              {Math.round((onboardingPlan.dayNumber / onboardingPlan.totalDays) * 100)}%
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 통계 카드 */}
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:12,marginBottom:20}}>
