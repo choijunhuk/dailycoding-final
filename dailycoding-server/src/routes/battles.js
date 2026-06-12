@@ -15,6 +15,7 @@ import { evaluateBugFixAnswer, evaluateFillBlankAnswer } from '../services/battl
 import { Notification } from '../models/Notification.js';
 import redis from '../config/redis.js';
 import { query, run } from '../config/mysql.js';
+import logger from '../config/logger.js';
 
 const router = Router();
 
@@ -25,6 +26,38 @@ router.get('/public/active-count', async (req, res) => {
     res.json({ count });
   } catch {
     res.json({ count: 0 });
+  }
+});
+
+// GET /api/battles/public/pool — waiting/playing room counts + recent avg match time
+router.get('/public/pool', async (req, res) => {
+  try {
+    const [waitingRows] = await Promise.all([
+      query(
+        "SELECT COUNT(*) AS cnt FROM battle_rooms WHERE status = 'waiting' AND COALESCE(is_private, 0) = 0",
+      ),
+    ]);
+    const playingCount = await AlgorithmBattle.countActivePublicRooms();
+    const waitingCount = Number(waitingRows?.[0]?.cnt ?? 0);
+
+    // Average wait-to-start time over the last 50 started rooms in the last 24h.
+    const matchRows = await query(
+      `SELECT TIMESTAMPDIFF(SECOND, created_at, started_at) AS secs
+       FROM battle_rooms
+       WHERE started_at IS NOT NULL
+         AND created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
+         AND COALESCE(is_private, 0) = 0
+       ORDER BY started_at DESC
+       LIMIT 50`,
+    );
+    const samples = (matchRows || []).map((r) => Number(r.secs)).filter((s) => s > 0 && s < 600);
+    const avgMatchSec = samples.length
+      ? Math.round(samples.reduce((a, b) => a + b, 0) / samples.length)
+      : null;
+    res.json({ waiting: waitingCount, playing: playingCount, avgMatchSec });
+  } catch (err) {
+    logger.warn('[battles/public/pool]', { message: err.message });
+    res.json({ waiting: 0, playing: 0, avgMatchSec: null });
   }
 });
 

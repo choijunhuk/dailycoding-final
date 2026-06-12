@@ -39,6 +39,20 @@ export async function attachReferralCode(referralCode, referredUserId) {
   return row;
 }
 
+// Grant Pro days, extending an existing subscription if one is active.
+async function grantProDays(userId, days) {
+  const user = await User.findById(userId);
+  if (!user) return null;
+  const currentExpiry = user.subscription_expires_at ? new Date(user.subscription_expires_at) : new Date();
+  const base = currentExpiry > new Date() ? currentExpiry : new Date();
+  const nextExpiry = addDays(base, days);
+  await User.updateSubscription(userId, {
+    subscription_tier: 'pro',
+    subscription_expires_at: nextExpiry,
+  });
+  return nextExpiry;
+}
+
 export async function claimReferralReward(referredUserId) {
   const referral = await queryOne(
     'SELECT * FROM referrals WHERE referred_user_id = ? AND status = ? LIMIT 1',
@@ -49,17 +63,27 @@ export async function claimReferralReward(referredUserId) {
   const referrer = await User.findById(referral.referrer_id);
   if (!referrer) return null;
 
-  const currentExpiry = referrer.subscription_expires_at ? new Date(referrer.subscription_expires_at) : new Date();
-  const base = currentExpiry > new Date() ? currentExpiry : new Date();
-  const nextExpiry = addDays(base, 7);
-  await User.updateSubscription(referrer.id, {
-    subscription_tier: 'pro',
-    subscription_expires_at: nextExpiry,
-  });
+  // Two-sided reward: both the referrer and the new user get Pro 7 days.
+  // The referrer's days are stacked onto their existing expiry; the referred
+  // user (new signup, usually Free) effectively starts a 7-day Pro trial.
+  await grantProDays(referrer.id, 7);
+  await grantProDays(referredUserId, 7);
+
   await run(
     'UPDATE referrals SET status = ?, reward_granted_at = ? WHERE id = ?',
     ['rewarded', new Date().toISOString().slice(0, 19).replace('T', ' '), referral.id]
   );
-  await Notification.create(referrer.id, '친구가 첫 문제를 풀었습니다! Pro 7일이 추가되었습니다.', 'pricing', { type: 'reward' });
+  await Notification.create(
+    referrer.id,
+    '친구가 첫 문제를 풀었습니다! Pro 7일이 추가되었습니다.',
+    'pricing',
+    { type: 'reward' },
+  );
+  await Notification.create(
+    referredUserId,
+    '추천 가입 보상으로 Pro 7일이 지급되었습니다.',
+    'pricing',
+    { type: 'reward' },
+  );
   return referral;
 }

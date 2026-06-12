@@ -3,10 +3,19 @@
   "short_name": "DailyCoding",
   "description": "매일 성장하는 코딩 배틀 플랫폼",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#0f1117",
+  "orientation": "any",
+  "background_color": "#0d1117",
   "theme_color": "#6c63ff",
+  "lang": "ko",
+  "categories": ["education", "productivity", "developer"],
   "icons": [
     { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ],
+  "shortcuts": [
+    { "name": "오늘의 문제", "url": "/problems", "icons": [{ "src": "/icon.svg", "sizes": "any" }] },
+    { "name": "알고리즘 배틀", "url": "/battle", "icons": [{ "src": "/icon.svg", "sizes": "any" }] },
+    { "name": "랭킹", "url": "/ranking", "icons": [{ "src": "/icon.svg", "sizes": "any" }] }
   ]
 }

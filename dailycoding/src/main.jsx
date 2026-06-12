@@ -7,6 +7,12 @@ import { initSentry } from './utils/sentry.js'
 
 initSentry();
 
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => { /* SW optional */ });
+  });
+}
+
 const referralCode = new URLSearchParams(window.location.search).get('ref');
 if (referralCode) {
   localStorage.setItem('referralCode', referralCode);

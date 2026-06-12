@@ -1,6 +1,55 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '../api.js';
+
+function ShareButtons({ url, title }) {
+  const [copied, setCopied] = useState(false);
+
+  const onNativeShare = useCallback(async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({ title, url });
+      } catch { /* user cancelled */ }
+    } else {
+      try {
+        await navigator.clipboard.writeText(url);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } catch { /* no clipboard access */ }
+    }
+  }, [url, title]);
+
+  const onCopyLink = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch { /* no clipboard access */ }
+  }, [url]);
+
+  const onTwitter = useCallback(() => {
+    const text = encodeURIComponent(`${title} - DailyCoding 알고리즘 배틀 리플레이`);
+    window.open(`https://twitter.com/intent/tweet?text=${text}&url=${encodeURIComponent(url)}`, '_blank', 'noopener');
+  }, [url, title]);
+
+  const btnStyle = {
+    padding: '8px 14px',
+    background: 'var(--bg2)',
+    color: 'var(--text)',
+    border: '1px solid var(--border)',
+    borderRadius: 8,
+    fontSize: 13,
+    cursor: 'pointer',
+  };
+
+  return (
+    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+      <button onClick={onNativeShare} style={btnStyle}>📤 공유</button>
+      <button onClick={onCopyLink} style={btnStyle}>{copied ? '✓ 복사됨' : '🔗 링크 복사'}</button>
+      <button onClick={onTwitter} style={btnStyle}>𝕏 트위터</button>
+    </div>
+  );
+}
 
 const EVENT_LABELS = {
   'player.joined': '플레이어 입장',
@@ -76,14 +125,20 @@ export default function SharedBattleReplayPage() {
       <div style={{ maxWidth:960, margin:'0 auto' }}>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:24 }}>
           <Link to="/" style={{ color:'var(--text2)', fontSize:14, textDecoration:'none' }}>← DailyCoding</Link>
-          <span style={{
-            padding:'4px 10px',
-            background:'var(--bg2)',
-            border:'1px solid var(--border)',
-            borderRadius:999,
-            fontSize:12,
-            color:'var(--text2)',
-          }}>공개 리플레이</span>
+          <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+            <ShareButtons
+              url={typeof window !== 'undefined' ? window.location.href : ''}
+              title={room.title || `Battle #${room.id}`}
+            />
+            <span style={{
+              padding:'4px 10px',
+              background:'var(--bg2)',
+              border:'1px solid var(--border)',
+              borderRadius:999,
+              fontSize:12,
+              color:'var(--text2)',
+            }}>공개 리플레이</span>
+          </div>
         </div>
 
         <div style={{

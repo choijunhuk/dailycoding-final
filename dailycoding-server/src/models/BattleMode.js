@@ -190,10 +190,22 @@ async function hydrateMode(row, viewerId = null) {
   return normalizeMode(row, Boolean(like), author?.username || null);
 }
 
+function trendingScore(row, now = Date.now()) {
+  const plays = Number(row.play_count ?? 0);
+  const likes = Number(row.like_count ?? 0);
+  const created = row.created_at ? new Date(row.created_at).getTime() : now;
+  const ageHours = Math.max(1, (now - created) / 3_600_000);
+  return (plays + likes * 3) / Math.pow(ageHours + 12, 0.7);
+}
+
 export const BattleMode = {
   async findAll({ limit = 20, offset = 0, authorId = null, isPublic = true, sort = 'created_at', search = '', viewerId = null } = {}) {
     const sortColumn = ['play_count', 'like_count', 'created_at'].includes(sort) ? sort : 'created_at';
-    const rows = await query(`SELECT * FROM battle_modes ORDER BY ${sortColumn} DESC, id DESC`);
+    const rows = await query(
+      sort === 'trending'
+        ? `SELECT * FROM battle_modes ORDER BY id DESC` // ranking computed in JS
+        : `SELECT * FROM battle_modes ORDER BY ${sortColumn} DESC, id DESC`,
+    );
     const needle = cleanText(search, 80).toLowerCase();
     const filtered = (rows || []).filter((row) => {
       if (authorId != null && Number(row.author_id) !== Number(authorId)) return false;
@@ -201,6 +213,12 @@ export const BattleMode = {
       if (needle && !String(row.name || '').toLowerCase().includes(needle)) return false;
       return true;
     });
+    if (sort === 'trending') {
+      // Trending = recent plays × likes, decayed by age.
+      // score = (play_count*1 + like_count*3) / (ageHours + 12)^0.7
+      const now = Date.now();
+      filtered.sort((a, b) => trendingScore(b, now) - trendingScore(a, now));
+    }
     const start = Math.max(0, Number(offset) || 0);
     const cap = Math.min(50, Math.max(1, Number(limit) || 20));
     return Promise.all(filtered.slice(start, start + cap).map((row) => hydrateMode(row, viewerId)));
