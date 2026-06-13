@@ -66,7 +66,11 @@ function pieceFromType(t) {
 
 function rotate(piece) {
   if (piece.type === 'O') return piece
-  const cx = 1.5, cy = 1.5
+  // I-piece uses a 4x4 bounding box (center 1.5, 1.5);
+  // T/S/Z/J/L use a 3x3 bounding box (center 1, 1).
+  const isI = piece.type === 'I'
+  const cx = isI ? 1.5 : 1
+  const cy = isI ? 1.5 : 1
   const newCells = piece.cells.map(([x, y]) => {
     const dx = x - cx, dy = y - cy
     return [Math.round(cx - dy), Math.round(cy + dx)]

@@ -58,6 +58,37 @@ export default function CodeTypingGame({ onComplete }) {
     return i
   }
 
+  const handleKeyDown = (e) => {
+    if (e.key === 'Tab') {
+      // Default Tab moves focus out of the textarea, ending the round.
+      // Insert a literal tab so the user can type tab-indented snippets.
+      e.preventDefault()
+      if (finalizedRef.current) return
+      const el = e.target
+      const start = el.selectionStart
+      const end = el.selectionEnd
+      const next = typed.slice(0, start) + '\t' + typed.slice(end)
+      if (!started) {
+        setStarted(true)
+        startedAtRef.current = Date.now()
+      }
+      const matching = computeMatching(target, next)
+      if (next.length > matching && next.length > typed.length) {
+        setErrors((n) => n + 1)
+      }
+      setTyped(next)
+      // Restore caret after React updates value
+      requestAnimationFrame(() => {
+        try { el.selectionStart = el.selectionEnd = start + 1 } catch { /* noop */ }
+      })
+      if (matching >= target.length) {
+        setCumulativeCorrect((c) => c + matching)
+        setTarget(pickSnippet())
+        setTyped('')
+      }
+    }
+  }
+
   const handleInput = (e) => {
     if (finalizedRef.current) return
     const val = e.target.value
@@ -112,6 +143,7 @@ export default function CodeTypingGame({ onComplete }) {
         className="typing-input"
         value={typed}
         onChange={handleInput}
+        onKeyDown={handleKeyDown}
         placeholder={txt('여기에 입력하세요. 입력 시작과 동시에 타이머 시작.', 'Type here. Timer starts when you type.')}
         autoFocus
         spellCheck={false}
