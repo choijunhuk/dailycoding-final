@@ -52,6 +52,8 @@ const LearningPathPage = lazy(() => import('./pages/LearningPathPage'));
 const SubmitProblemPage = lazy(() => import('./pages/SubmitProblemPage'));
 const ProblemSetsPage = lazy(() => import('./pages/ProblemSetsPage'));
 const GameHubPage = lazy(() => import('./pages/GameHubPage'));
+const ArcadePage = lazy(() => import('./pages/ArcadePage'));
+const ArcadeGamePage = lazy(() => import('./pages/ArcadeGamePage'));
 const TournamentPage = lazy(() => import('./pages/TournamentPage'));
 const BadgesPage = lazy(() => import('./pages/BadgesPage'));
 const CompetePage = lazy(() => import('./pages/CompetePage'));
@@ -208,6 +210,8 @@ function AppInner() {
                 <Route path="/workshop/:id" element={<WorkshopPage />} />
                 <Route path="/workshop-gallery" element={<WorkshopGalleryPage />} />
                 <Route path="/game"        element={<GameHubPage />} />
+                <Route path="/arcade"      element={<ArcadePage />} />
+                <Route path="/arcade/:key" element={<ArcadeGamePage />} />
                 <Route path="/battle/:id/replay" element={<BattlePage />} />
                 <Route path="/battle/:roomId" element={<AlgorithmBattlePage />} />
                 <Route path="/battles/history" element={<BattlePage />} />

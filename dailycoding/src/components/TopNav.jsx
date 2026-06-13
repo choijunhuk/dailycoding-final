@@ -33,6 +33,7 @@ import {
   LogOut,
   Swords,
   Sparkles,
+  Gamepad2,
 } from 'lucide-react';
 import './TopNav.css';
 
@@ -63,7 +64,14 @@ const NAV_GROUPS = [
     ],
   },
   { key: 'compete', labelKey: 'compete', Icon: Swords, path: '/compete' },
-  { key: 'game',    labelKey: 'game', Icon: Sparkles, path: '/game' },
+  {
+    key: 'game', labelKey: 'game', Icon: Sparkles,
+    matchPaths: ['/game', '/arcade'],
+    items: [
+      { path: '/game',   labelKey: 'gameHub', Icon: Sparkles },
+      { path: '/arcade', labelKey: 'arcade',  Icon: Gamepad2 },
+    ],
+  },
   { key: 'ranking', labelKey: 'ranking', Icon: BarChart2,     path: '/ranking' },
   {
     key: 'community', labelKey: 'community', Icon: MessageSquare,

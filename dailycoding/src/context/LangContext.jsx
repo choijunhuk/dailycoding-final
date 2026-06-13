@@ -31,6 +31,8 @@ const STRINGS = {
     submitProblemNav: '문제 제출하기',
     compete: '대결',
     game: '게임',
+    gameHub: '게임 허브',
+    arcade: '아케이드',
     affiliation: '소속',
     // ── Theme / Language ────────────────────────
     darkMode: '다크 모드',
@@ -1350,6 +1352,8 @@ const STRINGS = {
     submitProblemNav: 'Submit Problem',
     compete: 'Compete',
     game: 'Game',
+    gameHub: 'Game Hub',
+    arcade: 'Arcade',
     affiliation: 'Affiliation',
     // ── Theme / Language ────────────────────────
     darkMode: 'Dark Mode',

@@ -1,0 +1,331 @@
+/* ─── Shared header for game pages ─── */
+.arcade-game-page { display: flex; flex-direction: column; gap: 18px; }
+.arcade-game-head {
+  display: flex; align-items: center; gap: 16px;
+  border-bottom: 1px solid var(--border); padding-bottom: 14px;
+}
+.arcade-game-head h1 { margin: 0; font-size: 22px; flex: 1; }
+.arcade-tab-group { display: flex; gap: 4px; }
+.arcade-tab {
+  padding: 6px 12px; border-radius: 7px; border: 1px solid var(--border);
+  background: var(--bg3); color: var(--text2); cursor: pointer;
+  font-size: 12px; font-weight: 700; font-family: inherit;
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.arcade-tab.active { background: var(--accent); color: #0d1117; border-color: var(--accent); }
+
+.arcade-stage { min-height: 480px; display: flex; flex-direction: column; gap: 16px; }
+.arcade-result { display: flex; flex-direction: column; gap: 20px; align-items: center; padding: 30px 0; }
+.arcade-result-score { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.arcade-result-score span { font-size: 12px; color: var(--text3); text-transform: uppercase; letter-spacing: .1em; }
+.arcade-result-score strong { font-size: 72px; font-family: 'Space Mono', monospace; color: var(--accent); }
+.arcade-result-stats { display: flex; gap: 32px; }
+.arcade-result-stats > div { display: flex; flex-direction: column; align-items: center; gap: 2px; position: relative; }
+.arcade-result-stats span { font-size: 11px; color: var(--text3); }
+.arcade-result-stats strong { font-size: 24px; font-family: 'Space Mono', monospace; }
+.badge-new {
+  position: absolute; top: -10px; right: -28px;
+  background: var(--red); color: #fff; font-size: 9px; font-weight: 800;
+  padding: 2px 5px; border-radius: 4px; letter-spacing: .1em; font-style: normal;
+}
+.arcade-result-actions { display: flex; gap: 8px; }
+.arcade-submitting { text-align: center; color: var(--text3); font-size: 12px; }
+
+/* ─── Quiz games ─── */
+.quiz-game, .bug-hunt-game, .typing-game { display: flex; flex-direction: column; gap: 16px; }
+.quiz-bar {
+  display: flex; align-items: center; gap: 16px;
+  padding: 10px 14px; background: var(--bg3); border-radius: 10px;
+}
+.quiz-progress { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.quiz-progress > span { font-size: 11px; color: var(--text3); }
+.quiz-progress-bar { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+.quiz-progress-bar span { display: block; height: 100%; background: var(--accent); transition: width .3s; }
+.quiz-timer, .quiz-streak {
+  font-family: 'Space Mono', monospace; font-weight: 700;
+  display: flex; align-items: center; gap: 4px;
+}
+.quiz-code {
+  background: var(--bg);
+  border: 1px solid var(--border); border-radius: 10px;
+  padding: 16px; margin: 0;
+  font-family: 'Space Mono', monospace; font-size: 13px; line-height: 1.55;
+  overflow-x: auto;
+}
+.quiz-prompt { font-size: 14px; font-weight: 700; }
+.quiz-options { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.quiz-option {
+  padding: 14px 16px; background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 10px; color: var(--text); cursor: pointer; font-family: 'Space Mono', monospace;
+  font-size: 14px; font-weight: 600; text-align: left; transition: all .15s;
+}
+.quiz-option:hover:not(:disabled) { background: var(--bg2); border-color: var(--accent); }
+.quiz-option.right { background: rgba(126, 231, 135, .15); border-color: var(--green); color: var(--green); }
+.quiz-option.wrong { background: rgba(255, 123, 114, .15); border-color: var(--red); color: var(--red); }
+.quiz-option.dim { opacity: .35; }
+
+/* ─── Bug Hunt ─── */
+.bug-hunt-title {
+  display: flex; align-items: center; gap: 10px;
+  padding-bottom: 4px;
+}
+.bug-hunt-title strong { font-size: 14px; }
+.bug-hunt-hint { color: var(--text3); font-size: 12px; margin-left: auto; }
+.lang-pill {
+  background: var(--bg3); padding: 2px 8px; border-radius: 4px;
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em;
+  color: var(--blue);
+}
+.bug-hunt-code {
+  background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
+  padding: 8px 0; margin: 0; font-family: 'Space Mono', monospace; font-size: 13px;
+}
+.bug-line {
+  display: flex; gap: 10px; padding: 4px 14px; cursor: pointer;
+  transition: background .12s;
+}
+.bug-line:hover { background: var(--bg3); }
+.bug-line-no { color: var(--text3); width: 28px; text-align: right; user-select: none; }
+.bug-line-text { white-space: pre; flex: 1; }
+.bug-line.right { background: rgba(126, 231, 135, .12); }
+.bug-line.right .bug-line-text { color: var(--green); font-weight: 700; }
+.bug-line.wrong { background: rgba(255, 123, 114, .12); }
+.bug-line.wrong .bug-line-text { color: var(--red); }
+.bug-hunt-explain {
+  padding: 10px 14px; border-radius: 8px; font-size: 13px; line-height: 1.5;
+}
+.bug-hunt-explain.good { background: rgba(126, 231, 135, .08); border-left: 3px solid var(--green); }
+.bug-hunt-explain.bad  { background: rgba(255, 123, 114, .08); border-left: 3px solid var(--red); }
+
+/* ─── Typing ─── */
+.typing-target {
+  background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
+  padding: 16px; margin: 0;
+  font-family: 'Space Mono', monospace; font-size: 15px; line-height: 1.6;
+  white-space: pre-wrap;
+}
+.tch { color: var(--text3); }
+.tch.ok { color: var(--text); }
+.tch.bad { color: var(--red); background: rgba(255, 123, 114, .15); border-radius: 3px; }
+.tch.cur { background: var(--accent); color: #0d1117; border-radius: 3px; }
+.typing-input {
+  width: 100%; min-height: 100px; padding: 12px;
+  background: var(--bg3); color: var(--text);
+  border: 1px solid var(--border); border-radius: 10px;
+  font-family: 'Space Mono', monospace; font-size: 14px; line-height: 1.6;
+  outline: none; box-sizing: border-box; resize: vertical;
+}
+.typing-input:focus { border-color: var(--accent); }
+.typing-hint { font-size: 12px; color: var(--text3); }
+
+/* ─── Tetris / Snake / 2048 / Minesweeper shared ─── */
+.tetris-game, .snake-game, .g2048-game {
+  display: flex; gap: 24px; justify-content: center; align-items: flex-start;
+  padding: 12px 0;
+}
+.tetris-board {
+  display: grid; gap: 1px;
+  background: var(--bg); padding: 4px; border-radius: 8px;
+  border: 2px solid var(--border);
+}
+.t-cell {
+  width: 22px; height: 22px; background: var(--bg2); border-radius: 2px;
+}
+.t-cell.on { box-shadow: inset 0 0 0 1px rgba(255,255,255,.15); }
+
+.tetris-side, .snake-side, .g2048-side {
+  display: flex; flex-direction: column; gap: 10px; min-width: 160px;
+}
+.tetris-stat {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 8px 12px; background: var(--bg3); border-radius: 8px;
+}
+.tetris-stat span { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .1em; }
+.tetris-stat strong { font-size: 18px; font-family: 'Space Mono', monospace; }
+.tetris-next {
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 8px 12px; background: var(--bg3); border-radius: 8px;
+}
+.tetris-next > span { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .1em; }
+.tetris-next-box {
+  padding: 12px; border-radius: 6px; text-align: center;
+  font-weight: 800; font-size: 18px; font-family: 'Space Mono', monospace;
+}
+.tetris-controls {
+  font-size: 11px; color: var(--text2);
+  padding: 8px 12px; background: var(--bg3); border-radius: 8px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.tetris-controls kbd {
+  display: inline-block; padding: 1px 5px; margin-right: 3px;
+  background: var(--bg); border: 1px solid var(--border); border-radius: 3px;
+  font-family: 'Space Mono', monospace; font-size: 10px;
+}
+
+.snake-board {
+  display: grid; gap: 1px;
+  background: var(--bg); padding: 6px; border-radius: 10px;
+  border: 2px solid var(--border);
+}
+.s-cell {
+  width: 18px; height: 18px; background: var(--bg2); border-radius: 2px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Space Mono', monospace; font-weight: 800; font-size: 13px;
+}
+.s-cell.head { background: var(--green); }
+.s-cell.body { background: var(--emerald, #00d18f); opacity: .7; }
+.s-cell.food { background: rgba(255, 209, 102, .2); color: var(--yellow); }
+
+/* 2048 */
+.g2048-board {
+  display: grid; grid-template-columns: repeat(4, 76px); gap: 8px;
+  background: var(--bg3); padding: 8px; border-radius: 10px;
+}
+.g2048-cell {
+  width: 76px; height: 76px; background: var(--bg2); border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Space Mono', monospace; font-weight: 800; font-size: 28px;
+  transition: background .15s;
+}
+.g2048-victory {
+  background: rgba(255, 215, 0, .15); color: var(--yellow);
+  padding: 6px 12px; border-radius: 8px; font-weight: 800; text-align: center;
+}
+
+/* Tetris mode select */
+.tetris-mode-select { display: flex; flex-direction: column; gap: 16px; padding: 20px 0; }
+.tetris-mode-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.tetris-mode-card {
+  display: flex; flex-direction: column; gap: 6px; text-align: left;
+  padding: 16px; background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 10px; color: var(--text); cursor: pointer;
+  font-family: inherit; transition: all .15s;
+}
+.tetris-mode-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+.tetris-mode-card strong { font-size: 14px; color: var(--blue); }
+.tetris-mode-card span { font-size: 12px; color: var(--text2); line-height: 1.45; }
+
+/* Minesweeper */
+.mines-game { display: flex; flex-direction: column; gap: 12px; align-items: center; padding: 12px 0; }
+.mines-bar {
+  display: flex; gap: 20px; align-items: center;
+  font-family: 'Space Mono', monospace; font-weight: 700;
+}
+.mines-bar > div { display: flex; align-items: center; gap: 4px; }
+.mines-win { color: var(--yellow); }
+.mines-board {
+  display: grid; gap: 2px;
+  background: var(--bg); padding: 6px; border-radius: 8px;
+  border: 2px solid var(--border);
+}
+.m-cell {
+  width: 28px; height: 28px; background: var(--bg3); border-radius: 3px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Space Mono', monospace; font-weight: 800; font-size: 13px;
+  cursor: pointer; user-select: none;
+}
+.m-cell:hover:not(.revealed):not(.flagged) { background: var(--bg2); }
+.m-cell.revealed { background: var(--bg2); cursor: default; }
+.m-cell.flagged { background: rgba(255, 209, 102, .15); }
+.m-cell.boom { background: rgba(255, 123, 114, .35); }
+.mines-hint { font-size: 12px; color: var(--text3); }
+
+/* Memory Match */
+.memory-game { display: flex; flex-direction: column; gap: 14px; }
+.memory-board {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+  max-width: 560px; margin: 0 auto;
+}
+.memory-card {
+  aspect-ratio: 1.5 / 1;
+  background: var(--bg3); border: 1px solid var(--border); border-radius: 10px;
+  color: var(--text); cursor: pointer; padding: 6px;
+  font-family: 'Space Mono', monospace; font-size: 12px; font-weight: 700;
+  transition: all .2s; display: flex; align-items: center; justify-content: center;
+  text-align: center; line-height: 1.3;
+}
+.memory-card.face-up { background: var(--bg); border-color: var(--blue); }
+.memory-card.matched { background: rgba(126, 231, 135, .12); border-color: var(--green); cursor: default; }
+.memory-card-inner { display: block; padding: 4px; }
+.memory-hint { font-size: 12px; color: var(--text3); text-align: center; }
+
+/* 15-Puzzle */
+.fifteen-game { display: flex; flex-direction: column; gap: 14px; align-items: center; }
+.fifteen-board {
+  display: grid; grid-template-columns: repeat(4, 70px); gap: 6px;
+  background: var(--bg3); padding: 8px; border-radius: 10px;
+}
+.fifteen-tile {
+  width: 70px; height: 70px;
+  background: var(--bg); color: var(--text); border: 1px solid var(--border);
+  border-radius: 8px; cursor: pointer;
+  font-family: 'Space Mono', monospace; font-weight: 800; font-size: 24px;
+  transition: all .15s;
+}
+.fifteen-tile:hover:not(:disabled):not(.empty) { background: var(--bg2); border-color: var(--accent); }
+.fifteen-tile.empty { background: transparent; border-color: transparent; cursor: default; }
+.fifteen-tile.settled { color: var(--green); }
+
+/* Code Wordle */
+.wordle-game { display: flex; flex-direction: column; gap: 14px; align-items: center; padding: 10px 0; }
+.wordle-grid { display: flex; flex-direction: column; gap: 6px; }
+.wordle-grid.shake { animation: wordle-shake .4s; }
+@keyframes wordle-shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+.wordle-row { display: flex; gap: 6px; }
+.wordle-tile {
+  width: 52px; height: 52px;
+  background: var(--bg3); border: 2px solid var(--border); border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Space Mono', monospace; font-weight: 800; font-size: 22px;
+  color: var(--text); transition: all .25s;
+}
+.wordle-tile.filled { border-color: var(--text2); }
+.wordle-tile.correct { background: var(--green); color: #0d1117; border-color: var(--green); }
+.wordle-tile.present { background: var(--yellow, #ffd166); color: #0d1117; border-color: var(--yellow, #ffd166); }
+.wordle-tile.absent  { background: var(--bg2); color: var(--text3); border-color: var(--bg2); }
+.wordle-status {
+  padding: 8px 14px; border-radius: 8px;
+  font-weight: 700; font-size: 14px;
+}
+.wordle-status.win  { background: rgba(126, 231, 135, .15); color: var(--green); }
+.wordle-status.lose { background: rgba(255, 123, 114, .15); color: var(--red); }
+.wordle-keyboard { display: flex; flex-direction: column; gap: 6px; }
+.wordle-keyrow { display: flex; gap: 4px; justify-content: center; }
+.wordle-key {
+  min-width: 32px; height: 44px; padding: 0 8px;
+  background: var(--bg3); border: 1px solid var(--border); border-radius: 5px;
+  color: var(--text); cursor: pointer; font-family: inherit;
+  font-size: 13px; font-weight: 700;
+}
+.wordle-key.wide { padding: 0 14px; font-size: 11px; }
+.wordle-key.correct { background: var(--green); color: #0d1117; border-color: var(--green); }
+.wordle-key.present { background: var(--yellow, #ffd166); color: #0d1117; border-color: var(--yellow, #ffd166); }
+.wordle-key.absent  { background: var(--bg2); color: var(--text3); border-color: var(--bg2); }
+
+/* Leaderboard */
+.arcade-lb { display: flex; flex-direction: column; gap: 14px; }
+.arcade-lb-head { display: flex; justify-content: space-between; align-items: baseline; }
+.arcade-lb-head h2 { margin: 0; font-size: 18px; }
+.arcade-lb-head span { color: var(--text3); font-size: 12px; }
+.arcade-empty { color: var(--text3); padding: 24px; text-align: center; }
+.arcade-lb-table { width: 100%; border-collapse: collapse; }
+.arcade-lb-table th, .arcade-lb-table td {
+  padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.arcade-lb-table th { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: .1em; }
+.arcade-lb-table tr.top-1 td { background: rgba(255, 215, 0, .08); }
+.arcade-lb-table tr.top-2 td { background: rgba(192, 192, 192, .06); }
+.arcade-lb-table tr.top-3 td { background: rgba(205, 127, 50, .06); }
+
+@media (max-width: 720px) {
+  .arcade-result-score strong { font-size: 52px; }
+  .tetris-game, .snake-game, .g2048-game { flex-direction: column; align-items: center; }
+  .quiz-options { grid-template-columns: 1fr; }
+  .arcade-game-head { flex-wrap: wrap; }
+  .arcade-game-head h1 { width: 100%; order: -1; }
+}

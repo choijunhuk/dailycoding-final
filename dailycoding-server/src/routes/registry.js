@@ -40,6 +40,7 @@ import reviewsRouter from './reviews.js';
 import communityProblemsRouter from './community-problems.js';
 import problemSetsRouter from './problem-sets.js';
 import gameRouter from './game.js';
+import arcadeRouter from './arcade.js';
 import pushRouter from './push.js';
 import badgesRouter from './badges.js';
 import { getJudgeRuntime } from '../services/judge.js';
@@ -85,6 +86,7 @@ export function registerRoutes(app) {
   app.use('/api/community-problems', generalLimiter, communityProblemsRouter);
   app.use('/api/problem-sets', generalLimiter, problemSetsRouter);
   app.use('/api/game', generalLimiter, gameRouter);
+  app.use('/api/arcade', generalLimiter, arcadeRouter);
   app.use('/api/push', generalLimiter, pushRouter);
   app.use('/api/badges', generalLimiter, badgesRouter);
 
