@@ -1116,25 +1116,49 @@ export default function BattlePage() {
   // ─────────────────────────────────────────────────────────────────────────
   if (phase === 'countdown') {
     const players = Object.values(room?.players || {});
+    const team1 = players.filter(p => p.teamId === 'team_1');
+    const team2 = players.filter(p => p.teamId === 'team_2');
     return (
-      <div className="bp-page" style={{ display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:8, background:'var(--bg)' }}>
-        <div style={{ textAlign:'center' }}>
-          <div style={{ fontSize:13, color:'var(--text3)', letterSpacing:3, marginBottom:16, textTransform:'uppercase' }}>{txt('배틀 시작까지', 'Battle starts in')}</div>
-          <div style={{ fontSize:128, fontWeight:900, color: countdown > 0 ? 'var(--blue)' : 'var(--green)', lineHeight:1, fontFamily:'Space Mono,monospace', minWidth:160, transition:'color 0.3s' }}>
-            {countdown > 0 ? countdown : '🔥'}
+      <div className="bp-page bp-countdown-stage">
+        <div className="bp-countdown-bg" aria-hidden="true">
+          <div className="bp-countdown-grid" />
+          <div className="bp-countdown-glow blue" />
+          <div className="bp-countdown-glow red" />
+        </div>
+        <div className="bp-vs-row">
+          <div className="bp-vs-team blue">
+            <div className="bp-vs-label">{txt('팀 1', 'TEAM 1')}</div>
+            <div className="bp-vs-members">
+              {team1.length ? team1.map(p => (
+                <div key={p.id} className={`bp-vs-chip${p.id === myId ? ' me' : ''}`}>
+                  {p.username}{p.id === myId && <span className="bp-vs-me-tag">{txt(' (나)', ' (Me)')}</span>}
+                </div>
+              )) : <div className="bp-vs-chip ghost">—</div>}
+            </div>
           </div>
-          <div style={{ fontSize:15, color:'var(--text2)', marginTop:20 }}>
+          <div className="bp-vs-divider">
+            <div className="bp-vs-vs">VS</div>
+            <div className="bp-vs-spark" />
+          </div>
+          <div className="bp-vs-team red">
+            <div className="bp-vs-label">{txt('팀 2', 'TEAM 2')}</div>
+            <div className="bp-vs-members">
+              {team2.length ? team2.map(p => (
+                <div key={p.id} className={`bp-vs-chip${p.id === myId ? ' me' : ''}`}>
+                  {p.username}{p.id === myId && <span className="bp-vs-me-tag">{txt(' (나)', ' (Me)')}</span>}
+                </div>
+              )) : <div className="bp-vs-chip ghost">—</div>}
+            </div>
+          </div>
+        </div>
+        <div className="bp-countdown-hero">
+          <div className="bp-countdown-tagline">{txt('배틀 시작까지', 'Battle starts in')}</div>
+          <div className={`bp-countdown-num${countdown <= 0 ? ' go' : ''}`} key={countdown}>
+            {countdown > 0 ? countdown : 'GO!'}
+          </div>
+          <div className="bp-countdown-sub">
             {countdown > 0 ? txt('잠시 후 문제가 공개됩니다...', 'Problems will be revealed shortly...') : txt('배틀 시작!', 'Battle Start!')}
           </div>
-          {players.length > 0 && (
-            <div style={{ marginTop:28, display:'flex', gap:12, justifyContent:'center', flexWrap:'wrap' }}>
-              {players.map(p => (
-                <div key={p.id} style={{ padding:'6px 18px', borderRadius:20, background:'var(--bg3)', border:`2px solid ${p.teamId === 'team_1' ? 'var(--blue)' : 'var(--red)'}`, fontSize:14, fontWeight:600, color:'var(--text)' }}>
-                  {p.id === myId ? `${p.username} (${txt('나', 'Me')})` : p.username}
-                </div>
-              ))}
-            </div>
-          )}
         </div>
       </div>
     );

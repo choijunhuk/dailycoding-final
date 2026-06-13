@@ -123,15 +123,119 @@
   display: flex; gap: 24px; justify-content: center; align-items: flex-start;
   padding: 12px 0;
 }
+.tetris-board-wrap {
+  position: relative;
+  transition: transform .04s linear;
+}
 .tetris-board {
   display: grid; gap: 1px;
   background: var(--bg); padding: 4px; border-radius: 8px;
   border: 2px solid var(--border);
+  box-shadow: 0 0 30px rgba(121, 192, 255, .08), inset 0 0 30px rgba(0,0,0,.4);
 }
 .t-cell {
   width: 22px; height: 22px; background: var(--bg2); border-radius: 2px;
+  transition: background .08s;
 }
 .t-cell.on { box-shadow: inset 0 0 0 1px rgba(255,255,255,.15); }
+.t-cell.ghost { border-radius: 2px; }
+.t-cell.flash {
+  animation: tetris-flash .22s ease-out;
+  background: #fff !important;
+  box-shadow: 0 0 18px #fff, inset 0 0 0 1px #fff !important;
+}
+@keyframes tetris-flash {
+  0%   { filter: brightness(2.5); transform: scale(1.1); }
+  100% { filter: brightness(1);   transform: scale(1); }
+}
+
+/* Floating combo / line clear text */
+.tetris-floats {
+  position: absolute; inset: 0; pointer-events: none; overflow: visible;
+}
+.tetris-float {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  font-family: 'Space Mono', monospace; font-weight: 900; font-size: 26px;
+  letter-spacing: .04em;
+  animation: tetris-float-up 1.1s ease-out forwards;
+  white-space: nowrap;
+}
+@keyframes tetris-float-up {
+  0%   { opacity: 0; transform: translate(-50%, 20px) scale(.6); }
+  18%  { opacity: 1; transform: translate(-50%, -8px) scale(1.15); }
+  35%  { opacity: 1; transform: translate(-50%, -16px) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -60px) scale(.95); }
+}
+
+.tetris-pause-overlay {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(13,17,23,.78); backdrop-filter: blur(4px);
+  color: var(--yellow); font-family: 'Space Mono', monospace;
+  font-weight: 900; font-size: 32px; letter-spacing: .25em;
+  border-radius: 8px;
+  animation: tetris-overlay-in .25s ease-out;
+}
+.tetris-pause-overlay.over {
+  color: var(--red); font-size: 28px;
+  text-shadow: 0 0 16px var(--red);
+}
+@keyframes tetris-overlay-in {
+  0%   { opacity: 0; backdrop-filter: blur(0); }
+  100% { opacity: 1; backdrop-filter: blur(4px); }
+}
+
+/* Hold / Next mini piece */
+.tetris-side-left { min-width: 130px; }
+.tetris-mini {
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 8px 10px; background: var(--bg3); border-radius: 8px;
+}
+.tetris-mini > span {
+  font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .1em;
+}
+.tetris-mini-box {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 56px; padding: 8px; border-radius: 6px;
+  background: var(--bg2);
+  transition: opacity .2s;
+}
+.tetris-mini-box.dim { opacity: .35; }
+.tetris-mini[data-empty] .tetris-mini-box { background: var(--bg2); }
+.tetris-mini-grid {
+  display: grid; gap: 1px;
+}
+.tetris-mini-cell {
+  width: 12px; height: 12px;
+  background: transparent;
+  border-radius: 1px;
+}
+
+.tetris-queue {
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 8px 10px; background: var(--bg3); border-radius: 8px;
+}
+.tetris-queue > span {
+  font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .1em;
+}
+.tetris-queue-list {
+  display: flex; flex-direction: column; gap: 6px;
+}
+.tetris-queue-list .tetris-mini {
+  background: var(--bg2); padding: 6px 8px;
+}
+.tetris-queue-list .tetris-mini-box { min-height: 40px; padding: 4px; }
+
+.combo-stat {
+  background: linear-gradient(135deg, rgba(255, 209, 102, .25), rgba(210, 168, 255, .15)) !important;
+  border: 1px solid var(--yellow);
+  animation: combo-pulse 1s ease-in-out infinite;
+}
+.combo-stat strong { color: var(--yellow); text-shadow: 0 0 8px var(--yellow); }
+@keyframes combo-pulse {
+  0%, 100% { box-shadow: 0 0 0 rgba(255, 209, 102, 0); }
+  50%      { box-shadow: 0 0 16px rgba(255, 209, 102, .5); }
+}
 
 .tetris-side, .snake-side, .g2048-side {
   display: flex; flex-direction: column; gap: 10px; min-width: 160px;
