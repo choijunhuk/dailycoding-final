@@ -1,5 +1,40 @@
 import { Reward } from '../models/Reward.js';
-import { query } from '../config/mysql.js';
+import { query, queryOne } from '../config/mysql.js';
+
+const ARCADE_TOTAL_GAMES = 11;
+
+export async function grantArcadeBadges(userId, gameKey, score, meta) {
+  if (!userId || !gameKey) return;
+  try {
+    await Reward.grant(userId, 'badge_arcade_first');
+
+    if (gameKey === 'tetris') {
+      if (score >= 5000) await Reward.grant(userId, 'badge_tetris_5k');
+      else if (score >= 1000) await Reward.grant(userId, 'badge_tetris_1k');
+      if (meta && meta.mode === 'sprint' && meta.finished && Number(meta.elapsed) > 0 && Number(meta.elapsed) <= 120) {
+        await Reward.grant(userId, 'badge_sprint_sub2');
+      }
+    } else if (gameKey === 'snake' && Number(meta?.length || 0) >= 50) {
+      await Reward.grant(userId, 'badge_snake_50');
+    } else if (gameKey === '2048') {
+      const maxTile = Number(meta?.maxTile || 0);
+      if (meta?.reached2048 || maxTile >= 2048) await Reward.grant(userId, 'badge_2048_reached');
+    }
+
+    const row = await queryOne(
+      'SELECT COUNT(DISTINCT game_key) AS cnt FROM arcade_scores WHERE user_id = ?',
+      [userId]
+    );
+    const distinct = Number(row?.cnt || 0);
+    if (distinct >= 5) await Reward.grant(userId, 'badge_arcade_explorer');
+    if (distinct >= ARCADE_TOTAL_GAMES) {
+      await Reward.grant(userId, 'badge_arcade_master');
+      await Reward.grant(userId, 'title_arcade_master');
+    }
+  } catch {
+    // non-fatal
+  }
+}
 
 const GOLD_TIERS = new Set(['gold', 'platinum', 'emerald', 'diamond', 'master', 'grandmaster', 'challenger']);
 

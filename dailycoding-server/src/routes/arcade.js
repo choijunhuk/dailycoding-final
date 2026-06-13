@@ -2,10 +2,21 @@ import { Router } from 'express';
 import { auth, requireVerified } from '../middleware/auth.js';
 import { query, queryOne, insert } from '../config/mysql.js';
 import { redis } from '../config/redis.js';
+import { grantArcadeBadges } from '../services/badgeService.js';
 
 const router = Router();
 router.use(auth);
 router.use(requireVerified);
+
+// Games whose leaderboard supports a time-based metric (fastest clear).
+const TIME_METRIC_GAMES = new Set([
+  'tetris',        // sprint mode finished
+  'code-typing',
+  'code-wordle',
+  'memory-match',
+  'fifteen',
+  'minesweeper',
+]);
 
 // Allowed games. Keep keys in sync with the frontend ArcadePage GAMES list.
 const GAMES = [
@@ -61,8 +72,17 @@ router.post('/score', async (req, res, next) => {
       [req.user.id, gameKey, rawScore, meta]
     );
 
-    // Invalidate leaderboard cache for this game.
-    try { await redis.del(`arcade:lb:${gameKey}`); } catch { /* ignore */ }
+    // Invalidate leaderboard cache for this game (both score + time metrics).
+    try { await redis.clearPrefix(`arcade:lb:${gameKey}`); } catch { /* ignore */ }
+
+    // Grant arcade achievement badges. Best-effort — failures must not break score save.
+    try {
+      const parsedMeta = req.body?.meta && typeof req.body.meta === 'object' ? req.body.meta : null;
+      await grantArcadeBadges(req.user.id, gameKey, rawScore, parsedMeta);
+    } catch (badgeErr) {
+      // eslint-disable-next-line no-console
+      console.error('[arcade.grantArcadeBadges]', badgeErr?.message || badgeErr);
+    }
 
     const myBest = await queryOne(
       'SELECT MAX(score) AS best FROM arcade_scores WHERE user_id = ? AND game_key = ?',
@@ -92,33 +112,59 @@ router.get('/leaderboard/:gameKey', async (req, res, next) => {
       return res.status(404).json({ message: 'Unknown gameKey' });
     }
     const limit = Math.min(100, Math.max(5, toInt(req.query.limit, 20)));
-    const cacheKey = `arcade:lb:${gameKey}:${limit}`;
+    const requested = String(req.query.metric || 'score').toLowerCase();
+    const metric = requested === 'time' && TIME_METRIC_GAMES.has(gameKey) ? 'time' : 'score';
+    const cacheKey = `arcade:lb:${gameKey}:${metric}:${limit}`;
     try {
       const cached = await redis.get(cacheKey);
       if (cached) return res.json(JSON.parse(cached));
     } catch { /* ignore cache miss */ }
 
-    // Top score per user.
-    const rows = await query(
-      `SELECT s.user_id, u.username, u.tier, MAX(s.score) AS score, MAX(s.played_at) AS played_at
-       FROM arcade_scores s
-       JOIN users u ON u.id = s.user_id
-       WHERE s.game_key = ?
-       GROUP BY s.user_id, u.username, u.tier
-       ORDER BY score DESC, played_at ASC
-       LIMIT ${limit}`,
-      [gameKey]
-    );
+    let rows;
+    if (metric === 'time') {
+      // Fastest elapsed per user. For Tetris only sprint mode that actually finished counts.
+      const tetrisFilter = gameKey === 'tetris'
+        ? `AND JSON_EXTRACT(s.meta, '$.mode') = 'sprint' AND JSON_EXTRACT(s.meta, '$.finished') = true`
+        : '';
+      rows = await query(
+        `SELECT s.user_id, u.username, u.tier,
+                MIN(JSON_EXTRACT(s.meta, '$.elapsed')) AS elapsed_sec,
+                MAX(s.score) AS score
+         FROM arcade_scores s
+         JOIN users u ON u.id = s.user_id
+         WHERE s.game_key = ?
+           AND JSON_EXTRACT(s.meta, '$.elapsed') > 0
+           ${tetrisFilter}
+         GROUP BY s.user_id, u.username, u.tier
+         ORDER BY elapsed_sec ASC
+         LIMIT ${limit}`,
+        [gameKey]
+      );
+    } else {
+      // Top score per user.
+      rows = await query(
+        `SELECT s.user_id, u.username, u.tier, MAX(s.score) AS score, MAX(s.played_at) AS played_at
+         FROM arcade_scores s
+         JOIN users u ON u.id = s.user_id
+         WHERE s.game_key = ?
+         GROUP BY s.user_id, u.username, u.tier
+         ORDER BY score DESC, played_at ASC
+         LIMIT ${limit}`,
+        [gameKey]
+      );
+    }
+
     const leaderboard = (rows || []).map((row, index) => ({
       rank: index + 1,
       userId: row.user_id,
       username: row.username,
       tier: row.tier || 'unranked',
       score: toInt(row.score, 0),
-      playedAt: row.played_at,
+      elapsedSec: row.elapsed_sec != null ? Number(row.elapsed_sec) : null,
+      playedAt: row.played_at || null,
     }));
 
-    const payload = { gameKey, leaderboard };
+    const payload = { gameKey, metric, leaderboard };
     try { await redis.set(cacheKey, JSON.stringify(payload), 60); } catch { /* ignore */ }
     res.json(payload);
   } catch (err) {

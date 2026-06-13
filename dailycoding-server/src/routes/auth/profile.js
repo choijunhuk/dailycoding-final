@@ -13,6 +13,7 @@ import { User } from '../../models/User.js';
 import { Reward } from '../../models/Reward.js';
 import { redis } from '../../config/redis.js';
 import { errorResponse, internalError } from '../../middleware/errorHandler.js';
+import { touchUserActivity, normalizeActivity } from '../../middleware/userActivity.js';
 import { clearAuthCookies, clearAuthStatus } from './helpers.js';
 
 const router = Router();
@@ -600,6 +601,19 @@ router.delete('/me', auth, async (req, res) => {
     res.json({ message: 'Account deleted.' });
   } catch (err) {
     console.error('[delete-account]', err.message);
+    return internalError(res);
+  }
+});
+
+// POST /api/auth/me/heartbeat — frontend pings every ~60s with a coarse activity label
+// Body: { activity: 'arcade' | 'battle' | 'judge' | 'community' | 'ai' | 'ranking' | ... }
+router.post('/me/heartbeat', auth, async (req, res) => {
+  try {
+    const activity = normalizeActivity(req.body?.activity);
+    await touchUserActivity(req.user.id, activity);
+    res.json({ ok: true, activity });
+  } catch (err) {
+    console.error('[me/heartbeat]', err.message);
     return internalError(res);
   }
 });

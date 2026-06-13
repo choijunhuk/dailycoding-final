@@ -11,6 +11,8 @@ import TermsPage          from './pages/TermsPage';
 import PrivacyPage        from './pages/PrivacyPage';
 import TopNav             from './components/TopNav';
 import VerificationBanner from './components/VerificationBanner';
+import FriendsWidget      from './components/FriendsWidget.jsx';
+import './components/FriendsWidget.css';
 import ProBenefitsSlot    from './components/ProBenefitsSlot';
 import NotFoundPage    from './pages/NotFoundPage';
 import { ToastProvider } from './context/ToastContext.jsx';
@@ -169,6 +171,7 @@ function AppInner() {
     <div style={{ display:'flex', flexDirection:'column', height:'100vh', overflow:'hidden', background:'var(--bg)' }}>
       <TopNav />
       <VerificationBanner />
+      <FriendsWidget />
       <div id="page-content" style={{ flex:1, overflowY:'auto', overflowX:'hidden', background:'var(--bg)', display:'flex', flexDirection:'column' }}>
         {loading && !isJudge ? (
           <RouteFallback isJudge={false} />

@@ -14,6 +14,7 @@ import battlesRouter from './battles.js';
 import battleModesRouter from './battleModes.js';
 import tournamentsRouter from './tournaments.js';
 import followsRouter from './follows.js';
+import dmRouter from './dm.js';
 import subscriptionRouter, { stripeWebhookHandler } from './subscription.js';
 import teamsRouter from './teams.js';
 import adminRouter from './admin.js';
@@ -60,6 +61,7 @@ export function registerRoutes(app) {
   app.use('/api/battle-modes', generalLimiter, battleModesRouter);
   app.use('/api/tournaments', generalLimiter, tournamentsRouter);
   app.use('/api/follows', generalLimiter, followsRouter);
+  app.use('/api/dm', generalLimiter, dmRouter);
   app.use('/api/subscription', generalLimiter, subscriptionRouter);
   app.use('/api/teams', generalLimiter, teamsRouter);
   app.use('/api/admin', generalLimiter, adminRouter);

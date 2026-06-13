@@ -235,6 +235,53 @@ router.get('/:id/following', auth, async (req, res) => {
   return listFollowUsers(req, res, 'following');
 });
 
+// GET /api/follows/online — friends I follow, with online/activity hints
+// Returns: { online: [...], offline: [...] }
+// Online window: last_active_at >= NOW() - INTERVAL 5 MINUTE
+router.get('/online', auth, async (req, res) => {
+  try {
+    const rows = await dbQuery(
+      `SELECT u.id, u.username, u.nickname, u.display_name, u.tier, u.rating,
+              u.avatar_url, u.avatar_url_custom, u.avatar_color, u.avatar_emoji, u.avatar_source,
+              u.last_active_at, u.current_activity,
+              CASE WHEN u.last_active_at IS NOT NULL
+                   AND u.last_active_at >= NOW() - INTERVAL 5 MINUTE
+                   THEN 1 ELSE 0 END AS is_online
+       FROM follows f
+       JOIN users u ON u.id = f.following_id
+       WHERE f.follower_id = ?
+       ORDER BY is_online DESC, u.last_active_at DESC, u.username ASC
+       LIMIT 100`,
+      [req.user.id]
+    );
+    const map = (r) => ({
+      id: r.id,
+      username: r.username,
+      nickname: r.nickname ?? null,
+      displayName: r.display_name ?? null,
+      tier: r.tier,
+      rating: r.rating,
+      avatar_url: r.avatar_url,
+      avatar_url_custom: r.avatar_url_custom,
+      avatar_color: r.avatar_color,
+      avatar_emoji: r.avatar_emoji,
+      avatar_source: r.avatar_source || 'site',
+      lastActiveAt: r.last_active_at,
+      currentActivity: r.current_activity || 'idle',
+      online: !!r.is_online,
+    });
+    const all = rows.map(map);
+    res.json({
+      online: all.filter((u) => u.online),
+      offline: all.filter((u) => !u.online),
+      totalFollowing: all.length,
+    });
+  } catch (err) {
+    console.error('[follows/online]', err.message);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // GET /api/follows/:id/stats — follower/following counts for a user
 router.get('/:id/stats', auth, async (req, res) => {
   const targetId = Number(req.params.id);
