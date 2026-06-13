@@ -9,16 +9,36 @@ export async function grantArcadeBadges(userId, gameKey, score, meta) {
     await Reward.grant(userId, 'badge_arcade_first');
 
     if (gameKey === 'tetris') {
-      if (score >= 5000) await Reward.grant(userId, 'badge_tetris_5k');
-      else if (score >= 1000) await Reward.grant(userId, 'badge_tetris_1k');
-      if (meta && meta.mode === 'sprint' && meta.finished && Number(meta.elapsed) > 0 && Number(meta.elapsed) <= 120) {
+      // Score-based tetris badges only make sense in score modes (classic
+      // ranks survival now, sprint score is derived from time). Restrict to
+      // ultra+invisible so casual classic runs don't accidentally clear them.
+      const tetrisMode = meta?.mode;
+      const scoreModeQualifies = tetrisMode === 'ultra' || tetrisMode === 'invisible' || !tetrisMode;
+      if (scoreModeQualifies) {
+        if (score >= 5000) await Reward.grant(userId, 'badge_tetris_5k');
+        else if (score >= 1000) await Reward.grant(userId, 'badge_tetris_1k');
+      }
+      if (tetrisMode === 'sprint' && meta?.finished && Number(meta.elapsed) > 0 && Number(meta.elapsed) <= 120) {
         await Reward.grant(userId, 'badge_sprint_sub2');
+      }
+      // New: survival badge for classic/invisible — 3+ minute endurance.
+      if ((tetrisMode === 'classic' || tetrisMode === 'invisible') && Number(meta?.elapsed) >= 180) {
+        await Reward.grant(userId, 'badge_tetris_survivor');
       }
     } else if (gameKey === 'snake' && Number(meta?.length || 0) >= 50) {
       await Reward.grant(userId, 'badge_snake_50');
     } else if (gameKey === '2048') {
       const maxTile = Number(meta?.maxTile || 0);
       if (meta?.reached2048 || maxTile >= 2048) await Reward.grant(userId, 'badge_2048_reached');
+    } else if (gameKey === 'minesweeper') {
+      // Mode-scoped minesweeper badges. Easy clear is trivial, so badge harder
+      // wins specifically.
+      if (meta?.won && meta?.mode === 'medium' && Number(meta.elapsed) > 0 && Number(meta.elapsed) <= 180) {
+        await Reward.grant(userId, 'badge_minesweeper_medium');
+      }
+      if (meta?.won && meta?.mode === 'hard') {
+        await Reward.grant(userId, 'badge_minesweeper_hard');
+      }
     }
 
     const row = await queryOne(

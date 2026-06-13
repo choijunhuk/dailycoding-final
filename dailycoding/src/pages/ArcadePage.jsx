@@ -26,13 +26,25 @@ const CATEGORY_LABEL = {
   classic:   { ko: '클래식',   en: 'Classic' },
 }
 
+function fmtElapsed(sec) {
+  const s = Number(sec) || 0
+  if (s <= 0) return null
+  if (s < 60) return `${s.toFixed(s < 10 ? 1 : 0)}s`
+  const m = Math.floor(s / 60)
+  const r = Math.round(s - m * 60)
+  return `${m}m ${r.toString().padStart(2, '0')}s`
+}
+
 export default function ArcadePage() {
   const navigate = useNavigate()
   const { lang } = useLang()
   const txt = (ko, en) => (lang === 'ko' ? ko : en)
   const [games, setGames] = useState(FALLBACK_GAMES)
   const [bestByGame, setBestByGame] = useState({})
+  const [bestByGameMode, setBestByGameMode] = useState({})
   const [topByGame, setTopByGame] = useState({})
+  const [topByGameMode, setTopByGameMode] = useState({})
+  const [modesByGame, setModesByGame] = useState({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -49,7 +61,10 @@ export default function ArcadePage() {
         setGames(gamesRes.data.games)
       }
       setBestByGame(bestRes.data?.bestByGame || {})
+      setBestByGameMode(bestRes.data?.bestByGameMode || {})
       setTopByGame(topRes.data?.topByGame || {})
+      setTopByGameMode(topRes.data?.topByGameMode || {})
+      setModesByGame(topRes.data?.modes || gamesRes.data?.modes || {})
     } catch (err) {
       setError(err?.response?.data?.message || txt('아케이드 데이터를 불러오지 못했습니다.', 'Failed to load arcade data.'))
     } finally {
@@ -98,6 +113,9 @@ export default function ArcadePage() {
               const best = bestByGame[g.key]?.best || 0
               const plays = bestByGame[g.key]?.plays || 0
               const top = topByGame[g.key] || []
+              const modes = modesByGame[g.key] || null
+              const perModeBest = bestByGameMode[g.key] || null
+              const perModeTop = topByGameMode[g.key] || null
               return (
                 <div key={g.key} className="arcade-card card card-hover">
                   <div className="arcade-card-head">
@@ -107,17 +125,54 @@ export default function ArcadePage() {
                       <p>{lang === 'ko' ? (g.descKo || '') : (g.desc || '')}</p>
                     </div>
                   </div>
-                  <div className="arcade-stats">
-                    <div>
-                      <span>{txt('최고점', 'Best')}</span>
-                      <strong>{best}</strong>
+                  {modes && perModeBest ? (
+                    <div className="arcade-mode-stats">
+                      {modes.map((m) => {
+                        const stat = perModeBest[m.key] || {}
+                        let value = '—'
+                        if (m.metric === 'survival') value = fmtElapsed(stat.maxElapsed) || '—'
+                        else if (m.metric === 'time') value = fmtElapsed(stat.minElapsed) || '—'
+                        else value = stat.best > 0 ? String(stat.best) : '—'
+                        return (
+                          <div key={m.key} className="arcade-mode-stat">
+                            <span>{lang === 'ko' ? m.nameKo : m.name}</span>
+                            <strong>{value}</strong>
+                          </div>
+                        )
+                      })}
                     </div>
-                    <div>
-                      <span>{txt('플레이', 'Plays')}</span>
-                      <strong>{plays}</strong>
+                  ) : (
+                    <div className="arcade-stats">
+                      <div>
+                        <span>{txt('최고점', 'Best')}</span>
+                        <strong>{best}</strong>
+                      </div>
+                      <div>
+                        <span>{txt('플레이', 'Plays')}</span>
+                        <strong>{plays}</strong>
+                      </div>
                     </div>
-                  </div>
-                  {top.length > 0 && (
+                  )}
+                  {modes && perModeTop ? (
+                    <div className="arcade-top-mini">
+                      <div className="arcade-top-mini-head"><Crown size={12} /> {txt('모드별 1위', 'Top per mode')}</div>
+                      <ul>
+                        {modes.map((m) => {
+                          const winner = (perModeTop[m.key] || [])[0]
+                          if (!winner) return null
+                          const display = (m.metric === 'time' || m.metric === 'survival')
+                            ? fmtElapsed(winner.elapsedSec)
+                            : winner.score
+                          return (
+                            <li key={m.key}>
+                              <span>{lang === 'ko' ? m.nameKo : m.name} · {winner.username}</span>
+                              <strong>{display || '—'}</strong>
+                            </li>
+                          )
+                        })}
+                      </ul>
+                    </div>
+                  ) : (top.length > 0 && (
                     <div className="arcade-top-mini">
                       <div className="arcade-top-mini-head"><Crown size={12} /> {txt('Top 3', 'Top 3')}</div>
                       <ul>
@@ -129,7 +184,7 @@ export default function ArcadePage() {
                         ))}
                       </ul>
                     </div>
-                  )}
+                  ))}
                   <div className="arcade-card-actions">
                     <button className="btn btn-primary" onClick={() => navigate(`/arcade/${g.key}`)}>
                       {txt('플레이', 'Play')} <ArrowRight size={14} />

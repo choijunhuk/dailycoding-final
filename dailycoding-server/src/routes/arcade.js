@@ -8,7 +8,14 @@ const router = Router();
 router.use(auth);
 router.use(requireVerified);
 
-// Games whose leaderboard supports a time-based metric (fastest clear).
+// Metric kinds:
+//   - score    → MAX(score) DESC               (high score wins)
+//   - time     → MIN(elapsed) ASC              (fastest finish wins)
+//   - survival → MAX(elapsed) DESC             (longest endurance wins)
+const VALID_METRICS = new Set(['score', 'time', 'survival']);
+
+// Games whose leaderboard supports a non-score metric outside of mode routing
+// (used when the game has no internal modes).
 const TIME_METRIC_GAMES = new Set([
   'tetris',        // sprint mode finished
   'code-typing',
@@ -17,6 +24,46 @@ const TIME_METRIC_GAMES = new Set([
   'fifteen',
   'minesweeper',
 ]);
+
+// Games whose leaderboard splits by an internal mode. Keep `metric` aligned
+// with what each mode is actually scored by — wrong metric = wrong ranking.
+const MODE_GAMES = {
+  tetris: [
+    { key: 'classic',   name: 'Classic',   nameKo: '클래식',     metric: 'survival', desc: '얼마나 오래 버텼는지 — 생존 시간 랭킹.' },
+    { key: 'sprint',    name: 'Sprint 40', nameKo: '스프린트 40', metric: 'time',     desc: '40줄 가장 빠르게 클리어.' },
+    { key: 'ultra',     name: 'Ultra 2m',  nameKo: '울트라 2분',  metric: 'score',    desc: '2분 안에 최고 점수.' },
+    { key: 'invisible', name: 'Invisible', nameKo: '인비저블',   metric: 'survival', desc: '블록이 사라지는 인비저블 모드에서 가장 오래.' },
+  ],
+  minesweeper: [
+    { key: 'easy',   name: 'Easy 9x9',     nameKo: '이지 9x9',    metric: 'time', desc: '9x9 / 지뢰 10. 클리어 최단 시간.' },
+    { key: 'medium', name: 'Medium 16x16', nameKo: '미디엄 16x16', metric: 'time', desc: '16x16 / 지뢰 40. 클리어 최단 시간.' },
+    { key: 'hard',   name: 'Hard 30x16',   nameKo: '하드 30x16',   metric: 'time', desc: '30x16 / 지뢰 99. 클리어 최단 시간.' },
+  ],
+  '2048': [
+    { key: 'classic',     name: 'Classic',          nameKo: '클래식',       metric: 'score', desc: '무제한. 최고 점수까지 도달.' },
+    { key: 'time-attack', name: 'Time Attack 3m',   nameKo: '타임어택 3분', metric: 'score', desc: '3분 안에 최대한 높은 점수.' },
+  ],
+};
+
+function modesFor(gameKey) {
+  return MODE_GAMES[gameKey] || null;
+}
+
+function findMode(gameKey, mode) {
+  const modes = modesFor(gameKey);
+  if (!modes) return null;
+  return modes.find((m) => m.key === mode) || null;
+}
+
+// Resolve the effective mode for a moded game. If the caller passes a valid
+// mode, use it. Otherwise pick the first mode matching the requested metric.
+function resolveMode(gameKey, requestedMode, metric) {
+  const modes = modesFor(gameKey);
+  if (!modes) return null;
+  if (findMode(gameKey, requestedMode)) return requestedMode;
+  const byMetric = modes.find((m) => m.metric === metric);
+  return (byMetric || modes[0]).key;
+}
 
 // Allowed games. Keep keys in sync with the frontend ArcadePage GAMES list.
 const GAMES = [
@@ -52,7 +99,7 @@ function safeMeta(meta) {
 }
 
 router.get('/games', (req, res) => {
-  res.json({ games: GAMES });
+  res.json({ games: GAMES, modes: MODE_GAMES });
 });
 
 router.post('/score', async (req, res, next) => {
@@ -112,36 +159,72 @@ router.get('/leaderboard/:gameKey', async (req, res, next) => {
       return res.status(404).json({ message: 'Unknown gameKey' });
     }
     const limit = Math.min(100, Math.max(5, toInt(req.query.limit, 20)));
-    const requested = String(req.query.metric || 'score').toLowerCase();
-    const metric = requested === 'time' && TIME_METRIC_GAMES.has(gameKey) ? 'time' : 'score';
-    const cacheKey = `arcade:lb:${gameKey}:${metric}:${limit}`;
+    const requestedMode = String(req.query.mode || '').trim();
+    const modeInfo = findMode(gameKey, requestedMode);
+
+    // For moded games, the mode dictates the metric — only one ranking shape
+    // is meaningful per mode. Otherwise honor the `metric` query (clamped to
+    // the game's capability set).
+    let metric;
+    let mode = null;
+    if (modesFor(gameKey)) {
+      mode = modeInfo ? requestedMode : resolveMode(gameKey, '', 'score');
+      const resolved = findMode(gameKey, mode);
+      metric = resolved ? resolved.metric : 'score';
+    } else {
+      const requested = String(req.query.metric || 'score').toLowerCase();
+      if (!VALID_METRICS.has(requested)) metric = 'score';
+      else if (requested === 'time' && TIME_METRIC_GAMES.has(gameKey)) metric = 'time';
+      else if (requested === 'survival') metric = 'score';
+      else metric = 'score';
+    }
+
+    const cacheKey = `arcade:lb:${gameKey}:${metric}:${mode || 'none'}:${limit}`;
     try {
       const cached = await redis.get(cacheKey);
       if (cached) return res.json(JSON.parse(cached));
     } catch { /* ignore cache miss */ }
 
+    // Build mode-scoped filter via a parameterized value.
+    const params = [gameKey];
+    let modeFilter = '';
+    if (mode) {
+      modeFilter = `AND s.meta->>'$.mode' = ?`;
+      params.push(mode);
+    }
+
     let rows;
-    if (metric === 'time') {
-      // Fastest elapsed per user. JSON values must be unquoted before string
+    if (metric === 'time' || metric === 'survival') {
+      // Elapsed-based metrics. JSON values must be unquoted before string
       // compare, and numeric-cast before sort — JSON_EXTRACT sorts JSON values
       // lexicographically (so "10" < "5"), which gives the wrong ranking.
-      const tetrisFilter = gameKey === 'tetris'
-        ? `AND s.meta->>'$.mode' = 'sprint' AND s.meta->>'$.finished' = 'true'`
+      // Tetris sprint runs only count if `finished` (40 lines reached);
+      // minesweeper time runs only count if `won` (otherwise dying instantly = 1s win).
+      const tetrisSprintFinished = (gameKey === 'tetris' && mode === 'sprint')
+        ? `AND s.meta->>'$.finished' = 'true'`
         : '';
+      const minesweeperWon = (gameKey === 'minesweeper' && metric === 'time')
+        ? `AND s.meta->>'$.won' = 'true'`
+        : '';
+      const isSurvival = metric === 'survival';
+      const aggregate = isSurvival ? 'MAX' : 'MIN';
+      const order = isSurvival ? 'DESC' : 'ASC';
       rows = await query(
         `SELECT s.user_id, u.username, u.tier,
-                MIN(CAST(s.meta->>'$.elapsed' AS DECIMAL(10,3))) AS elapsed_sec,
+                ${aggregate}(CAST(s.meta->>'$.elapsed' AS DECIMAL(10,3))) AS elapsed_sec,
                 MAX(s.score) AS score
          FROM arcade_scores s
          JOIN users u ON u.id = s.user_id
          WHERE s.game_key = ?
            AND s.meta->>'$.elapsed' IS NOT NULL
            AND CAST(s.meta->>'$.elapsed' AS DECIMAL(10,3)) > 0
-           ${tetrisFilter}
+           ${modeFilter}
+           ${tetrisSprintFinished}
+           ${minesweeperWon}
          GROUP BY s.user_id, u.username, u.tier
-         ORDER BY elapsed_sec ASC
+         ORDER BY elapsed_sec ${order}
          LIMIT ${limit}`,
-        [gameKey]
+        params
       );
     } else {
       // Top score per user.
@@ -150,10 +233,11 @@ router.get('/leaderboard/:gameKey', async (req, res, next) => {
          FROM arcade_scores s
          JOIN users u ON u.id = s.user_id
          WHERE s.game_key = ?
+           ${modeFilter}
          GROUP BY s.user_id, u.username, u.tier
          ORDER BY score DESC, played_at ASC
          LIMIT ${limit}`,
-        [gameKey]
+        params
       );
     }
 
@@ -167,7 +251,7 @@ router.get('/leaderboard/:gameKey', async (req, res, next) => {
       playedAt: row.played_at || null,
     }));
 
-    const payload = { gameKey, metric, leaderboard };
+    const payload = { gameKey, metric, mode, modes: modesFor(gameKey), leaderboard };
     try { await redis.set(cacheKey, JSON.stringify(payload), 60); } catch { /* ignore */ }
     res.json(payload);
   } catch (err) {
@@ -188,7 +272,40 @@ router.get('/my-best', async (req, res, next) => {
     (rows || []).forEach((row) => {
       map[row.game_key] = { best: toInt(row.best, 0), plays: toInt(row.plays, 0) };
     });
-    res.json({ bestByGame: map });
+
+    // For games with modes, also return per-mode best (score + best elapsed
+    // separately) so the UI can show "your PB" per mode card.
+    const bestByGameMode = {};
+    for (const [gameKey, modes] of Object.entries(MODE_GAMES)) {
+      const modeRows = await query(
+        `SELECT s.meta->>'$.mode' AS mode,
+                MAX(s.score) AS best_score,
+                MAX(CAST(s.meta->>'$.elapsed' AS DECIMAL(10,3))) AS max_elapsed,
+                MIN(CAST(s.meta->>'$.elapsed' AS DECIMAL(10,3))) AS min_elapsed,
+                COUNT(*) AS plays
+         FROM arcade_scores s
+         WHERE s.user_id = ?
+           AND s.game_key = ?
+           AND s.meta->>'$.mode' IS NOT NULL
+         GROUP BY s.meta->>'$.mode'`,
+        [req.user.id, gameKey]
+      );
+      const perMode = {};
+      for (const m of modes) perMode[m.key] = { best: 0, plays: 0, minElapsed: null, maxElapsed: null };
+      (modeRows || []).forEach((row) => {
+        const k = row.mode;
+        if (!perMode[k]) return;
+        perMode[k] = {
+          best: toInt(row.best_score, 0),
+          plays: toInt(row.plays, 0),
+          minElapsed: row.min_elapsed != null ? Number(row.min_elapsed) : null,
+          maxElapsed: row.max_elapsed != null ? Number(row.max_elapsed) : null,
+        };
+      });
+      bestByGameMode[gameKey] = perMode;
+    }
+
+    res.json({ bestByGame: map, bestByGameMode });
   } catch (err) {
     next(err);
   }
@@ -198,6 +315,7 @@ router.get('/top', async (req, res, next) => {
   try {
     const limit = Math.min(30, Math.max(3, toInt(req.query.limit, 5)));
     const out = {};
+    const topByGameMode = {};
     for (const game of GAMES) {
       const rows = await query(
         `SELECT s.user_id, u.username, u.tier, MAX(s.score) AS score
@@ -216,8 +334,64 @@ router.get('/top', async (req, res, next) => {
         tier: row.tier || 'unranked',
         score: toInt(row.score, 0),
       }));
+
+      // For moded games, also emit a per-mode top that uses each mode's
+      // declared metric — score-only mixing across modes is meaningless.
+      const modes = modesFor(game.key);
+      if (modes) {
+        const perMode = {};
+        for (const m of modes) {
+          const isElapsed = m.metric === 'time' || m.metric === 'survival';
+          const isSurvival = m.metric === 'survival';
+          const tetrisSprintFinished = (game.key === 'tetris' && m.key === 'sprint') ? `AND s.meta->>'$.finished' = 'true'` : '';
+          const minesweeperWon = (game.key === 'minesweeper' && m.metric === 'time') ? `AND s.meta->>'$.won' = 'true'` : '';
+          let modeRows;
+          if (isElapsed) {
+            const aggregate = isSurvival ? 'MAX' : 'MIN';
+            const order = isSurvival ? 'DESC' : 'ASC';
+            modeRows = await query(
+              `SELECT s.user_id, u.username, u.tier,
+                      ${aggregate}(CAST(s.meta->>'$.elapsed' AS DECIMAL(10,3))) AS elapsed_sec,
+                      MAX(s.score) AS score
+               FROM arcade_scores s
+               JOIN users u ON u.id = s.user_id
+               WHERE s.game_key = ?
+                 AND s.meta->>'$.mode' = ?
+                 AND s.meta->>'$.elapsed' IS NOT NULL
+                 AND CAST(s.meta->>'$.elapsed' AS DECIMAL(10,3)) > 0
+                 ${tetrisSprintFinished}
+                 ${minesweeperWon}
+               GROUP BY s.user_id, u.username, u.tier
+               ORDER BY elapsed_sec ${order}
+               LIMIT ${limit}`,
+              [game.key, m.key]
+            );
+          } else {
+            modeRows = await query(
+              `SELECT s.user_id, u.username, u.tier, MAX(s.score) AS score
+               FROM arcade_scores s
+               JOIN users u ON u.id = s.user_id
+               WHERE s.game_key = ? AND s.meta->>'$.mode' = ?
+               GROUP BY s.user_id, u.username, u.tier
+               ORDER BY score DESC
+               LIMIT ${limit}`,
+              [game.key, m.key]
+            );
+          }
+          perMode[m.key] = (modeRows || []).map((row, index) => ({
+            rank: index + 1,
+            userId: row.user_id,
+            username: row.username,
+            tier: row.tier || 'unranked',
+            score: toInt(row.score, 0),
+            elapsedSec: row.elapsed_sec != null ? Number(row.elapsed_sec) : null,
+            metric: m.metric,
+          }));
+        }
+        topByGameMode[game.key] = perMode;
+      }
     }
-    res.json({ topByGame: out });
+    res.json({ topByGame: out, topByGameMode, modes: MODE_GAMES });
   } catch (err) {
     next(err);
   }

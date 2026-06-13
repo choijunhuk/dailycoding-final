@@ -73,6 +73,17 @@
 .arcade-stats span { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .1em; }
 .arcade-stats strong { font-size: 16px; font-family: 'Space Mono', monospace; }
 
+.arcade-mode-stats {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+  gap: 6px; padding: 8px; background: var(--bg3); border-radius: 10px;
+}
+.arcade-mode-stat { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.arcade-mode-stat span {
+  font-size: 9px; color: var(--text3); text-transform: uppercase;
+  letter-spacing: .08em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.arcade-mode-stat strong { font-size: 13px; font-family: 'Space Mono', monospace; }
+
 .arcade-top-mini { font-size: 11px; }
 .arcade-top-mini-head {
   display: flex; align-items: center; gap: 4px;

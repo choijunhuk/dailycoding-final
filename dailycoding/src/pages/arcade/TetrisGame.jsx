@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Clock } from 'lucide-react'
 import { useLang } from '../../context/LangContext.jsx'
+import api from '../../api.js'
 
 const COLS = 10
 const ROWS = 20
@@ -18,10 +19,36 @@ const PIECES = {
 const TYPES = Object.keys(PIECES)
 
 const MODES = {
-  classic:  { name: 'Classic',  nameKo: '클래식',     desc: 'Play until you top out.', descKo: '계속 떨어지는 무한 모드. 가능한 오래 버티세요.' },
-  sprint:   { name: 'Sprint 40', nameKo: '스프린트 40', desc: 'Clear 40 lines as fast as possible.', descKo: '40줄 클리어 타임어택. 빠를수록 점수 ↑' },
-  ultra:    { name: 'Ultra 2m', nameKo: '울트라 2분',  desc: 'High score in 2 minutes.', descKo: '2분 안에 최대한 많은 점수를 쌓으세요.' },
-  invisible:{ name: 'Invisible', nameKo: '인비저블',   desc: 'Placed blocks fade after 1.5s.', descKo: '놓은 블록이 1.5초 후 흐려집니다. 기억력 테스트.' },
+  classic:  { name: 'Classic',  nameKo: '클래식',     desc: 'Play until you top out.', descKo: '계속 떨어지는 무한 모드. 가능한 오래 버티세요.', metric: 'survival' },
+  sprint:   { name: 'Sprint 40', nameKo: '스프린트 40', desc: 'Clear 40 lines as fast as possible.', descKo: '40줄 클리어 타임어택. 빠를수록 점수 ↑', metric: 'time' },
+  ultra:    { name: 'Ultra 2m', nameKo: '울트라 2분',  desc: 'High score in 2 minutes.', descKo: '2분 안에 최대한 많은 점수를 쌓으세요.', metric: 'score' },
+  invisible:{ name: 'Invisible', nameKo: '인비저블',   desc: 'Placed blocks fade after 1.5s.', descKo: '놓은 블록이 1.5초 후 흐려집니다. 기억력 테스트.', metric: 'survival' },
+}
+
+function fmtElapsed(sec) {
+  const s = Number(sec) || 0
+  if (s <= 0) return null
+  if (s < 60) return `${s.toFixed(s < 10 ? 1 : 0)}s`
+  const m = Math.floor(s / 60)
+  const r = Math.round(s - m * 60)
+  return `${m}m ${r.toString().padStart(2, '0')}s`
+}
+
+function formatPBForMode(modeKey, perMode, lang) {
+  if (!perMode) return null
+  const stat = perMode[modeKey]
+  if (!stat) return null
+  const metric = MODES[modeKey]?.metric
+  if (metric === 'survival') {
+    const t = fmtElapsed(stat.maxElapsed)
+    return t ? `${lang === 'ko' ? '최장 생존' : 'Best survival'}: ${t}` : null
+  }
+  if (metric === 'time') {
+    const t = fmtElapsed(stat.minElapsed)
+    return t ? `${lang === 'ko' ? '최단 클리어' : 'Best time'}: ${t}` : null
+  }
+  if (stat.best > 0) return `${lang === 'ko' ? '최고 점수' : 'Best score'}: ${stat.best.toLocaleString()}`
+  return null
 }
 
 function shuffleBag() {
@@ -590,18 +617,32 @@ export default function TetrisGame({ onComplete }) {
   const { lang } = useLang()
   const txt = (ko, en) => (lang === 'ko' ? ko : en)
   const [mode, setMode] = useState(null)
+  const [perMode, setPerMode] = useState(null)
+
+  useEffect(() => {
+    if (mode) return undefined
+    let cancelled = false
+    api.get('/arcade/my-best')
+      .then(({ data }) => { if (!cancelled) setPerMode(data?.bestByGameMode?.tetris || null) })
+      .catch(() => { /* non-fatal — mode cards still render without PB */ })
+    return () => { cancelled = true }
+  }, [mode])
 
   if (!mode) {
     return (
       <div className="tetris-mode-select">
         <h2 style={{ margin: 0, fontSize: 18 }}>{txt('테트리스 모드 선택', 'Choose a Tetris mode')}</h2>
         <div className="tetris-mode-grid">
-          {Object.entries(MODES).map(([key, info]) => (
-            <button key={key} className="tetris-mode-card" onClick={() => setMode(key)}>
-              <strong>{lang === 'ko' ? info.nameKo : info.name}</strong>
-              <span>{lang === 'ko' ? info.descKo : info.desc}</span>
-            </button>
-          ))}
+          {Object.entries(MODES).map(([key, info]) => {
+            const pb = formatPBForMode(key, perMode, lang)
+            return (
+              <button key={key} className="tetris-mode-card" onClick={() => setMode(key)}>
+                <strong>{lang === 'ko' ? info.nameKo : info.name}</strong>
+                <span>{lang === 'ko' ? info.descKo : info.desc}</span>
+                {pb && <span style={{ marginTop: 6, fontSize: 11, color: 'var(--accent)', fontFamily: 'Space Mono, monospace' }}>★ {pb}</span>}
+              </button>
+            )
+          })}
         </div>
       </div>
     )

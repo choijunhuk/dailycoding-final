@@ -211,10 +211,11 @@ All page components use **inline `style={{}}`**, which CSS cannot override witho
 - 배포 스크립트: `scripts/deploy.sh` / 초기 세팅: `scripts/vps-setup.sh`
 
 ### Deploy Command
-To deploy after committing and pushing to GitHub:
+Pushing to `main` auto-triggers GitHub Actions deploy (workflow `.github/workflows/deploy.yml`). For manual deploy:
 ```bash
-ssh -i ~/Downloads/LightsailDefaultKey-ap-northeast-2.pem ubuntu@13.125.79.231 "cd /home/ubuntu/dailycoding-final && bash scripts/deploy.sh"
+ssh -i ~/.ssh/coms_server -p 2222 kw@coms.kw.ac.kr "cd ~/dailycoding-final && bash scripts/deploy.sh"
 ```
+Server: KW-hosted VPS at `coms.kw.ac.kr` (`128.134.57.111`). Port 2222, user `kw`. NOT the old AWS Lightsail.
 
 ---
 
