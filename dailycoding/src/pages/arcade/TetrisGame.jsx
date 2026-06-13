@@ -433,25 +433,24 @@ function TetrisPlay({ mode, onComplete, onExit }) {
     lockRef.current.armed = false
     lockRef.current.resets = 0
     setLocking(false)
-    setPiece((p) => {
-      if (!held) {
-        setHeld(p.type)
-        // Spawn next from queue
-        setQueue((q) => {
-          const fresh = pieceFromType(q[0])
-          if (collides(board, fresh)) { setOver(true); return q }
-          // Pull a new tail from bag
-          setTimeout(() => setQueue((q2) => q2.length === q.length ? [...q2.slice(1), pullPiece()] : q2), 0)
-          setPiece(fresh)
-          return q
-        })
-        return p
-      }
-      const fresh = pieceFromType(held)
+
+    // Read current state once — avoid nested setState callbacks
+    const { piece: p, board: b } = stateRef.current
+    if (!held) {
+      // First hold: save current, spawn from front of queue, refill bag tail
+      const nextType = queue[0]
+      const fresh = pieceFromType(nextType)
+      if (collides(b, fresh)) { setOver(true); return }
       setHeld(p.type)
-      if (collides(board, fresh)) { setOver(true); return p }
-      return fresh
-    })
+      setPiece(fresh)
+      setQueue((q) => [...q.slice(1), pullPiece()])
+    } else {
+      // Swap: held becomes active, current goes into hold
+      const fresh = pieceFromType(held)
+      if (collides(b, fresh)) { setOver(true); return }
+      setHeld(p.type)
+      setPiece(fresh)
+    }
   }
 
   useEffect(() => {

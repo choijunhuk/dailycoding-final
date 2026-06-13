@@ -122,18 +122,21 @@ router.get('/leaderboard/:gameKey', async (req, res, next) => {
 
     let rows;
     if (metric === 'time') {
-      // Fastest elapsed per user. For Tetris only sprint mode that actually finished counts.
+      // Fastest elapsed per user. JSON values must be unquoted before string
+      // compare, and numeric-cast before sort — JSON_EXTRACT sorts JSON values
+      // lexicographically (so "10" < "5"), which gives the wrong ranking.
       const tetrisFilter = gameKey === 'tetris'
-        ? `AND JSON_EXTRACT(s.meta, '$.mode') = 'sprint' AND JSON_EXTRACT(s.meta, '$.finished') = true`
+        ? `AND s.meta->>'$.mode' = 'sprint' AND s.meta->>'$.finished' = 'true'`
         : '';
       rows = await query(
         `SELECT s.user_id, u.username, u.tier,
-                MIN(JSON_EXTRACT(s.meta, '$.elapsed')) AS elapsed_sec,
+                MIN(CAST(s.meta->>'$.elapsed' AS DECIMAL(10,3))) AS elapsed_sec,
                 MAX(s.score) AS score
          FROM arcade_scores s
          JOIN users u ON u.id = s.user_id
          WHERE s.game_key = ?
-           AND JSON_EXTRACT(s.meta, '$.elapsed') > 0
+           AND s.meta->>'$.elapsed' IS NOT NULL
+           AND CAST(s.meta->>'$.elapsed' AS DECIMAL(10,3)) > 0
            ${tetrisFilter}
          GROUP BY s.user_id, u.username, u.tier
          ORDER BY elapsed_sec ASC
