@@ -144,6 +144,13 @@
   background: #fff !important;
   box-shadow: 0 0 18px #fff, inset 0 0 0 1px #fff !important;
 }
+.t-cell.locking {
+  animation: tetris-lock-pulse .5s ease-out infinite;
+}
+@keyframes tetris-lock-pulse {
+  0%, 100% { filter: brightness(1); }
+  50%      { filter: brightness(1.6); }
+}
 @keyframes tetris-flash {
   0%   { filter: brightness(2.5); transform: scale(1.1); }
   100% { filter: brightness(1);   transform: scale(1); }

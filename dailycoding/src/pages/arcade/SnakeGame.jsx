@@ -33,11 +33,20 @@ export default function SnakeGame({ onComplete }) {
   const [score, setScore] = useState(0)
   const [over, setOver] = useState(false)
   const dirRef = useRef(dir)
+  // Buffered direction queue — applied one per tick. Prevents fast L→D after R from
+  // collapsing into a 180° kill (only the last input wins per tick today).
+  const queueRef = useRef([])
   const completedRef = useRef(false)
 
   useEffect(() => { dirRef.current = dir }, [dir])
 
   const tick = useCallback(() => {
+    // Apply the next buffered direction (already opposite-checked at enqueue)
+    if (queueRef.current.length > 0) {
+      const nextDir = queueRef.current.shift()
+      dirRef.current = nextDir
+      setDir(nextDir)
+    }
     setSnake((s) => {
       const head = { x: s[0].x + dirRef.current.dx, y: s[0].y + dirRef.current.dy }
       if (head.x < 0 || head.x >= COLS || head.y < 0 || head.y >= ROWS) {
@@ -76,10 +85,18 @@ export default function SnakeGame({ onComplete }) {
       const d = DIRS[e.key]
       if (!d) return
       e.preventDefault()
-      const cur = dirRef.current
+      // Compare against the latest queued direction (or current if queue empty)
+      // so the player can chain 2 quick perpendicular inputs without losing one.
+      const last = queueRef.current.length > 0
+        ? queueRef.current[queueRef.current.length - 1]
+        : dirRef.current
       // Prevent reversing into self.
-      if (cur.dx === -d.dx && cur.dy === -d.dy) return
-      setDir(d)
+      if (last.dx === -d.dx && last.dy === -d.dy) return
+      // Ignore duplicate same-direction repeats — they waste a queue slot.
+      if (last.dx === d.dx && last.dy === d.dy) return
+      // Buffer at most 2 inputs ahead; drop overflow to keep responsive feel.
+      if (queueRef.current.length >= 2) return
+      queueRef.current.push(d)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)

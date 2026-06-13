@@ -77,6 +77,8 @@ export default function Game2048({ onComplete }) {
   const [score, setScore] = useState(0)
   const [over, setOver] = useState(false)
   const [reached2048, setReached2048] = useState(false)
+  // One-step undo: snapshot saved on each successful move, consumed once
+  const [undoSnap, setUndoSnap] = useState(null)
   const completedRef = useRef(false)
 
   useEffect(() => {
@@ -92,14 +94,28 @@ export default function Game2048({ onComplete }) {
     if (!changed) return
     const spawned = spawn(next)
     const maxTile = Math.max(...spawned.flat())
+    // Save snapshot BEFORE applying — one undo available per move
+    setUndoSnap({ grid, score })
     setGrid(spawned)
     setScore((s) => s + gained)
     if (maxTile >= 2048 && !reached2048) setReached2048(true)
     if (isStuck(spawned)) setOver(true)
-  }, [grid, over, reached2048])
+  }, [grid, over, reached2048, score])
+
+  const handleUndo = useCallback(() => {
+    if (!undoSnap || over) return
+    setGrid(undoSnap.grid)
+    setScore(undoSnap.score)
+    setUndoSnap(null)
+  }, [undoSnap, over])
 
   useEffect(() => {
     const onKey = (e) => {
+      if (e.key === 'u' || e.key === 'U' || e.key === 'z' || e.key === 'Z') {
+        e.preventDefault()
+        handleUndo()
+        return
+      }
       const map = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down', h: 'left', l: 'right', k: 'up', j: 'down' }
       const dir = map[e.key]
       if (!dir) return
@@ -108,7 +124,7 @@ export default function Game2048({ onComplete }) {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [handleMove])
+  }, [handleMove, handleUndo])
 
   return (
     <div className="g2048-game">
@@ -127,11 +143,22 @@ export default function Game2048({ onComplete }) {
         <div className="tetris-controls">
           <div><kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd></div>
           <div>{txt('또는', 'or')} <kbd>h</kbd><kbd>j</kbd><kbd>k</kbd><kbd>l</kbd></div>
+          <div><kbd>U</kbd> {txt('한 수 되돌리기', 'Undo last move')}</div>
           <div>{txt('같은 숫자 만나면 합쳐짐. 2048 만들면 보너스!', 'Merge equal tiles. Reach 2048 for a bonus!')}</div>
         </div>
         {reached2048 && <div className="g2048-victory">🏆 2048!</div>}
         {!over && (
-          <button className="btn btn-ghost btn-sm" onClick={() => setOver(true)}>{txt('포기', 'Give up')}</button>
+          <>
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={handleUndo}
+              disabled={!undoSnap}
+              style={{ opacity: undoSnap ? 1 : 0.4 }}
+            >
+              ↶ {txt('되돌리기', 'Undo')}
+            </button>
+            <button className="btn btn-ghost btn-sm" onClick={() => setOver(true)}>{txt('포기', 'Give up')}</button>
+          </>
         )}
       </div>
     </div>

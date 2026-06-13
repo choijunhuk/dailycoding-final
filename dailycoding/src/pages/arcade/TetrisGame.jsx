@@ -146,6 +146,12 @@ function TetrisPlay({ mode, onComplete, onExit }) {
   const [held, setHeld] = useState(null)
   const canHoldRef = useRef(true)
 
+  // Lock-delay: 500ms after touching ground, with up to 8 move/rotate resets
+  const LOCK_DELAY_MS = 500
+  const LOCK_RESET_CAP = 8
+  const lockRef = useRef({ timerId: null, resets: 0, armed: false })
+  const [locking, setLocking] = useState(false)
+
   const [score, setScore] = useState(0)
   const [lines, setLines] = useState(0)
   const [level, setLevel] = useState(1)
@@ -173,6 +179,64 @@ function TetrisPlay({ mode, onComplete, onExit }) {
     setTimeout(() => setFloats((f) => f.filter((x) => x.id !== id)), 1100)
   }, [])
 
+  const clearLockTimer = useCallback(() => {
+    if (lockRef.current.timerId) {
+      clearTimeout(lockRef.current.timerId)
+      lockRef.current.timerId = null
+    }
+    lockRef.current.armed = false
+    lockRef.current.resets = 0
+    setLocking(false)
+  }, [])
+
+  const lockNow = useCallback(() => {
+    const { board: b, piece: p, placedAt: pa } = stateRef.current
+    clearLockTimer()
+    lockAndAdvanceRef.current && lockAndAdvanceRef.current(b, p, pa)
+  }, [clearLockTimer])
+
+  const armLockTimer = useCallback(() => {
+    if (lockRef.current.timerId || lockRef.current.armed) return
+    lockRef.current.armed = true
+    setLocking(true)
+    lockRef.current.timerId = setTimeout(() => {
+      lockRef.current.timerId = null
+      // Re-check: if piece moved off floor before timer fired, abort lock
+      const { board: b, piece: p, placedAt: pa } = stateRef.current
+      if (collides(b, { ...p, y: p.y + 1 })) {
+        lockRef.current.armed = false
+        lockRef.current.resets = 0
+        setLocking(false)
+        lockAndAdvanceRef.current && lockAndAdvanceRef.current(b, p, pa)
+      } else {
+        lockRef.current.armed = false
+        setLocking(false)
+      }
+    }, LOCK_DELAY_MS)
+  }, [])
+
+  const resetLockTimer = useCallback(() => {
+    // Only resets if currently armed (piece touching floor) and cap not exceeded
+    if (!lockRef.current.armed) return
+    if (lockRef.current.resets >= LOCK_RESET_CAP) return
+    lockRef.current.resets += 1
+    if (lockRef.current.timerId) {
+      clearTimeout(lockRef.current.timerId)
+      lockRef.current.timerId = null
+    }
+    lockRef.current.armed = false
+    setLocking(false)
+    armLockTimer()
+  }, [armLockTimer])
+
+  // Forward ref so lockNow/timer callback can call lockAndAdvance defined later
+  const lockAndAdvanceRef = useRef(null)
+
+  // Cleanup timer on unmount
+  useEffect(() => () => {
+    if (lockRef.current.timerId) clearTimeout(lockRef.current.timerId)
+  }, [])
+
   // Ultra clock
   useEffect(() => {
     if (mode !== 'ultra' || over || paused) return undefined
@@ -192,6 +256,12 @@ function TetrisPlay({ mode, onComplete, onExit }) {
   }, [mode, over])
 
   const lockAndAdvance = useCallback((board, piece, placedAt) => {
+    // Ensure lock state is cleared whenever a piece actually locks
+    if (lockRef.current.timerId) { clearTimeout(lockRef.current.timerId); lockRef.current.timerId = null }
+    lockRef.current.armed = false
+    lockRef.current.resets = 0
+    setLocking(false)
+
     const ts = Date.now()
     const merged = merge(board, piece)
     const nextPlaced = placedAt.map((row) => row.slice())
@@ -254,15 +324,26 @@ function TetrisPlay({ mode, onComplete, onExit }) {
     })
   }, [combo, mode, pullPiece, pushFloat, txt])
 
+  // Keep ref in sync so lock timer callback can invoke lockAndAdvance
+  useEffect(() => { lockAndAdvanceRef.current = lockAndAdvance }, [lockAndAdvance])
+
   const step = useCallback(() => {
-    const { board: b, piece: p, placedAt: pa } = stateRef.current
+    const { board: b, piece: p } = stateRef.current
     const moved = { ...p, y: p.y + 1 }
     if (collides(b, moved)) {
-      lockAndAdvance(b, p, pa)
+      // Touching ground — arm lock delay instead of locking immediately
+      armLockTimer()
     } else {
+      // Piece can fall — clear any armed lock timer (left a ledge etc.)
+      if (lockRef.current.armed) {
+        if (lockRef.current.timerId) { clearTimeout(lockRef.current.timerId); lockRef.current.timerId = null }
+        lockRef.current.armed = false
+        setLocking(false)
+        // Note: resets persist across off-ground/on-ground cycles within same piece
+      }
       setPiece(moved)
     }
-  }, [lockAndAdvance])
+  }, [armLockTimer])
 
   useEffect(() => {
     if (over || paused || flashRows.length > 0) return undefined
@@ -286,11 +367,27 @@ function TetrisPlay({ mode, onComplete, onExit }) {
     }
   }, [over])
 
+  const afterPlayerMove = (movedPiece) => {
+    // If new position is grounded → reset/arm lock timer; else cancel
+    const grounded = collides(board, { ...movedPiece, y: movedPiece.y + 1 })
+    if (grounded) {
+      if (lockRef.current.armed) resetLockTimer()
+      else armLockTimer()
+    } else {
+      // Left ground — cancel timer but keep reset count (anti-stall)
+      if (lockRef.current.timerId) { clearTimeout(lockRef.current.timerId); lockRef.current.timerId = null }
+      lockRef.current.armed = false
+      setLocking(false)
+    }
+  }
+
   const move = (dx) => {
     if (over || paused) return
     setPiece((p) => {
       const moved = { ...p, x: p.x + dx }
-      return collides(board, moved) ? p : moved
+      if (collides(board, moved)) return p
+      afterPlayerMove(moved)
+      return moved
     })
   }
 
@@ -298,12 +395,17 @@ function TetrisPlay({ mode, onComplete, onExit }) {
     if (over || paused) return
     setPiece((p) => {
       const r = rotate(p)
-      if (!collides(board, r)) return r
-      for (const dx of [-1, 1, -2, 2]) {
-        const shifted = { ...r, x: r.x + dx }
-        if (!collides(board, shifted)) return shifted
+      let result = null
+      if (!collides(board, r)) result = r
+      else {
+        for (const dx of [-1, 1, -2, 2]) {
+          const shifted = { ...r, x: r.x + dx }
+          if (!collides(board, shifted)) { result = shifted; break }
+        }
       }
-      return p
+      if (!result) return p
+      afterPlayerMove(result)
+      return result
     })
   }
 
@@ -315,12 +417,22 @@ function TetrisPlay({ mode, onComplete, onExit }) {
     setScore((s) => s + (moved.y - p.y) * 2)
     setShake(4)
     setTimeout(() => setShake(0), 120)
+    // Hard drop bypasses lock delay
+    if (lockRef.current.timerId) { clearTimeout(lockRef.current.timerId); lockRef.current.timerId = null }
+    lockRef.current.armed = false
+    lockRef.current.resets = 0
+    setLocking(false)
     lockAndAdvance(b, moved, pa)
   }
 
   const doHold = () => {
     if (over || paused || !canHoldRef.current) return
     canHoldRef.current = false
+    // Hold swaps the active piece — reset lock state for the new piece
+    if (lockRef.current.timerId) { clearTimeout(lockRef.current.timerId); lockRef.current.timerId = null }
+    lockRef.current.armed = false
+    lockRef.current.resets = 0
+    setLocking(false)
     setPiece((p) => {
       if (!held) {
         setHeld(p.type)
@@ -367,6 +479,15 @@ function TetrisPlay({ mode, onComplete, onExit }) {
     return s
   }, [ghost, board])
 
+  const pieceSet = useMemo(() => {
+    const s = new Set()
+    piece.cells.forEach(([cx, cy]) => {
+      const x = piece.x + cx, y = piece.y + cy
+      if (y >= 0 && y < ROWS && x >= 0 && x < COLS) s.add(`${x},${y}`)
+    })
+    return s
+  }, [piece])
+
   const view = board.map((row) => row.slice())
   piece.cells.forEach(([cx, cy]) => {
     const x = piece.x + cx, y = piece.y + cy
@@ -397,10 +518,12 @@ function TetrisPlay({ mode, onComplete, onExit }) {
             }
             const isGhost = !cell && ghostSet.has(`${x},${y}`)
             const isFlash = flashRows.includes(y)
+            const isActive = cell && pieceSet.has(`${x},${y}`)
             const classes = ['t-cell']
             if (cell) classes.push('on')
             if (isGhost) classes.push('ghost')
             if (isFlash) classes.push('flash')
+            if (isActive && locking) classes.push('locking')
             return (
               <div
                 key={`${x}-${y}`}
