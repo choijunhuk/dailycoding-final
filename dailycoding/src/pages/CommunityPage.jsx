@@ -184,8 +184,10 @@ export default function CommunityPage() {
   const [selectedPost, setSelectedPost] = useState(null)
   const [composerOpen, setComposerOpen] = useState(false)
   const [editorMode, setEditorMode] = useState('create')
-  const [draft, setDraft] = useState({ title: '', content: '', tags: '', isAnonymous: false })
+  const [draft, setDraft] = useState({ title: '', content: '', tags: '', isAnonymous: false, imageUrl: '' })
   const [savingPost, setSavingPost] = useState(false)
+  const [uploadingImage, setUploadingImage] = useState(false)
+  const [sort, setSort] = useState('new')
   const [replyDraft, setReplyDraft] = useState('')
   const [replyBusy, setReplyBusy] = useState(false)
 
@@ -207,7 +209,7 @@ export default function CommunityPage() {
   const refreshPosts = useCallback(async () => {
     setLoading(true)
     try {
-      const { data } = await api.get(`/community/${activeBoard}`, { params: { page, q: search || undefined, tag: tag || undefined } })
+      const { data } = await api.get(`/community/${activeBoard}`, { params: { page, q: search || undefined, tag: tag || undefined, sort } })
       setPostsState({
         posts: data.posts || [],
         totalPages: Math.max(1, data.totalPages || 1),
@@ -219,7 +221,7 @@ export default function CommunityPage() {
     } finally {
       setLoading(false)
     }
-  }, [activeBoard, page, search, tag, toast, txt])
+  }, [activeBoard, page, search, tag, sort, toast, txt])
 
   const refreshDetail = useCallback(async (postId) => {
     if (!postId) return
@@ -240,7 +242,12 @@ export default function CommunityPage() {
     setPage(1)
     setSearch('')
     setTag('')
+    setSort('new')
   }, [activeBoard])
+
+  useEffect(() => {
+    setPage(1)
+  }, [sort])
 
   useEffect(() => {
     refreshPosts()
@@ -286,11 +293,13 @@ export default function CommunityPage() {
       content: post.content || '',
       tags: parseTags(post.tags).join(', '),
       isAnonymous: Boolean(post.is_anonymous),
+      imageUrl: post.image_url || '',
     } : {
       title: '',
       content: '',
       tags: '',
       isAnonymous: false,
+      imageUrl: '',
     })
     setComposerOpen(true)
   }
@@ -301,6 +310,7 @@ export default function CommunityPage() {
       content: draft.content.trim(),
       tags: draft.tags.split(',').map((value) => value.trim()).filter(Boolean),
       is_anonymous: draft.isAnonymous,
+      image_url: draft.imageUrl || null,
     }
     if (!payload.title || !payload.content) {
       toast?.show(txt('제목과 본문을 입력하세요.', 'Please enter a title and content.'), 'warning')
@@ -346,6 +356,39 @@ export default function CommunityPage() {
       await Promise.all([refreshPosts(), selectedPost?.id === postId ? refreshDetail(postId) : Promise.resolve()])
     } catch {
       toast?.show(txt('좋아요 처리에 실패했습니다.', 'Failed to process like.'), 'error')
+    }
+  }
+
+  const votePost = async (postId, vote) => {
+    try {
+      await api.post(`/community/${activeBoard}/${postId}/vote`, { vote })
+      await Promise.all([refreshPosts(), selectedPost?.id === postId ? refreshDetail(postId) : Promise.resolve()])
+    } catch (error) {
+      toast?.show(error?.response?.data?.message || txt('투표 처리에 실패했습니다.', 'Failed to record vote.'), 'error')
+    }
+  }
+
+  const uploadPostImage = async (file) => {
+    if (!file) return
+    if (file.size > 6 * 1024 * 1024) {
+      toast?.show(txt('이미지 크기는 6MB 이하여야 합니다.', 'Image must be under 6MB.'), 'warning')
+      return
+    }
+    setUploadingImage(true)
+    try {
+      const form = new FormData()
+      form.append('image', file)
+      const { data } = await api.post('/community/upload-image', form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      if (data?.url) {
+        setDraft((d) => ({ ...d, imageUrl: data.url }))
+        toast?.show(txt('이미지가 업로드되었습니다.', 'Image uploaded.'), 'success')
+      }
+    } catch (error) {
+      toast?.show(error?.response?.data?.message || txt('이미지 업로드에 실패했습니다.', 'Image upload failed.'), 'error')
+    } finally {
+      setUploadingImage(false)
     }
   }
 
@@ -443,6 +486,31 @@ export default function CommunityPage() {
           placeholder={txt('쉼표로 태그를 구분하여 입력하세요. 예: dp, 그래프, 리뷰', 'Separate tags with commas. Example: dp, graph, review')}
           style={{ border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', borderRadius: 12, padding: '12px 14px', fontFamily: 'inherit', fontSize: 13, outline: 'none' }}
         />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 12, background: 'var(--bg3)', borderRadius: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 10, cursor: uploadingImage ? 'wait' : 'pointer', fontSize: 13, fontWeight: 700 }}>
+              📷 {uploadingImage ? txt('업로드 중...', 'Uploading...') : txt('이미지 추가', 'Add Image')}
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/gif"
+                disabled={uploadingImage}
+                style={{ display: 'none' }}
+                onChange={(e) => { uploadPostImage(e.target.files?.[0]); e.target.value = '' }}
+              />
+            </label>
+            {draft.imageUrl && (
+              <button
+                type="button"
+                onClick={() => setDraft((d) => ({ ...d, imageUrl: '' }))}
+                style={{ border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--red)', borderRadius: 10, padding: '8px 12px', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}
+              >{txt('이미지 제거', 'Remove')}</button>
+            )}
+            <span style={{ fontSize: 11, color: 'var(--text3)' }}>{txt('PNG·JPG·WEBP·GIF, 최대 6MB', 'PNG/JPG/WEBP/GIF, max 6MB')}</span>
+          </div>
+          {draft.imageUrl && (
+            <img src={draft.imageUrl} alt="" style={{ maxWidth: '100%', maxHeight: 280, borderRadius: 10, border: '1px solid var(--border)', objectFit: 'contain', background: 'var(--bg)' }} />
+          )}
+        </div>
         {editorMode === 'create' ? (
           <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text2)', cursor: 'pointer', width: 'fit-content' }}>
             <input type="checkbox" checked={draft.isAnonymous} onChange={(event) => setDraft((current) => ({ ...current, isAnonymous: event.target.checked }))} />
@@ -483,7 +551,14 @@ export default function CommunityPage() {
           ) : (
             <div style={{ display: 'grid', gap: 20 }}>
               <div>
-                <div style={{ fontSize: 12, color: BOARD_META[activeBoard].tone, fontWeight: 900, marginBottom: 8 }}>{boardMeta[activeBoard].label}</div>
+                <div style={{ fontSize: 12, color: BOARD_META[activeBoard].tone, fontWeight: 900, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span>{boardMeta[activeBoard].label}</span>
+                  {((selectedPost.like_count || 0) - (selectedPost.dislike_count || 0)) >= 5 ? (
+                    <span style={{ background: 'linear-gradient(135deg, #ffd166, #ffa657)', color: '#0d1117', padding: '2px 8px', borderRadius: 6, fontSize: 10, fontWeight: 900, letterSpacing: '.05em' }}>
+                      💡 {txt('개념글', 'CONCEPT')}
+                    </span>
+                  ) : null}
+                </div>
                 <h1 className="community-detail-title" style={{ margin: 0, fontSize: 28, lineHeight: 1.25, color: 'var(--text)', letterSpacing: -0.5 }}>{selectedPost.title}</h1>
               </div>
 
@@ -503,7 +578,21 @@ export default function CommunityPage() {
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  <button onClick={() => togglePostLike(selectedPost.id)} style={{ border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--text)', borderRadius: 12, padding: '9px 12px', cursor: 'pointer', fontWeight: 700 }}>❤️ {txt('좋아요', 'Like')} {selectedPost.like_count || 0}</button>
+                  <div style={{ display: 'flex', gap: 0, alignItems: 'stretch', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
+                    <button
+                      onClick={() => votePost(selectedPost.id, 1)}
+                      title={txt('추천', 'Upvote')}
+                      style={{ border: 'none', background: 'var(--bg3)', color: 'var(--green)', padding: '9px 12px', cursor: 'pointer', fontWeight: 700 }}
+                    >▲ {selectedPost.like_count || 0}</button>
+                    <div style={{ padding: '9px 10px', background: 'var(--bg)', color: 'var(--text)', fontWeight: 800, fontFamily: 'Space Mono, monospace', borderLeft: '1px solid var(--border)', borderRight: '1px solid var(--border)' }}>
+                      {((selectedPost.like_count || 0) - (selectedPost.dislike_count || 0))}
+                    </div>
+                    <button
+                      onClick={() => votePost(selectedPost.id, -1)}
+                      title={txt('비추천', 'Downvote')}
+                      style={{ border: 'none', background: 'var(--bg3)', color: 'var(--red)', padding: '9px 12px', cursor: 'pointer', fontWeight: 700 }}
+                    >▼ {selectedPost.dislike_count || 0}</button>
+                  </div>
                   <button onClick={() => toggleScrap(selectedPost.id)} style={{ border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--text)', borderRadius: 12, padding: '9px 12px', cursor: 'pointer', fontWeight: 700 }}>{selectedPost.isScrapped ? txt('북마크 해제', 'Unbookmark') : txt('북마크', 'Bookmark')}</button>
                   {!isMyPost && selectedPost.user_id ? (
                     <button onClick={() => blockAuthor(selectedPost.user_id)} style={{ border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--red)', borderRadius: 12, padding: '9px 12px', cursor: 'pointer', fontWeight: 700 }}>{txt('차단', 'Block')}</button>
@@ -524,6 +613,12 @@ export default function CommunityPage() {
                   <span key={`detail-page-tag-${item}`} style={{ fontSize: 11, color: 'var(--blue)', background: 'rgba(88,166,255,.12)', border: '1px solid rgba(88,166,255,.2)', borderRadius: 999, padding: '4px 8px' }}>#{item}</span>
                 ))}
               </div>
+
+              {selectedPost.image_url ? (
+                <a href={selectedPost.image_url} target="_blank" rel="noreferrer" style={{ display: 'block', borderRadius: 18, overflow: 'hidden', border: '1px solid var(--border)', background: 'var(--bg)' }}>
+                  <img src={selectedPost.image_url} alt="" style={{ width: '100%', maxHeight: 600, objectFit: 'contain', display: 'block' }} />
+                </a>
+              ) : null}
 
               <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 18, padding: '22px 20px', color: 'var(--text)', lineHeight: 1.85, whiteSpace: 'pre-wrap', fontSize: 15 }}>
                 {selectedPost.content}
@@ -696,6 +791,31 @@ export default function CommunityPage() {
               </div>
             </div>
 
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', padding: '0 2px 12px' }}>
+              {[
+                { key: 'new',     label: txt('최신',   'New') },
+                { key: 'hot',     label: txt('인기',   'Hot') },
+                { key: 'top',     label: txt('Top',    'Top') },
+                { key: 'concept', label: txt('💡 개념글', '💡 Concept') },
+              ].map((opt) => (
+                <button
+                  key={opt.key}
+                  onClick={() => setSort(opt.key)}
+                  style={{
+                    border: '1px solid var(--border)',
+                    background: sort === opt.key ? BOARD_META[activeBoard].tone : 'var(--bg3)',
+                    color: sort === opt.key ? 'var(--bg)' : 'var(--text2)',
+                    borderRadius: 999,
+                    padding: '6px 14px',
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                    fontSize: 12,
+                    fontWeight: 700,
+                  }}
+                >{opt.label}</button>
+              ))}
+            </div>
+
             <div className="card" style={{ overflow: 'hidden' }}>
               {loading ? (
                 <div style={{ padding: '46px 20px', textAlign: 'center', color: 'var(--text3)' }}>{txt('게시글을 불러오는 중...', 'Loading posts...')}</div>
@@ -723,30 +843,45 @@ export default function CommunityPage() {
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 10 }}>
-                      <div style={{ minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
-                          {post.is_pinned ? <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--yellow)' }}>{txt('고정됨', 'Pinned')}</span> : null}
-                          {post.is_solved ? <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--green)' }}>{txt('해결됨', 'Solved')}</span> : null}
-                          {post.is_anonymous ? <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--purple)' }}>{txt('익명', 'Anonymous')}</span> : null}
-                        </div>
-                        <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)', lineHeight: 1.4, marginBottom: 8, overflow: 'hidden', textOverflow: 'ellipsis' }}>{post.title}</div>
-                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
-                          {post.tags.map((item) => (
-                            <span key={`${post.id}-${item}`} style={{ fontSize: 11, color: 'var(--blue)', background: 'rgba(88,166,255,.12)', border: '1px solid rgba(88,166,255,.2)', borderRadius: 999, padding: '4px 8px' }}>
-                              #{item}
-                            </span>
-                          ))}
-                        </div>
-                        <div style={{ fontSize: 12, color: 'var(--text3)', display: 'flex', gap: 14, flexWrap: 'wrap' }}>
-                          <span>{authorName}</span>
-                          <span>{formatDate(post.created_at, dateLocale)}</span>
+                      <div style={{ minWidth: 0, display: 'flex', gap: 12, flex: 1 }}>
+                        {post.image_url ? (
+                          <img
+                            src={post.image_url}
+                            alt=""
+                            loading="lazy"
+                            style={{ width: 96, height: 72, objectFit: 'cover', borderRadius: 10, border: '1px solid var(--border)', flexShrink: 0 }}
+                          />
+                        ) : null}
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+                            {post.is_pinned ? <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--yellow)' }}>{txt('고정됨', 'Pinned')}</span> : null}
+                            {post.is_concept ? (
+                              <span style={{ background: 'linear-gradient(135deg, #ffd166, #ffa657)', color: '#0d1117', padding: '2px 7px', borderRadius: 5, fontSize: 10, fontWeight: 900, letterSpacing: '.05em' }}>
+                                💡 {txt('개념글', 'CONCEPT')}
+                              </span>
+                            ) : null}
+                            {post.is_solved ? <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--green)' }}>{txt('해결됨', 'Solved')}</span> : null}
+                            {post.is_anonymous ? <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--purple)' }}>{txt('익명', 'Anonymous')}</span> : null}
+                          </div>
+                          <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)', lineHeight: 1.4, marginBottom: 8, overflow: 'hidden', textOverflow: 'ellipsis' }}>{post.title}</div>
+                          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
+                            {post.tags.map((item) => (
+                              <span key={`${post.id}-${item}`} style={{ fontSize: 11, color: 'var(--blue)', background: 'rgba(88,166,255,.12)', border: '1px solid rgba(88,166,255,.2)', borderRadius: 999, padding: '4px 8px' }}>
+                                #{item}
+                              </span>
+                            ))}
+                          </div>
+                          <div style={{ fontSize: 12, color: 'var(--text3)', display: 'flex', gap: 14, flexWrap: 'wrap' }}>
+                            <span>{authorName}</span>
+                            <span>{formatDate(post.created_at, dateLocale)}</span>
+                          </div>
                         </div>
                       </div>
                       <div className="community-post-metrics" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(54px, 1fr))', gap: 8, textAlign: 'center', flexShrink: 0 }}>
                         {[
-                          { label: txt('좋아요', 'Likes'), value: post.like_count || 0, color: 'var(--red)' },
-                          { label: txt('댓글', 'Replies'), value: post.answer_count || 0, color: 'var(--green)' },
-                          { label: txt('조회', 'Views'), value: post.view_count || 0, color: 'var(--yellow)' },
+                          { label: txt('점수', 'Score'), value: (post.like_count || 0) - (post.dislike_count || 0), color: (post.like_count || 0) - (post.dislike_count || 0) >= 5 ? 'var(--yellow)' : 'var(--green)' },
+                          { label: txt('댓글', 'Replies'), value: post.answer_count || 0, color: 'var(--blue)' },
+                          { label: txt('조회', 'Views'), value: post.view_count || 0, color: 'var(--text2)' },
                         ].map((item) => (
                           <div key={`${post.id}-${item.label}`} style={{ background: 'var(--bg3)', borderRadius: 12, padding: '10px 8px' }}>
                             <div style={{ fontSize: 15, fontWeight: 800, color: item.color }}>{item.value}</div>

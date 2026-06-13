@@ -1,4 +1,10 @@
 import { Router } from 'express';
+import path from 'path';
+import { promises as fs } from 'fs';
+import { fileURLToPath } from 'url';
+import { randomBytes } from 'crypto';
+import multer from 'multer';
+import sharp from 'sharp';
 import { auth, requireVerified } from '../middleware/auth.js';
 import { query, queryOne, insert, run, transaction } from '../config/mysql.js';
 import { Notification } from '../models/Notification.js';
@@ -9,6 +15,16 @@ import { communityPostLimiter, communityReplyLimiter } from '../middleware/rateL
 const router = Router();
 const PAGE_SIZE = 20;
 const ALLOWED_BLOCK_ALIASES = new Set(['p', 'r', 'c', 'post', 'reply']);
+// Score (likes - dislikes) >= 5 promotes a post to "개념글" (featured).
+const CONCEPT_THRESHOLD = 5;
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const COMMUNITY_UPLOAD_DIR = path.join(__dirname, '..', '..', 'uploads', 'community');
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 6 * 1024 * 1024 },
+});
 
 // ── 헬퍼 ──────────────────────────────────────────────────────────────────
 
@@ -114,6 +130,37 @@ function maskAnonymousPostAuthor(row, viewerId) {
   };
 }
 
+// ── 이미지 업로드 (게시글 첨부) ───────────────────────────────────────────
+// POST /api/community/upload-image  (multipart/form-data, field name: "image")
+// Resizes via sharp to a max 1600px edge and writes to /uploads/community/.
+router.post('/upload-image', auth, requireVerified, upload.single('image'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ message: 'No image file' });
+  const mime = req.file.mimetype || '';
+  if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(mime)) {
+    return res.status(400).json({ message: 'Only JPG / PNG / WEBP / GIF allowed' });
+  }
+  try {
+    await fs.mkdir(COMMUNITY_UPLOAD_DIR, { recursive: true });
+    const ext = mime === 'image/gif' ? 'gif' : 'webp';
+    const filename = `${Date.now()}-${randomBytes(6).toString('hex')}.${ext}`;
+    const filePath = path.join(COMMUNITY_UPLOAD_DIR, filename);
+    if (mime === 'image/gif') {
+      // Preserve animation — sharp loses frames on GIFs, so just write the source bytes.
+      await fs.writeFile(filePath, req.file.buffer);
+    } else {
+      await sharp(req.file.buffer)
+        .rotate()
+        .resize({ width: 1600, height: 1600, fit: 'inside', withoutEnlargement: true })
+        .webp({ quality: 82 })
+        .toFile(filePath);
+    }
+    res.json({ url: `/uploads/community/${filename}` });
+  } catch (err) {
+    console.error('[community/upload-image]', err);
+    res.status(500).json({ message: 'Upload failed' });
+  }
+});
+
 // ── 인기 게시판 (최근 24시간, 추천 10개 이상) ────────────────────────────────
 // GET /api/community/popular
 router.get('/popular', auth, async (req, res) => {
@@ -205,12 +252,18 @@ router.get('/:board', auth, boardGuard, async (req, res) => {
   const offset = (page - 1) * PAGE_SIZE;
   const search = typeof req.query.q === 'string' ? req.query.q.trim().slice(0, 100) : '';
   const tag = typeof req.query.tag === 'string' ? req.query.tag.trim().slice(0, 50) : '';
+  // sort=new|hot|top|concept — defaults to "new". "concept" filters to score ≥ threshold.
+  const sortRaw = typeof req.query.sort === 'string' ? req.query.sort : 'new';
+  const sort = ['new', 'hot', 'top', 'concept'].includes(sortRaw) ? sortRaw : 'new';
 
   try {
     const blocked = blockFilter(req.user.id);
     let sql = `
       SELECT p.id, p.board_type, p.user_id, u.username, u.nickname, u.tier,
-             p.title, p.tags, p.view_count, p.like_count, p.answer_count,
+             p.title, p.tags, p.view_count, p.like_count, p.dislike_count, p.answer_count,
+             (p.like_count - p.dislike_count) AS score,
+             CASE WHEN (p.like_count - p.dislike_count) >= ${CONCEPT_THRESHOLD} THEN 1 ELSE 0 END AS is_concept,
+             p.image_url,
              p.is_solved, p.is_pinned, p.is_anonymous, p.created_at, p.problem_id
       FROM posts p
       JOIN users u ON p.user_id = u.id
@@ -227,8 +280,25 @@ router.get('/:board', auth, boardGuard, async (req, res) => {
       sql += ' AND JSON_CONTAINS(p.tags, JSON_QUOTE(?))';
       params.push(tag);
     }
+    if (sort === 'concept') {
+      sql += ` AND (p.like_count - p.dislike_count) >= ${CONCEPT_THRESHOLD}`;
+    }
 
-    sql += ` ORDER BY p.is_pinned DESC, p.created_at DESC LIMIT ${PAGE_SIZE} OFFSET ${offset}`;
+    let orderClause;
+    if (sort === 'hot') {
+      // Reddit-ish hot: score / age-hours^1.8, biased by recency.
+      orderClause = `ORDER BY p.is_pinned DESC,
+        ((p.like_count - p.dislike_count) /
+          POW(GREATEST(2, TIMESTAMPDIFF(HOUR, p.created_at, NOW()) + 2), 1.8)) DESC,
+        p.created_at DESC`;
+    } else if (sort === 'top') {
+      orderClause = 'ORDER BY p.is_pinned DESC, (p.like_count - p.dislike_count) DESC, p.created_at DESC';
+    } else if (sort === 'concept') {
+      orderClause = 'ORDER BY p.is_pinned DESC, (p.like_count - p.dislike_count) DESC, p.created_at DESC';
+    } else {
+      orderClause = 'ORDER BY p.is_pinned DESC, p.created_at DESC';
+    }
+    sql += ` ${orderClause} LIMIT ${PAGE_SIZE} OFFSET ${offset}`;
 
     const rawRows = await query(sql, params);
     const rows = (rawRows || []).map((row) => maskAnonymousPostAuthor(row, req.user.id));
@@ -237,6 +307,7 @@ router.get('/:board', auth, boardGuard, async (req, res) => {
     const countParams = [board];
     if (search) { countExtra += ' AND (p.title LIKE ? OR p.content LIKE ?)'; countParams.push(`%${search}%`, `%${search}%`); }
     if (tag)    { countExtra += ' AND JSON_CONTAINS(p.tags, JSON_QUOTE(?))'; countParams.push(tag); }
+    if (sort === 'concept') countExtra += ` AND (p.like_count - p.dislike_count) >= ${CONCEPT_THRESHOLD}`;
 
     const countSql = `
       SELECT COUNT(*) AS cnt FROM posts p
@@ -322,17 +393,21 @@ router.get('/:board/:id', auth, boardGuard, async (req, res) => {
 // ── 게시글 작성 ───────────────────────────────────────────────────────────
 // POST /api/community/:board
 router.post('/:board', auth, requireVerified, communityPostLimiter, boardGuard, validateBody(communityPostSchema), async (req, res) => {
-  const { title, content, code_snippet, lang, tags, problem_id, is_anonymous, poll } = req.body;
+  const { title, content, code_snippet, lang, tags, problem_id, is_anonymous, poll, image_url } = req.body;
   if (!title?.trim() || !content?.trim()) {
     return res.status(400).json({ message: 'Title and content are required.' });
   }
+  // Only accept our own upload URLs to prevent SSRF/abuse via arbitrary remote images.
+  const safeImageUrl = typeof image_url === 'string' && image_url.startsWith('/uploads/community/')
+    ? image_url.slice(0, 500)
+    : null;
   try {
     const cleanTags = sanitizeTags(tags);
     const normalizedPoll = normalizePoll(poll);
     const id = await transaction(async (conn) => {
       const [postResult] = await conn.query(
-        `INSERT INTO posts (board_type, user_id, title, content, code_snippet, lang, tags, problem_id, is_anonymous, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+        `INSERT INTO posts (board_type, user_id, title, content, code_snippet, lang, image_url, tags, problem_id, is_anonymous, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
         [
           req.params.board,
           req.user.id,
@@ -340,6 +415,7 @@ router.post('/:board', auth, requireVerified, communityPostLimiter, boardGuard, 
           content.trim(),
           code_snippet || null,
           lang || null,
+          safeImageUrl,
           cleanTags === null ? null : JSON.stringify(cleanTags),
           problem_id ? Number(problem_id) : null,
           is_anonymous ? 1 : 0,
@@ -384,22 +460,30 @@ router.patch('/:board/:id', auth, requireVerified, boardGuard, async (req, res) 
   if (!post) return res.status(404).json({ message: 'Post not found' });
   if (post.user_id !== req.user.id) return res.status(403).json({ message: 'Unauthorized' });
 
-  const { title, content, code_snippet, lang, tags } = req.body;
+  const { title, content, code_snippet, lang, tags, image_url } = req.body;
   if (title !== undefined && String(title).length > 300) {
     return res.status(400).json({ message: 'title must be 300 characters or fewer.' });
   }
   if (content !== undefined && String(content).length > 10000) {
     return res.status(400).json({ message: 'content must be 10000 characters or fewer.' });
   }
+  // image_url can be: undefined (keep), null/'' (clear), valid /uploads/community/ path (replace).
+  let nextImageUrl = post.image_url;
+  if (image_url === null || image_url === '') {
+    nextImageUrl = null;
+  } else if (typeof image_url === 'string' && image_url.startsWith('/uploads/community/')) {
+    nextImageUrl = image_url.slice(0, 500);
+  }
   try {
     const cleanTags = tags === undefined ? undefined : sanitizeTags(tags);
     await run(
-      'UPDATE posts SET title=?, content=?, code_snippet=?, lang=?, tags=?, updated_at=NOW() WHERE id=?',
+      'UPDATE posts SET title=?, content=?, code_snippet=?, lang=?, image_url=?, tags=?, updated_at=NOW() WHERE id=?',
       [
         (title || post.title).trim().slice(0, 300),
         (content || post.content).trim(),
         code_snippet ?? post.code_snippet,
         lang ?? post.lang,
+        nextImageUrl,
         cleanTags === undefined ? post.tags : cleanTags === null ? null : JSON.stringify(cleanTags),
         postId,
       ]
@@ -527,6 +611,66 @@ router.post('/qna/:id/replies/:replyId/accept', auth, async (req, res) => {
     res.json({ message: 'Answer accepted.' });
   } catch (err) {
     console.error('[community/accept]', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// ── 추천/비추천 ──────────────────────────────────────────────────────────
+// POST /api/community/:board/:id/vote  body: { vote: 1 | -1 | 0 }
+// Same user voting the same direction twice clears the vote.
+router.post('/:board/:id/vote', auth, boardGuard, async (req, res) => {
+  const postId = Number(req.params.id);
+  const raw = Number(req.body?.vote);
+  if (!postId || ![1, -1, 0].includes(raw)) {
+    return res.status(400).json({ message: 'Invalid vote (1 | -1 | 0)' });
+  }
+  try {
+    const existing = await queryOne(
+      "SELECT vote FROM post_likes WHERE user_id=? AND target_type='post' AND target_id=?",
+      [req.user.id, postId]
+    );
+    let nextVote = raw;
+    // Re-voting the same direction (or sending 0) clears.
+    if (existing && (raw === 0 || existing.vote === raw)) nextVote = 0;
+
+    if (nextVote === 0) {
+      await run(
+        "DELETE FROM post_likes WHERE user_id=? AND target_type='post' AND target_id=?",
+        [req.user.id, postId]
+      );
+    } else if (existing) {
+      await run(
+        "UPDATE post_likes SET vote=? WHERE user_id=? AND target_type='post' AND target_id=?",
+        [nextVote, req.user.id, postId]
+      );
+    } else {
+      await run(
+        "INSERT INTO post_likes (user_id, target_type, target_id, vote) VALUES (?, 'post', ?, ?)",
+        [req.user.id, postId, nextVote]
+      );
+    }
+
+    // Recompute denormalized counters from post_likes (authoritative).
+    const counts = await queryOne(
+      `SELECT
+         SUM(CASE WHEN vote = 1  THEN 1 ELSE 0 END) AS likes,
+         SUM(CASE WHEN vote = -1 THEN 1 ELSE 0 END) AS dislikes
+       FROM post_likes WHERE target_type='post' AND target_id=?`,
+      [postId]
+    );
+    const likeCount = Number(counts?.likes || 0);
+    const dislikeCount = Number(counts?.dislikes || 0);
+    await run('UPDATE posts SET like_count=?, dislike_count=? WHERE id=?', [likeCount, dislikeCount, postId]);
+
+    res.json({
+      vote: nextVote,
+      likeCount,
+      dislikeCount,
+      score: likeCount - dislikeCount,
+      isConcept: likeCount - dislikeCount >= CONCEPT_THRESHOLD,
+    });
+  } catch (err) {
+    console.error('[community/vote]', err);
     res.status(500).json({ message: 'Server error' });
   }
 });
