@@ -35,3 +35,23 @@ test('visible app headers use the DailyCoding icon asset', () => {
   assert.match(topNav, new RegExp(`src="${iconPath}"`))
   assert.match(landingPage, new RegExp(`src="${iconPath}"`))
 })
+
+test('auth and app shell brand marks use the DailyCoding icon asset', () => {
+  const brandMark = readFileSync(resolve(root, 'src/components/BrandMark.jsx'), 'utf8')
+  assert.match(brandMark, new RegExp(iconPath), 'BrandMark should render the brand icon')
+
+  const brandFiles = [
+    'src/pages/AuthPage.jsx',
+    'src/context/AuthContext.jsx',
+    'src/pages/ForgotPasswordPage.jsx',
+    'src/pages/ResetPasswordPage.jsx',
+    'src/pages/VerifyEmailPage.jsx',
+    'src/App.jsx',
+  ]
+
+  for (const file of brandFiles) {
+    const source = readFileSync(resolve(root, file), 'utf8')
+    assert.match(source, /BrandMark/, `${file} should render the shared brand mark`)
+    assert.doesNotMatch(source, /⚡\s*DailyCoding|>\s*⚡\s*<\/span>\s*[\s\S]{0,160}DailyCoding/, `${file} should not render the old lightning wordmark`)
+  }
+})

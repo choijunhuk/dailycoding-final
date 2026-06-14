@@ -36,6 +36,13 @@ function formatDate(value, locale) {
   })
 }
 
+function isEditedPost(post) {
+  if (!post?.created_at || !post?.updated_at) return false
+  const created = new Date(post.created_at).getTime()
+  const updated = new Date(post.updated_at).getTime()
+  return Number.isFinite(created) && Number.isFinite(updated) && updated - created > 1000
+}
+
 function makeAvatar(label, color = 'var(--blue)', size = 38) {
   return (
     <div style={{
@@ -196,6 +203,25 @@ export default function CommunityPage() {
     tags: parseTags(post.tags),
   })), [postsState.posts])
 
+  const communityInsights = useMemo(() => ({
+    unansweredQna: normalizedPosts.filter((post) => post.board_type === 'qna' && !post.is_solved && Number(post.answer_count || 0) === 0).length,
+    conceptCount: normalizedPosts.filter((post) => post.is_concept || ((post.like_count || 0) - (post.dislike_count || 0)) >= 5).length,
+    imageCount: normalizedPosts.filter((post) => Boolean(post.image_url)).length,
+  }), [normalizedPosts])
+
+  const topicChips = useMemo(() => {
+    const counts = new Map()
+    for (const post of normalizedPosts) {
+      for (const item of post.tags) {
+        counts.set(item, (counts.get(item) || 0) + 1)
+      }
+    }
+    return [...counts.entries()]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .slice(0, 8)
+      .map(([name, count]) => ({ name, count }))
+  }, [normalizedPosts])
+
   const refreshPopular = useCallback(async () => {
     try {
       const { data } = await api.get('/community/popular')
@@ -347,15 +373,6 @@ export default function CommunityPage() {
       await refreshPopular()
     } catch (error) {
       toast?.show(error.response?.data?.message || txt('게시글 삭제에 실패했습니다.', 'Failed to delete post.'), 'error')
-    }
-  }
-
-  const togglePostLike = async (postId) => {
-    try {
-      await api.post(`/community/${activeBoard}/${postId}/like`)
-      await Promise.all([refreshPosts(), selectedPost?.id === postId ? refreshDetail(postId) : Promise.resolve()])
-    } catch {
-      toast?.show(txt('좋아요 처리에 실패했습니다.', 'Failed to process like.'), 'error')
     }
   }
 
@@ -574,7 +591,10 @@ export default function CommunityPage() {
                         </button>
                       ) : null}
                     </div>
-                    <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 4 }}>{formatDate(selectedPost.created_at, dateLocale)}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 4, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      <span>{formatDate(selectedPost.created_at, dateLocale)}</span>
+                      {isEditedPost(selectedPost) ? <span>{txt('수정됨', 'Edited')} {formatDate(selectedPost.updated_at, dateLocale)}</span> : null}
+                    </div>
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -727,9 +747,21 @@ export default function CommunityPage() {
           <div style={{ marginTop: 20 }}>
             <BoardTabs activeBoard={activeBoard} boardMeta={boardMeta} onChange={(board) => navigate(board === 'qna' ? '/community/qna' : `/community/${board}`)} />
           </div>
+          <div className="community-insight-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10, marginTop: 18 }}>
+            {[
+              { label: txt('미답변 Q&A', 'Unanswered Q&A'), value: communityInsights.unansweredQna, tone: 'var(--blue)' },
+              { label: txt('개념글 후보', 'Concept Posts'), value: communityInsights.conceptCount, tone: 'var(--yellow)' },
+              { label: txt('이미지 글', 'Posts with Images'), value: communityInsights.imageCount, tone: 'var(--green)' },
+            ].map((item) => (
+              <div key={item.label} style={{ border: '1px solid var(--border)', background: 'var(--bg)', borderRadius: 14, padding: '12px 14px' }}>
+                <div style={{ color: item.tone, fontFamily: 'Space Mono, monospace', fontWeight: 800, fontSize: 18 }}>{item.value}</div>
+                <div style={{ color: 'var(--text3)', fontSize: 11, fontWeight: 700, marginTop: 4 }}>{item.label}</div>
+              </div>
+            ))}
+          </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr)', gap: 24, alignItems: 'start' }}>
+        <div className="community-main-layout" style={{ display: 'grid', gap: 24, alignItems: 'start' }}>
           <div style={{ minWidth: 0 }}>
             <div className="card" style={{ padding: 18, marginBottom: 18 }}>
               <SectionTitle
@@ -789,6 +821,32 @@ export default function CommunityPage() {
               <div style={{ fontSize: 12, color: 'var(--text3)' }}>
                 {txt('본문에 `@username`을 입력해 유저를 멘션할 수 있습니다. 답글 버튼은 멘션을 자동 입력합니다.', 'Mention users by typing `@username` in the body. Use the Reply button to prefill a mention for threaded replies.')}
               </div>
+              {topicChips.length ? (
+                <div className="community-topic-chips" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 14 }}>
+                  {topicChips.map((item) => {
+                    const active = tag === item.name
+                    return (
+                      <button
+                        key={item.name}
+                        onClick={() => { setTag(active ? '' : item.name); setPage(1) }}
+                        style={{
+                          border: `1px solid ${active ? BOARD_META[activeBoard].tone : 'var(--border)'}`,
+                          background: active ? BOARD_META[activeBoard].tone : 'var(--bg3)',
+                          color: active ? 'var(--bg)' : 'var(--text2)',
+                          borderRadius: 999,
+                          padding: '6px 10px',
+                          cursor: 'pointer',
+                          fontFamily: 'inherit',
+                          fontSize: 12,
+                          fontWeight: 800,
+                        }}
+                      >
+                        #{item.name} <span style={{ opacity: 0.7 }}>{item.count}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              ) : null}
             </div>
 
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', padding: '0 2px 12px' }}>
@@ -820,8 +878,23 @@ export default function CommunityPage() {
               {loading ? (
                 <div style={{ padding: '46px 20px', textAlign: 'center', color: 'var(--text3)' }}>{txt('게시글을 불러오는 중...', 'Loading posts...')}</div>
               ) : normalizedPosts.length === 0 ? (
-                <div style={{ padding: '52px 20px', textAlign: 'center', color: 'var(--text3)' }}>
-                  {txt('현재 필터와 일치하는 게시글이 없습니다.', 'No posts match the current filters.')}
+                <div style={{ padding: '52px 20px', textAlign: 'center', color: 'var(--text3)', display: 'grid', gap: 14, justifyItems: 'center' }}>
+                  <div>{txt('현재 필터와 일치하는 게시글이 없습니다.', 'No posts match the current filters.')}</div>
+                  {(search || tag) ? (
+                    <button
+                      onClick={() => { setSearch(''); setTag(''); setPage(1) }}
+                      style={{ border: '1px solid var(--border)', background: 'var(--bg3)', color: 'var(--text)', borderRadius: 999, padding: '8px 13px', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12, fontWeight: 800 }}
+                    >
+                      {txt('필터 초기화', 'Clear Filters')}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => openComposer('create')}
+                      style={{ border: 'none', background: BOARD_META[activeBoard].tone, color: 'var(--bg)', borderRadius: 999, padding: '9px 14px', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12, fontWeight: 900 }}
+                    >
+                      {txt('첫 글 작성하기', 'Write the First Post')}
+                    </button>
+                  )}
                 </div>
               ) : normalizedPosts.map((post) => {
                 const authorName = post.nickname || post.username || txt('익명', 'Anonymous')
@@ -862,6 +935,7 @@ export default function CommunityPage() {
                             ) : null}
                             {post.is_solved ? <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--green)' }}>{txt('해결됨', 'Solved')}</span> : null}
                             {post.is_anonymous ? <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--purple)' }}>{txt('익명', 'Anonymous')}</span> : null}
+                            {isEditedPost(post) ? <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--text3)' }}>{txt('수정됨', 'Edited')}</span> : null}
                           </div>
                           <div style={{ fontSize: 17, fontWeight: 800, color: 'var(--text)', lineHeight: 1.4, marginBottom: 8, overflow: 'hidden', textOverflow: 'ellipsis' }}>{post.title}</div>
                           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
@@ -874,6 +948,7 @@ export default function CommunityPage() {
                           <div style={{ fontSize: 12, color: 'var(--text3)', display: 'flex', gap: 14, flexWrap: 'wrap' }}>
                             <span>{authorName}</span>
                             <span>{formatDate(post.created_at, dateLocale)}</span>
+                            {isEditedPost(post) ? <span>{txt('수정', 'Edited')} {formatDate(post.updated_at, dateLocale)}</span> : null}
                           </div>
                         </div>
                       </div>

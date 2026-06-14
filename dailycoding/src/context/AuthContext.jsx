@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import api, { AUTH_EXPIRED_EVENT, clearSessionMarker, markSessionActive } from '../api.js';
+import BrandMark from '../components/BrandMark.jsx';
 
 const AuthContext = createContext(null);
 
@@ -111,8 +112,7 @@ export function AuthProvider({ children }) {
       color: localStorage.getItem('dc_theme') === 'light' ? '#57606a' : '#8b949e',
       fontFamily: 'sans-serif', flexDirection: 'column', gap: 12,
     }}>
-      <div style={{ fontSize: 36 }}>⚡</div>
-      <div style={{ fontSize: 14, fontWeight: 600 }}>DailyCoding</div>
+      <BrandMark iconSize={36} textSize={14} justify="center" style={{ flexDirection: 'column', gap: 8 }} />
       <div style={{
         width: 32, height: 32, borderRadius: '50%',
         border: '3px solid rgba(121,192,255,.2)',

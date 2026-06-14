@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useLang } from '../context/LangContext.jsx';
 import api from '../api.js';
+import BrandMark from '../components/BrandMark.jsx';
 
 export default function VerifyEmailPage() {
   const [searchParams] = useSearchParams();
@@ -60,10 +61,7 @@ export default function VerifyEmailPage() {
         borderRadius: 14, textAlign: 'center',
       }}>
         {/* 로고 */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 32 }}>
-          <span style={{ fontSize: 20 }}>⚡</span>
-          <span style={{ fontSize: 16, fontWeight: 800, letterSpacing: -0.5 }}>DailyCoding</span>
-        </div>
+        <BrandMark iconSize={22} textSize={16} justify="center" style={{ marginBottom: 32 }} />
 
         {status === 'loading' && (
           <div>

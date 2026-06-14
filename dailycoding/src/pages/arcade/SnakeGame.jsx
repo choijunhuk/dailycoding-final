@@ -5,11 +5,15 @@ const COLS = 20
 const ROWS = 20
 
 function randomFood(snake) {
-  while (true) {
-    const x = Math.floor(Math.random() * COLS)
-    const y = Math.floor(Math.random() * ROWS)
-    if (!snake.some((s) => s.x === x && s.y === y)) return { x, y }
+  const occupied = new Set(snake.map((cell) => `${cell.x}:${cell.y}`))
+  const availableCells = []
+  for (let y = 0; y < ROWS; y++) {
+    for (let x = 0; x < COLS; x++) {
+      if (!occupied.has(`${x}:${y}`)) availableCells.push({ x, y })
+    }
   }
+  if (availableCells.length === 0) return snake[0] || { x: 0, y: 0 }
+  return availableCells[Math.floor(Math.random() * availableCells.length)]
 }
 
 const DIRS = {

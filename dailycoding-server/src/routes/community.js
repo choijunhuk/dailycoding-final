@@ -264,7 +264,7 @@ router.get('/:board', auth, boardGuard, async (req, res) => {
              (p.like_count - p.dislike_count) AS score,
              CASE WHEN (p.like_count - p.dislike_count) >= ${CONCEPT_THRESHOLD} THEN 1 ELSE 0 END AS is_concept,
              p.image_url,
-             p.is_solved, p.is_pinned, p.is_anonymous, p.created_at, p.problem_id
+             p.is_solved, p.is_pinned, p.is_anonymous, p.created_at, p.updated_at, p.problem_id
       FROM posts p
       JOIN users u ON p.user_id = u.id
       WHERE p.board_type = ?

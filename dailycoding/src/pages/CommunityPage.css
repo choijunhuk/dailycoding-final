@@ -30,6 +30,10 @@
   font-size: 28px;
 }
 
+.community-main-layout {
+  grid-template-columns: minmax(0, 1fr) 310px;
+}
+
 @media (max-width: 640px) {
   /* 검색바: 입력+버튼 1행, 셀렉트 2행 (3→2행으로 축소) */
   .community-search-bar {
@@ -61,6 +65,16 @@
   .community-detail-title {
     font-size: 20px !important;
     letter-spacing: -0.3px !important;
+  }
+
+  .community-insight-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 980px) {
+  .community-main-layout {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

@@ -24,6 +24,7 @@ import { applyAppTypographyPreference } from './utils/fontPreferences.js';
 import { applyUiPreferenceFlags } from './utils/uiPreferences.js';
 import { resolvePostLoginRedirect } from './utils/redirects.js';
 import { MAIN_TECH_STACK, TechIcon } from './components/icons/BrandIcon.jsx';
+import BrandMark from './components/BrandMark.jsx';
 import './index.css';
 
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -237,7 +238,7 @@ function AppInner() {
         {!isJudge && (
           <footer className="site-footer">
             <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:16,flexWrap:'wrap',fontSize:12}}>
-              <span style={{fontWeight:700}}>⚡ DailyCoding</span>
+              <BrandMark iconSize={18} textSize={12} />
               <span style={{color:'var(--text3)'}}>© {new Date().getFullYear()}</span>
               <span style={{color:'var(--text3)'}}>·</span>
               <a href="/pricing" style={{color:'var(--text2)',textDecoration:'none'}} onClick={e=>{e.preventDefault();navigate('/pricing');}}>{t('pricing')}</a>

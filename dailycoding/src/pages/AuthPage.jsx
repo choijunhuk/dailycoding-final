@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import './Auth.css'
 import { useToast } from '../context/ToastContext.jsx';
 import { useLang } from '../context/LangContext.jsx';
+import BrandMark from '../components/BrandMark.jsx';
 
 function pwStrength(pw, t) {
   if (!pw) return { score:0, label:'', color:'' };
@@ -151,10 +152,7 @@ export default function AuthPage() {
 
         {/* 로고 */}
         <div style={{ marginBottom:40 }}>
-          <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:6 }}>
-            <span style={{ fontSize:26 }}>⚡</span>
-            <span style={{ fontSize:21, fontWeight:800, letterSpacing:-.5 }}>DailyCoding</span>
-          </div>
+          <BrandMark iconSize={28} textSize={21} gap={10} style={{ marginBottom:6 }} />
           <p style={{ color:'var(--text3)', fontSize:12 }}>{t('authPlatformSubtitle')}</p>
         </div>
 

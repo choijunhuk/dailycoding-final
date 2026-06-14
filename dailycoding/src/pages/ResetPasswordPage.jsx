@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useLang } from '../context/LangContext.jsx';
 import api from '../api.js';
+import BrandMark from '../components/BrandMark.jsx';
 
 const inputStyle = {
   width: '100%', padding: '11px 13px',
@@ -64,10 +65,7 @@ export default function ResetPasswordPage() {
         borderRadius: 14,
       }}>
         {/* 로고 */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 28 }}>
-          <span style={{ fontSize: 20 }}>⚡</span>
-          <span style={{ fontSize: 16, fontWeight: 800, letterSpacing: -0.5 }}>DailyCoding</span>
-        </div>
+        <BrandMark iconSize={22} textSize={16} style={{ marginBottom: 28 }} />
 
         {success ? (
           /* 성공 메시지 */
