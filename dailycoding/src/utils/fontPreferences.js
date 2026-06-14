@@ -50,6 +50,7 @@ export function normalizeAppFontSize(value) {
 
 export function applyAppFontSizePreference(fontSize) {
   const normalized = normalizeAppFontSize(fontSize);
+  document.documentElement.style.setProperty('--app-font-size', `${normalized}px`);
   if (document.body?.style) {
     const zoom = normalized / 14;
     document.body.style.zoom = zoom === 1 ? '' : String(Math.round(zoom * 1000) / 1000);

@@ -33,8 +33,10 @@ test('buildDailyFocusPlan prioritizes unresolved recovery work over weekly chall
   });
 
   assert.equal(plan[1].key, 'recovery');
-  assert.equal(plan[1].path, '/problems/2001');
+  assert.equal(plan[1].path, '/recovery');
+  assert.equal(plan[1].state.highlightId, 9);
   assert.equal(plan[1].stat, '우선 복구');
+  assert.match(plan[1].reason, /최근 실패/);
   assert.equal(plan.find((card) => card.key === 'weekly-challenge'), undefined);
 });
 
@@ -49,6 +51,7 @@ test('buildDailyFocusPlan uses weekly challenge when there is no recovery item',
   assert.equal(plan[1].key, 'weekly-challenge');
   assert.equal(plan[1].path, '/problems/3001');
   assert.equal(plan[1].stat, '실버 · 난이도 2');
+  assert.match(plan[1].reason, /이번 주/);
 });
 
 test('buildDailyFocusPlan defaults chrome labels to English mode', () => {
@@ -62,6 +65,7 @@ test('buildDailyFocusPlan defaults chrome labels to English mode', () => {
 
   assert.equal(plan[1].title, 'Wrong Answer Recovery');
   assert.equal(plan[1].stat, 'Priority Recovery');
+  assert.match(plan[1].reason, /recent failed/i);
 });
 
 test('buildDailyFocusPlan falls back to progression and caps the card count', () => {
@@ -75,4 +79,16 @@ test('buildDailyFocusPlan falls back to progression and caps the card count', ()
   assert.equal(plan[1].key, 'progression');
   assert.equal(plan[1].path, '/profile');
   assert.equal(plan[1].stat, '87%');
+  assert.match(plan[1].reason, /level/i);
+});
+
+test('buildDailyFocusPlan explains why the current recommended problem is first', () => {
+  const plan = buildDailyFocusPlan({
+    todayProblem,
+    solvedCount: 3,
+    totalProblems: 10,
+    lang: 'ko',
+  });
+
+  assert.match(plan[0].reason, /현재 진행률 30%/);
 });

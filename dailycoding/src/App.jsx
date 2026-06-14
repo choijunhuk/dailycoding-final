@@ -1,20 +1,12 @@
-import { lazy, Suspense, useEffect } from 'react';
-import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Suspense, useEffect } from 'react';
+import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AppProvider, useApp }   from './context/AppContext';
-import AuthPage           from './pages/AuthPage';
-import ForgotPasswordPage from './pages/ForgotPasswordPage';
-import ResetPasswordPage  from './pages/ResetPasswordPage';
-import VerifyEmailPage    from './pages/VerifyEmailPage';
-import LandingPage        from './pages/LandingPage';
-import TermsPage          from './pages/TermsPage';
-import PrivacyPage        from './pages/PrivacyPage';
 import TopNav             from './components/TopNav';
 import VerificationBanner from './components/VerificationBanner';
 import FriendsWidget      from './components/FriendsWidget.jsx';
 import './components/FriendsWidget.css';
 import ProBenefitsSlot    from './components/ProBenefitsSlot';
-import NotFoundPage    from './pages/NotFoundPage';
 import { ToastProvider } from './context/ToastContext.jsx';
 import { ThemeProvider, useTheme } from './context/ThemeContext.jsx';
 import { LangProvider, useLang } from './context/LangContext.jsx';
@@ -25,43 +17,8 @@ import { applyUiPreferenceFlags } from './utils/uiPreferences.js';
 import { resolvePostLoginRedirect } from './utils/redirects.js';
 import { MAIN_TECH_STACK, TechIcon } from './components/icons/BrandIcon.jsx';
 import BrandMark from './components/BrandMark.jsx';
+import { AUTHENTICATED_ROUTES, PUBLIC_ROUTES, renderRouteElement } from './routes/appRouteConfig.jsx';
 import './index.css';
-
-const Dashboard = lazy(() => import('./pages/Dashboard'));
-const ProblemsPage = lazy(() => import('./pages/ProblemsPage'));
-const JudgePage = lazy(() => import('./pages/JudgePage'));
-const ContestPage = lazy(() => import('./pages/ContestPage'));
-const RankingPage = lazy(() => import('./pages/RankingPage'));
-const AiPage = lazy(() => import('./pages/AiPage'));
-const ProfilePage = lazy(() => import('./pages/ProfilePage'));
-const SubmissionsPage = lazy(() => import('./pages/SubmissionsPage'));
-const AdminPage = lazy(() => import('./pages/AdminPage'));
-const BattlePage = lazy(() => import('./pages/BattlePage'));
-const AlgorithmBattlePage = lazy(() => import('./pages/AlgorithmBattlePage'));
-const ReviewsPage = lazy(() => import('./pages/ReviewsPage'));
-const PricingPage = lazy(() => import('./pages/PricingPage'));
-const TeamDashboard = lazy(() => import('./pages/TeamDashboard'));
-const JoinTeamPage = lazy(() => import('./pages/JoinTeamPage'));
-const SettingsPage = lazy(() => import('./pages/SettingsPage'));
-const CommunityPage = lazy(() => import('./pages/CommunityPage'));
-const PublicProfilePage = lazy(() => import('./pages/PublicProfilePage'));
-const SharedSubmissionPage = lazy(() => import('./pages/SharedSubmissionPage'));
-const SharedBattleReplayPage = lazy(() => import('./pages/SharedBattleReplayPage'));
-const ExamListPage = lazy(() => import('./pages/ExamListPage'));
-const ExamPage = lazy(() => import('./pages/ExamPage'));
-const SheetsPage = lazy(() => import('./pages/SheetsPage'));
-const SheetDetailPage = lazy(() => import('./pages/SheetDetailPage'));
-const LearningPathPage = lazy(() => import('./pages/LearningPathPage'));
-const SubmitProblemPage = lazy(() => import('./pages/SubmitProblemPage'));
-const ProblemSetsPage = lazy(() => import('./pages/ProblemSetsPage'));
-const GameHubPage = lazy(() => import('./pages/GameHubPage'));
-const ArcadePage = lazy(() => import('./pages/ArcadePage'));
-const ArcadeGamePage = lazy(() => import('./pages/ArcadeGamePage'));
-const TournamentPage = lazy(() => import('./pages/TournamentPage'));
-const BadgesPage = lazy(() => import('./pages/BadgesPage'));
-const CompetePage = lazy(() => import('./pages/CompetePage'));
-const WorkshopPage = lazy(() => import('./pages/WorkshopPage'));
-const WorkshopGalleryPage = lazy(() => import('./pages/WorkshopGalleryPage'));
 
 function RouteFallback({ isJudge }) {
   if (isJudge) {
@@ -140,29 +97,17 @@ function AppInner() {
 
   if (!user) {
     return (
-      <Routes>
-        <Route path="/verify-email"    element={<VerifyEmailPage />} />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="/reset-password"  element={<ResetPasswordPage />} />
-        <Route path="/share/:slug"     element={<SharedSubmissionPage />} />
-        <Route path="/share/battle/:slug" element={<SharedBattleReplayPage />} />
-        <Route path="/terms"           element={<TermsPage />} />
-        <Route path="/privacy"         element={<PrivacyPage />} />
-        <Route path="/pricing"         element={<PricingPage />} />
-        <Route path="/battle/:id/replay" element={<BattlePage />} />
-        <Route path="/login"           element={<AuthPage />} />
-        <Route
-          path="/"
-          element={
-            <LandingPage
-              onLogin={() => navigate('/login')}
-              onSignup={() => navigate('/login', { state: { mode: 'register' } })}
-              onPricing={() => navigate('/pricing')}
+      <Suspense fallback={<RouteFallback isJudge={false} />}>
+        <Routes>
+          {PUBLIC_ROUTES.map((route) => (
+            <Route
+              key={route.path}
+              path={route.path}
+              element={renderRouteElement(route, { navigate, isAdmin })}
             />
-          }
-        />
-        <Route path="*"                element={<AuthPage />} />
-      </Routes>
+          ))}
+        </Routes>
+      </Suspense>
     );
   }
 
@@ -180,55 +125,13 @@ function AppInner() {
           <div key={location.pathname} className="page-enter" style={{ flex:1 }}>
             <Suspense fallback={<RouteFallback isJudge={isJudge} />}>
               <Routes>
-                <Route path="/"            element={<Dashboard />} />
-                <Route path="/problems"    element={<ProblemsPage />} />
-                <Route path="/judge"       element={<Navigate to="/problems" replace />} />
-                <Route path="/problems/:id" element={<JudgePage />} />
-                <Route path="/compete"     element={<CompetePage />} />
-                <Route path="/contest"     element={<ContestPage />} />
-                <Route path="/tournaments" element={<TournamentPage />} />
-                <Route path="/ranking"     element={<RankingPage />} />
-                <Route path="/community"   element={<CommunityPage />} />
-                <Route path="/community/:board" element={<CommunityPage />} />
-                <Route path="/community/:board/:id" element={<CommunityPage />} />
-                <Route path="/ai"          element={<AiPage />} />
-                <Route path="/exams"       element={<ExamListPage />} />
-                <Route path="/exams/:id"   element={<ExamPage />} />
-                <Route path="/sheets"      element={<SheetsPage />} />
-                <Route path="/sheets/:id"  element={<SheetDetailPage />} />
-                <Route path="/learning"    element={<LearningPathPage />} />
-                <Route path="/learning/:id" element={<LearningPathPage />} />
-                <Route path="/growth"      element={<Navigate to="/learning" replace />} />
-                <Route path="/profile"     element={<ProfilePage />} />
-                <Route path="/rewards"     element={<BadgesPage />} />
-                <Route path="/badges"      element={<BadgesPage />} />
-                <Route path="/user/:id"    element={<PublicProfilePage />} />
-                <Route path="/submissions" element={<SubmissionsPage />} />
-                <Route path="/submit-problem" element={<SubmitProblemPage />} />
-                <Route path="/problem-sets" element={<ProblemSetsPage />} />
-                <Route path="/problem-sets/shared/:token" element={<ProblemSetsPage />} />
-                <Route path="/reviews"     element={<ReviewsPage />} />
-                <Route path="/reviews/:id" element={<ReviewsPage />} />
-                <Route path="/battle"      element={<AlgorithmBattlePage />} />
-                <Route path="/workshop"    element={<WorkshopPage />} />
-                <Route path="/workshop/:id" element={<WorkshopPage />} />
-                <Route path="/workshop-gallery" element={<WorkshopGalleryPage />} />
-                <Route path="/game"        element={<GameHubPage />} />
-                <Route path="/arcade"      element={<ArcadePage />} />
-                <Route path="/arcade/:key" element={<ArcadeGamePage />} />
-                <Route path="/battle/:id/replay" element={<BattlePage />} />
-                <Route path="/battle/:roomId" element={<AlgorithmBattlePage />} />
-                <Route path="/battles/history" element={<BattlePage />} />
-                <Route path="/battle/watch/:roomId" element={<BattlePage />} />
-                <Route path="/share/:slug" element={<SharedSubmissionPage />} />
-                <Route path="/settings"    element={<SettingsPage />} />
-                <Route path="/pricing"     element={<PricingPage />} />
-                <Route path="/team"        element={<TeamDashboard />} />
-                <Route path="/join/team/:token" element={<JoinTeamPage />} />
-                <Route path="/terms"       element={<TermsPage />} />
-                <Route path="/privacy"     element={<PrivacyPage />} />
-                <Route path="/admin"       element={isAdmin ? <AdminPage /> : <Navigate to="/" replace />} />
-                <Route path="*"            element={<NotFoundPage />} />
+                {AUTHENTICATED_ROUTES.map((route) => (
+                  <Route
+                    key={route.path}
+                    path={route.path}
+                    element={renderRouteElement(route, { navigate, isAdmin })}
+                  />
+                ))}
               </Routes>
             </Suspense>
           </div>

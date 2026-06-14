@@ -111,12 +111,46 @@
   overflow-wrap: anywhere;
 }
 
+.dashboard-learning-reason {
+  display: block;
+  color: var(--text3);
+  font-size: 11px;
+  line-height: 1.5;
+  margin-top: 7px;
+  overflow-wrap: anywhere;
+}
+
 .dashboard-learning-stat {
   grid-column: 2;
   color: var(--mode-color);
   font-size: 11px;
   font-weight: 800;
   text-transform: uppercase;
+}
+
+.dashboard-battle-recap {
+  margin-top: 10px;
+  padding-top: 9px;
+  border-top: 1px solid var(--border);
+}
+
+.dashboard-battle-recap strong,
+.dashboard-battle-recap span {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.dashboard-battle-recap strong {
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.dashboard-battle-recap span {
+  color: var(--text3);
+  font-size: 11px;
+  line-height: 1.5;
+  margin: 3px 0 8px;
 }
 
 /* 메인 2컬럼 그리드: 태블릿 이하에서 단일 컬럼 */

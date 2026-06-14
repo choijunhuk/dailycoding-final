@@ -595,22 +595,39 @@ export default function Dashboard() {
             {battleSummaryLoadFailed ? (
               <div className="dashboard-inline-error">{t('dashboardBattleSummaryLoadFailed')}</div>
             ) : (
-            <div style={{display:'flex',gap:4,marginTop:6}}>
-              {(battleSummary.recent || []).slice(0, 5).map((item, index) => (
-                <span key={`${item.roomId || index}-${item.result}`} title={item.result} style={{
-                  width:20,height:20,borderRadius:999,display:'grid',placeItems:'center',
-                  background:item.result === 'win' ? 'rgba(86,211,100,.16)' : item.result === 'draw' ? 'rgba(227,179,65,.16)' : 'rgba(248,81,73,.14)',
-                  color:item.result === 'win' ? 'var(--green)' : item.result === 'draw' ? 'var(--yellow)' : 'var(--red)',
-                  fontSize:10,fontWeight:900,
-                }}>
-                  {item.result === 'win' ? 'W' : item.result === 'draw' ? 'D' : 'L'}
-                </span>
-              ))}
-              {(!battleSummary.recent || battleSummary.recent.length === 0) && (
-                <span style={{fontSize:11,color:'var(--text3)'}}>{t('dashNoRecentResult')}</span>
+              <>
+                <div style={{display:'flex',gap:4,marginTop:6}}>
+                  {(battleSummary.recent || []).slice(0, 5).map((item, index) => (
+                    <span key={`${item.roomId || index}-${item.result}`} title={item.result} style={{
+                      width:20,height:20,borderRadius:999,display:'grid',placeItems:'center',
+                      background:item.result === 'win' ? 'rgba(86,211,100,.16)' : item.result === 'draw' ? 'rgba(227,179,65,.16)' : 'rgba(248,81,73,.14)',
+                      color:item.result === 'win' ? 'var(--green)' : item.result === 'draw' ? 'var(--yellow)' : 'var(--red)',
+                      fontSize:10,fontWeight:900,
+                    }}>
+                      {item.result === 'win' ? 'W' : item.result === 'draw' ? 'D' : 'L'}
+                    </span>
+                  ))}
+                  {(!battleSummary.recent || battleSummary.recent.length === 0) && (
+                    <span style={{fontSize:11,color:'var(--text3)'}}>{t('dashNoRecentResult')}</span>
+                  )}
+                </div>
+                {battleSummary.recap && (
+                  <div className="dashboard-battle-recap">
+                    <strong>{battleSummary.recap.headline}</strong>
+                    <span>{battleSummary.recap.nextStep}</span>
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(battleSummary.recap.suggestedAction || '/battle');
+                      }}
+                    >
+                      {battleSummary.recap.suggestedAction === '/recovery' ? txt('복구 센터', 'Recovery') : txt('배틀 시작', 'Start Battle')}
+                    </button>
+                  </div>
+                )}
+              </>
               )}
-            </div>
-            )}
           </div>
         </div>
       </div>
@@ -644,6 +661,7 @@ export default function Dashboard() {
                 <span className="dashboard-learning-body">
                   <strong>{item.title}</strong>
                   <small>{item.description}</small>
+                  {item.reason && <span className="dashboard-learning-reason">{item.reason}</span>}
                 </span>
                 <span className="dashboard-learning-stat">{item.stat}</span>
               </button>
@@ -830,14 +848,19 @@ export default function Dashboard() {
                   {recoveryQueue.summary || txt('틀린 문제를 다시 풀어 약점을 없애세요.', 'Retry incorrect problems to eliminate weaknesses.')}
                 </div>
               </div>
-              <span style={{
-                padding:'4px 9px',borderRadius:999,
-                background:recoveryQueue.count > 0 ? 'rgba(248,81,73,.1)' : 'rgba(86,211,100,.1)',
-                color:recoveryQueue.count > 0 ? 'var(--red)' : 'var(--green)',
-                fontSize:11,fontWeight:800,whiteSpace:'nowrap',
-              }}>
-                {recoveryQueue.count > 0 ? withVars(t('dashQueuePending'), { n: recoveryQueue.count }) : t('dashAllDone')}
-              </span>
+              <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:8}}>
+                <span style={{
+                  padding:'4px 9px',borderRadius:999,
+                  background:recoveryQueue.count > 0 ? 'rgba(248,81,73,.1)' : 'rgba(86,211,100,.1)',
+                  color:recoveryQueue.count > 0 ? 'var(--red)' : 'var(--green)',
+                  fontSize:11,fontWeight:800,whiteSpace:'nowrap',
+                }}>
+                  {recoveryQueue.count > 0 ? withVars(t('dashQueuePending'), { n: recoveryQueue.count }) : t('dashAllDone')}
+                </span>
+                <button className="btn btn-ghost btn-sm" onClick={() => navigate('/recovery')}>
+                  {txt('복구 센터', 'Recovery Center')}
+                </button>
+              </div>
             </div>
             {recoveryQueue.items?.length > 0 ? (
               <div style={{display:'flex',flexDirection:'column',gap:10}}>

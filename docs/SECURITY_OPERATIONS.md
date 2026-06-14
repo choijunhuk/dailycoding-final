@@ -18,6 +18,16 @@ This checks for:
 - Stripe test payment links.
 - Frontend API URL consistency.
 
+After deploy, run the no-dependency live smoke check:
+
+```bash
+cd dailycoding-server
+npm run smoke:live
+```
+
+This verifies the production root page loads and `/api/health` reports
+`database=connected`, `redis=connected`, and `judge=docker`.
+
 ## Runtime Expectations
 
 - `NODE_ENV=production`

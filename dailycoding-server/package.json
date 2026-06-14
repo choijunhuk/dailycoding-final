@@ -15,6 +15,7 @@
     "lint": "npx eslint src --ext .js --max-warnings 0",
     "lint:fix": "npx eslint src --ext .js --fix",
     "preflight:production": "node ../scripts/production-preflight.mjs",
+    "smoke:live": "node ../scripts/smoke-live.mjs",
     "verify": "npm run lint && npm test"
   },
   "dependencies": {

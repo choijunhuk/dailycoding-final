@@ -16,6 +16,7 @@ import { Notification } from '../models/Notification.js';
 import redis from '../config/redis.js';
 import { query, run } from '../config/mysql.js';
 import logger from '../config/logger.js';
+import { buildBattleRecap } from './battleSummaryUtils.js';
 
 const router = Router();
 
@@ -230,6 +231,7 @@ router.get('/history', async (req, res) => {
 // GET /api/battles/summary — dashboard battle card
 router.get('/summary', async (req, res) => {
   try {
+    const lang = req.headers['x-language'] === 'ko' ? 'ko' : 'en';
     const rows = await query(
       `SELECT room_id, result, score, battle_score_delta, created_at
        FROM battle_results
@@ -243,7 +245,7 @@ router.get('/summary', async (req, res) => {
     const draws = results.filter((row) => row.result === 'draw').length;
     const losses = results.filter((row) => row.result !== 'win' && row.result !== 'draw').length;
     const total = results.length;
-    res.json({
+    const summary = {
       total,
       wins,
       draws,
@@ -260,6 +262,10 @@ router.get('/summary', async (req, res) => {
           createdAt: row.created_at || row.createdAt,
         };
       }),
+    };
+    res.json({
+      ...summary,
+      recap: buildBattleRecap(summary, lang),
     });
   } catch (err) {
     console.error('[battles/summary]', err);
