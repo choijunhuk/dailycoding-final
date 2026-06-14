@@ -58,8 +58,8 @@ self.addEventListener('push', (event) => {
   try { payload = event.data ? event.data.json() : payload; } catch { /* malformed push payload fallback */ }
   event.waitUntil(self.registration.showNotification(payload.title || 'DailyCoding', {
     body: payload.body || '',
-    icon: '/icon.svg',
-    badge: '/icon.svg',
+    icon: '/brand/dailycoding-icon.png',
+    badge: '/brand/dailycoding-icon.png',
     data: { url: payload.url || '/' },
   }));
 });

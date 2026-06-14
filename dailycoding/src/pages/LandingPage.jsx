@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowRight, PlayCircle, Moon, Sun, Sparkles, Star, Target, Swords, Bot, RotateCcw } from 'lucide-react'
+import { ArrowRight, PlayCircle, Moon, Sun, Star, Target, Swords, Bot, RotateCcw } from 'lucide-react'
 import { useTheme } from '../context/ThemeContext.jsx'
 import { useLang } from '../context/LangContext.jsx'
 import './LandingPage.css'
@@ -244,7 +244,7 @@ export default function LandingPage({ onLogin, onSignup, onPricing }) {
           borderBottom: '1px solid var(--border)',
         }}>
           <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} style={{ background: 'none', border: 'none', color: 'var(--text)', fontSize: 18, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
-            <Sparkles size={18} color="var(--blue)" />
+            <img src="/brand/dailycoding-icon.png" alt="" style={{ width: 24, height: 24, borderRadius: 7, objectFit: 'cover', display: 'block' }} />
             <span className="gradient-text">DailyCoding</span>
           </button>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>

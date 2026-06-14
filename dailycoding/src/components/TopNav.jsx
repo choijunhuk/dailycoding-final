@@ -227,8 +227,8 @@ export default function TopNav() {
           onMouseEnter={e=>e.currentTarget.style.background='var(--bg3)'}
           onMouseLeave={e=>e.currentTarget.style.background='transparent'}
         >
-          <span style={{ width:26, height:26, borderRadius:7, background:'linear-gradient(135deg, var(--blue), var(--purple))', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-            <Sparkles size={13} color="#fff" />
+          <span style={{ width:26, height:26, borderRadius:7, overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, background:'var(--bg2)' }}>
+            <img src="/brand/dailycoding-icon.png" alt="" style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
           </span>
           <span style={{fontSize:14,fontWeight:800,letterSpacing:-.3}} className="gradient-text">DailyCoding</span>
         </div>

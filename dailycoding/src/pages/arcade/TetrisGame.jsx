@@ -20,7 +20,7 @@ const TYPES = Object.keys(PIECES)
 
 const MODES = {
   classic:  { name: 'Classic',  nameKo: '클래식',     desc: 'Play until you top out.', descKo: '계속 떨어지는 무한 모드. 가능한 오래 버티세요.', metric: 'survival' },
-  sprint:   { name: 'Sprint 40', nameKo: '스프린트 40', desc: 'Clear 40 lines as fast as possible.', descKo: '40줄 클리어 타임어택. 빠를수록 점수 ↑', metric: 'time' },
+  sprint:   { name: 'Sprint 40', nameKo: '스프린트 40', desc: 'Clear 40 lines as fast as possible.', descKo: '40줄 클리어 타임어택. 빠른 시간이 기록됩니다.', metric: 'time' },
   ultra:    { name: 'Ultra 2m', nameKo: '울트라 2분',  desc: 'High score in 2 minutes.', descKo: '2분 안에 최대한 많은 점수를 쌓으세요.', metric: 'score' },
   invisible:{ name: 'Invisible', nameKo: '인비저블',   desc: 'Placed blocks fade after 1.5s.', descKo: '놓은 블록이 1.5초 후 흐려집니다. 기억력 테스트.', metric: 'survival' },
 }
@@ -210,22 +210,6 @@ function TetrisPlay({ mode, onComplete, onExit }) {
     setTimeout(() => setFloats((f) => f.filter((x) => x.id !== id)), 1100)
   }, [])
 
-  const clearLockTimer = useCallback(() => {
-    if (lockRef.current.timerId) {
-      clearTimeout(lockRef.current.timerId)
-      lockRef.current.timerId = null
-    }
-    lockRef.current.armed = false
-    lockRef.current.resets = 0
-    setLocking(false)
-  }, [])
-
-  const lockNow = useCallback(() => {
-    const { board: b, piece: p, placedAt: pa } = stateRef.current
-    clearLockTimer()
-    lockAndAdvanceRef.current && lockAndAdvanceRef.current(b, p, pa)
-  }, [clearLockTimer])
-
   const armLockTimer = useCallback(() => {
     if (lockRef.current.timerId || lockRef.current.armed) return
     lockRef.current.armed = true
@@ -260,7 +244,7 @@ function TetrisPlay({ mode, onComplete, onExit }) {
     armLockTimer()
   }, [armLockTimer])
 
-  // Forward ref so lockNow/timer callback can call lockAndAdvance defined later
+  // Forward ref so timer callbacks can call lockAndAdvance defined later
   const lockAndAdvanceRef = useRef(null)
 
   // Cleanup timer on unmount

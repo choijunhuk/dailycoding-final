@@ -11,11 +11,11 @@
   "lang": "ko",
   "categories": ["education", "productivity", "developer"],
   "icons": [
-    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+    { "src": "/brand/dailycoding-icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
   ],
   "shortcuts": [
-    { "name": "오늘의 문제", "url": "/problems", "icons": [{ "src": "/icon.svg", "sizes": "any" }] },
-    { "name": "알고리즘 배틀", "url": "/battle", "icons": [{ "src": "/icon.svg", "sizes": "any" }] },
-    { "name": "랭킹", "url": "/ranking", "icons": [{ "src": "/icon.svg", "sizes": "any" }] }
+    { "name": "오늘의 문제", "url": "/problems", "icons": [{ "src": "/brand/dailycoding-icon.png", "sizes": "512x512", "type": "image/png" }] },
+    { "name": "알고리즘 배틀", "url": "/battle", "icons": [{ "src": "/brand/dailycoding-icon.png", "sizes": "512x512", "type": "image/png" }] },
+    { "name": "랭킹", "url": "/ranking", "icons": [{ "src": "/brand/dailycoding-icon.png", "sizes": "512x512", "type": "image/png" }] }
   ]
 }

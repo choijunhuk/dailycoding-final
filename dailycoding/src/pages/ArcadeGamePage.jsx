@@ -33,6 +33,102 @@ const GAME_TITLES = {
   'code-wordle':  { ko: '코드 워들',    en: 'Code Wordle' },
 }
 
+const RESULT_MODE_METRICS = {
+  tetris: {
+    classic: 'survival',
+    sprint: 'time',
+    ultra: 'score',
+    invisible: 'survival',
+  },
+  minesweeper: {
+    easy: 'time',
+    medium: 'time',
+    hard: 'time',
+  },
+  '2048': {
+    classic: 'score',
+    'time-attack': 'score',
+  },
+}
+
+const RESULT_MODE_LABELS = {
+  tetris: {
+    classic: { ko: '클래식', en: 'Classic' },
+    sprint: { ko: '스프린트 40', en: 'Sprint 40' },
+    ultra: { ko: '울트라 2분', en: 'Ultra 2m' },
+    invisible: { ko: '인비저블', en: 'Invisible' },
+  },
+  minesweeper: {
+    easy: { ko: '이지 9x9', en: 'Easy 9x9' },
+    medium: { ko: '미디엄 16x16', en: 'Medium 16x16' },
+    hard: { ko: '하드 30x16', en: 'Hard 30x16' },
+  },
+  '2048': {
+    classic: { ko: '클래식', en: 'Classic' },
+    'time-attack': { ko: '타임어택 3분', en: 'Time Attack 3m' },
+  },
+}
+
+function formatArcadeElapsed(sec) {
+  const s = Number(sec) || 0
+  if (s <= 0) return null
+  if (s < 60) return `${s.toFixed(s < 10 ? 1 : 0)}s`
+  const m = Math.floor(s / 60)
+  const r = Math.round(s - m * 60)
+  return `${m}m ${r.toString().padStart(2, '0')}s`
+}
+
+function getResultMetric(gameKey, meta = {}) {
+  const modeMetric = RESULT_MODE_METRICS[gameKey]?.[meta.mode]
+  return modeMetric || 'score'
+}
+
+function getResultModeLabel(gameKey, mode, lang) {
+  const label = RESULT_MODE_LABELS[gameKey]?.[mode]
+  if (!label) return String(mode)
+  return lang === 'ko' ? label.ko : label.en
+}
+
+function buildResultDisplay(gameKey, result, lang) {
+  const txt = (ko, en) => (lang === 'ko' ? ko : en)
+  const meta = result?.meta || {}
+  const metric = getResultMetric(gameKey, meta)
+  const elapsedText = formatArcadeElapsed(meta.elapsed ?? meta.seconds)
+
+  if ((metric === 'time' || metric === 'survival') && elapsedText) {
+    const stats = []
+    if (meta.mode) {
+      stats.push({ label: txt('모드', 'Mode'), value: getResultModeLabel(gameKey, meta.mode, lang) })
+    }
+    if (gameKey === 'tetris' && meta.lines != null) {
+      stats.push({ label: txt('줄', 'Lines'), value: String(meta.lines) })
+    }
+    if (meta.finished != null) {
+      stats.push({ label: txt('완료', 'Finished'), value: meta.finished ? txt('성공', 'Yes') : txt('미완료', 'No') })
+    }
+    if (gameKey === 'minesweeper' && meta.won != null) {
+      stats.push({ label: txt('클리어', 'Cleared'), value: meta.won ? txt('성공', 'Yes') : txt('실패', 'No') })
+    }
+
+    return {
+      metric,
+      primaryLabel: metric === 'survival' ? txt('이번 생존', 'Survived') : txt('이번 시간', 'Time'),
+      primaryValue: elapsedText,
+      stats,
+    }
+  }
+
+  return {
+    metric: 'score',
+    primaryLabel: txt('이번 점수', 'Score'),
+    primaryValue: result.score,
+    stats: [
+      { label: txt('내 최고점', 'My Best'), value: result.best, isNewBest: result.isNewBest },
+      { label: txt('현재 순위 (이 점수 기준)', 'Approx Rank'), value: `#${result.approxRank}` },
+    ],
+  }
+}
+
 export default function ArcadeGamePage() {
   const { key } = useParams()
   const navigate = useNavigate()
@@ -68,10 +164,10 @@ export default function ArcadeGamePage() {
     setError('')
     try {
       const { data } = await api.post('/arcade/score', { gameKey: key, score: Math.max(0, Math.floor(score)), meta })
-      setLastResult(data)
+      setLastResult({ ...data, meta })
       setLeaderboardVersion((v) => v + 1)
     } catch (err) {
-      setError(err?.response?.data?.message || txt('점수 저장 실패', 'Failed to save score'))
+      setError(err?.response?.data?.message || txt('기록 저장 실패', 'Failed to save record'))
     } finally {
       setSubmitting(false)
     }
@@ -101,6 +197,8 @@ export default function ArcadeGamePage() {
     setResetKey((k) => k + 1)
   }
 
+  const resultDisplay = lastResult ? buildResultDisplay(key, lastResult, lang) : null
+
   return (
     <div className="arcade-page arcade-game-page">
       <div className="arcade-game-head">
@@ -127,20 +225,20 @@ export default function ArcadeGamePage() {
           {lastResult ? (
             <div className="arcade-result">
               <div className="arcade-result-score">
-                <span>{txt('이번 점수', 'Score')}</span>
-                <strong>{lastResult.score}</strong>
+                <span>{resultDisplay.primaryLabel}</span>
+                <strong>{resultDisplay.primaryValue}</strong>
               </div>
-              <div className="arcade-result-stats">
-                <div>
-                  <span>{txt('내 최고점', 'My Best')}</span>
-                  <strong>{lastResult.best}</strong>
-                  {lastResult.isNewBest && <em className="badge-new">NEW</em>}
+              {resultDisplay.stats.length > 0 && (
+                <div className="arcade-result-stats">
+                  {resultDisplay.stats.map((item) => (
+                    <div key={item.label}>
+                      <span>{item.label}</span>
+                      <strong>{item.value}</strong>
+                      {item.isNewBest && <em className="badge-new">NEW</em>}
+                    </div>
+                  ))}
                 </div>
-                <div>
-                  <span>{txt('현재 순위 (이 점수 기준)', 'Approx Rank')}</span>
-                  <strong>#{lastResult.approxRank}</strong>
-                </div>
-              </div>
+              )}
               <div className="arcade-result-actions">
                 <button className="btn btn-primary" onClick={restart} disabled={submitting}>
                   <RefreshCcw size={14} /> {txt('한 판 더', 'Play Again')}
@@ -153,7 +251,7 @@ export default function ArcadeGamePage() {
           ) : (
             renderGame()
           )}
-          {submitting && <div className="arcade-submitting">{txt('점수 저장 중...', 'Saving score...')}</div>}
+          {submitting && <div className="arcade-submitting">{txt('기록 저장 중...', 'Saving record...')}</div>}
         </div>
       ) : (
         <ArcadeLeaderboard gameKey={key} version={leaderboardVersion} />
