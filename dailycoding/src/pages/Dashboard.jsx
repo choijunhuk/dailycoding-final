@@ -13,6 +13,8 @@ import OnboardingModal from '../components/OnboardingModal.jsx';
 import { useLang } from '../context/LangContext.jsx';
 import { withVars } from '../utils/languageMode.js';
 import { buildDailyFocusPlan } from './dashboardPlanUtils.js';
+import { buildDailyRoutine } from './dailyRoutineUtils.js';
+import { buildAdminQualitySignals } from './adminQualityUtils.js';
 import { getTagLabelLang } from './problemsPageUtils.js';
 import { getTierLabel } from '../utils/labelMaps.js';
 import { copyText } from '../utils/clipboard.js';
@@ -133,6 +135,17 @@ export default function Dashboard() {
     todayProblem: todayProb,
     recoveryQueue,
     weeklyChallenge,
+    progression,
+    solvedCount: solvedList.length,
+    totalProblems: PROBLEMS.length,
+    lang,
+  });
+  const dailyRoutine = buildDailyRoutine({
+    todayProblem: todayProb,
+    recoveryQueue,
+    onboardingPlan,
+    battleSummary,
+    reviewQueue,
     progression,
     solvedCount: solvedList.length,
     totalProblems: PROBLEMS.length,
@@ -391,6 +404,8 @@ export default function Dashboard() {
   const adminActiveToday = adminStats?.userStats?.activeToday ?? 0;
   const adminSubmissionsToday = adminStats?.submissionStats?.totalToday ?? 0;
   const adminCorrectRate = adminStats?.submissionStats?.correctRate ?? 0;
+  const adminQualitySignals = buildAdminQualitySignals(adminStats || {}, lang);
+  const RoutinePrimaryIcon = DAILY_FOCUS_ICONS[dailyRoutine.primary.icon] || Target;
 
   // 관리자 대시보드
   if (isAdmin) return (
@@ -404,6 +419,30 @@ export default function Dashboard() {
         <StatCard icon={<Sparkles size={20} />} value={adminActiveToday} label={t('dashboardActiveToday')} color="var(--green)" />
         <StatCard icon={<BarChart3 size={20} />} value={adminSubmissionsToday} label={t('dashboardSubmissionsToday')} color="var(--orange)" />
         <StatCard icon={<CheckCircle2 size={20} />} value={`${adminCorrectRate}%`} label={t('dashboardCorrectRate')} color="var(--yellow)" />
+      </div>
+      <div className="dashboard-admin-quality card card-pad">
+        <div style={{display:'flex',justifyContent:'space-between',gap:12,alignItems:'flex-start',marginBottom:14}}>
+          <div>
+            <div style={{fontSize:11,color:'var(--blue)',fontWeight:800,letterSpacing:.4}}>
+              {txt('운영 품질 신호', 'QUALITY SIGNALS')}
+            </div>
+            <h2 style={{fontSize:17,margin:'4px 0 0',fontWeight:850}}>
+              {txt('오늘 먼저 볼 운영 체크', 'Operational checks to review today')}
+            </h2>
+          </div>
+          <button className="btn btn-ghost btn-sm" onClick={() => navigate('/admin')}>
+            {txt('관리 페이지', 'Admin')}
+          </button>
+        </div>
+        <div className="dashboard-admin-quality-grid">
+          {adminQualitySignals.map((signal) => (
+            <div key={signal.key} className={`dashboard-admin-signal signal-${signal.tone}`}>
+              <strong>{signal.title}</strong>
+              <span>{signal.stat}</span>
+              <small>{signal.description}</small>
+            </div>
+          ))}
+        </div>
       </div>
       <div className="admin-dash-grid" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16}}>
         <div className="card card-pad">
@@ -517,6 +556,53 @@ export default function Dashboard() {
           ))}
         </div>
       </div>
+
+      <section className="dashboard-routine-panel" aria-label={txt('오늘의 우선순위', "Today's priority")}>
+        <button
+          type="button"
+          className="dashboard-routine-primary"
+          style={{ '--routine-color': dailyRoutine.primary.color }}
+          onClick={() => navigate(dailyRoutine.primary.path, dailyRoutine.primary.state ? { state: dailyRoutine.primary.state } : undefined)}
+        >
+          <span className="dashboard-routine-icon" aria-hidden="true">
+            <RoutinePrimaryIcon size={24} />
+          </span>
+          <span className="dashboard-routine-copy">
+            <span className="dashboard-routine-kicker">{txt('지금 할 일', 'DO NOW')}</span>
+            <strong>{dailyRoutine.primary.title}</strong>
+            <small>{dailyRoutine.primary.description}</small>
+            <em>{dailyRoutine.primary.reason}</em>
+          </span>
+          <span className="dashboard-routine-stat">{dailyRoutine.primary.stat}</span>
+        </button>
+        <div className="dashboard-routine-side">
+          <div className="dashboard-routine-checklist">
+            {dailyRoutine.checklist.map((item) => (
+              <div key={item.key} className={item.done ? 'is-done' : ''}>
+                <CheckCircle2 size={14} />
+                <span>{item.label}</span>
+                <strong>{item.stat}</strong>
+              </div>
+            ))}
+          </div>
+          <div className="dashboard-routine-secondary">
+            {dailyRoutine.secondary.map((item) => {
+              const Icon = DAILY_FOCUS_ICONS[item.icon] || Target;
+              return (
+                <button
+                  key={item.key}
+                  type="button"
+                  style={{ '--routine-color': item.color }}
+                  onClick={() => navigate(item.path, item.state ? { state: item.state } : undefined)}
+                >
+                  <Icon size={16} />
+                  <span>{item.title}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </section>
 
       {onboardingPlan?.active && (
         <div style={{

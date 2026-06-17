@@ -273,10 +273,10 @@ export default function SettingsPage() {
               <div style={{ fontSize:13, color:'var(--text2)', lineHeight:1.7, marginBottom:14 }}>
                 {t('profileDetailEditDesc')}
               </div>
-              <a href="/profile" style={{
+              <button type="button" onClick={() => navigate('/profile')} style={{
                 display:'inline-flex', alignItems:'center', gap:6, padding:'8px 18px', borderRadius:8, fontSize:13, fontWeight:600,
-                background:'var(--accent)', color:'#fff', textDecoration:'none',
-              }}>{t('editMyProfile')}</a>
+                background:'var(--accent)', color:'#fff', border:0, cursor:'pointer', font:'inherit',
+              }}>{t('editMyProfile')}</button>
             </div>
           </div>
         )}

@@ -267,7 +267,7 @@ export default function AiPage() {
             {(!user?.techStack || user.techStack.length === 0) && (
               <div style={{marginTop:10,padding:'8px 12px',background:'rgba(121,192,255,.07)',border:'1px solid rgba(121,192,255,.15)',borderRadius:8,fontSize:12,color:'var(--text3)',display:'flex',gap:8,alignItems:'center'}}>
                 <span>💡 {t('quizNoStackHint')}</span>
-                <a href="/settings" style={{color:'var(--blue)',fontWeight:600,whiteSpace:'nowrap',textDecoration:'none'}}>{t('quizNoStackLink')}</a>
+                <button type="button" onClick={() => navigate('/settings')} style={{color:'var(--blue)',fontWeight:600,whiteSpace:'nowrap',background:'none',border:0,padding:0,cursor:'pointer',font:'inherit'}}>{t('quizNoStackLink')}</button>
               </div>
             )}
           </div>
@@ -299,11 +299,11 @@ export default function AiPage() {
             <div style={{marginTop:12,padding:'12px 14px',background:'rgba(248,81,73,.08)',border:'1px solid rgba(248,81,73,.25)',borderRadius:8,fontSize:13}}>
               <div style={{color:'var(--red)',fontWeight:600,marginBottom:6}}>{t('hintLimitTitle')}</div>
               <div style={{color:'var(--text2)',marginBottom:10}}>{hintLimitMsg}</div>
-              <a href="/pricing" style={{
-                display:'inline-block',padding:'6px 14px',borderRadius:7,
+              <button type="button" onClick={() => navigate('/pricing')} style={{
+                display:'inline-block',padding:'6px 14px',borderRadius:7,border:0,cursor:'pointer',font:'inherit',
                 background:'rgba(121,192,255,.15)',color:'var(--blue)',
-                fontSize:12,fontWeight:700,textDecoration:'none',
-              }}>{t('hintProPlanLink')}</a>
+                fontSize:12,fontWeight:700,
+              }}>{t('hintProPlanLink')}</button>
             </div>
           )}
           {aiHint && (
