@@ -13,6 +13,7 @@ import { BattleAdSlot, BugFixProblem, CodingProblem, FillBlankProblem, getBattle
 import { getDateLocale, pickLangText } from '../utils/languageMode.js';
 import { copyText } from '../utils/clipboard.js';
 import { SocialIcon } from '../components/icons/BrandIcon.jsx';
+import { buildBattleLobbyCoach } from './battleExperienceUtils.js';
 import './BattlePage.css';
 
 // ── Web Audio typing sound (no external libraries) ────────────────────────
@@ -231,6 +232,7 @@ export default function BattlePage() {
   const socketRef      = useRef(null);
   const lastTypingRef  = useRef(0);
   const lastOppTypingRef = useRef(0);
+  const inviteInputRef = useRef(null);
   const roomIdRef      = useRef(null);
   const pendingRoomRef = useRef(null);
   const loadErrorToastShownRef = useRef(false);
@@ -869,6 +871,19 @@ export default function BattlePage() {
   // RENDER: 로비
   // ─────────────────────────────────────────────────────────────────────────
   if (phase === 'lobby') {
+    const lobbyCoach = buildBattleLobbyCoach({
+      activeBattles,
+      historyRows,
+      selectedBattleMode,
+      selectedDuration,
+      lang,
+    });
+    const runLobbyCoachAction = () => {
+      if (lobbyCoach.action === 'spectate') setLobbyTab('active');
+      else if (lobbyCoach.action === 'history') setLobbyTab('history');
+      else inviteInputRef.current?.focus();
+    };
+
     return (
       <div className="bp-page">
         {isFreePlan && (
@@ -883,6 +898,20 @@ export default function BattlePage() {
             <h1>{txt('코딩 배틀', 'Coding Battle')}</h1>
             <p>{txt('실시간 코딩 대결로 상대를 이겨보세요.', 'Challenge opponents in real-time coding duels.')}<br/>{txt('모든 영역(문제)을 먼저 차지하는 팀이 승리합니다!', 'The team that captures all territories (problems) first wins!')}</p>
           </div>
+
+          <section className={`bp-coach-card bp-coach-${lobbyCoach.tone}`}>
+            <div>
+              <span className="bp-coach-kicker">{txt('다음 추천', 'NEXT MOVE')}</span>
+              <strong>{lobbyCoach.title}</strong>
+              <p>{lobbyCoach.description}</p>
+            </div>
+            <div className="bp-coach-action">
+              <span>{lobbyCoach.stat}</span>
+              <button className="bp-btn-small" onClick={runLobbyCoachAction}>
+                {lobbyCoach.actionLabel}
+              </button>
+            </div>
+          </section>
 
           <div className="bp-lobby-main">
             <div className="bp-lobby-left">
@@ -926,6 +955,7 @@ export default function BattlePage() {
                   </div>
                   <div className="bp-invite-row">
                     <input
+                      ref={inviteInputRef}
                       className="bp-invite-input"
                       value={inviteInput}
                       onChange={e => setInviteInput(e.target.value)}

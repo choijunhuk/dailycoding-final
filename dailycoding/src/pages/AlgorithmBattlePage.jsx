@@ -12,6 +12,7 @@ import { getTierLabel } from '../utils/labelMaps.js';
 import { getTagLabelLang } from './problemsPageUtils.js';
 import { getSocketUrl } from '../utils/socket.js';
 import { copyText } from '../utils/clipboard.js';
+import { buildAlgorithmRoomCoach } from './battleExperienceUtils.js';
 import './AlgorithmBattlePage.css';
 
 const Editor = lazy(() => import('@monaco-editor/react'));
@@ -1914,6 +1915,15 @@ export default function AlgorithmBattlePage() {
     : isTerritoryMode
     ? txt(`점령 ${myClaimCount}/${problems?.length || 5}`, `Claimed ${myClaimCount}/${problems?.length || 5}`)
     : txt(`최종 ${me?.score || 0}점`, `Final ${me?.score || 0}pts`);
+  const roomCoach = buildAlgorithmRoomCoach({
+    room: currentRoom,
+    me,
+    isSpectating,
+    isDrafting,
+    config,
+    timeLeftSec: displayedRoomTimeLeft,
+    lang: uiLang,
+  });
 
   return (
       <div className="ab-room-page">
@@ -1966,6 +1976,15 @@ export default function AlgorithmBattlePage() {
           )}
         </div>
       </div>
+
+      <section className={`ab-coach-strip ab-coach-${roomCoach.tone}`}>
+        <div>
+          <span>{roomCoach.stat}</span>
+          <strong>{roomCoach.title}</strong>
+          <p>{roomCoach.description}</p>
+        </div>
+        <em>{roomCoach.actionLabel}</em>
+      </section>
 
       {countdown != null && <div className="ab-countdown">{countdown > 0 ? countdown : txt('🔥 시작!', '🔥 Start!')}</div>}
       {isSpectating && (

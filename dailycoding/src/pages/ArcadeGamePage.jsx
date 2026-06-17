@@ -18,6 +18,7 @@ import FifteenPuzzleGame from './arcade/FifteenPuzzleGame.jsx'
 import CodeWordleGame from './arcade/CodeWordleGame.jsx'
 import ArcadeLeaderboard from './arcade/ArcadeLeaderboard.jsx'
 import { OUTPUT_QUESTIONS, BIGO_QUESTIONS } from './arcade/arcadeData.js'
+import { buildArcadeResultGoal } from './arcadeExperienceUtils.js'
 
 const GAME_TITLES = {
   'output-guess': { ko: '출력 맞추기',  en: 'Output Guess' },
@@ -198,6 +199,7 @@ export default function ArcadeGamePage() {
   }
 
   const resultDisplay = lastResult ? buildResultDisplay(key, lastResult, lang) : null
+  const resultGoal = lastResult ? buildArcadeResultGoal({ gameKey: key, result: lastResult, lang }) : null
 
   return (
     <div className="arcade-page arcade-game-page">
@@ -237,6 +239,13 @@ export default function ArcadeGamePage() {
                       {item.isNewBest && <em className="badge-new">NEW</em>}
                     </div>
                   ))}
+                </div>
+              )}
+              {resultGoal && (
+                <div className="arcade-result-goal">
+                  <span>{resultGoal.title}</span>
+                  <strong>{resultGoal.target}</strong>
+                  <small>{resultGoal.description}</small>
                 </div>
               )}
               <div className="arcade-result-actions">

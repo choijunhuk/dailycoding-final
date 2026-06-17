@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowRight, Crown, Gamepad2, RefreshCcw, Trophy } from 'lucide-react'
 import api from '../api.js'
 import { useLang } from '../context/LangContext.jsx'
+import { buildArcadeRecommendations } from './arcadeExperienceUtils.js'
 import './ArcadePage.css'
 
 const FALLBACK_GAMES = [
@@ -80,6 +81,10 @@ export default function ArcadePage() {
     acc[cat].push(g)
     return acc
   }, {})
+  const recommendations = useMemo(
+    () => buildArcadeRecommendations({ games, bestByGame, topByGame, lang }),
+    [games, bestByGame, topByGame, lang],
+  )
 
   return (
     <div className="arcade-page">
@@ -100,6 +105,24 @@ export default function ArcadePage() {
           <span>{error}</span>
           <button className="btn btn-ghost btn-sm" onClick={load}>{txt('다시 시도', 'Retry')}</button>
         </div>
+      )}
+
+      {recommendations.length > 0 && (
+        <section className="arcade-recommend-strip" aria-label={txt('아케이드 추천', 'Arcade recommendations')}>
+          {recommendations.map((rec) => (
+            <button
+              key={rec.key}
+              type="button"
+              className="arcade-recommend-card"
+              onClick={() => navigate(`/arcade/${rec.gameKey}${rec.tab ? `?tab=${rec.tab}` : ''}`)}
+            >
+              <span>{rec.stat}</span>
+              <strong>{rec.title}</strong>
+              <small>{rec.description}</small>
+              <em>{rec.actionLabel}</em>
+            </button>
+          ))}
+        </section>
       )}
 
       {Object.entries(grouped).map(([cat, list]) => (

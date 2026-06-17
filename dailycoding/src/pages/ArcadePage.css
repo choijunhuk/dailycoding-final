@@ -37,6 +37,94 @@
   padding: 12px 16px; border-left: 3px solid var(--red);
 }
 
+.arcade-recommend-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.arcade-recommend-card {
+  display: grid;
+  gap: 7px;
+  min-height: 138px;
+  padding: 15px;
+  text-align: left;
+  color: var(--text);
+  background: linear-gradient(135deg, rgba(121,192,255,.08), var(--bg2));
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+}
+
+.arcade-recommend-card:hover {
+  border-color: rgba(121, 192, 255, .42);
+}
+
+.arcade-recommend-card span {
+  color: var(--blue);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.arcade-recommend-card strong {
+  font-size: 15px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.arcade-recommend-card small {
+  color: var(--text2);
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.arcade-recommend-card em {
+  align-self: end;
+  color: var(--green);
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 850;
+}
+
+.arcade-result-goal {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 5px 12px;
+  align-items: center;
+  width: min(460px, 100%);
+  padding: 12px 14px;
+  border: 1px solid rgba(121, 192, 255, .28);
+  border-radius: 8px;
+  background: rgba(121, 192, 255, .07);
+}
+
+.arcade-result-goal span,
+.arcade-result-goal small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.arcade-result-goal span {
+  color: var(--blue);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.arcade-result-goal strong {
+  grid-row: span 2;
+  color: var(--text);
+  font-family: 'Space Mono', monospace;
+  font-size: 20px;
+}
+
+.arcade-result-goal small {
+  color: var(--text3);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
 .arcade-section { display: flex; flex-direction: column; gap: 14px; }
 .arcade-section-head {
   display: flex; align-items: baseline; justify-content: space-between;
@@ -99,4 +187,7 @@
 @media (max-width: 700px) {
   .arcade-hero { flex-direction: column; align-items: flex-start; }
   .arcade-hero-art { font-size: 22px; letter-spacing: 4px; }
+  .arcade-recommend-strip { grid-template-columns: 1fr; }
+  .arcade-result-goal { grid-template-columns: 1fr; }
+  .arcade-result-goal strong { grid-row: auto; }
 }

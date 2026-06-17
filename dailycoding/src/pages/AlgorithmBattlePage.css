@@ -191,6 +191,74 @@
   padding: 14px 16px;
 }
 
+.ab-coach-strip {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  margin: -4px 0 14px;
+  padding: 13px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(121, 192, 255, .08), var(--bg2));
+}
+
+.ab-coach-strip span,
+.ab-coach-strip strong,
+.ab-coach-strip p {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.ab-coach-strip span {
+  color: var(--blue);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.ab-coach-strip strong {
+  margin-top: 3px;
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+.ab-coach-strip p {
+  margin: 5px 0 0;
+  color: var(--text2);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.ab-coach-strip em {
+  justify-self: end;
+  padding: 6px 10px;
+  border-radius: 999px;
+  color: var(--text);
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.ab-coach-warning {
+  border-color: rgba(227, 179, 65, .35);
+  background: linear-gradient(135deg, rgba(227, 179, 65, .1), var(--bg2));
+}
+
+.ab-coach-live {
+  border-color: rgba(86, 211, 100, .28);
+  background: linear-gradient(135deg, rgba(86, 211, 100, .09), var(--bg2));
+}
+
+.ab-coach-done {
+  border-color: rgba(210, 168, 255, .32);
+  background: linear-gradient(135deg, rgba(210, 168, 255, .1), var(--bg2));
+}
+
 .ab-room-row div,
 .ab-room-top div {
   display: flex;

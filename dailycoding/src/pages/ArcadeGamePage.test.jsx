@@ -88,6 +88,8 @@ test('Tetris sprint result shows elapsed time instead of score', async () => {
 
   assert.match(container.textContent, /이번 시간/)
   assert.match(container.textContent, /1m 13s/)
+  assert.match(container.textContent, /다음 목표/)
+  assert.match(container.textContent, /1m 10s/)
   assert.doesNotMatch(container.textContent, /이번 점수/)
   assert.doesNotMatch(container.textContent, /92699/)
 })
