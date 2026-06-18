@@ -10,6 +10,7 @@ import { PLAN_META } from '../data/pricingPlans.js';
 import { getTierLabel } from '../utils/labelMaps.js';
 import ProfileAvatar from './ProfileAvatar.jsx';
 import ServerStatus from './ServerStatus.jsx';
+import { normalizeSearchResults } from './topNavSearchUtils.js';
 import {
   BarChart2,
   BookOpen,
@@ -105,7 +106,7 @@ export default function TopNav() {
   const [hoveredGroup,  setHoveredGroup]  = useState(null);
   const [showSearch,    setShowSearch]    = useState(false);
   const [searchQuery,   setSearchQuery]   = useState('');
-  const [searchResults, setSearchResults] = useState({ problems: [], posts: [] });
+  const [searchResults, setSearchResults] = useState(normalizeSearchResults());
   const [searchLoading, setSearchLoading] = useState(false);
   const hoverCloseTimerRef = useRef(null);
   const searchRef      = useRef(null);
@@ -146,7 +147,7 @@ export default function TopNav() {
       setSearchLoading(true);
       try {
         const { data } = await api.get('/search', { params: { q: searchQuery, limit: 5 } });
-        setSearchResults(data);
+        setSearchResults(normalizeSearchResults(data));
       } catch { setSearchResults({ problems: [], posts: [] }); }
       finally { setSearchLoading(false); }
     }, 300);
@@ -205,6 +206,7 @@ export default function TopNav() {
   const notificationLabel = unreadCount > 0
     ? (lang === 'ko' ? `알림 ${unreadCount}개 읽지 않음` : `Notifications, ${unreadCount} unread`)
     : (lang === 'ko' ? '알림' : 'Notifications');
+  const safeSearchResults = normalizeSearchResults(searchResults);
 
   return (
     <>
@@ -414,15 +416,15 @@ export default function TopNav() {
                     />
                   </div>
                   {searchLoading&&<div style={{padding:'16px',textAlign:'center',color:'var(--text3)',fontSize:12}}>{t('globalSearchLoading')}</div>}
-                  {!searchLoading&&searchQuery&&searchResults.problems.length===0&&searchResults.posts.length===0&&(
+                  {!searchLoading&&searchQuery&&safeSearchResults.problems.length===0&&safeSearchResults.posts.length===0&&(
                     <div style={{padding:'16px',textAlign:'center',color:'var(--text3)',fontSize:12}}>{t('globalSearchNoResults')}</div>
                   )}
-                  {!searchLoading&&(searchResults.problems.length>0||searchResults.posts.length>0)&&(
+                  {!searchLoading&&(safeSearchResults.problems.length>0||safeSearchResults.posts.length>0)&&(
                     <div style={{maxHeight:320,overflowY:'auto'}}>
-                      {searchResults.problems.length>0&&(
+                      {safeSearchResults.problems.length>0&&(
                         <>
                           <div style={{padding:'6px 12px 4px',fontSize:10,fontWeight:700,color:'var(--text3)',textTransform:'uppercase',letterSpacing:1}}>{t('globalSearchProblems')}</div>
-                          {searchResults.problems.map(p=>(
+                          {safeSearchResults.problems.map(p=>(
                             <div key={p.id} onClick={()=>go(`/problems/${p.id}`)} style={{
                               padding:'9px 12px',cursor:'pointer',borderBottom:'1px solid var(--border)',transition:'background .15s',
                             }}
@@ -435,10 +437,10 @@ export default function TopNav() {
                           ))}
                         </>
                       )}
-                      {searchResults.posts.length>0&&(
+                      {safeSearchResults.posts.length>0&&(
                         <>
                           <div style={{padding:'6px 12px 4px',fontSize:10,fontWeight:700,color:'var(--text3)',textTransform:'uppercase',letterSpacing:1}}>{t('globalSearchCommunity')}</div>
-                          {searchResults.posts.map(p=>(
+                          {safeSearchResults.posts.map(p=>(
                             <div key={p.id} onClick={()=>go(`/community/${p.board_type}/${p.id}`)} style={{
                               padding:'9px 12px',cursor:'pointer',transition:'background .15s',
                             }}

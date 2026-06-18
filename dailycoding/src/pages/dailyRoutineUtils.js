@@ -6,20 +6,37 @@ function compact(value, fallback = '') {
   return String(value || fallback).trim();
 }
 
+export function normalizeOnboardingPlan(onboardingPlan = {}) {
+  const totalDays = Number(onboardingPlan?.totalDays) > 0
+    ? Number(onboardingPlan.totalDays)
+    : 14;
+
+  return {
+    ...onboardingPlan,
+    active: Boolean(onboardingPlan?.active),
+    dayNumber: Number(onboardingPlan?.dayNumber) > 0
+      ? Number(onboardingPlan.dayNumber)
+      : 1,
+    totalDays,
+    problems: Array.isArray(onboardingPlan?.problems) ? onboardingPlan.problems : [],
+  };
+}
+
 function getOnboardingProgress(onboardingPlan = {}) {
-  const problems = Array.isArray(onboardingPlan.problems) ? onboardingPlan.problems : [];
+  const normalized = normalizeOnboardingPlan(onboardingPlan);
+  const problems = normalized.problems;
   const completed = problems.filter((problem) => Boolean(problem.solvedToday)).length;
   const remaining = Math.max(0, problems.length - completed);
   const nextProblem = problems.find((problem) => !problem.solvedToday) || problems[0] || null;
 
   return {
-    active: Boolean(onboardingPlan.active),
+    active: normalized.active,
     completed,
     remaining,
     total: problems.length,
     nextProblem,
-    dayNumber: onboardingPlan.dayNumber || 1,
-    totalDays: onboardingPlan.totalDays || 14,
+    dayNumber: normalized.dayNumber,
+    totalDays: normalized.totalDays,
   };
 }
 

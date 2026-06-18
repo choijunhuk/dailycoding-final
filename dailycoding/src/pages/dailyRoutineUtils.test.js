@@ -1,6 +1,6 @@
 import { test } from 'vitest';
 import assert from 'node:assert/strict';
-import { buildDailyRoutine } from './dailyRoutineUtils.js';
+import { buildDailyRoutine, normalizeOnboardingPlan } from './dailyRoutineUtils.js';
 
 const todayProblem = {
   id: 1001,
@@ -81,4 +81,18 @@ test('buildDailyRoutine returns a useful empty state when no problem exists', ()
   assert.equal(routine.primary.key, 'explore');
   assert.equal(routine.primary.path, '/problems');
   assert.match(routine.primary.title, /문제/);
+});
+
+test('normalizeOnboardingPlan keeps malformed active plans renderable', () => {
+  const plan = normalizeOnboardingPlan({
+    active: true,
+    dayNumber: null,
+    totalDays: 0,
+    problems: null,
+  });
+
+  assert.equal(plan.active, true);
+  assert.equal(plan.dayNumber, 1);
+  assert.equal(plan.totalDays, 14);
+  assert.deepEqual(plan.problems, []);
 });

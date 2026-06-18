@@ -13,7 +13,7 @@ import OnboardingModal from '../components/OnboardingModal.jsx';
 import { useLang } from '../context/LangContext.jsx';
 import { withVars } from '../utils/languageMode.js';
 import { buildDailyFocusPlan } from './dashboardPlanUtils.js';
-import { buildDailyRoutine } from './dailyRoutineUtils.js';
+import { buildDailyRoutine, normalizeOnboardingPlan } from './dailyRoutineUtils.js';
 import { buildAdminQualitySignals } from './adminQualityUtils.js';
 import { getTagLabelLang } from './problemsPageUtils.js';
 import { getTierLabel } from '../utils/labelMaps.js';
@@ -140,10 +140,11 @@ export default function Dashboard() {
     totalProblems: PROBLEMS.length,
     lang,
   });
+  const safeOnboardingPlan = normalizeOnboardingPlan(onboardingPlan);
   const dailyRoutine = buildDailyRoutine({
     todayProblem: todayProb,
     recoveryQueue,
-    onboardingPlan,
+    onboardingPlan: safeOnboardingPlan,
     battleSummary,
     reviewQueue,
     progression,
@@ -604,7 +605,7 @@ export default function Dashboard() {
         </div>
       </section>
 
-      {onboardingPlan?.active && (
+      {safeOnboardingPlan.active && safeOnboardingPlan.problems.length > 0 && (
         <div style={{
           marginBottom: 20,
           padding: '16px 20px',
@@ -622,10 +623,10 @@ export default function Dashboard() {
               온보딩 플랜
             </div>
             <div style={{ fontWeight: 800, fontSize: 17, marginTop: 4 }}>
-              Day {onboardingPlan.dayNumber} / {onboardingPlan.totalDays} · 오늘의 3문제
+              Day {safeOnboardingPlan.dayNumber} / {safeOnboardingPlan.totalDays} · 오늘의 3문제
             </div>
             <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-              {onboardingPlan.problems.slice(0, 3).map((p) => (
+              {safeOnboardingPlan.problems.slice(0, 3).map((p) => (
                 <button
                   key={p.id}
                   onClick={() => navigate(`/problems/${p.id}`)}
@@ -648,7 +649,7 @@ export default function Dashboard() {
           <div style={{
             width: 64, height: 64, borderRadius: 32,
             background: 'conic-gradient(var(--accent, #6c63ff) ' +
-              `${Math.round((onboardingPlan.dayNumber / onboardingPlan.totalDays) * 360)}deg, var(--bg3) 0)`,
+              `${Math.round((safeOnboardingPlan.dayNumber / safeOnboardingPlan.totalDays) * 360)}deg, var(--bg3) 0)`,
             display: 'grid', placeItems: 'center',
             flexShrink: 0,
           }}>
@@ -657,7 +658,7 @@ export default function Dashboard() {
               background: 'var(--bg)', display: 'grid', placeItems: 'center',
               fontSize: 14, fontWeight: 800,
             }}>
-              {Math.round((onboardingPlan.dayNumber / onboardingPlan.totalDays) * 100)}%
+              {Math.round((safeOnboardingPlan.dayNumber / safeOnboardingPlan.totalDays) * 100)}%
             </div>
           </div>
         </div>
