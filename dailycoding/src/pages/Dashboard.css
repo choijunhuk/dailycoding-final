@@ -15,16 +15,16 @@
   margin-bottom: 12px;
 }
 
-.dashboard-stat-grid {
-  align-items: start;
-}
-
 .dashboard-stat-grid > .card {
   min-height: 96px;
 }
 
 .dashboard-battle-stat-card {
-  min-height: 128px;
+  min-height: 96px;
+}
+
+.dashboard-battle-stat-card .dashboard-battle-recap {
+  display: none;
 }
 
 .dashboard-routine-primary {
