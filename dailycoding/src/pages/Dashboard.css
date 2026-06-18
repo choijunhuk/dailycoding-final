@@ -4,7 +4,27 @@
   display: grid;
   grid-template-columns: minmax(0, 1.45fr) minmax(280px, .8fr);
   gap: 14px;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
+}
+
+.dashboard-root .card-pad {
+  padding: 16px 18px;
+}
+
+.dashboard-root .section-header {
+  margin-bottom: 12px;
+}
+
+.dashboard-stat-grid {
+  align-items: start;
+}
+
+.dashboard-stat-grid > .card {
+  min-height: 96px;
+}
+
+.dashboard-battle-stat-card {
+  min-height: 128px;
 }
 
 .dashboard-routine-primary {
@@ -12,8 +32,8 @@
   grid-template-columns: 54px minmax(0, 1fr) auto;
   gap: 14px;
   align-items: center;
-  min-height: 164px;
-  padding: 18px;
+  min-height: 136px;
+  padding: 16px;
   text-align: left;
   color: var(--text);
   background: linear-gradient(135deg, color-mix(in srgb, var(--routine-color) 14%, transparent), var(--bg2));
@@ -222,7 +242,7 @@
 }
 
 .dashboard-xp-card {
-  padding: 20px 22px;
+  padding: 16px 18px;
   background: linear-gradient(135deg, rgba(121,192,255,.08), var(--bg2) 48%, rgba(86,211,100,.07));
 }
 
@@ -280,8 +300,8 @@
   gap: 12px;
   align-items: start;
   text-align: left;
-  min-height: 132px;
-  padding: 16px;
+  min-height: 112px;
+  padding: 14px;
   border-radius: 8px;
   border: 1px solid var(--border);
   background: linear-gradient(135deg, color-mix(in srgb, var(--mode-color) 10%, transparent), var(--bg2));
@@ -435,7 +455,7 @@
 
 .dashboard-problem-card {
   flex: 0 0 min(280px, 78vw);
-  min-height: 170px;
+  min-height: 138px;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -475,8 +495,8 @@
 
 
 .dashboard-game-banner {
-  margin: 0 0 16px;
-  padding: 16px;
+  margin: 0 0 14px;
+  padding: 14px 16px;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
@@ -487,9 +507,9 @@
 }
 
 .dashboard-game-banner-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 16px;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
   display: grid;
   place-items: center;
   color: var(--blue);

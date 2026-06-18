@@ -665,11 +665,11 @@ export default function Dashboard() {
       )}
 
       {/* 통계 카드 */}
-      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:12,marginBottom:20}}>
+      <div className="dashboard-stat-grid" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:12,marginBottom:20}}>
         <StatCard icon={<CheckCircle2 size={20} />} value={solvedList.length}  label={t('solved')}  color="var(--green)" delta={solvedList.length > 0 ? `▲ ${Math.min(99, Math.round(solvedList.length / Math.max(PROBLEMS.length, 1) * 100))}%` : null} onClick={() => navigate('/submissions')} />
         <StatCard icon={<TrendingUp size={20} />} value={progression ? `Lv.${progression.level}` : (user?.rating||800)}  label={progression ? txt('성장 레벨', 'Growth Level') : t('rating')}  color="var(--yellow)" delta={progression ? `${progression.xp.toLocaleString()} XP` : ((user?.streak||0) > 0 ? `+${(user.streak) * 2} Growth` : null)} onClick={() => navigate('/profile')} />
         <StatCard icon={<Target size={20} />} value={myRank?`#${myRank}`:'−'} label={t('dashboardMyRank')} color="var(--purple)" delta={t('dashboardRealtimeTrack')} onClick={() => navigate('/ranking')} />
-        <div className="card card-pad card-hover" onClick={() => navigate('/battle')} style={{display:'flex',alignItems:'center',gap:14,cursor:'pointer',position:'relative',overflow:'hidden'}}>
+        <div className="dashboard-battle-stat-card card card-pad card-hover" onClick={() => navigate('/battle')} style={{display:'flex',alignItems:'center',gap:14,cursor:'pointer',position:'relative',overflow:'hidden'}}>
           <div className="stat-card-accent" style={{background:'linear-gradient(90deg, rgba(248,81,73,.75), rgba(248,81,73,.16))'}} />
           <div style={{width:48,height:48,borderRadius:14,background:'rgba(248,81,73,.12)',border:'1px solid rgba(248,81,73,.22)',display:'flex',alignItems:'center',justifyContent:'center',color:'var(--red)',flexShrink:0}}>
             <Swords size={20} />
